@@ -357,6 +357,7 @@ button { font: inherit; }
 .flow-final { border-color: rgba(47,191,113,.25) !important; }
 .flow-final svg { stroke: var(--success) !important; }
 .flow-final strong { color: var(--success); }
+.flow-connector { display: none; }
 .score-flow-note {
   justify-self: center;
   display: inline-flex;
@@ -651,4 +652,80 @@ button { font: inherit; }
   .contact-line { margin-top: 48px; gap: 14px 24px; }
   .slide-footer { left: 18px; right: 18px; bottom: 18px; }
   .next-slide { right: 18px; bottom: 28px; width: 38px; height: 38px; }
+}
+
+.catalog-layout { gap: 52px; }
+.catalog-grid {
+  display: grid;
+  gap: 16px;
+}
+.catalog-grid.three-cols { grid-template-columns: repeat(3, 1fr); }
+.catalog-grid.four-cols { grid-template-columns: repeat(4, 1fr); }
+.catalog-item {
+  min-height: 150px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.catalog-grid.light .catalog-item {
+  background: var(--white);
+  border: 1px solid var(--line-light);
+}
+.catalog-grid.dark .catalog-item {
+  background: var(--deep);
+  border: 1px solid var(--line-dark);
+}
+.catalog-item svg {
+  width: 28px;
+  height: 28px;
+  stroke-width: 1.25;
+  stroke: var(--orange);
+}
+.catalog-grid.light .catalog-item svg { stroke: var(--orange-dark); }
+.catalog-item small {
+  display: block;
+  margin-top: 18px;
+  color: #8ea3b1;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.catalog-grid.light .catalog-item small { color: #7f94a3; }
+.catalog-item h3 {
+  margin: 12px 0 0;
+  font-size: 24px;
+  letter-spacing: -.03em;
+}
+.catalog-item p {
+  margin: 10px 0 0;
+  color: #9fb1bc;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.catalog-grid.light .catalog-item p { color: var(--light-muted); }
+.catalog-item.name-only {
+  min-height: 108px;
+  justify-content: center;
+}
+.catalog-item.name-only h3 {
+  margin: 0;
+  font-size: 22px;
+}
+.product-note {
+  margin: 0;
+  color: var(--light-muted);
+  font-size: 15px;
+  max-width: 700px;
+}
+@media (max-width: 1240px) {
+  .catalog-grid.four-cols { grid-template-columns: repeat(2, 1fr); }
+  .catalog-grid.three-cols { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 860px) {
+  .catalog-grid.four-cols,
+  .catalog-grid.three-cols { grid-template-columns: 1fr; }
+  .catalog-item,
+  .catalog-item.name-only { min-height: 0; }
 }
