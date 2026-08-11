@@ -17,7 +17,7 @@
 
 .insurers-grid {
   display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0;
   width: 100%;
   border-top: 1px solid var(--line-light);
@@ -25,12 +25,15 @@
   background: #ffffff;
 }
 
-.insurer-card {
-  grid-column: span 3;
+.insurer-card,
+.insurers-grid::after {
   min-height: 126px;
   background: #ffffff;
   border-right: 1px solid var(--line-light);
   border-bottom: 1px solid var(--line-light);
+}
+
+.insurer-card {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -38,8 +41,9 @@
   overflow: hidden;
 }
 
-.insurer-card:nth-last-child(-n + 3) {
-  grid-column: span 4;
+.insurers-grid::after {
+  content: "";
+  display: block;
 }
 
 .insurer-card img {
@@ -71,17 +75,12 @@
   }
 
   .insurers-grid {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .insurer-card,
-  .insurer-card:nth-last-child(-n + 3) {
-    grid-column: span 2;
+  .insurers-grid::after {
     min-height: 116px;
-  }
-
-  .insurer-card:nth-last-child(-n + 2) {
-    grid-column: span 3;
   }
 }
 
@@ -101,15 +100,12 @@
   }
 
   .insurer-card,
-  .insurer-card:nth-last-child(-n + 3),
-  .insurer-card:nth-last-child(-n + 2) {
-    grid-column: span 1;
+  .insurers-grid::after {
     min-height: 104px;
-    padding: 18px;
   }
 
-  .insurer-card:last-child:nth-child(odd) {
-    grid-column: 1 / -1;
+  .insurer-card {
+    padding: 18px;
   }
 
   .insurer-card img {
@@ -123,13 +119,13 @@
     grid-template-columns: 1fr;
   }
 
-  .insurer-card,
-  .insurer-card:nth-last-child(-n + 3),
-  .insurer-card:nth-last-child(-n + 2),
-  .insurer-card:last-child:nth-child(odd) {
-    grid-column: auto;
+  .insurer-card {
     min-height: 90px;
     padding: 16px;
+  }
+
+  .insurers-grid::after {
+    display: none;
   }
 
   .insurer-card img {
@@ -160,19 +156,18 @@
   }
 
   .insurers-grid {
-    grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
     gap: 0 !important;
   }
 
-  .insurer-card {
-    grid-column: span 3 !important;
+  .insurer-card,
+  .insurers-grid::after {
     min-height: 76px !important;
-    padding: 10px 12px !important;
-    break-inside: avoid !important;
   }
 
-  .insurer-card:nth-last-child(-n + 3) {
-    grid-column: span 4 !important;
+  .insurer-card {
+    padding: 10px 12px !important;
+    break-inside: avoid !important;
   }
 
   .insurer-card img {
