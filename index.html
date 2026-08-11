@@ -10,7 +10,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="./styles.css" />
-  <link rel="stylesheet" href="./semantic.css" />
 </head>
 <body>
   <header class="presentation-header">
@@ -25,9 +24,9 @@
     <section class="slide slide-dark hero" id="slide-01" data-slide="1">
       <div class="slide-inner hero-grid">
         <div class="hero-copy">
-          <p class="kicker">TECNOLOGIA PARA OPERAÇÕES LOGÍSTICAS</p>
-          <h1>Confiança em cada etapa<br /><span>da operação.</span></h1>
-          <p class="lead">Identidade, risco e logística em uma única plataforma.</p>
+          <p class="kicker">TECNOLOGIA PARA GERENCIAMENTO DE RISCO</p>
+          <h1>Segurança operacional começa <span>antes da viagem.</span></h1>
+          <p class="lead">A ViaGate valida identidade, contexto de risco e operação logística antes e durante o transporte.</p>
           <div class="hero-proof">
             <div><strong>300+</strong><span>clientes diretos</span></div>
             <div><strong>5 anos</strong><span>de empresa</span></div>
@@ -40,164 +39,309 @@
             <i data-lucide="image"></i>
             <strong>IMAGEM HERO</strong>
             <span>1600 × 1200 px</span>
-            <small>Operação logística + motorista + tecnologia<br />Imagem limpa, corporativa e de alto impacto</small>
+            <small>Motorista + carga + smartphone / validação<br />Imagem corporativa, limpa e de alto impacto</small>
           </div>
         </figure>
       </div>
-      <div class="slide-footer"><span>ViaGate</span><span>01 / 10</span></div>
+      <div class="slide-footer"><span>ViaGate</span><span>01 / 12</span></div>
     </section>
 
     <section class="slide slide-light" id="slide-02" data-slide="2">
       <div class="slide-inner statement-layout">
         <div class="statement-copy">
-          <p class="kicker dark-kicker">O CENÁRIO</p>
-          <h2>O risco começa <span>antes da viagem.</span></h2>
-          <p class="lead dark-lead">A ViaGate reúne o contexto necessário antes que a operação avance.</p>
+          <p class="kicker dark-kicker">ANTES DA OPERAÇÃO</p>
+          <h2>Uma decisão errada pode começar com <span>uma informação incompleta.</span></h2>
+          <p class="lead dark-lead">A contratação acontece antes da viagem. É nesse momento que identidade, documentos, histórico e vínculo com o veículo precisam ser consistentes.</p>
         </div>
         <div class="risk-list">
-          <article><i data-lucide="user-round-x"></i><span>Identidade não validada</span></article>
-          <article><i data-lucide="file-warning"></i><span>Dados fragmentados</span></article>
-          <article><i data-lucide="shield-alert"></i><span>Decisão sem contexto</span></article>
-          <article><i data-lucide="route-off"></i><span>Operação sem rastreabilidade</span></article>
+          <article class="risk-danger"><i data-lucide="user-round-x"></i><div><strong>Identidade</strong><span>Quem está realmente do outro lado?</span></div></article>
+          <article class="risk-warning"><i data-lucide="file-warning"></i><div><strong>Dados</strong><span>As informações estão completas e atualizadas?</span></div></article>
+          <article class="risk-danger"><i data-lucide="shield-alert"></i><div><strong>Risco</strong><span>Há contexto suficiente para tomar a decisão?</span></div></article>
+          <article class="risk-warning"><i data-lucide="car-front"></i><div><strong>Veículo</strong><span>Veículo e proprietário são compatíveis com a operação?</span></div></article>
         </div>
       </div>
-      <div class="slide-footer dark-footer"><span>O problema</span><span>02 / 10</span></div>
+      <div class="slide-footer dark-footer"><span>O cenário</span><span>02 / 12</span></div>
     </section>
 
-    <section class="slide slide-dark" id="slide-03" data-slide="3">
-      <div class="slide-inner platform-layout">
-        <div class="section-copy compact-copy">
-          <p class="kicker">PLATAFORMA VIAGATE</p>
-          <h2>Uma plataforma.<br /><span>Quatro camadas de confiança.</span></h2>
-          <p class="lead">Da identidade à execução da viagem.</p>
-        </div>
-        <div class="platform-grid">
-          <article><i data-lucide="scan-face"></i><small>01</small><h3>Identidade</h3><p>Biometria facial, prova de vida e validação cadastral.</p></article>
-          <article><i data-lucide="database"></i><small>02</small><h3>Dados</h3><p>CNH, ANTT, processos, veículo e outras fontes.</p></article>
-          <article><i data-lucide="shield-check"></i><small>03</small><h3>Risco</h3><p>Critérios parametrizados para apoiar a decisão operacional.</p></article>
-          <article><i data-lucide="truck"></i><small>04</small><h3>Operação</h3><p>Coletas, entregas, localização, eventos e timeline.</p></article>
-        </div>
-      </div>
-      <div class="slide-footer"><span>Plataforma</span><span>03 / 10</span></div>
-    </section>
-
-    <section class="slide slide-light" id="slide-04" data-slide="4">
-      <div class="slide-inner product-layout">
-        <div class="product-copy">
-          <p class="kicker dark-kicker">CARGO SCORE</p>
-          <h2>Saiba <span>quem está do outro lado.</span></h2>
-          <p class="lead dark-lead">Identidade, consultas e critérios de risco em um único fluxo.</p>
-          <div class="thin-feature-list">
-            <div><i data-lucide="scan-line"></i><span>Biometria facial e prova de vida</span></div>
-            <div><i data-lucide="badge-check"></i><span>Validação cadastral e CNH</span></div>
-            <div><i data-lucide="scale"></i><span>Processos e antecedentes</span></div>
-            <div><i data-lucide="car-front"></i><span>Veículo e proprietário</span></div>
+    <section class="slide slide-dark score-intro" id="slide-03" data-slide="3">
+      <div class="slide-inner score-intro-layout">
+        <div class="section-copy">
+          <p class="kicker">CARGO SCORE · PRINCIPAL SOLUÇÃO</p>
+          <h2>Dados dispersos se transformam em <span>uma decisão operacional.</span></h2>
+          <p class="lead">O Cargo Score concentra validação de identidade, consultas cadastrais e regras de risco em um único fluxo rastreável.</p>
+          <div class="score-pill-row">
+            <span><i data-lucide="scan-face"></i> Identidade</span>
+            <span><i data-lucide="badge-check"></i> CNH</span>
+            <span><i data-lucide="scale"></i> Processos</span>
+            <span><i data-lucide="car-front"></i> Veículo</span>
+            <span><i data-lucide="shield-check"></i> Regras</span>
           </div>
         </div>
-        <figure class="media-placeholder light-placeholder product-media">
-          <div class="placeholder-content dark-placeholder-content">
-            <i data-lucide="monitor"></i>
-            <strong>SCREENSHOT DO CARGO SCORE</strong>
-            <span>1440 × 1080 px</span>
-            <small>Preferir uma tela real com score, status e validações visíveis</small>
+
+        <div class="decision-panel">
+          <div class="decision-panel-head">
+            <span>RESULTADO DA ANÁLISE</span>
+            <small>Exemplo visual</small>
           </div>
-        </figure>
+          <div class="decision-person">
+            <div class="decision-avatar"><i data-lucide="user-round"></i></div>
+            <div><strong>Motorista pesquisado</strong><span>Identidade e dados verificados</span></div>
+          </div>
+          <div class="decision-checks">
+            <div><span>Biometria</span><strong class="status-success">VALIDADA</strong></div>
+            <div><span>CNH</span><strong class="status-success">REGULAR</strong></div>
+            <div><span>Contexto de risco</span><strong class="status-warning">ANALISADO</strong></div>
+          </div>
+          <div class="decision-result status-success-bg">
+            <i data-lucide="shield-check"></i>
+            <div><small>DECISÃO OPERACIONAL</small><strong>APROVADO</strong></div>
+          </div>
+        </div>
       </div>
-      <div class="slide-footer dark-footer"><span>Cargo Score</span><span>04 / 10</span></div>
+      <div class="slide-footer"><span>Cargo Score</span><span>03 / 12</span></div>
     </section>
 
-    <section class="slide slide-deep" id="slide-05" data-slide="5">
-      <div class="slide-inner flow-layout">
-        <div class="section-copy centered-copy">
-          <p class="kicker">UM FLUXO, UMA DECISÃO</p>
-          <h2>Da identificação à liberação operacional.</h2>
+    <section class="slide slide-deep" id="slide-04" data-slide="4">
+      <div class="slide-inner score-flow-layout">
+        <div class="section-copy centered-copy score-flow-heading">
+          <p class="kicker">COMO O CARGO SCORE FUNCIONA</p>
+          <h2>Da identificação ao resultado em <span>seis etapas.</span></h2>
+          <p class="lead">Um processo digital, configurável e orientado à decisão antes da liberação da operação.</p>
         </div>
-        <div class="flow-track">
-          <article><span>01</span><i data-lucide="send"></i><strong>Link seguro</strong><small>via web ou WhatsApp</small></article>
-          <div class="flow-line"></div>
-          <article><span>02</span><i data-lucide="scan-face"></i><strong>Biometria</strong><small>identidade + prova de vida</small></article>
-          <div class="flow-line"></div>
-          <article><span>03</span><i data-lucide="search-check"></i><strong>Consultas</strong><small>dados pessoais e veículo</small></article>
-          <div class="flow-line"></div>
-          <article><span>04</span><i data-lucide="settings-2"></i><strong>Regras</strong><small>critérios parametrizados</small></article>
-          <div class="flow-line"></div>
-          <article class="flow-result"><span>05</span><i data-lucide="shield-check"></i><strong>Decisão</strong><small>resultado operacional</small></article>
+
+        <div class="score-flow">
+          <article>
+            <span class="step-number">01</span>
+            <i data-lucide="send"></i>
+            <strong>Início da pesquisa</strong>
+            <p>A empresa inicia a análise e disponibiliza um link seguro ao pesquisado.</p>
+          </article>
+          <div class="flow-connector"><i data-lucide="arrow-right"></i></div>
+          <article>
+            <span class="step-number">02</span>
+            <i data-lucide="scan-face"></i>
+            <strong>Biometria</strong>
+            <p>Validação facial pelo navegador, com prova de vida para confirmar presença real.</p>
+          </article>
+          <div class="flow-connector"><i data-lucide="arrow-right"></i></div>
+          <article>
+            <span class="step-number">03</span>
+            <i data-lucide="badge-check"></i>
+            <strong>Dados cadastrais</strong>
+            <p>Identidade e CNH são confrontadas com as informações disponíveis nas fontes consultadas.</p>
+          </article>
+          <div class="flow-connector"><i data-lucide="arrow-right"></i></div>
+          <article>
+            <span class="step-number">04</span>
+            <i data-lucide="database"></i>
+            <strong>Consultas</strong>
+            <p>Processos, ANTT, veículo, proprietário e outros dados entram no contexto da análise.</p>
+          </article>
+          <div class="flow-connector"><i data-lucide="arrow-right"></i></div>
+          <article>
+            <span class="step-number">05</span>
+            <i data-lucide="settings-2"></i>
+            <strong>Regras de risco</strong>
+            <p>Critérios são parametrizados de acordo com o perfil e a política operacional do cliente.</p>
+          </article>
+          <div class="flow-connector"><i data-lucide="arrow-right"></i></div>
+          <article class="flow-final">
+            <span class="step-number">06</span>
+            <i data-lucide="shield-check"></i>
+            <strong>Resultado</strong>
+            <p>A análise retorna uma decisão operacional e mantém o processo rastreável.</p>
+          </article>
         </div>
-        <p class="flow-note">A análise pode ser configurada conforme diferentes perfis operacionais.</p>
+
+        <div class="score-flow-note">
+          <i data-lucide="timer"></i>
+          <strong>1 a 10 minutos</strong>
+          <span>Tempo informado no material institucional para a análise após a validação facial, conforme a parametrização.</span>
+        </div>
       </div>
-      <div class="slide-footer"><span>Fluxo Cargo Score</span><span>05 / 10</span></div>
+      <div class="slide-footer"><span>Fluxo Cargo Score</span><span>04 / 12</span></div>
+    </section>
+
+    <section class="slide slide-light" id="slide-05" data-slide="5">
+      <div class="slide-inner score-data-layout">
+        <div class="section-copy score-data-copy">
+          <p class="kicker dark-kicker">O QUE ENTRA NA ANÁLISE</p>
+          <h2>Uma decisão com <span>mais contexto.</span></h2>
+          <p class="lead dark-lead">O objetivo não é exibir uma lista de consultas. É reunir sinais relevantes para que a empresa avalie a operação de forma consistente.</p>
+        </div>
+
+        <div class="data-grid">
+          <article>
+            <i data-lucide="scan-face"></i>
+            <small>PESSOA</small>
+            <h3>Identidade</h3>
+            <p>Biometria facial, prova de vida e validação cadastral.</p>
+          </article>
+          <article>
+            <i data-lucide="badge-check"></i>
+            <small>DOCUMENTO</small>
+            <h3>CNH</h3>
+            <p>Validação de dados da habilitação sem depender da circulação de cópias do documento.</p>
+          </article>
+          <article>
+            <i data-lucide="scale"></i>
+            <small>CONTEXTO</small>
+            <h3>Processos</h3>
+            <p>Informações de processos civis, criminais, familiares e trabalhistas disponíveis na consulta.</p>
+          </article>
+          <article>
+            <i data-lucide="truck"></i>
+            <small>TRANSPORTE</small>
+            <h3>ANTT</h3>
+            <p>Regularidade e dados relacionados ao transporte rodoviário e ao veículo consultado.</p>
+          </article>
+          <article>
+            <i data-lucide="car-front"></i>
+            <small>VEÍCULO</small>
+            <h3>Proprietário</h3>
+            <p>Validação conjunta de veículo e proprietário para ampliar o contexto da operação.</p>
+          </article>
+          <article>
+            <i data-lucide="shield-alert"></i>
+            <small>RISCO</small>
+            <h3>Fraude</h3>
+            <p>Consultas e regras podem apoiar a identificação de sinais associados a situações de fraude.</p>
+          </article>
+        </div>
+      </div>
+      <div class="slide-footer dark-footer"><span>Contexto de análise</span><span>05 / 12</span></div>
     </section>
 
     <section class="slide slide-dark" id="slide-06" data-slide="6">
-      <div class="slide-inner product-layout reverse-layout">
-        <figure class="media-placeholder hero-media operation-media">
+      <div class="slide-inner fraud-layout">
+        <div class="fraud-copy">
+          <p class="kicker">AUTENTICAÇÃO E PREVENÇÃO</p>
+          <h2>Antes do contrato ou pagamento, confirme <span>quem está participando da negociação.</span></h2>
+          <p class="lead">O autenticador foi concebido para reduzir a exposição a golpes em que terceiros se passam pela empresa ou pelo motorista.</p>
+          <div class="fraud-features">
+            <div><i data-lucide="map-pin"></i><span>Origem do acesso e dispositivo</span></div>
+            <div><i data-lucide="scan-face"></i><span>Biometria vinculada ao CPF pesquisado</span></div>
+            <div><i data-lucide="send-horizontal"></i><span>Dados enviados diretamente à contratante</span></div>
+          </div>
+        </div>
+
+        <div class="fraud-visual">
+          <div class="fraud-block fraud-danger-block">
+            <div class="fraud-icon"><i data-lucide="triangle-alert"></i></div>
+            <div><small>RISCO</small><strong>Intermediação não validada</strong><span>Terceiros podem se passar pelas partes da negociação.</span></div>
+          </div>
+          <div class="fraud-divider"><span>SUBSTITUÍDO POR</span></div>
+          <div class="fraud-block fraud-success-block">
+            <div class="fraud-icon"><i data-lucide="link-2"></i></div>
+            <div><small>FLUXO SEGURO</small><strong>Link único + validações</strong><span>Identidade e dados seguem diretamente para a empresa.</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer"><span>Autenticador</span><span>06 / 12</span></div>
+    </section>
+
+    <section class="slide slide-light" id="slide-07" data-slide="7">
+      <div class="slide-inner ecosystem-layout">
+        <div class="section-copy ecosystem-copy">
+          <p class="kicker dark-kicker">DO RISCO À EXECUÇÃO</p>
+          <h2>O Score decide antes. O ecossistema acompanha <span>durante a viagem.</span></h2>
+          <p class="lead dark-lead">Depois da validação, a operação pode seguir para o Cargo Truck e para a Plataforma Cargo com atividades, localização e eventos registrados.</p>
+        </div>
+
+        <div class="ecosystem-flow">
+          <article>
+            <span class="ecosystem-index">01</span>
+            <i data-lucide="shield-check"></i>
+            <strong>Cargo Score</strong>
+            <p>Identidade, dados e decisão de risco.</p>
+          </article>
+          <div class="ecosystem-arrow"><i data-lucide="arrow-right"></i></div>
+          <article>
+            <span class="ecosystem-index">02</span>
+            <i data-lucide="smartphone"></i>
+            <strong>Cargo Truck</strong>
+            <p>Atividades, rota, paradas e entrega no aplicativo.</p>
+          </article>
+          <div class="ecosystem-arrow"><i data-lucide="arrow-right"></i></div>
+          <article>
+            <span class="ecosystem-index">03</span>
+            <i data-lucide="monitor-dot"></i>
+            <strong>Plataforma Cargo</strong>
+            <p>Gestão, rastreamento e timeline da operação.</p>
+          </article>
+        </div>
+      </div>
+      <div class="slide-footer dark-footer"><span>Ecossistema ViaGate</span><span>07 / 12</span></div>
+    </section>
+
+    <section class="slide slide-dark" id="slide-08" data-slide="8">
+      <div class="slide-inner operation-layout">
+        <figure class="media-placeholder operation-media">
           <div class="placeholder-content">
             <i data-lucide="map"></i>
             <strong>IMAGEM / SCREENSHOT DA OPERAÇÃO</strong>
             <span>1600 × 1100 px</span>
-            <small>Mapa, app do motorista ou composição com rota e eventos</small>
+            <small>Mapa + aplicativo + eventos da viagem<br />Evitar montagem carregada</small>
           </div>
         </figure>
-        <div class="product-copy dark-product-copy">
+        <div class="operation-copy">
           <p class="kicker">CARGO TRUCK + PLATAFORMA CARGO</p>
-          <h2>A decisão segue <span>com a viagem.</span></h2>
-          <p class="lead">Coletas, entregas, rastreamento e eventos permanecem conectados à operação.</p>
-          <div class="thin-feature-list dark-list">
-            <div><i data-lucide="package-open"></i><span>Coletas e entregas no aplicativo</span></div>
-            <div><i data-lucide="map-pin"></i><span>Rastreamento durante a viagem</span></div>
-            <div><i data-lucide="circle-dot-dashed"></i><span>Registro de eventos e paradas</span></div>
-            <div><i data-lucide="history"></i><span>Timeline completa da operação</span></div>
+          <h2>Da coleta à entrega, <span>cada evento permanece registrado.</span></h2>
+          <div class="operation-steps">
+            <div><span>01</span><i data-lucide="package-open"></i><strong>Atividade</strong><small>Coletas e entregas chegam ao motorista.</small></div>
+            <div><span>02</span><i data-lucide="route"></i><strong>Viagem</strong><small>Rota e rastreamento acompanham a execução.</small></div>
+            <div><span>03</span><i data-lucide="circle-dot-dashed"></i><strong>Eventos</strong><small>Paradas e motivos ficam registrados.</small></div>
+            <div><span>04</span><i data-lucide="file-check-2"></i><strong>Entrega</strong><small>Conclusão pode registrar imagem do canhoto assinado.</small></div>
           </div>
         </div>
       </div>
-      <div class="slide-footer"><span>Operação logística</span><span>06 / 10</span></div>
+      <div class="slide-footer"><span>Operação logística</span><span>08 / 12</span></div>
     </section>
 
-    <section class="slide slide-light" id="slide-07" data-slide="7">
+    <section class="slide slide-light" id="slide-09" data-slide="9">
       <div class="slide-inner integration-layout">
         <div class="integration-copy-large">
           <p class="kicker dark-kicker">API + WHITE LABEL</p>
-          <h2>Nossa tecnologia.<br /><span>Sua plataforma.</span></h2>
-          <p class="lead dark-lead">Integração por API ou experiência white label com a marca do cliente.</p>
+          <h2>A ViaGate pode ser a plataforma. Ou <span>a tecnologia por trás dela.</span></h2>
+          <p class="lead dark-lead">Recursos podem ser consumidos por API ou entregues em uma experiência personalizada com a identidade do cliente.</p>
         </div>
         <div class="integration-cards">
-          <article><i data-lucide="plug"></i><h3>API</h3><p>Integrações para biometria, CNH, ANTT, veículo, antecedentes e outras consultas.</p></article>
-          <article><i data-lucide="panels-top-left"></i><h3>White label</h3><p>Logo, cores e URL exclusivas para entregar a experiência com a marca do cliente.</p></article>
+          <article><i data-lucide="plug"></i><h3>API</h3><p>Biometria, CNH, ANTT, veículo, antecedentes e outras integrações disponíveis para softwares de terceiros.</p></article>
+          <article><i data-lucide="panels-top-left"></i><h3>White label</h3><p>Logo, cores e URL próprias para uma experiência alinhada à marca da empresa contratante.</p></article>
           <figure class="mini-placeholder"><span>IMAGEM 1200 × 700 px</span><small>Integração / white label</small></figure>
         </div>
       </div>
-      <div class="slide-footer dark-footer"><span>Integrações</span><span>07 / 10</span></div>
+      <div class="slide-footer dark-footer"><span>Integrações</span><span>09 / 12</span></div>
     </section>
 
-    <section class="slide slide-dark proof-slide" id="slide-08" data-slide="8">
+    <section class="slide slide-dark proof-slide" id="slide-10" data-slide="10">
       <div class="slide-inner proof-layout">
         <div class="section-copy proof-copy">
           <p class="kicker">VALIDAÇÃO DE MERCADO</p>
-          <h2>Não é uma ideia.<br /><span>É tecnologia em operação.</span></h2>
+          <h2>Tecnologia em operação. <span>Não apenas uma proposta.</span></h2>
+          <p class="lead">O material institucional apresenta uma operação já utilizada por empresas e reconhecida no mercado securitário.</p>
         </div>
         <div class="metric-wall">
           <article class="metric-primary"><strong>300+</strong><span>clientes diretos</span></article>
-          <article><strong>5 anos</strong><span>de empresa, com tecnologia aplicada a operações logísticas e securitárias</span></article>
-          <article><strong>5 anos</strong><span>de operação com biometria e validação de CNH sem evento adverso informado no material institucional</span></article>
-          <article><i data-lucide="badge-check"></i><span>Auditada pela FENSEG e reconhecida pelas principais seguradoras, segundo a apresentação institucional.</span></article>
+          <article><strong>5 anos</strong><span>de empresa</span></article>
+          <article class="metric-success"><strong>5 anos</strong><span>de operação com biometria e validação de CNH sem evento adverso informado no material institucional</span></article>
+          <article class="metric-certification"><i data-lucide="badge-check"></i><span>Auditada pela FENSEG e reconhecida pelas principais seguradoras, segundo a apresentação institucional.</span></article>
         </div>
       </div>
-      <div class="slide-footer"><span>Validação de mercado</span><span>08 / 10</span></div>
+      <div class="slide-footer"><span>Validação de mercado</span><span>10 / 12</span></div>
     </section>
 
-    <section class="slide slide-deep people-slide" id="slide-09" data-slide="9">
+    <section class="slide slide-deep people-slide" id="slide-11" data-slide="11">
       <div class="slide-inner people-layout">
         <div class="people-heading">
           <p class="kicker">PESSOAS POR TRÁS DO PROJETO</p>
-          <h2>Experiência de mercado.<br /><span>Execução tecnológica.</span></h2>
-          <p class="lead">Mercado, risco e tecnologia reunidos na execução do produto.</p>
+          <h2>Experiência de mercado. <span>Execução tecnológica.</span></h2>
+          <p class="lead">A experiência acumulada pelos sócios combina risco securitário, gestão e desenvolvimento de tecnologia aplicada ao transporte.</p>
         </div>
 
         <div class="people-grid">
           <article class="person">
-            <figure class="person-photo">
-              <span>FOTO ANTÔNIO<br /><small>800 × 1000 px</small></span>
-            </figure>
+            <figure class="person-photo"><span>FOTO ANTÔNIO<br /><small>800 × 1000 px</small></span></figure>
             <div class="person-info">
               <span class="person-index">01</span>
               <h3>Antônio Santos</h3>
@@ -205,11 +349,8 @@
               <p class="person-description">34 anos de atuação em seguro de transportes, gerenciamento de riscos e segurança em operações logísticas.</p>
             </div>
           </article>
-
           <article class="person">
-            <figure class="person-photo">
-              <span>FOTO ANÉSIO<br /><small>800 × 1000 px</small></span>
-            </figure>
+            <figure class="person-photo"><span>FOTO ANÉSIO<br /><small>800 × 1000 px</small></span></figure>
             <div class="person-info">
               <span class="person-index">02</span>
               <h3>Anésio Santos</h3>
@@ -217,11 +358,8 @@
               <p class="person-description">Especialista no mercado financeiro e comércio exterior, com atuação executiva em uma das maiores montadoras do mundo.</p>
             </div>
           </article>
-
           <article class="person">
-            <figure class="person-photo">
-              <span>FOTO MATEUS<br /><small>800 × 1000 px</small></span>
-            </figure>
+            <figure class="person-photo"><span>FOTO MATEUS<br /><small>800 × 1000 px</small></span></figure>
             <div class="person-info">
               <span class="person-index">03</span>
               <h3>Mateus Insa</h3>
@@ -231,22 +369,22 @@
           </article>
         </div>
       </div>
-      <div class="slide-footer"><span>Time</span><span>09 / 10</span></div>
+      <div class="slide-footer"><span>Time</span><span>11 / 12</span></div>
     </section>
 
-    <section class="slide slide-orange" id="slide-10" data-slide="10">
+    <section class="slide slide-orange" id="slide-12" data-slide="12">
       <div class="slide-inner closing-layout">
         <img class="closing-logo" src="./assets/logo-viagate-white.svg" alt="ViaGate" />
         <p class="kicker closing-kicker">VIAGATE</p>
-        <h2>Infraestrutura de confiança<br />para quem movimenta cargas.</h2>
-        <p>Identidade. Dados. Risco. Logística.</p>
+        <h2>Mais contexto para decidir. Mais controle para operar.</h2>
+        <p>Identidade. Risco. Logística.</p>
         <div class="contact-line">
           <span>viagate.com.br</span>
           <span>antonio.santos@viagate.com.br</span>
           <span>(41) 99962-3600</span>
         </div>
       </div>
-      <div class="slide-footer orange-footer"><span>ViaGate</span><span>10 / 10</span></div>
+      <div class="slide-footer orange-footer"><span>ViaGate</span><span>12 / 12</span></div>
     </section>
   </main>
 
