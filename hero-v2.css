@@ -1,0 +1,374 @@
+.hero-original.is-hidden {
+  display: none !important;
+}
+
+.hero-v2-layout {
+  grid-template-columns: .78fr 1.22fr;
+  gap: 72px;
+  align-items: center;
+}
+
+.hero-v2-copy {
+  align-self: center;
+  max-width: 640px;
+}
+
+.hero-v2-copy .kicker {
+  margin-bottom: 22px;
+}
+
+.hero-v2-copy h1 {
+  max-width: 680px;
+}
+
+.hero-v2-statement {
+  margin: 30px 0 0;
+  max-width: 610px;
+  color: #f5f8fa;
+  font-size: clamp(21px, 1.7vw, 28px);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -.03em;
+}
+
+.hero-v2-copy .lead {
+  max-width: 600px;
+  margin-top: 18px;
+  color: #9fb0bb;
+  font-size: 16px;
+}
+
+.hero-v2-panel {
+  align-self: center;
+  display: grid;
+  width: 100%;
+  border-top: 1px solid var(--line-dark);
+  border-left: 1px solid var(--line-dark);
+  background: rgba(15, 38, 55, .52);
+}
+
+.hero-v2-panel-head {
+  min-height: 62px;
+  padding: 18px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-right: 1px solid var(--line-dark);
+  border-bottom: 1px solid var(--line-dark);
+}
+
+.hero-v2-panel-head span {
+  color: var(--orange);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .17em;
+}
+
+.hero-v2-panel-head small {
+  color: #7f95a4;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.hero-v2-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.hero-v2-card {
+  min-height: 182px;
+  padding: 22px 22px 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 26px;
+  border-right: 1px solid var(--line-dark);
+  border-bottom: 1px solid var(--line-dark);
+  background: rgba(7, 24, 39, .14);
+}
+
+.hero-v2-card-accent {
+  background: rgba(255, 107, 24, .08);
+}
+
+.hero-v2-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.hero-v2-card-head svg {
+  width: 24px;
+  height: 24px;
+  stroke: var(--orange);
+  stroke-width: 1.3;
+}
+
+.hero-v2-card-head span {
+  color: #748b9b;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .16em;
+}
+
+.hero-v2-card h3 {
+  margin: 0;
+  color: #f4f7f9;
+  font-size: clamp(20px, 1.55vw, 27px);
+  font-weight: 650;
+  line-height: 1.05;
+  letter-spacing: -.04em;
+}
+
+.hero-v2-card p {
+  margin: 10px 0 0;
+  color: #91a5b2;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.hero-v2-card-accent h3 {
+  color: #fff;
+}
+
+.hero-v2-panel-footer {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  border-right: 1px solid var(--line-dark);
+  border-bottom: 1px solid var(--line-dark);
+}
+
+.hero-v2-proof {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.hero-v2-proof div {
+  min-height: 100px;
+  padding: 18px 20px;
+  display: grid;
+  align-content: center;
+  border-right: 1px solid var(--line-dark);
+}
+
+.hero-v2-proof strong {
+  color: var(--orange);
+  font-size: 31px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -.05em;
+}
+
+.hero-v2-proof span {
+  margin-top: 8px;
+  color: #a9b8c1;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.hero-v2-next {
+  min-width: 255px;
+  padding: 18px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.hero-v2-next span {
+  max-width: 190px;
+  color: #dbe4e9;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.hero-v2-next svg {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  stroke: var(--orange);
+  stroke-width: 1.3;
+}
+
+@media (max-width: 1240px) {
+  .hero-v2-layout {
+    grid-template-columns: 1fr;
+    gap: 48px;
+    align-content: start;
+  }
+
+  .hero-v2-copy {
+    max-width: 900px;
+  }
+
+  .hero-v2-panel {
+    max-width: 1040px;
+  }
+
+  .hero-v2-card {
+    min-height: 156px;
+  }
+}
+
+@media (max-width: 860px) {
+  .hero-v2-layout {
+    gap: 34px;
+  }
+
+  .hero-v2-statement {
+    margin-top: 24px;
+    font-size: 21px;
+  }
+
+  .hero-v2-copy .lead {
+    font-size: 16px;
+  }
+
+  .hero-v2-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .hero-v2-card {
+    min-height: 148px;
+    padding: 18px;
+  }
+
+  .hero-v2-panel-footer {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-v2-next {
+    min-width: 0;
+    border-top: 1px solid var(--line-dark);
+  }
+}
+
+@media (max-width: 560px) {
+  .hero-v2-grid,
+  .hero-v2-proof {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-v2-card {
+    min-height: 0;
+    gap: 20px;
+  }
+
+  .hero-v2-proof div {
+    min-height: 0;
+  }
+
+  .hero-v2-next span {
+    max-width: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hero-v2-copy,
+  .hero-v2-panel {
+    animation: heroV2Reveal .52s cubic-bezier(.22, .61, .36, 1) both;
+  }
+
+  .hero-v2-panel {
+    animation-delay: 80ms;
+  }
+}
+
+@keyframes heroV2Reveal {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media print {
+  .hero-v2-layout {
+    grid-template-columns: .72fr 1.28fr !important;
+    gap: 34px !important;
+    align-items: center !important;
+  }
+
+  .hero-v2-copy {
+    max-width: 330px !important;
+  }
+
+  .hero-v2-copy h1 {
+    font-size: 38px !important;
+    line-height: .96 !important;
+  }
+
+  .hero-v2-statement {
+    margin-top: 20px !important;
+    font-size: 17px !important;
+    line-height: 1.28 !important;
+  }
+
+  .hero-v2-copy .lead {
+    margin-top: 12px !important;
+    font-size: 10.5px !important;
+    line-height: 1.4 !important;
+  }
+
+  .hero-v2-panel-head {
+    min-height: 42px !important;
+    padding: 10px 12px !important;
+  }
+
+  .hero-v2-card {
+    min-height: 106px !important;
+    padding: 12px !important;
+    gap: 12px !important;
+  }
+
+  .hero-v2-card-head svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  .hero-v2-card h3 {
+    font-size: 16px !important;
+  }
+
+  .hero-v2-card p {
+    margin-top: 5px !important;
+    font-size: 8.5px !important;
+  }
+
+  .hero-v2-proof div {
+    min-height: 58px !important;
+    padding: 8px 10px !important;
+  }
+
+  .hero-v2-proof strong {
+    font-size: 21px !important;
+  }
+
+  .hero-v2-proof span {
+    margin-top: 4px !important;
+    font-size: 7.5px !important;
+  }
+
+  .hero-v2-next {
+    min-width: 150px !important;
+    padding: 10px 12px !important;
+  }
+
+  .hero-v2-next span {
+    max-width: 112px !important;
+    font-size: 8px !important;
+  }
+
+  .hero-v2-next svg {
+    width: 15px !important;
+    height: 15px !important;
+  }
+}
