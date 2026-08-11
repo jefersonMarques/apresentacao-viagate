@@ -1,0 +1,75 @@
+.insurers-layout {
+  align-content: center;
+  gap: 46px;
+}
+
+.insurers-heading {
+  max-width: 980px;
+}
+
+.insurers-heading h2 {
+  max-width: 940px;
+}
+
+.insurers-heading .lead {
+  max-width: 760px;
+}
+
+.insurers-wall {
+  margin: 0;
+  width: 100%;
+  background: #fff;
+  border-top: 1px solid var(--line-light);
+  border-bottom: 1px solid var(--line-light);
+  padding: 24px 32px;
+}
+
+.insurers-wall picture,
+.insurers-wall img {
+  display: block;
+  width: 100%;
+}
+
+.insurers-wall img {
+  height: auto;
+  max-height: 430px;
+  object-fit: contain;
+}
+
+@media (max-width: 1240px) {
+  .insurers-layout { gap: 36px; }
+  .insurers-wall { padding: 20px 24px; }
+}
+
+@media (max-width: 860px) {
+  .insurers-layout {
+    align-content: start;
+    gap: 28px;
+  }
+
+  .insurers-heading h2,
+  .insurers-heading .lead { max-width: none; }
+
+  .insurers-wall {
+    padding: 16px 14px;
+  }
+
+  .insurers-wall img {
+    max-height: none;
+  }
+}
+
+@media print {
+  .insurers-layout { gap: 20px !important; }
+  .insurers-heading h2 { font-size: 36px !important; }
+  .insurers-heading .lead {
+    margin-top: 10px !important;
+    font-size: 12px !important;
+    line-height: 1.4 !important;
+  }
+  .insurers-wall { padding: 12px 24px !important; }
+  .insurers-wall img {
+    max-height: 360px !important;
+    margin: 0 !important;
+  }
+}
