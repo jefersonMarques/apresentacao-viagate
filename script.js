@@ -208,20 +208,103 @@ function updateOperationalCopy() {
 function updateMarketProofCopy() {
   const slide = document.querySelector('#slide-13');
   const lead = slide?.querySelector('.proof-copy .lead');
-  const successMetric = slide?.querySelector('.metric-success span');
+  const experienceMetric = slide?.querySelector('.metric-success');
+  const experienceValue = experienceMetric?.querySelector('strong');
+  const experienceLabel = experienceMetric?.querySelector('span');
   const certification = slide?.querySelector('.metric-certification span');
 
   if (lead) {
     lead.textContent = 'A ViaGate já atende mais de 300 clientes diretos e possui reconhecimento no mercado securitário.';
   }
 
-  if (successMetric) {
-    successMetric.textContent = 'de operação com biometria e validação de CNH sem registro de evento adverso.';
+  if (experienceValue) {
+    experienceValue.textContent = '30+ anos';
+  }
+
+  if (experienceLabel) {
+    experienceLabel.textContent = 'de experiência acumulada na equipe.';
   }
 
   if (certification) {
     certification.textContent = 'Auditada pela FENSEG e reconhecida pelas principais seguradoras.';
   }
+}
+
+function updateTeamSlide() {
+  const slide = document.querySelector('#slide-14');
+  const people = Array.from(slide?.querySelectorAll('.person') ?? []);
+  const photoByName = new Map([
+    ['Antônio Santos', './assets/antonio-photo.svg'],
+    ['Anésio Santos', './assets/anesio-photo.svg'],
+    ['Mateus Insa', './assets/mateus-photo.svg'],
+  ]);
+
+  people.forEach((person) => {
+    const name = person.querySelector('h3')?.textContent?.trim();
+    const photo = person.querySelector('.person-photo');
+    const src = photoByName.get(name);
+
+    if (!photo || !src || !name) {
+      return;
+    }
+
+    photo.classList.add('has-photo');
+    photo.innerHTML = `<img src="${src}" alt="${name}" loading="lazy" decoding="async" />`;
+  });
+}
+
+function initializeFadeUpAnimations() {
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const selectors = [
+    '.hero-copy',
+    '.hero-media',
+    '.section-copy',
+    '.market-grid article',
+    '.benefit-card',
+    '.phone-stage',
+    '.analysis-result-step',
+    '.score-flow article',
+    '.data-grid article',
+    '.catalog-item',
+    '.fraud-block',
+    '.product-portfolio-group',
+    '.ecosystem-flow article',
+    '.operation-media',
+    '.operation-steps > div',
+    '.integration-cards article',
+    '.metric-wall article',
+    '.person',
+    '.closing-layout > *',
+  ];
+
+  const observer = reduceMotion
+    ? null
+    : new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) {
+            return;
+          }
+
+          entry.target.classList.add('is-visible');
+          observer.unobserve(entry.target);
+        });
+      }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
+
+  document.querySelectorAll('.slide').forEach((slide) => {
+    const elements = Array.from(slide.querySelectorAll(selectors.join(',')));
+
+    elements.forEach((element, index) => {
+      element.classList.add('fade-up');
+      element.style.setProperty('--fade-delay', `${Math.min(index, 5) * 55}ms`);
+
+      if (reduceMotion) {
+        element.classList.add('is-visible');
+        return;
+      }
+
+      observer.observe(element);
+    });
+  });
 }
 
 function applyPresentationEnhancements() {
@@ -232,6 +315,7 @@ function applyPresentationEnhancements() {
   updateProductPortfolioSlide();
   updateOperationalCopy();
   updateMarketProofCopy();
+  updateTeamSlide();
 }
 
 applyPresentationEnhancements();
@@ -244,6 +328,8 @@ const header = document.querySelector('.presentation-header');
 if (window.lucide) {
   window.lucide.createIcons();
 }
+
+initializeFadeUpAnimations();
 
 function getCurrentSlideIndex() {
   const viewportCenter = window.scrollY + window.innerHeight / 2;
