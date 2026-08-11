@@ -1,13 +1,13 @@
 /* Refinamentos visuais da apresentação ViaGate */
 * { border-radius: 0 !important; }
 
-.analysis-result-layout { align-content: center; gap: 46px; }
+.analysis-result-layout { align-content: center; gap: 38px; }
 .analysis-result-heading { max-width: 1120px; }
 .analysis-result-heading h2 { max-width: 1080px; }
 .analysis-result-heading .lead { max-width: 920px; }
 .analysis-result-flow {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0;
   border-top: 1px solid var(--line-light);
   border-left: 1px solid var(--line-light);
@@ -15,35 +15,31 @@
 }
 .analysis-result-step {
   position: relative;
-  min-height: 286px;
-  padding: 24px 20px 22px;
+  min-height: 218px;
+  padding: 22px 22px 20px;
   border-right: 1px solid var(--line-light);
   border-bottom: 1px solid var(--line-light);
   background: var(--white);
   color: var(--ink);
 }
-.analysis-result-step:not(:last-child)::after {
-  content: "";
-  position: absolute;
-  right: -7px;
-  top: 46px;
-  width: 13px;
-  height: 13px;
-  border-top: 1px solid #8ca0ae;
-  border-right: 1px solid #8ca0ae;
-  transform: rotate(45deg);
-  background: var(--white);
-  z-index: 2;
+.analysis-result-step:nth-child(4) {
+  background: #f7fafb;
+}
+.analysis-result-step.is-final {
+  grid-column: span 2;
+  background: rgba(47,191,113,.09);
+  border-color: rgba(47,191,113,.34);
 }
 .analysis-result-top {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 14px;
+  min-height: 28px;
 }
 .analysis-result-top svg {
-  width: 27px;
-  height: 27px;
+  width: 25px;
+  height: 25px;
   stroke: var(--orange-dark);
   stroke-width: 1.3;
 }
@@ -54,32 +50,35 @@
   letter-spacing: .14em;
 }
 .analysis-result-step h3 {
-  margin: 44px 0 12px;
-  font-size: 20px;
-  line-height: 1.12;
-  letter-spacing: -.035em;
+  margin: 28px 0 10px;
+  max-width: 290px;
+  font-size: 18px;
+  line-height: 1.14;
+  letter-spacing: -.03em;
 }
 .analysis-result-step p {
   margin: 0;
+  max-width: 330px;
   color: var(--light-muted);
   font-size: 12px;
-  line-height: 1.55;
+  line-height: 1.5;
 }
 .analysis-result-step strong {
   display: block;
-  margin-top: 16px;
+  margin-top: 14px;
+  max-width: 360px;
   color: #526b7b;
-  font-size: 11px;
-  line-height: 1.55;
+  font-size: 10px;
+  line-height: 1.5;
   font-weight: 700;
+  letter-spacing: .015em;
 }
-.analysis-result-step.is-final {
-  background: rgba(47,191,113,.09);
-  border-color: rgba(47,191,113,.34);
-}
-.analysis-result-step.is-final::after { display: none; }
 .analysis-result-step.is-final .analysis-result-top svg { stroke: var(--success); }
-.analysis-result-step.is-final h3 { color: #147342; }
+.analysis-result-step.is-final h3 {
+  max-width: 420px;
+  color: #147342;
+  font-size: 21px;
+}
 .analysis-result-step.is-final strong { color: var(--success); }
 
 .score-flow article { padding: 23px; }
@@ -219,8 +218,9 @@
 .next-slide { border-radius: 0 !important; }
 
 @media (max-width: 1240px) {
-  .analysis-result-flow { grid-template-columns: repeat(4, 1fr); }
-  .analysis-result-step:not(:last-child)::after { display: none; }
+  .analysis-result-flow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .analysis-result-step { min-height: 200px; }
+  .analysis-result-step.is-final { grid-column: span 2; }
   .product-portfolio-grid { grid-template-columns: repeat(2, 1fr); }
 
   .people-layout {
@@ -238,19 +238,25 @@
 }
 
 @media (max-width: 860px) {
-  .analysis-result-layout { gap: 34px; }
+  .analysis-result-layout { gap: 30px; }
   .analysis-result-heading { max-width: none; }
   .analysis-result-heading h2 { max-width: none; }
   .analysis-result-flow,
   .product-portfolio-grid { grid-template-columns: 1fr; }
-  .analysis-result-step {
+  .analysis-result-step,
+  .analysis-result-step.is-final {
+    grid-column: auto;
     min-height: 0;
-    padding: 20px 18px 22px;
+    padding: 18px 18px 20px;
   }
-  .analysis-result-step h3 {
-    margin: 24px 0 10px;
-    font-size: 19px;
+  .analysis-result-step h3,
+  .analysis-result-step.is-final h3 {
+    max-width: none;
+    margin: 20px 0 8px;
+    font-size: 18px;
   }
+  .analysis-result-step p,
+  .analysis-result-step strong { max-width: none; }
   .analysis-result-step p { font-size: 13px; }
   .product-portfolio-group {
     min-height: 0;
