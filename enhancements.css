@@ -331,3 +331,225 @@
     transition: none !important;
   }
 }
+
+/* Exportação PDF: cada seção ocupa exatamente uma página widescreen 16:9. */
+@page {
+  size: 13.333in 7.5in;
+  margin: 0;
+}
+
+@media print {
+  html,
+  body {
+    width: 13.333in !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    scroll-snap-type: none !important;
+    overflow: visible !important;
+  }
+
+  body,
+  body * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .presentation {
+    width: 13.333in !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .slide {
+    width: 13.333in !important;
+    height: 7.5in !important;
+    min-height: 7.5in !important;
+    max-height: 7.5in !important;
+    margin: 0 !important;
+    break-after: page !important;
+    page-break-after: always !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    overflow: hidden !important;
+  }
+
+  .slide:last-child {
+    break-after: auto !important;
+    page-break-after: auto !important;
+  }
+
+  .slide-inner {
+    width: calc(100% - 64px) !important;
+    height: 7.5in !important;
+    min-height: 0 !important;
+    max-height: 7.5in !important;
+    margin: 0 auto !important;
+    padding: 64px 0 42px !important;
+    overflow: hidden !important;
+  }
+
+  .presentation-header {
+    position: fixed !important;
+    height: 48px !important;
+    padding: 0 28px !important;
+  }
+  .brand { width: 110px !important; height: 28px !important; }
+  .brand-logo { width: 110px !important; }
+  .presentation-meta { font-size: 8px !important; }
+
+  .slide-footer {
+    left: 32px !important;
+    right: 32px !important;
+    bottom: 18px !important;
+  }
+
+  .presentation-progress,
+  .next-slide {
+    display: none !important;
+  }
+
+  .fade-up,
+  .fade-up.is-visible {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .hero-media { min-height: 460px !important; }
+  .operation-media { min-height: 460px !important; }
+
+  .analysis-result-layout { gap: 22px !important; }
+  .analysis-result-heading h2 { font-size: 36px !important; }
+  .analysis-result-heading .lead {
+    margin-top: 12px !important;
+    font-size: 13px !important;
+    line-height: 1.45 !important;
+  }
+  .analysis-result-step {
+    min-height: 174px !important;
+    padding: 14px 16px !important;
+  }
+  .analysis-result-step h3,
+  .analysis-result-step.is-final h3 {
+    margin: 16px 0 7px !important;
+    font-size: 15px !important;
+  }
+  .analysis-result-step p { font-size: 10.5px !important; }
+  .analysis-result-step strong {
+    margin-top: 8px !important;
+    font-size: 8.5px !important;
+  }
+
+  .biometrics-layout { gap: 20px !important; }
+  .biometrics-heading h2 { font-size: 34px !important; }
+  .biometrics-heading .lead {
+    margin-top: 10px !important;
+    font-size: 12px !important;
+    line-height: 1.42 !important;
+  }
+  .biometrics-stage {
+    grid-template-columns: 1fr 230px 1fr !important;
+    gap: 8px 12px !important;
+  }
+  .benefit-card {
+    min-height: 102px !important;
+    padding: 12px !important;
+  }
+  .benefit-card svg { width: 20px !important; height: 20px !important; }
+  .benefit-card h3 {
+    margin: 12px 0 5px !important;
+    font-size: 15px !important;
+  }
+  .benefit-card p {
+    font-size: 9.5px !important;
+    line-height: 1.35 !important;
+  }
+  .phone-shell {
+    width: 214px !important;
+    padding: 7px !important;
+  }
+  .phone-screen {
+    min-height: 350px !important;
+    padding: 14px !important;
+  }
+  .phone-topbar {
+    height: 3px !important;
+    margin-bottom: 15px !important;
+  }
+  .phone-avatar { width: 88px !important; height: 88px !important; }
+  .phone-avatar svg { width: 40px !important; height: 40px !important; }
+  .phone-screen strong {
+    margin-top: 12px !important;
+    font-size: 18px !important;
+  }
+  .phone-screen span { font-size: 9px !important; }
+  .phone-screen small {
+    margin-top: 8px !important;
+    font-size: 8.5px !important;
+  }
+  .phone-status {
+    margin-top: 12px !important;
+    gap: 6px !important;
+  }
+  .phone-status > div { padding: 8px !important; }
+  .phone-status strong { font-size: 12px !important; }
+
+  .score-flow-layout { gap: 22px !important; }
+  .score-flow-heading h2 { font-size: 36px !important; }
+  .score-flow-heading .lead {
+    margin-top: 10px !important;
+    font-size: 12px !important;
+    line-height: 1.42 !important;
+  }
+  .score-flow article { padding: 14px !important; }
+  .score-step-head svg { width: 20px !important; height: 20px !important; }
+  .score-flow article > strong {
+    margin-top: 14px !important;
+    font-size: 15px !important;
+  }
+  .score-flow article p {
+    margin-top: 7px !important;
+    font-size: 9.5px !important;
+  }
+  .score-flow-note {
+    padding: 9px 12px !important;
+    gap: 9px !important;
+  }
+  .score-flow-note strong { font-size: 13px !important; }
+  .score-flow-note span { font-size: 9.5px !important; }
+
+  .product-portfolio-group {
+    min-height: 278px !important;
+    padding: 18px !important;
+  }
+  .product-portfolio-group header {
+    min-height: 48px !important;
+    padding-bottom: 10px !important;
+  }
+  .product-portfolio-group header strong { font-size: 12px !important; }
+  .product-portfolio-group ul { margin-top: 12px !important; }
+  .product-portfolio-group li {
+    padding: 7px 0 7px 14px !important;
+    font-size: 13px !important;
+  }
+  .product-portfolio-group li::before { top: 14px !important; }
+
+  .people-layout { gap: 46px !important; }
+  .people-heading h2 { font-size: 38px !important; }
+  .people-heading .lead {
+    margin-top: 12px !important;
+    font-size: 12px !important;
+  }
+  .person-photo { max-height: 330px !important; }
+  .person-description {
+    margin-top: 10px !important;
+    font-size: 10px !important;
+  }
+
+  .metric-wall article {
+    min-height: 212px !important;
+    padding: 24px !important;
+  }
+  .metric-wall strong { font-size: 52px !important; }
+}
