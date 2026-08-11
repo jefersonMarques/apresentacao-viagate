@@ -180,6 +180,31 @@
   background: var(--orange);
 }
 
+.person-photo.has-photo {
+  overflow: hidden;
+  background: #173044;
+}
+.person-photo.has-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.fade-up {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity .5s ease var(--fade-delay, 0ms),
+    transform .58s cubic-bezier(.22, .61, .36, 1) var(--fade-delay, 0ms);
+  will-change: opacity, transform;
+}
+.fade-up.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 /* Apresentação enterprise: nenhum card, painel ou controle arredondado. */
 .phone-shell,
 .phone-screen,
@@ -197,12 +222,106 @@
   .analysis-result-flow { grid-template-columns: repeat(4, 1fr); }
   .analysis-result-step:not(:last-child)::after { display: none; }
   .product-portfolio-grid { grid-template-columns: repeat(2, 1fr); }
+
+  .people-layout {
+    grid-template-columns: 1fr;
+    gap: 44px;
+  }
+  .people-heading {
+    max-width: 860px;
+    padding-top: 0;
+  }
+  .people-grid {
+    width: 100%;
+    max-width: none;
+  }
 }
 
 @media (max-width: 860px) {
+  .analysis-result-layout { gap: 34px; }
+  .analysis-result-heading { max-width: none; }
+  .analysis-result-heading h2 { max-width: none; }
   .analysis-result-flow,
   .product-portfolio-grid { grid-template-columns: 1fr; }
-  .analysis-result-step { min-height: 0; }
-  .product-portfolio-group { min-height: 0; }
-  .score-flow-note { align-items: flex-start; }
+  .analysis-result-step {
+    min-height: 0;
+    padding: 20px 18px 22px;
+  }
+  .analysis-result-step h3 {
+    margin: 24px 0 10px;
+    font-size: 19px;
+  }
+  .analysis-result-step p { font-size: 13px; }
+  .product-portfolio-group {
+    min-height: 0;
+    padding: 24px 20px;
+  }
+  .product-portfolio-group header {
+    min-height: 0;
+  }
+  .product-portfolio-group li {
+    font-size: 16px;
+  }
+  .score-flow-note {
+    width: 100%;
+    align-items: flex-start;
+  }
+
+  .people-layout { gap: 30px; }
+  .people-heading h2 { max-width: none; }
+  .people-heading .lead { max-width: none; }
+  .people-grid { gap: 22px; }
+  .person {
+    grid-template-columns: 112px minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+  }
+  .person-photo,
+  .person-photo.has-photo {
+    width: 112px;
+    aspect-ratio: 4 / 5;
+  }
+  .person-info {
+    min-width: 0;
+    padding-top: 14px;
+  }
+  .person-index { top: 16px; }
+  .person h3 { font-size: 20px; }
+  .person-description {
+    margin-top: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .metric-wall article {
+    min-height: 164px;
+    padding: 26px;
+  }
+  .metric-wall strong { font-size: 48px; }
+
+  .fade-up {
+    transform: translateY(12px);
+    transition-duration: .42s, .48s;
+  }
+}
+
+@media (max-width: 560px) {
+  .person {
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: 14px;
+  }
+  .person-photo,
+  .person-photo.has-photo {
+    width: 96px;
+  }
+  .person-role { font-size: 11px; }
+  .person-description { font-size: 11px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-up {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
 }
