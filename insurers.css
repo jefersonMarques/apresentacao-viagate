@@ -17,23 +17,20 @@
 
 .insurers-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 0;
   width: 100%;
-  border-top: 1px solid var(--line-light);
-  border-left: 1px solid var(--line-light);
+  border-top: 1px solid #c9d5dc;
+  border-left: 1px solid #c9d5dc;
   background: #ffffff;
-}
-
-.insurer-card,
-.insurers-grid::after {
-  min-height: 126px;
-  background: #ffffff;
-  border-right: 1px solid var(--line-light);
-  border-bottom: 1px solid var(--line-light);
 }
 
 .insurer-card {
+  grid-column: span 2;
+  min-height: 126px;
+  background: #ffffff;
+  border-right: 1px solid #c9d5dc;
+  border-bottom: 1px solid #c9d5dc;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -41,9 +38,9 @@
   overflow: hidden;
 }
 
-.insurers-grid::after {
-  content: "";
-  display: block;
+.insurer-card:nth-last-child(2),
+.insurer-card:last-child {
+  grid-column: span 3;
 }
 
 .insurer-card img {
@@ -65,6 +62,22 @@
   max-height: 52px;
 }
 
+/* Reforça as divisórias do fluxo claro da página 4. */
+.analysis-result-flow {
+  border-top-color: #c9d5dc;
+  border-left-color: #c9d5dc;
+}
+
+.analysis-result-step {
+  border-right-color: #c9d5dc;
+  border-bottom-color: #c9d5dc;
+}
+
+.analysis-result-step.is-final {
+  border-right-color: #9fcfb6;
+  border-bottom-color: #9fcfb6;
+}
+
 @media (max-width: 1240px) {
   .insurers-layout {
     gap: 30px;
@@ -74,12 +87,7 @@
     max-width: 900px;
   }
 
-  .insurers-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .insurer-card,
-  .insurers-grid::after {
+  .insurer-card {
     min-height: 116px;
   }
 }
@@ -100,8 +108,14 @@
   }
 
   .insurer-card,
-  .insurers-grid::after {
+  .insurer-card:nth-last-child(2),
+  .insurer-card:last-child {
+    grid-column: auto;
     min-height: 104px;
+  }
+
+  .insurer-card:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
   }
 
   .insurer-card {
@@ -119,13 +133,16 @@
     grid-template-columns: 1fr;
   }
 
-  .insurer-card {
+  .insurer-card,
+  .insurer-card:nth-last-child(2),
+  .insurer-card:last-child,
+  .insurer-card:last-child:nth-child(odd) {
+    grid-column: auto;
     min-height: 90px;
-    padding: 16px;
   }
 
-  .insurers-grid::after {
-    display: none;
+  .insurer-card {
+    padding: 16px;
   }
 
   .insurer-card img {
@@ -156,18 +173,20 @@
   }
 
   .insurers-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
     gap: 0 !important;
   }
 
-  .insurer-card,
-  .insurers-grid::after {
-    min-height: 76px !important;
-  }
-
   .insurer-card {
+    grid-column: span 2 !important;
+    min-height: 76px !important;
     padding: 10px 12px !important;
     break-inside: avoid !important;
+  }
+
+  .insurer-card:nth-last-child(2),
+  .insurer-card:last-child {
+    grid-column: span 3 !important;
   }
 
   .insurer-card img {
