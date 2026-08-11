@@ -254,6 +254,26 @@ function insertInsurersSlide() {
 
   loadInsurerStyles();
 
+  const insurers = [
+    { name: 'Allianz', src: './assets/insurers/color/allianz-logo.svg', className: 'logo-wide' },
+    { name: 'AXA', src: './assets/insurers/color/axa-logo.svg', className: 'logo-tall' },
+    { name: 'Chubb', src: './assets/insurers/color/chubb-logo.svg', className: 'logo-wide' },
+    { name: 'HDI Seguros', src: './assets/insurers/color/hdi-seguros-logo.svg', className: '' },
+    { name: 'Porto Seguro', src: './assets/insurers/color/porto-seguro-logo.svg', className: '' },
+    { name: 'Mapfre', src: './assets/insurers/color/Mapfre_logo.svg', className: 'logo-tall' },
+    { name: 'Liberty Seguros', src: './assets/insurers/color/liberty-seguros.svg', className: 'logo-tall' },
+    { name: 'Grupo Sura', src: './assets/insurers/color/sura_logo.svg', className: '' },
+    { name: 'Swiss Re', src: './assets/insurers/color/Swiss_Re_2013_logo.svg', className: 'logo-wide' },
+    { name: 'Akad Seguros', src: './assets/insurers/color/akad-logo.svg', className: 'logo-wide' },
+    { name: 'FF Seguros', src: './assets/insurers/color/ff-logo.svg', className: 'logo-wide' },
+  ];
+
+  const cards = insurers.map(({ name, src, className }) => `
+    <article class="insurer-card ${className}">
+      <img src="${src}" alt="${name}" loading="lazy" decoding="async" />
+    </article>
+  `).join('');
+
   const section = document.createElement('section');
   section.className = 'slide slide-light insurers-slide';
   section.id = 'slide-insurers';
@@ -265,9 +285,9 @@ function insertInsurersSlide() {
         <h2>Empresas do mercado securitário que <span>confiam na ViaGate.</span></h2>
         <p class="lead dark-lead">Relacionamentos construídos com empresas que exigem segurança, rastreabilidade e consistência operacional.</p>
       </div>
-      <figure class="insurers-wall">
-        <img src="./assets/insurers-grid.svg" alt="Seguradoras e empresas do mercado securitário que confiam na ViaGate" loading="lazy" decoding="async" />
-      </figure>
+      <div class="insurers-grid" aria-label="Seguradoras e empresas do mercado securitário que confiam na ViaGate">
+        ${cards}
+      </div>
     </div>
     <div class="slide-footer dark-footer"><span>Mercado securitário</span><span></span></div>
   `;
@@ -334,7 +354,7 @@ function initializeFadeUpAnimations() {
     '.operation-steps > div',
     '.integration-cards article',
     '.metric-wall article',
-    '.insurers-wall',
+    '.insurer-card',
     '.person',
     '.closing-layout > *',
   ];
