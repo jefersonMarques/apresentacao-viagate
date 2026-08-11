@@ -10,6 +10,18 @@ function loadEnhancementStyles() {
   document.head.appendChild(link);
 }
 
+function loadInsurerStyles() {
+  if (document.querySelector('link[data-viagate-insurers]')) {
+    return;
+  }
+
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = './insurers.css';
+  link.dataset.viagateInsurers = 'true';
+  document.head.appendChild(link);
+}
+
 function updateAnalysisResultSlide() {
   const slide = document.querySelector('#slide-04');
   const content = slide?.querySelector('.slide-inner');
@@ -230,8 +242,57 @@ function updateMarketProofCopy() {
   }
 }
 
+function insertInsurersSlide() {
+  if (document.querySelector('#slide-insurers')) {
+    return;
+  }
+
+  const teamSlide = document.querySelector('#slide-14');
+  if (!teamSlide) {
+    return;
+  }
+
+  loadInsurerStyles();
+
+  const section = document.createElement('section');
+  section.className = 'slide slide-light insurers-slide';
+  section.id = 'slide-insurers';
+  section.dataset.slide = '14';
+  section.innerHTML = `
+    <div class="slide-inner insurers-layout">
+      <div class="section-copy insurers-heading">
+        <p class="kicker dark-kicker">MERCADO SECURITÁRIO</p>
+        <h2>Empresas do mercado securitário que <span>confiam na ViaGate.</span></h2>
+        <p class="lead dark-lead">Relacionamentos construídos com empresas que exigem segurança, rastreabilidade e consistência operacional.</p>
+      </div>
+      <figure class="insurers-wall">
+        <img src="./assets/insurers-grid.svg" alt="Seguradoras e empresas do mercado securitário que confiam na ViaGate" loading="lazy" decoding="async" />
+      </figure>
+    </div>
+    <div class="slide-footer dark-footer"><span>Mercado securitário</span><span></span></div>
+  `;
+
+  teamSlide.before(section);
+}
+
+function renumberSlides() {
+  const allSlides = Array.from(document.querySelectorAll('[data-slide]'));
+  const total = allSlides.length;
+
+  allSlides.forEach((slide, index) => {
+    const number = index + 1;
+    slide.dataset.slide = String(number);
+    slide.id = `slide-${String(number).padStart(2, '0')}`;
+
+    const counter = slide.querySelector('.slide-footer span:last-child');
+    if (counter) {
+      counter.textContent = `${String(number).padStart(2, '0')} / ${String(total).padStart(2, '0')}`;
+    }
+  });
+}
+
 function updateTeamSlide() {
-  const slide = document.querySelector('#slide-14');
+  const slide = document.querySelector('#slide-15');
   const people = Array.from(slide?.querySelectorAll('.person') ?? []);
   const photoByName = new Map([
     ['Antônio Santos', './assets/antonio-photo.svg'],
@@ -273,6 +334,7 @@ function initializeFadeUpAnimations() {
     '.operation-steps > div',
     '.integration-cards article',
     '.metric-wall article',
+    '.insurers-wall',
     '.person',
     '.closing-layout > *',
   ];
@@ -315,6 +377,8 @@ function applyPresentationEnhancements() {
   updateProductPortfolioSlide();
   updateOperationalCopy();
   updateMarketProofCopy();
+  insertInsurersSlide();
+  renumberSlides();
   updateTeamSlide();
 }
 
