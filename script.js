@@ -22,6 +22,89 @@ function loadInsurerStyles() {
   document.head.appendChild(link);
 }
 
+function loadHeroV2Styles() {
+  if (document.querySelector('link[data-viagate-hero-v2]')) {
+    return;
+  }
+
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = './hero-v2.css';
+  link.dataset.viagateHeroV2 = 'true';
+  document.head.appendChild(link);
+}
+
+function updateHeroSlide() {
+  const slide = document.querySelector('#slide-01');
+  const original = slide?.querySelector(':scope > .slide-inner');
+
+  if (!slide || !original || slide.querySelector('.hero-v2-layout')) {
+    return;
+  }
+
+  original.classList.add('hero-original', 'is-hidden');
+  original.setAttribute('aria-hidden', 'true');
+
+  const hero = document.createElement('div');
+  hero.className = 'slide-inner hero-v2-layout';
+  hero.innerHTML = `
+    <div class="hero-v2-copy">
+      <p class="kicker">RESPEITAMOS SEU TEMPO</p>
+      <h1>O que fazemos<br /><span>e o que oferecemos?</span></h1>
+      <p class="hero-v2-statement">A ViaGate é uma empresa de tecnologia para gestão de risco em operações logísticas.</p>
+      <p class="lead">Usamos tecnologia própria para validar pessoas, consultar informações relevantes e apoiar decisões antes e durante a operação.</p>
+    </div>
+
+    <div class="hero-v2-panel">
+      <div class="hero-v2-panel-head">
+        <span>SOLUÇÕES</span>
+        <small>Visão rápida da ViaGate</small>
+      </div>
+
+      <div class="hero-v2-grid">
+        <article class="hero-v2-card">
+          <div class="hero-v2-card-head"><i data-lucide="scan-face"></i><span>01</span></div>
+          <div><h3>Biometria facial</h3><p>Com prova de vida</p></div>
+        </article>
+        <article class="hero-v2-card">
+          <div class="hero-v2-card-head"><i data-lucide="badge-check"></i><span>02</span></div>
+          <div><h3>Análise cadastral</h3><p>Automatizada</p></div>
+        </article>
+        <article class="hero-v2-card">
+          <div class="hero-v2-card-head"><i data-lucide="scale"></i><span>03</span></div>
+          <div><h3>Análise de processos</h3><p>Judiciais e contexto de risco</p></div>
+        </article>
+        <article class="hero-v2-card">
+          <div class="hero-v2-card-head"><i data-lucide="car-front"></i><span>04</span></div>
+          <div><h3>Veículos e proprietários</h3><p>Validação integrada</p></div>
+        </article>
+        <article class="hero-v2-card">
+          <div class="hero-v2-card-head"><i data-lucide="truck"></i><span>05</span></div>
+          <div><h3>CNH · ANTT · RNTRC</h3><p>Consultas integradas</p></div>
+        </article>
+        <article class="hero-v2-card hero-v2-card-accent">
+          <div class="hero-v2-card-head"><i data-lucide="shield-check"></i><span>06</span></div>
+          <div><h3>Cargo Score</h3><p>Decisão operacional</p></div>
+        </article>
+      </div>
+
+      <div class="hero-v2-panel-footer">
+        <div class="hero-v2-proof">
+          <div><strong>300+</strong><span>clientes diretos</span></div>
+          <div><strong>5 anos</strong><span>de empresa</span></div>
+          <div><strong>100%</strong><span>tecnologia própria</span></div>
+        </div>
+        <div class="hero-v2-next">
+          <span>Conheça os detalhes ao longo da apresentação.</span>
+          <i data-lucide="arrow-down"></i>
+        </div>
+      </div>
+    </div>
+  `;
+
+  slide.insertBefore(hero, original);
+}
+
 function updateAnalysisResultSlide() {
   const slide = document.querySelector('#slide-04');
   const content = slide?.querySelector('.slide-inner');
@@ -337,6 +420,10 @@ function updateTeamSlide() {
 function initializeFadeUpAnimations() {
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const selectors = [
+    '.hero-v2-copy',
+    '.hero-v2-card',
+    '.hero-v2-proof > div',
+    '.hero-v2-next',
     '.hero-copy',
     '.hero-media',
     '.section-copy',
@@ -391,6 +478,8 @@ function initializeFadeUpAnimations() {
 
 function applyPresentationEnhancements() {
   loadEnhancementStyles();
+  loadHeroV2Styles();
+  updateHeroSlide();
   updateAnalysisResultSlide();
   updateScoreStepsSlide();
   updateConsultationCopy();
