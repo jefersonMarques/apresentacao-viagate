@@ -1,31 +1,36 @@
 .insurers-layout {
-  grid-template-columns: .72fr 1.28fr;
-  gap: 78px;
-  align-items: center;
+  align-content: start;
+  gap: 34px;
 }
 
 .insurers-heading {
-  max-width: 560px;
+  max-width: 980px;
 }
 
-.insurers-heading h2,
+.insurers-heading h2 {
+  max-width: 980px;
+}
+
 .insurers-heading .lead {
-  max-width: none;
+  max-width: 760px;
 }
 
 .insurers-grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 0;
   width: 100%;
-  align-self: center;
+  border-top: 1px solid var(--line-light);
+  border-left: 1px solid var(--line-light);
+  background: #ffffff;
 }
 
 .insurer-card {
-  grid-column: span 2;
-  min-height: 112px;
+  grid-column: span 3;
+  min-height: 126px;
   background: #ffffff;
-  border: 1px solid var(--line-light);
+  border-right: 1px solid var(--line-light);
+  border-bottom: 1px solid var(--line-light);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -33,81 +38,83 @@
   overflow: hidden;
 }
 
-.insurer-card:nth-last-child(2) {
-  grid-column: 2 / span 2;
-}
-
-.insurer-card:last-child {
-  grid-column: 4 / span 2;
+.insurer-card:nth-last-child(-n + 3) {
+  grid-column: span 4;
 }
 
 .insurer-card img {
   display: block;
   width: auto;
   height: auto;
-  max-width: 80%;
-  max-height: 48px;
+  max-width: 78%;
+  max-height: 44px;
   object-fit: contain;
 }
 
-.insurer-card.logo-tall img {
-  max-width: 72%;
-  max-height: 56px;
+.insurer-card.logo-wide img {
+  max-width: 84%;
+  max-height: 40px;
 }
 
-.insurer-card.logo-wide img {
-  max-width: 86%;
-  max-height: 44px;
+.insurer-card.logo-tall img {
+  max-width: 70%;
+  max-height: 52px;
 }
 
 @media (max-width: 1240px) {
   .insurers-layout {
-    grid-template-columns: 1fr;
-    gap: 44px;
+    gap: 30px;
   }
 
   .insurers-heading {
-    max-width: 880px;
+    max-width: 900px;
   }
 
   .insurers-grid {
     grid-template-columns: repeat(6, minmax(0, 1fr));
-    max-width: 1040px;
   }
 
-  .insurer-card {
-    min-height: 104px;
+  .insurer-card,
+  .insurer-card:nth-last-child(-n + 3) {
+    grid-column: span 2;
+    min-height: 116px;
+  }
+
+  .insurer-card:nth-last-child(-n + 2) {
+    grid-column: span 3;
   }
 }
 
 @media (max-width: 860px) {
   .insurers-layout {
     align-content: start;
-    gap: 28px;
+    gap: 26px;
+  }
+
+  .insurers-heading h2,
+  .insurers-heading .lead {
+    max-width: none;
   }
 
   .insurers-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
   }
 
   .insurer-card,
-  .insurer-card:nth-last-child(2),
-  .insurer-card:last-child {
-    grid-column: auto;
-    min-height: 96px;
+  .insurer-card:nth-last-child(-n + 3),
+  .insurer-card:nth-last-child(-n + 2) {
+    grid-column: span 1;
+    min-height: 104px;
     padding: 18px;
   }
 
   .insurer-card:last-child:nth-child(odd) {
     grid-column: 1 / -1;
-    width: calc(50% - 6px);
-    justify-self: center;
   }
 
   .insurer-card img {
-    max-width: 84%;
-    max-height: 42px;
+    max-width: 82%;
+    max-height: 40px;
   }
 }
 
@@ -117,62 +124,59 @@
   }
 
   .insurer-card,
+  .insurer-card:nth-last-child(-n + 3),
+  .insurer-card:nth-last-child(-n + 2),
   .insurer-card:last-child:nth-child(odd) {
     grid-column: auto;
-    width: 100%;
-    min-height: 86px;
+    min-height: 90px;
+    padding: 16px;
   }
 
   .insurer-card img {
-    max-width: 78%;
-    max-height: 38px;
+    max-width: 76%;
+    max-height: 36px;
   }
 }
 
 @media print {
   .insurers-layout {
-    grid-template-columns: .72fr 1.28fr !important;
-    gap: 36px !important;
-    align-items: center !important;
+    align-content: start !important;
+    gap: 18px !important;
   }
 
   .insurers-heading {
-    max-width: 320px !important;
+    max-width: 760px !important;
   }
 
   .insurers-heading h2 {
-    font-size: 32px !important;
-    line-height: .98 !important;
+    font-size: 34px !important;
+    line-height: 1 !important;
   }
 
   .insurers-heading .lead {
     margin-top: 10px !important;
-    font-size: 11px !important;
+    font-size: 12px !important;
     line-height: 1.35 !important;
   }
 
   .insurers-grid {
-    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
-    gap: 7px !important;
+    grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+    gap: 0 !important;
   }
 
   .insurer-card {
-    grid-column: span 2 !important;
-    min-height: 66px !important;
+    grid-column: span 3 !important;
+    min-height: 76px !important;
     padding: 10px 12px !important;
     break-inside: avoid !important;
   }
 
-  .insurer-card:nth-last-child(2) {
-    grid-column: 2 / span 2 !important;
-  }
-
-  .insurer-card:last-child {
-    grid-column: 4 / span 2 !important;
+  .insurer-card:nth-last-child(-n + 3) {
+    grid-column: span 4 !important;
   }
 
   .insurer-card img {
-    max-width: 80% !important;
-    max-height: 31px !important;
+    max-width: 76% !important;
+    max-height: 28px !important;
   }
 }
