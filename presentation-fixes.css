@@ -388,18 +388,19 @@
   }
 }
 
-/* O PDF funciona como uma captura proporcional da apresentação dentro de A4 retrato. */
+/* Exportação contínua: uma única página longa, sem quebras entre as seções. */
 @page {
-  size: A4 portrait;
+  size: 297mm 2840.0625mm;
   margin: 0;
 }
 
 @media print {
   html,
   body {
-    width: 210mm !important;
-    min-width: 210mm !important;
-    height: auto !important;
+    width: 297mm !important;
+    min-width: 297mm !important;
+    height: 2840.0625mm !important;
+    min-height: 2840.0625mm !important;
     margin: 0 !important;
     padding: 0 !important;
     overflow: visible !important;
@@ -414,28 +415,27 @@
   }
 
   .presentation {
-    width: 210mm !important;
+    width: 297mm !important;
+    height: 2840.0625mm !important;
     margin: 0 !important;
     padding: 0 !important;
   }
 
   .slide {
     position: relative !important;
-    width: 210mm !important;
-    height: 297mm !important;
-    min-height: 297mm !important;
-    max-height: 297mm !important;
+    width: 297mm !important;
+    height: 167.0625mm !important;
+    min-height: 167.0625mm !important;
+    max-height: 167.0625mm !important;
     margin: 0 !important;
+    padding: 0 !important;
     overflow: hidden !important;
-    break-after: page !important;
-    page-break-after: always !important;
-    break-inside: avoid !important;
-    page-break-inside: avoid !important;
-  }
-
-  .slide:last-child {
     break-after: auto !important;
     page-break-after: auto !important;
+    break-before: auto !important;
+    page-break-before: auto !important;
+    break-inside: auto !important;
+    page-break-inside: auto !important;
   }
 
   .slide-dark {
@@ -466,7 +466,7 @@
     margin: 0 !important;
     padding: 64px 32px 42px !important;
     overflow: hidden !important;
-    transform: translate(-50%, -50%) scale(.575) !important;
+    transform: translate(-50%, -50%) scale(.877) !important;
     transform-origin: center center !important;
   }
 
@@ -477,9 +477,9 @@
   }
 
   .slide-footer {
-    left: 12mm !important;
-    right: 12mm !important;
-    bottom: 9mm !important;
+    left: 10mm !important;
+    right: 10mm !important;
+    bottom: 5mm !important;
     z-index: 3 !important;
     font-size: 8px !important;
   }
