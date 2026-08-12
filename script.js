@@ -49,54 +49,47 @@ function updateHeroSlide() {
   hero.className = 'slide-inner hero-v2-layout';
   hero.innerHTML = `
     <div class="hero-v2-copy">
-      <p class="kicker">RESPEITAMOS SEU TEMPO</p>
-      <h1>O que fazemos<br /><span>e o que oferecemos?</span></h1>
-      <p class="hero-v2-statement">A ViaGate é uma empresa de tecnologia para gestão de risco em operações logísticas.</p>
-      <p class="lead">Usamos tecnologia própria para validar pessoas, consultar informações relevantes e apoiar decisões antes e durante a operação.</p>
+      <p class="kicker">VISÃO EXECUTIVA</p>
+      <h1>Validação, análise de risco<br /><span>e operação logística.</span></h1>
+      <p class="hero-v2-statement">Um único ecossistema para identificar quem está na operação, apoiar a decisão e acompanhar a viagem.</p>
+      <p class="lead">Tecnologia própria para validar pessoas, consultar informações relevantes e tornar o processo mais seguro, rastreável e eficiente.</p>
     </div>
 
     <div class="hero-v2-panel">
       <div class="hero-v2-panel-head">
-        <span>SOLUÇÕES</span>
-        <small>Visão rápida da ViaGate</small>
+        <span>COMO A VIAGATE ATUA</span>
+        <small>Três pilares da operação</small>
       </div>
 
       <div class="hero-v2-grid">
         <article class="hero-v2-card">
           <div class="hero-v2-card-head"><i data-lucide="scan-face"></i><span>01</span></div>
-          <div><h3>Biometria facial</h3><p>Com prova de vida</p></div>
-        </article>
-        <article class="hero-v2-card">
-          <div class="hero-v2-card-head"><i data-lucide="badge-check"></i><span>02</span></div>
-          <div><h3>Análise cadastral</h3><p>Automatizada</p></div>
-        </article>
-        <article class="hero-v2-card">
-          <div class="hero-v2-card-head"><i data-lucide="scale"></i><span>03</span></div>
-          <div><h3>Análise de processos</h3><p>Judiciais e contexto de risco</p></div>
-        </article>
-        <article class="hero-v2-card">
-          <div class="hero-v2-card-head"><i data-lucide="car-front"></i><span>04</span></div>
-          <div><h3>Veículos e proprietários</h3><p>Validação integrada</p></div>
-        </article>
-        <article class="hero-v2-card">
-          <div class="hero-v2-card-head"><i data-lucide="truck"></i><span>05</span></div>
-          <div><h3>CNH · ANTT · RNTRC</h3><p>Consultas integradas</p></div>
+          <div>
+            <h3>Validação</h3>
+            <p>Biometria com prova de vida, identidade, CNH, ANTT e RNTRC.</p>
+          </div>
         </article>
         <article class="hero-v2-card hero-v2-card-accent">
-          <div class="hero-v2-card-head"><i data-lucide="shield-check"></i><span>06</span></div>
-          <div><h3>Cargo Score</h3><p>Decisão operacional</p></div>
+          <div class="hero-v2-card-head"><i data-lucide="shield-check"></i><span>02</span></div>
+          <div>
+            <h3>Análise de risco</h3>
+            <p>Cargo Score, processos, veículo, proprietário e regras operacionais.</p>
+          </div>
+        </article>
+        <article class="hero-v2-card">
+          <div class="hero-v2-card-head"><i data-lucide="route"></i><span>03</span></div>
+          <div>
+            <h3>Operação</h3>
+            <p>Cargo Truck, rastreamento, eventos e Plataforma Cargo durante a viagem.</p>
+          </div>
         </article>
       </div>
 
       <div class="hero-v2-panel-footer">
         <div class="hero-v2-proof">
           <div><strong>300+</strong><span>clientes diretos</span></div>
-          <div><strong>5 anos</strong><span>de empresa</span></div>
+          <div><strong>30+ anos</strong><span>de experiência acumulada</span></div>
           <div><strong>100%</strong><span>tecnologia própria</span></div>
-        </div>
-        <div class="hero-v2-next">
-          <span>Conheça os detalhes ao longo da apresentação.</span>
-          <i data-lucide="arrow-down"></i>
         </div>
       </div>
     </div>
