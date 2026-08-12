@@ -287,3 +287,236 @@ function applyExecutivePresentation() {
 }
 
 applyExecutivePresentation();
+
+const analysisMetricsConfig = Object.freeze({
+  vehiclesBase: 154150,
+  peopleBase: 83350,
+  vehiclesPerDay: 420,
+  peoplePerDay: 250,
+  operatingHoursPerDay: 12,
+});
+
+function loadPresentationFixesStyles() {
+  if (document.querySelector('link[data-viagate-presentation-fixes]')) {
+    return;
+  }
+
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = './presentation-fixes.css';
+  link.dataset.viagatePresentationFixes = 'true';
+  document.head.appendChild(link);
+}
+
+function createAnalysisMetricsSlide() {
+  const existing = document.querySelector('.exec-analysis-metrics-slide');
+  if (existing) {
+    return existing;
+  }
+
+  const hero = document.querySelector('#slide-01');
+  if (!hero) {
+    return null;
+  }
+
+  const slide = document.createElement('section');
+  slide.className = 'slide slide-orange exec-analysis-metrics-slide';
+  slide.id = 'slide-analysis-metrics';
+  slide.dataset.slide = '2';
+  slide.innerHTML = `
+    <div class="slide-inner exec-analysis-metrics-layout">
+      <div class="exec-analysis-eyebrow">
+        <span>ESCALA OPERACIONAL</span>
+        <span>VOLUME CONSOLIDADO</span>
+      </div>
+
+      <div class="exec-analysis-main">
+        <span>ANÁLISES REALIZADAS</span>
+        <strong class="exec-analysis-total" data-analysis-total>237.500+</strong>
+        <p>Validações de pessoas e veículos realizadas pela ViaGate.</p>
+      </div>
+
+      <div class="exec-analysis-breakdown">
+        <div>
+          <small>VEÍCULOS</small>
+          <strong data-analysis-vehicles>154.150</strong>
+        </div>
+        <div>
+          <small>PESSOAS</small>
+          <strong data-analysis-people>83.350</strong>
+        </div>
+        <div class="exec-analysis-rate">
+          <small>RITMO MÉDIO</small>
+          <strong>≈ 670/dia</strong>
+          <span>≈ 56/hora · ≈ 1/minuto</span>
+        </div>
+      </div>
+
+      <div class="exec-analysis-footnote">
+        <span>Ritmo médio estimado com base em <strong>12 horas de operação diária.</strong></span>
+        <span>Os contadores evoluem conforme a média operacional informada.</span>
+      </div>
+    </div>
+    <div class="slide-footer orange-footer"><span>Escala operacional</span><span></span></div>
+  `;
+
+  hero.after(slide);
+  return slide;
+}
+
+function renumberExecutiveSlides() {
+  const slides = Array.from(document.querySelectorAll('[data-slide]'));
+  const total = slides.length;
+
+  slides.forEach((slide, index) => {
+    const number = index + 1;
+    slide.dataset.slide = String(number);
+    slide.id = `slide-${String(number).padStart(2, '0')}`;
+
+    const counter = slide.querySelector('.slide-footer span:last-child');
+    if (counter) {
+      counter.textContent = `${String(number).padStart(2, '0')} / ${String(total).padStart(2, '0')}`;
+    }
+  });
+}
+
+function formatAnalysisMetric(value) {
+  return new Intl.NumberFormat('pt-BR').format(value);
+}
+
+function initializeAnalysisMetrics(slide) {
+  if (!slide || slide.dataset.metricsInitialized === 'true') {
+    return;
+  }
+
+  slide.dataset.metricsInitialized = 'true';
+
+  const totalElement = slide.querySelector('[data-analysis-total]');
+  const vehiclesElement = slide.querySelector('[data-analysis-vehicles]');
+  const peopleElement = slide.querySelector('[data-analysis-people]');
+  const startedAt = Date.now();
+  const operatingMilliseconds = analysisMetricsConfig.operatingHoursPerDay * 60 * 60 * 1000;
+  const vehicleInterval = operatingMilliseconds / analysisMetricsConfig.vehiclesPerDay;
+  const peopleInterval = operatingMilliseconds / analysisMetricsConfig.peoplePerDay;
+
+  const render = () => {
+    const elapsed = Date.now() - startedAt;
+    const vehicles = analysisMetricsConfig.vehiclesBase + Math.floor(elapsed / vehicleInterval);
+    const people = analysisMetricsConfig.peopleBase + Math.floor(elapsed / peopleInterval);
+    const total = vehicles + people;
+
+    if (vehiclesElement) {
+      vehiclesElement.textContent = formatAnalysisMetric(vehicles);
+    }
+
+    if (peopleElement) {
+      peopleElement.textContent = formatAnalysisMetric(people);
+    }
+
+    if (totalElement) {
+      totalElement.textContent = `${formatAnalysisMetric(total)}+`;
+    }
+  };
+
+  render();
+  window.setInterval(render, 1000);
+
+  if (!('IntersectionObserver' in window)) {
+    slide.classList.add('is-active');
+    return;
+  }
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      slide.classList.toggle('is-active', entry.isIntersecting);
+    });
+  }, { threshold: 0.45 });
+
+  observer.observe(slide);
+}
+
+function getLivePresentationSlides() {
+  return Array.from(document.querySelectorAll('[data-slide]'));
+}
+
+function getLiveCurrentSlideIndex() {
+  const slides = getLivePresentationSlides();
+  const viewportCenter = window.scrollY + window.innerHeight / 2;
+  let currentIndex = 0;
+
+  slides.forEach((slide, index) => {
+    if (viewportCenter >= slide.offsetTop) {
+      currentIndex = index;
+    }
+  });
+
+  return currentIndex;
+}
+
+function goToLiveSlide(index) {
+  const slides = getLivePresentationSlides();
+  if (index < 0 || index >= slides.length) {
+    return;
+  }
+
+  slides[index].scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function syncLivePresentationState() {
+  const slides = getLivePresentationSlides();
+  if (!slides.length) {
+    return;
+  }
+
+  const currentIndex = getLiveCurrentSlideIndex();
+  const currentSlide = slides[currentIndex];
+  const progressBar = document.getElementById('progressBar');
+  const header = document.querySelector('.presentation-header');
+
+  if (progressBar) {
+    progressBar.style.width = `${((currentIndex + 1) / slides.length) * 100}%`;
+  }
+
+  if (header) {
+    header.dataset.theme = currentSlide.classList.contains('slide-light') ? 'light' : 'dark';
+  }
+}
+
+function initializeLivePresentationNavigation() {
+  window.addEventListener('keydown', (event) => {
+    const nextKeys = ['ArrowDown', 'PageDown', 'ArrowRight'];
+    const previousKeys = ['ArrowUp', 'PageUp', 'ArrowLeft'];
+
+    if (nextKeys.includes(event.key)) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      goToLiveSlide(getLiveCurrentSlideIndex() + 1);
+      return;
+    }
+
+    if (previousKeys.includes(event.key)) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      goToLiveSlide(getLiveCurrentSlideIndex() - 1);
+    }
+  }, { capture: true });
+
+  window.addEventListener('scroll', syncLivePresentationState, { passive: true });
+  window.addEventListener('resize', syncLivePresentationState);
+  syncLivePresentationState();
+}
+
+function applyAnalysisMetricsEnhancement() {
+  loadPresentationFixesStyles();
+  const slide = createAnalysisMetricsSlide();
+
+  if (!slide) {
+    return;
+  }
+
+  renumberExecutiveSlides();
+  initializeAnalysisMetrics(slide);
+  initializeLivePresentationNavigation();
+}
+
+applyAnalysisMetricsEnhancement();
