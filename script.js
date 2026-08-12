@@ -549,3 +549,8 @@ window.addEventListener('keydown', (event) => {
 window.addEventListener('scroll', updateProgress, { passive: true });
 window.addEventListener('resize', updateProgress);
 updateProgress();
+
+const executiveScript = document.createElement('script');
+executiveScript.src = './executive-v2.js';
+executiveScript.defer = false;
+document.body.appendChild(executiveScript);
