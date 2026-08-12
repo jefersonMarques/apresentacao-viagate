@@ -416,7 +416,7 @@ button { font: inherit; }
 .fraud-success-block { border-color: rgba(47,191,113,.24); }
 
 .ecosystem-layout { gap: 60px; }
-.ecosystem-copy h2 { max-width: 980px; }
+.ecosystem-copy h2 { max-width: 1200px; }
 .ecosystem-flow {
   display: grid;
   grid-template-columns: 1fr 86px 1fr 86px 1fr;

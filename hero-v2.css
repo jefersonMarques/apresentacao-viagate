@@ -237,7 +237,7 @@
 /* Sessão 3: usa a imagem real enviada no lugar do mock do telefone. */
 #slide-03 .phone-stage {
   min-height: 600px;
-  background: url('./assets/biometria-slide-03.svg') center / contain no-repeat;
+  background: url('./assets/biometria-slide-03.webp') center / contain no-repeat;
 }
 
 #slide-03 .phone-stage .phone-shell {
@@ -279,7 +279,7 @@
 .hero-v2-proof > div,
 .metric-wall,
 .metric-wall article {
-  margin: 0 !important;
+  margin: 0.5px !important;
 }
 
 @media (max-width: 1240px) {
