@@ -254,6 +254,7 @@ function updateProofSlide() {
       <article class="exec-proof-primary exec-animate"><small>CLIENTES DIRETOS</small><strong>300+</strong><span>empresas atendidas diretamente</span></article>
       <article class="exec-proof-metric exec-animate"><small>EXPERIÊNCIA</small><strong>30+ anos</strong><span>de experiência acumulada no mercado securitário, gerenciamento de riscos e rastreamento</span></article>
       <article class="exec-proof-metric exec-animate"><small>HISTÓRICO DE SEGURANÇA</small><strong>5 anos</strong><span>de operação com biometria e validação de CNH sem evento adverso registrado</span></article>
+      <article class="exec-proof-metric exec-animate"><small>TECNOLOGIA</small><strong>100%</strong><span>tecnologia própria, permitindo flexibilidade para atender diferentes operações</span></article>
       <article class="exec-proof-certification exec-animate"><i data-lucide="badge-check"></i><div><small>RECONHECIMENTO</small><strong>Auditada pela FENSEG</strong><span>e reconhecida pelas principais seguradoras.</span></div></article>
     </div>
   `);
