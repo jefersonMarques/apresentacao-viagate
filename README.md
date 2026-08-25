@@ -13,9 +13,11 @@ Apresentação institucional e área de propostas comerciais da ViaGate.
 
 A página principal utiliza uma camada de apresentação sobre o conteúdo institucional existente:
 
-- capa dedicada;
-- botão **Iniciar apresentação**;
-- Fullscreen API;
+- camada inicial sobre toda a apresentação com blur de fundo;
+- botão **Iniciar apresentação** centralizado;
+- entrada pela Fullscreen API;
+- ao sair da tela cheia, a apresentação é pausada e a camada retorna com **Continuar apresentação**;
+- retomada no mesmo slide em que a apresentação foi interrompida;
 - navegação por setas, Page Up/Page Down e roda do mouse;
 - `Home` para o primeiro slide;
 - `End` para o último slide;
@@ -23,8 +25,23 @@ A página principal utiliza uma camada de apresentação sobre o conteúdo insti
 - scrollbar e elementos com comportamento de site ocultos;
 - controles discretos que desaparecem quando o mouse fica inativo;
 - slide narrativo com um exemplo completo de operação;
-- contato comercial personalizado no encerramento;
+- slide final exclusivo para o contato comercial;
 - métricas exibidas como base consolidada, sem contador simulando tempo real.
+
+O contato exibido no último slide fica em `presentation-contact.js`, separado do conteúdo institucional. Isso permite trocar nome, cargo, foto, telefone, e-mail e WhatsApp do comercial sem alterar os slides.
+
+Exemplo:
+
+```javascript
+window.presentationContact = Object.freeze({
+  name: 'Antônio Santos',
+  role: 'Sócio-Diretor Comercial',
+  email: 'antonio.santos@viagate.com.br',
+  phone: '(41) 99962-3600',
+  whatsapp: '5541999623600',
+  photoUrl: './assets/antonio-photo.svg',
+});
+```
 
 O conteúdo institucional original foi preservado em `presentation-content.html`. O `index.html` funciona apenas como shell de apresentação e carrega as melhorias depois que os slides executivos existentes terminam de ser montados.
 
