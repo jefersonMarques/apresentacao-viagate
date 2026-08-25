@@ -8,12 +8,16 @@ import {
 const viewerState = {
   started: false,
   wheelLocked: false,
-  controlsTimer: null,
 };
 
 const loadingElement = document.getElementById('proposalLoading');
 const presentationElement = document.getElementById('proposalPresentation');
 const controlsElement = document.getElementById('proposalControls');
+const startButton = document.getElementById('proposalStartButton');
+const restartButton = document.getElementById('proposalRestartButton');
+const previousButton = document.querySelector('[data-proposal-previous]');
+const nextButton = document.querySelector('[data-proposal-next]');
+const counterElement = document.querySelector('[data-proposal-counter]');
 
 function escapeHtml(value) {
   const element = document.createElement('div');
@@ -34,33 +38,117 @@ function safeImageUrl(value) {
   }
 }
 
-function renderList(items, emptyText) {
-  if (!items?.length) {
-    return `<article class="proposal-content-card"><small>CONTEXTO</small><h3>${escapeHtml(emptyText)}</h3><p>Detalhamento a confirmar com o cliente.</p></article>`;
-  }
-
-  return items.map((item, index) => `
+function renderSimpleCards(items) {
+  return (items ?? []).map((item, index) => `
     <article class="proposal-content-card">
       <small>${String(index + 1).padStart(2, '0')}</small>
       <h3>${escapeHtml(item)}</h3>
-      <p>Item considerado na construção desta proposta comercial.</p>
     </article>
   `).join('');
 }
 
-function renderPricingRows(items) {
-  if (!items?.length) {
-    return '<tr><td colspan="4">Investimento a definir.</td></tr>';
+function getPricingModelCards(model) {
+  const perItem = {
+    eyebrow: 'MODELO 1',
+    title: 'Análise por item',
+    copy: 'Cada cadastro ou consulta é processado de forma individual. O investimento é aplicado individualmente ao motorista e ao veículo. Indicado para operações com frota, agregados e terceiros.',
+  };
+
+  const bundle = {
+    eyebrow: 'MODELO 2',
+    title: 'Análise por conjunto',
+    copy: 'Processamento unificado de motorista + veículos, incluindo cadastro ou consulta. O modelo simplifica o processo de análise em uma única composição.',
+  };
+
+  if (model === 'per_item') {
+    return [perItem];
   }
 
-  return items.map((item) => `
-    <tr>
-      <td>${escapeHtml(item.label)}</td>
-      <td>${item.is_optional ? 'Opcional' : 'Proposto'}</td>
-      <td>${escapeHtml(item.unit || '—')}</td>
-      <td>${formatCurrency(item.price)}</td>
-    </tr>
-  `).join('');
+  if (model === 'bundle') {
+    return [bundle];
+  }
+
+  if (model === 'item_and_bundle') {
+    return [perItem, bundle];
+  }
+
+  return [];
+}
+
+function resolveItemGroup(item) {
+  const configuredGroup = String(item.metadata?.group ?? '').trim();
+  if (configuredGroup) {
+    return configuredGroup;
+  }
+
+  const label = String(item.label ?? '').toLocaleLowerCase('pt-BR');
+
+  if (/autenticador|processo|vitimologia|antt/.test(label)) {
+    return 'Consultas e autenticação';
+  }
+
+  if (/multa|histórico veicular/.test(label)) {
+    return 'Prevenção';
+  }
+
+  if (/veículo fixo|viagem avulsa|autotrac|check list|checklist|monitoramento/.test(label)) {
+    return 'Monitoramento de veículos';
+  }
+
+  if (/primeira viagem|viagens subsequentes|rastreamento via aplicativo|cargo truck/.test(label)) {
+    return 'Aplicativo | Logística';
+  }
+
+  return 'Score | Análise cadastral';
+}
+
+function groupPricingItems(items) {
+  return (items ?? []).reduce((groups, item) => {
+    const group = resolveItemGroup(item);
+    if (!groups.has(group)) {
+      groups.set(group, []);
+    }
+    groups.get(group).push(item);
+    return groups;
+  }, new Map());
+}
+
+function renderPricingGroups(items) {
+  const groups = groupPricingItems(items);
+
+  return Array.from(groups.entries()).map(([group, groupItems]) => {
+    const allOptional = groupItems.every((item) => item.is_optional);
+    const rows = groupItems.map((item) => `
+      <tr>
+        <td>${escapeHtml(item.label)}</td>
+        <td>${escapeHtml(item.unit || '—')}</td>
+        <td>${item.is_optional ? 'Opcional' : 'Proposto'}</td>
+        <td>${formatCurrency(item.price)}</td>
+      </tr>
+    `).join('');
+
+    return `
+      <section class="proposal-price-group">
+        <header class="proposal-price-group-header">
+          <strong>${escapeHtml(group)}</strong>
+          ${allOptional ? '<span class="proposal-optional-label">Opcional</span>' : ''}
+        </header>
+        <table class="proposal-price-table">
+          <thead><tr><th>Item</th><th>Unidade</th><th>Status</th><th>Valor</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </section>
+    `;
+  }).join('');
+}
+
+function createSlide(content, theme = 'light', footerLabel = 'ViaGate') {
+  return `
+    <section class="proposal-slide ${theme}" data-proposal-slide>
+      ${content}
+      <div class="proposal-slide-footer"><span>${escapeHtml(footerLabel)}</span><span data-slide-number></span></div>
+    </section>
+  `;
 }
 
 function renderProposal(data) {
@@ -70,161 +158,151 @@ function renderProposal(data) {
   const client = content.client ?? {};
   const contact = content.contact ?? {};
   const salesperson = content.salesperson ?? {};
-  const clientLogoUrl = safeImageUrl(client.logo_url);
-  const salespersonPhotoUrl = safeImageUrl(salesperson.photo_url);
   const conditions = version.conditions?.items ?? [];
   const pricingItems = version.items ?? [];
-  const requiredItems = pricingItems.filter((item) => !item.is_optional);
-  const optionalItems = pricingItems.filter((item) => item.is_optional);
-  const expiredText = data.is_expired ? 'Proposta expirada' : `Válida até ${formatDate(proposal.valid_until)}`;
+  const modelCards = getPricingModelCards(version.pricing_model);
+  const clientLogoUrl = safeImageUrl(client.logo_url);
+  const salespersonPhotoUrl = safeImageUrl(salesperson.photo_url);
+  const slides = [];
 
-  document.title = `ViaGate — Proposta para ${client.company_name || 'cliente'}`;
+  document.title = client.company_name
+    ? `ViaGate — Proposta para ${client.company_name}`
+    : `ViaGate — ${proposal.title || 'Proposta Comercial'}`;
 
-  presentationElement.innerHTML = `
-    <section class="proposal-slide dark" data-proposal-slide>
-      <div class="proposal-slide-inner proposal-cover-grid">
-        <div>
-          <img class="proposal-cover-logo" src="../assets/logo-viagate-white.svg" alt="ViaGate" />
-          <p class="proposal-kicker">PROPOSTA COMERCIAL · VERSÃO ${String(version.version_number ?? 1).padStart(2, '0')}</p>
-          <h1>Preparada para<br /><span>${escapeHtml(client.company_name || 'sua operação')}</span></h1>
-          ${contact.name ? `<p class="proposal-lead">Aos cuidados de ${escapeHtml(contact.name)}${contact.role ? ` · ${escapeHtml(contact.role)}` : ''}.</p>` : '<p class="proposal-lead">Uma proposta construída para o contexto desta operação.</p>'}
-          ${clientLogoUrl ? `<img class="proposal-client-logo" src="${escapeHtml(clientLogoUrl)}" alt="${escapeHtml(client.company_name || 'Cliente')}" />` : ''}
-          <button class="proposal-start-button" type="button" data-proposal-start>Iniciar apresentação</button>
-        </div>
-        <aside class="proposal-person-card">
-          ${salespersonPhotoUrl ? `<img src="${escapeHtml(salespersonPhotoUrl)}" alt="${escapeHtml(salesperson.name || 'Comercial ViaGate')}" />` : ''}
-          <small>Apresentado por</small>
-          <strong>${escapeHtml(salesperson.name || 'ViaGate Comercial')}</strong>
-          <span>${escapeHtml(salesperson.role || 'Equipe Comercial')}</span>
-          ${salesperson.email ? `<span>${escapeHtml(salesperson.email)}</span>` : ''}
-          ${salesperson.phone ? `<span>${escapeHtml(salesperson.phone)}</span>` : ''}
-        </aside>
+  slides.push(createSlide(`
+    <div class="proposal-slide-inner proposal-cover-grid">
+      <div>
+        <img class="proposal-cover-logo" src="../assets/logo-viagate-white.svg" alt="ViaGate" />
+        <p class="proposal-kicker">PROPOSTA COMERCIAL · VERSÃO ${String(version.version_number ?? 1).padStart(2, '0')}</p>
+        <h1>${client.company_name ? `Preparada para<br /><span>${escapeHtml(client.company_name)}</span>` : escapeHtml(proposal.title || 'Proposta Comercial ViaGate')}</h1>
+        ${contact.name ? `<p class="proposal-lead">Aos cuidados de ${escapeHtml(contact.name)}${contact.role ? ` · ${escapeHtml(contact.role)}` : ''}</p>` : ''}
+        ${clientLogoUrl ? `<img class="proposal-client-logo" src="${escapeHtml(clientLogoUrl)}" alt="${escapeHtml(client.company_name || 'Cliente')}" />` : ''}
       </div>
-      <div class="proposal-slide-footer"><span>ViaGate</span><span>01</span></div>
-    </section>
+      <aside class="proposal-person-card">
+        ${salespersonPhotoUrl ? `<img src="${escapeHtml(salespersonPhotoUrl)}" alt="${escapeHtml(salesperson.name || 'Comercial ViaGate')}" />` : ''}
+        <small>APRESENTADO POR</small>
+        ${salesperson.name ? `<strong>${escapeHtml(salesperson.name)}</strong>` : ''}
+        ${salesperson.role ? `<span>${escapeHtml(salesperson.role)}</span>` : ''}
+        ${salesperson.email ? `<span>${escapeHtml(salesperson.email)}</span>` : ''}
+        ${salesperson.phone ? `<span>${escapeHtml(salesperson.phone)}</span>` : ''}
+      </aside>
+    </div>
+  `, 'dark', 'Proposta comercial'));
 
-    <section class="proposal-slide light" data-proposal-slide>
+  if (content.operation_context || content.customer_priorities?.length) {
+    slides.push(createSlide(`
       <div class="proposal-slide-inner">
         <div>
           <p class="proposal-kicker">CENÁRIO CONSIDERADO</p>
-          <h2>Partimos do contexto <span>da sua operação.</span></h2>
-          <p class="proposal-lead">${escapeHtml(content.operation_context || 'A proposta foi estruturada a partir das necessidades apresentadas durante a negociação.')}</p>
-          <div class="proposal-content-grid">
-            ${renderList(content.customer_priorities ?? [], 'Prioridades a confirmar')}
-          </div>
+          <h2>Contexto da <span>operação</span></h2>
+          ${content.operation_context ? `<p class="proposal-lead">${escapeHtml(content.operation_context)}</p>` : ''}
+          ${content.customer_priorities?.length ? `<div class="proposal-content-grid">${renderSimpleCards(content.customer_priorities)}</div>` : ''}
         </div>
       </div>
-      <div class="proposal-slide-footer"><span>Contexto</span><span>02</span></div>
-    </section>
+    `, 'light', 'Cenário considerado'));
+  }
 
-    <section class="proposal-slide dark" data-proposal-slide>
+  if (content.solution_title || content.solution_scope?.length) {
+    slides.push(createSlide(`
       <div class="proposal-slide-inner">
         <div>
           <p class="proposal-kicker">SOLUÇÃO PROPOSTA</p>
-          <h2>${escapeHtml(content.solution_title || 'Solução ViaGate')} <span>para esta operação.</span></h2>
-          <p class="proposal-lead">O escopo abaixo representa os componentes previstos para atender o cenário apresentado.</p>
-          <div class="proposal-content-grid">
-            ${renderList(content.solution_scope ?? [], 'Escopo em definição')}
-          </div>
+          ${content.solution_title ? `<h2>${escapeHtml(content.solution_title)}</h2>` : ''}
+          ${content.solution_scope?.length ? `<div class="proposal-content-grid">${renderSimpleCards(content.solution_scope)}</div>` : ''}
         </div>
       </div>
-      <div class="proposal-slide-footer"><span>Solução</span><span>03</span></div>
-    </section>
+    `, 'dark', 'Solução proposta'));
+  }
 
-    <section class="proposal-slide light" data-proposal-slide>
+  if (modelCards.length) {
+    slides.push(createSlide(`
       <div class="proposal-slide-inner">
         <div>
-          <p class="proposal-kicker">ESCOPO COMERCIAL</p>
-          <h2>O que está <span>incluído e opcional.</span></h2>
-          <div class="proposal-content-grid">
-            <article class="proposal-content-card">
-              <small>ITENS PROPOSTOS</small>
-              <h3>${requiredItems.length || 0} itens</h3>
-              <p>${escapeHtml(requiredItems.map((item) => item.label).join(' · ') || 'A definir')}</p>
-            </article>
-            <article class="proposal-content-card">
-              <small>ITENS OPCIONAIS</small>
-              <h3>${optionalItems.length || 0} itens</h3>
-              <p>${escapeHtml(optionalItems.map((item) => item.label).join(' · ') || 'Nenhum item opcional nesta versão')}</p>
-            </article>
-            <article class="proposal-content-card">
-              <small>MODELO COMERCIAL</small>
-              <h3>${escapeHtml(version.pricing_model_label || version.pricing_model || 'Personalizado')}</h3>
-              <p>Modelo utilizado como base para os valores desta versão.</p>
-            </article>
+          <p class="proposal-kicker">MODELO DE ANÁLISE CADASTRAL</p>
+          <h2>${version.pricing_model === 'item_and_bundle' ? 'Duas formas de <span>compor a análise</span>' : escapeHtml(modelCards[0].title)}</h2>
+          <div class="proposal-model-grid">
+            ${modelCards.map((model) => `
+              <article class="proposal-model-card">
+                <small>${escapeHtml(model.eyebrow)}</small>
+                <strong>${escapeHtml(model.title)}</strong>
+                <span>${escapeHtml(model.copy)}</span>
+              </article>
+            `).join('')}
           </div>
         </div>
       </div>
-      <div class="proposal-slide-footer"><span>Escopo</span><span>04</span></div>
-    </section>
+    `, 'light', 'Modelo comercial'));
+  }
 
-    <section class="proposal-slide dark" data-proposal-slide>
+  if (pricingItems.length || Number(version.minimum_invoice) > 0 || Number(version.setup_fee) > 0) {
+    slides.push(createSlide(`
       <div class="proposal-slide-inner">
         <div>
           <p class="proposal-kicker">INVESTIMENTO</p>
-          <h2>Valores desta <span>versão comercial.</span></h2>
-          <table class="proposal-price-table">
-            <thead><tr><th>Solução</th><th>Tipo</th><th>Unidade</th><th>Valor</th></tr></thead>
-            <tbody>${renderPricingRows(pricingItems)}</tbody>
-          </table>
-          <div class="proposal-highlight-grid">
-            <div class="proposal-highlight">
-              <small>Fatura mínima mensal</small>
-              <strong>${formatCurrency(version.minimum_invoice)}</strong>
-              <span>Quando aplicável à contratação.</span>
+          <h2>Valores da <span>proposta comercial</span></h2>
+          <p class="proposal-commercial-note">Os valores são aplicados de acordo com o uso e podem variar conforme o número de consultas realizadas, respeitando os valores definidos nesta proposta.</p>
+          ${pricingItems.length ? `<div class="proposal-price-groups">${renderPricingGroups(pricingItems)}</div>` : ''}
+          ${(Number(version.minimum_invoice) > 0 || Number(version.setup_fee) > 0) ? `
+            <div class="proposal-highlight-grid">
+              ${Number(version.minimum_invoice) > 0 ? `
+                <div class="proposal-highlight">
+                  <small>Fatura mínima mensal</small>
+                  <strong>${formatCurrency(version.minimum_invoice)}</strong>
+                </div>
+              ` : ''}
+              ${Number(version.setup_fee) > 0 ? `
+                <div class="proposal-highlight">
+                  <small>Implantação</small>
+                  <strong>${formatCurrency(version.setup_fee)}</strong>
+                </div>
+              ` : ''}
             </div>
-            <div class="proposal-highlight">
-              <small>Implantação</small>
-              <strong>${formatCurrency(version.setup_fee)}</strong>
-              <span>Valor previsto nesta versão.</span>
-            </div>
-          </div>
+          ` : ''}
         </div>
       </div>
-      <div class="proposal-slide-footer"><span>Investimento</span><span>05</span></div>
-    </section>
+    `, 'dark', 'Investimento'));
+  }
 
-    <section class="proposal-slide light" data-proposal-slide>
+  if (conditions.length || proposal.valid_until) {
+    const validityText = data.is_expired
+      ? `Expirada em ${formatDate(proposal.valid_until)}`
+      : `Válida até ${formatDate(proposal.valid_until)}`;
+
+    slides.push(createSlide(`
       <div class="proposal-slide-inner">
         <div>
-          <p class="proposal-kicker">CONDIÇÕES COMERCIAIS</p>
-          <h2>Condições desta <span>proposta.</span></h2>
-          <div class="proposal-content-grid">
-            ${renderList(conditions, 'Condições padrão')}
-            <article class="proposal-content-card">
-              <small>VALIDADE</small>
-              <h3>${escapeHtml(expiredText)}</h3>
-              <p>Versão ${escapeHtml(version.version_number ?? 1)} publicada em ${formatDate((version.published_at || '').slice(0, 10))}.</p>
-            </article>
-          </div>
+          <p class="proposal-kicker">OBSERVAÇÕES E CONDIÇÕES</p>
+          <h2>Condições <span>comerciais</span></h2>
+          ${conditions.length ? `<div class="proposal-content-grid">${renderSimpleCards(conditions)}</div>` : ''}
+          ${proposal.valid_until ? `<div class="proposal-validity"><strong>${escapeHtml(validityText)}</strong></div>` : ''}
         </div>
       </div>
-      <div class="proposal-slide-footer"><span>Condições</span><span>06</span></div>
-    </section>
+    `, 'light', 'Condições comerciais'));
+  }
 
-    <section class="proposal-slide orange" data-proposal-slide>
-      <div class="proposal-slide-inner proposal-cover-grid">
-        <div>
-          <p class="proposal-kicker" style="color:#fff">PRÓXIMOS PASSOS</p>
-          <h2>Vamos avançar com <span style="color:#071827">esta operação?</span></h2>
-          <p class="proposal-lead" style="color:rgba(255,255,255,.86)">O contato comercial responsável está disponível para revisar escopo, volumes, integrações e próximos passos.</p>
-        </div>
-        <aside class="proposal-person-card">
-          ${salespersonPhotoUrl ? `<img src="${escapeHtml(salespersonPhotoUrl)}" alt="${escapeHtml(salesperson.name || 'Comercial ViaGate')}" />` : ''}
-          <small>Contato comercial</small>
-          <strong>${escapeHtml(salesperson.name || 'ViaGate Comercial')}</strong>
-          <span>${escapeHtml(salesperson.role || 'Equipe Comercial')}</span>
-          ${salesperson.email ? `<span>${escapeHtml(salesperson.email)}</span>` : ''}
-          ${salesperson.phone ? `<span>${escapeHtml(salesperson.phone)}</span>` : ''}
-        </aside>
+  slides.push(createSlide(`
+    <div class="proposal-slide-inner proposal-contact-final">
+      <div>
+        <p class="proposal-kicker" style="color:#fff">CONTATO COMERCIAL</p>
+        <h2>${salesperson.name ? escapeHtml(salesperson.name) : 'ViaGate'}</h2>
+        ${salesperson.role ? `<p class="proposal-lead" style="color:rgba(255,255,255,.84)">${escapeHtml(salesperson.role)}</p>` : ''}
       </div>
-      <div class="proposal-slide-footer"><span>ViaGate</span><span>07</span></div>
-    </section>
-  `;
+      <aside class="proposal-contact-data">
+        ${salespersonPhotoUrl ? `<img src="${escapeHtml(salespersonPhotoUrl)}" alt="${escapeHtml(salesperson.name || 'ViaGate')}" />` : ''}
+        <small>CONTATO RESPONSÁVEL</small>
+        ${salesperson.name ? `<strong>${escapeHtml(salesperson.name)}</strong>` : ''}
+        ${salesperson.phone ? `<span>${escapeHtml(salesperson.phone)}</span>` : ''}
+        ${salesperson.email ? `<span>${escapeHtml(salesperson.email)}</span>` : ''}
+      </aside>
+    </div>
+  `, 'orange', 'Contato comercial'));
 
-  loadingElement.hidden = true;
+  presentationElement.innerHTML = slides.join('');
   presentationElement.hidden = false;
-  controlsElement.hidden = false;
+  loadingElement.hidden = true;
+  renumberSlides();
+  goToSlide(0, 'auto');
+  showGate('start');
 }
 
 function getSlides() {
@@ -245,88 +323,108 @@ function getCurrentSlideIndex() {
   return currentIndex;
 }
 
-function goToSlide(index) {
+function renumberSlides() {
   const slides = getSlides();
+  const total = slides.length;
+
+  slides.forEach((slide, index) => {
+    const element = slide.querySelector('[data-slide-number]');
+    if (element) {
+      element.textContent = `${String(index + 1).padStart(2, '0')} / ${String(total).padStart(2, '0')}`;
+    }
+  });
+
+  updateControls();
+}
+
+function goToSlide(index, behavior = 'smooth') {
+  const slides = getSlides();
+
   if (index < 0 || index >= slides.length) {
     return;
   }
 
-  slides[index].scrollIntoView({ behavior: 'smooth', block: 'start' });
+  slides[index].scrollIntoView({ behavior, block: 'start' });
+  window.setTimeout(updateControls, behavior === 'auto' ? 0 : 120);
 }
 
 function updateControls() {
   const slides = getSlides();
   const currentIndex = getCurrentSlideIndex();
-  const counter = document.querySelector('[data-proposal-counter]');
 
-  if (counter) {
-    counter.textContent = `${String(currentIndex + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}`;
-  }
+  counterElement.textContent = `${String(currentIndex + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}`;
+  previousButton.disabled = currentIndex <= 0;
+  nextButton.disabled = currentIndex >= slides.length - 1;
 }
 
-function showControls() {
-  if (!viewerState.started) {
-    return;
-  }
+function showGate(mode) {
+  document.body.classList.add('proposal-locked');
+  controlsElement.hidden = true;
 
-  document.body.classList.add('controls-visible');
-  window.clearTimeout(viewerState.controlsTimer);
-  viewerState.controlsTimer = window.setTimeout(() => {
-    document.body.classList.remove('controls-visible');
-  }, 2200);
+  const continuing = mode === 'continue';
+  startButton.textContent = continuing ? 'CONTINUAR APRESENTAÇÃO' : 'INICIAR APRESENTAÇÃO';
+  restartButton.hidden = !continuing;
+}
+
+function revealProposal() {
+  document.body.classList.remove('proposal-locked');
+  controlsElement.hidden = false;
+  restartButton.hidden = true;
+  updateControls();
 }
 
 async function startPresentation() {
-  viewerState.started = true;
-  document.body.classList.add('started');
-  showControls();
-
   try {
     if (!document.fullscreenElement) {
       await document.documentElement.requestFullscreen();
     }
+
+    viewerState.started = true;
+    revealProposal();
+    document.dispatchEvent(new CustomEvent('proposal:started'));
   } catch {
+    showGate(viewerState.started ? 'continue' : 'start');
   }
 }
 
-async function toggleFullscreen() {
-  if (document.fullscreenElement) {
-    await document.exitFullscreen();
-    return;
-  }
-
-  await document.documentElement.requestFullscreen();
+function restartPresentation() {
+  goToSlide(0, 'auto');
+  viewerState.started = false;
+  showGate('start');
+  document.dispatchEvent(new CustomEvent('proposal:restarted'));
 }
 
 function handleKeyboard(event) {
+  if (!viewerState.started || !document.fullscreenElement) {
+    return;
+  }
+
   if (['ArrowRight', 'ArrowDown', 'PageDown'].includes(event.key)) {
     event.preventDefault();
     goToSlide(getCurrentSlideIndex() + 1);
+    return;
   }
 
   if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(event.key)) {
     event.preventDefault();
     goToSlide(getCurrentSlideIndex() - 1);
+    return;
   }
 
   if (event.key === 'Home') {
     event.preventDefault();
     goToSlide(0);
+    return;
   }
 
   if (event.key === 'End') {
     event.preventDefault();
     goToSlide(getSlides().length - 1);
   }
-
-  if (event.key.toLowerCase() === 'f') {
-    event.preventDefault();
-    toggleFullscreen().catch(() => {});
-  }
 }
 
 function handleWheel(event) {
-  if (!viewerState.started || Math.abs(event.deltaY) < 18) {
+  if (!viewerState.started || !document.fullscreenElement || Math.abs(event.deltaY) < 18) {
     return;
   }
 
@@ -338,20 +436,33 @@ function handleWheel(event) {
 
   viewerState.wheelLocked = true;
   goToSlide(getCurrentSlideIndex() + (event.deltaY > 0 ? 1 : -1));
+
   window.setTimeout(() => {
     viewerState.wheelLocked = false;
   }, 720);
 }
 
 function bindViewerEvents() {
-  document.querySelector('[data-proposal-start]')?.addEventListener('click', startPresentation);
-  document.querySelector('[data-proposal-previous]')?.addEventListener('click', () => goToSlide(getCurrentSlideIndex() - 1));
-  document.querySelector('[data-proposal-next]')?.addEventListener('click', () => goToSlide(getCurrentSlideIndex() + 1));
-  document.querySelector('[data-proposal-fullscreen]')?.addEventListener('click', () => toggleFullscreen().catch(() => {}));
+  startButton.addEventListener('click', startPresentation);
+  restartButton.addEventListener('click', restartPresentation);
+  previousButton.addEventListener('click', () => goToSlide(getCurrentSlideIndex() - 1));
+  nextButton.addEventListener('click', () => goToSlide(getCurrentSlideIndex() + 1));
   window.addEventListener('keydown', handleKeyboard);
   window.addEventListener('wheel', handleWheel, { passive: false });
   window.addEventListener('scroll', updateControls, { passive: true });
-  window.addEventListener('mousemove', showControls, { passive: true });
+
+  document.addEventListener('fullscreenchange', () => {
+    if (document.fullscreenElement) {
+      if (viewerState.started) {
+        revealProposal();
+      }
+      return;
+    }
+
+    if (viewerState.started) {
+      showGate('continue');
+    }
+  });
 }
 
 function showLoadError(message) {
@@ -359,6 +470,8 @@ function showLoadError(message) {
 }
 
 async function initializeViewer() {
+  bindViewerEvents();
+
   if (!hasSupabaseConfiguration() || !supabase) {
     showLoadError('Proposta indisponível: Supabase ainda não configurado.');
     return;
@@ -380,8 +493,6 @@ async function initializeViewer() {
   }
 
   renderProposal(data);
-  bindViewerEvents();
-  updateControls();
 }
 
 initializeViewer();
