@@ -4,194 +4,20 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#071827" />
-  <title>ViaGate — Apresentação Institucional</title>
-  <meta name="description" content="Apresentação institucional ViaGate — validação, análise de risco e operação logística." />
-  <link rel="canonical" href="https://viagate.com.br/apresentacao" />
+  <meta name="robots" content="noindex,nofollow,noarchive" />
+  <title>ViaGate — Hub Comercial</title>
+  <meta http-equiv="refresh" content="0; url=./proposta/" />
   <style>
-    :root {
-      font-family: Inter, Arial, sans-serif;
-      color-scheme: dark;
-    }
-
-    html,
-    body {
-      width: 100%;
-      height: 100%;
-      margin: 0;
-      overflow: hidden;
-      background: #071827;
-    }
-
-    .presentation-frame {
-      display: block;
-      width: 100%;
-      height: 100%;
-      border: 0;
-      background: #071827;
-      transition: filter 280ms ease, transform 280ms ease;
-    }
-
-    body.presentation-host-paused .presentation-frame {
-      filter: blur(14px) brightness(.68);
-      transform: scale(1.012);
-      pointer-events: none;
-    }
-
-    .presentation-host-gate {
-      position: fixed;
-      inset: 0;
-      z-index: 1000;
-      display: grid;
-      place-items: center;
-      background: rgba(3, 14, 24, .18);
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
-      transition: opacity 220ms ease, visibility 220ms ease;
-    }
-
-    body.presentation-host-paused .presentation-host-gate {
-      opacity: 1;
-      visibility: visible;
-      pointer-events: auto;
-    }
-
-    .presentation-host-action {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 22px;
-    }
-
-    .presentation-host-button {
-      min-width: 290px;
-      min-height: 62px;
-      padding: 0 30px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border: 1px solid #ff6b18;
-      background: #ff6b18;
-      color: #fff;
-      cursor: pointer;
-      font: inherit;
-      font-size: 12px;
-      font-weight: 800;
-      letter-spacing: .14em;
-      text-transform: uppercase;
-      box-shadow: 0 18px 50px rgba(0, 0, 0, .24);
-      transition: background 180ms ease, transform 180ms ease, box-shadow 180ms ease;
-    }
-
-    .presentation-host-button:hover {
-      background: #df5208;
-      transform: translateY(-2px);
-      box-shadow: 0 22px 56px rgba(0, 0, 0, .3);
-    }
-
-    .presentation-host-button:focus-visible {
-      outline: 2px solid rgba(255, 255, 255, .9);
-      outline-offset: 4px;
-    }
-
-    .presentation-host-logo {
-      width: 128px;
-      height: auto;
-      opacity: .34;
-      filter: saturate(.8);
-      user-select: none;
-      pointer-events: none;
-    }
-
-    @media (max-width: 640px) {
-      .presentation-host-button {
-        min-width: min(290px, calc(100vw - 48px));
-      }
-
-      .presentation-host-logo {
-        width: 112px;
-      }
-    }
+    html,body{width:100%;height:100%;margin:0;background:#071827;color:#fff;font-family:Inter,Arial,sans-serif}.redirect{height:100%;display:grid;place-items:center;text-align:center}.redirect img{width:150px;opacity:.8;margin-bottom:22px}.redirect a{color:#ff6b18;text-decoration:none;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
   </style>
 </head>
-<body class="presentation-host-paused">
-  <iframe
-    class="presentation-frame"
-    id="presentationFrame"
-    src="./presentation-content.html?v=20260825-3"
-    title="Apresentação Institucional ViaGate"
-    allow="fullscreen"
-    allowfullscreen
-  ></iframe>
-
-  <div class="presentation-host-gate" id="presentationGate" role="dialog" aria-modal="true" aria-label="Iniciar apresentação">
-    <div class="presentation-host-action">
-      <button class="presentation-host-button" id="presentationStartButton" type="button">INICIAR APRESENTAÇÃO</button>
-      <img class="presentation-host-logo" src="./assets/logo-viagate-white.svg" alt="ViaGate" />
+<body>
+  <main class="redirect">
+    <div>
+      <img src="./assets/logo-viagate-white.svg" alt="ViaGate" />
+      <div><a href="./proposta/">Acessar Hub Comercial</a></div>
     </div>
-  </div>
-
-  <script>
-    const frame = document.getElementById('presentationFrame');
-    const startButton = document.getElementById('presentationStartButton');
-    let presentationStarted = false;
-
-    function showGate(mode) {
-      startButton.textContent = mode === 'continue'
-        ? 'CONTINUAR APRESENTAÇÃO'
-        : 'INICIAR APRESENTAÇÃO';
-
-      document.body.classList.add('presentation-host-paused');
-      frame.contentWindow?.hostPausePresentation?.();
-    }
-
-    function installPresentationBootstrap() {
-      const frameDocument = frame.contentDocument;
-
-      if (!frameDocument || frameDocument.querySelector('script[data-presentation-bootstrap]')) {
-        return;
-      }
-
-      const bootstrapScript = frameDocument.createElement('script');
-      bootstrapScript.src = './presentation-bootstrap.js?v=20260825-3';
-      bootstrapScript.dataset.presentationBootstrap = 'true';
-      frameDocument.body.appendChild(bootstrapScript);
-    }
-
-    frame.addEventListener('load', installPresentationBootstrap);
-
-    if (frame.contentDocument?.readyState === 'complete') {
-      installPresentationBootstrap();
-    }
-
-    startButton.addEventListener('click', async () => {
-      try {
-        if (!document.fullscreenElement) {
-          await document.documentElement.requestFullscreen();
-        }
-
-        const firstStart = !presentationStarted;
-        presentationStarted = true;
-        document.body.classList.remove('presentation-host-paused');
-        frame.contentWindow?.hostStartPresentation?.(firstStart);
-      } catch (error) {
-        console.warn('Não foi possível ativar a tela cheia automaticamente.', error);
-      }
-    });
-
-    document.addEventListener('fullscreenchange', () => {
-      if (document.fullscreenElement) {
-        document.body.classList.remove('presentation-host-paused');
-        frame.contentWindow?.hostStartPresentation?.(!presentationStarted);
-        return;
-      }
-
-      if (presentationStarted) {
-        showGate('continue');
-      }
-    });
-
-    showGate('start');
-  </script>
+  </main>
+  <script>window.location.replace('./proposta/');</script>
 </body>
 </html>
