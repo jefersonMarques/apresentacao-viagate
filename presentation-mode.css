@@ -1,0 +1,315 @@
+:root {
+  --presentation-control-bg: rgba(7, 24, 39, 0.88);
+  --presentation-control-border: rgba(255, 255, 255, 0.14);
+}
+
+html,
+body {
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;
+}
+
+body.presentation-shell {
+  overscroll-behavior-y: none;
+}
+
+body.presentation-shell .contact-whatsapp,
+body.presentation-shell .next-slide {
+  display: none !important;
+}
+
+body.presentation-shell .brand {
+  pointer-events: none;
+}
+
+.presentation-cover {
+  background:
+    radial-gradient(circle at 82% 20%, rgba(255, 107, 24, 0.16), transparent 30%),
+    linear-gradient(135deg, #071827 0%, #071827 56%, #0b2234 100%);
+}
+
+.presentation-cover::before,
+.presentation-cover::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.presentation-cover::before {
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: linear-gradient(to right, rgba(0, 0, 0, 0.8), transparent 82%);
+}
+
+.presentation-cover::after {
+  top: 0;
+  right: 10vw;
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(transparent, rgba(255, 107, 24, 0.7), transparent);
+}
+
+.presentation-cover-inner {
+  position: relative;
+  z-index: 1;
+  width: min(calc(100% - 120px), 1440px);
+  min-height: 100svh;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 96px;
+  align-items: center;
+  padding: 112px 0 86px;
+}
+
+.presentation-cover-brand {
+  width: 176px;
+  height: auto;
+  margin-bottom: 54px;
+}
+
+.presentation-cover-kicker {
+  margin: 0 0 22px;
+  color: #ff6b18;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.presentation-cover h1 {
+  max-width: 920px;
+  margin: 0;
+  font-size: clamp(54px, 6.2vw, 98px);
+  font-weight: 700;
+  letter-spacing: -0.065em;
+  line-height: 0.94;
+}
+
+.presentation-cover h1 span {
+  color: #ff6b18;
+}
+
+.presentation-cover-lead {
+  max-width: 720px;
+  margin: 30px 0 0;
+  color: #afbdc7;
+  font-size: clamp(17px, 1.3vw, 21px);
+  line-height: 1.58;
+}
+
+.presentation-cover-action {
+  align-self: end;
+  padding-bottom: 42px;
+}
+
+.presentation-start-button {
+  width: 100%;
+  min-height: 62px;
+  border: 1px solid rgba(255, 107, 24, 0.7);
+  background: #ff6b18;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 0 22px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transition: transform 180ms ease, background-color 180ms ease;
+}
+
+.presentation-start-button:hover {
+  transform: translateY(-2px);
+  background: #df5208;
+}
+
+.presentation-start-button svg {
+  width: 20px;
+  height: 20px;
+}
+
+.presentation-cover-hint {
+  display: block;
+  margin-top: 14px;
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.presentation-cover-status {
+  display: none;
+  margin-top: 14px;
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+body.presentation-started .presentation-start-button {
+  display: none;
+}
+
+body.presentation-started .presentation-cover-status {
+  display: block;
+}
+
+body:not(.presentation-started) .presentation-header,
+body:not(.presentation-started) .presentation-progress {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.presentation-header,
+.presentation-progress {
+  transition: opacity 220ms ease;
+}
+
+.presentation-controls {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 100;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  transform: translate(-50%, 10px);
+  border: 1px solid var(--presentation-control-border);
+  background: var(--presentation-control-bg);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.24);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+body.presentation-started.presentation-controls-visible .presentation-controls {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, 0);
+}
+
+.presentation-control-button {
+  width: 46px;
+  height: 44px;
+  border: 0;
+  border-right: 1px solid var(--presentation-control-border);
+  background: transparent;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.presentation-control-button:last-child {
+  border-right: 0;
+  border-left: 1px solid var(--presentation-control-border);
+}
+
+.presentation-control-button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.presentation-control-button svg {
+  width: 17px;
+  height: 17px;
+}
+
+.presentation-control-counter {
+  min-width: 98px;
+  padding: 0 16px;
+  color: rgba(255, 255, 255, 0.8);
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+body.presentation-cursor-hidden,
+body.presentation-cursor-hidden * {
+  cursor: none !important;
+}
+
+.presentation-sales-contact {
+  margin-top: 34px;
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 18px;
+  align-items: center;
+  max-width: 520px;
+  padding-top: 26px;
+  border-top: 1px solid rgba(255, 255, 255, 0.24);
+}
+
+.presentation-sales-contact img {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.presentation-sales-contact small,
+.presentation-sales-contact span,
+.presentation-sales-contact strong {
+  display: block;
+}
+
+.presentation-sales-contact small {
+  margin-bottom: 5px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.presentation-sales-contact strong {
+  font-size: 18px;
+}
+
+.presentation-sales-contact span {
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 12px;
+}
+
+@media (max-width: 900px) {
+  .presentation-cover-inner {
+    width: min(calc(100% - 48px), 760px);
+    grid-template-columns: 1fr;
+    gap: 42px;
+    padding: 80px 0 62px;
+  }
+
+  .presentation-cover-action {
+    align-self: auto;
+    padding-bottom: 0;
+    max-width: 360px;
+  }
+
+  .presentation-cover-brand {
+    width: 148px;
+    margin-bottom: 42px;
+  }
+
+  .presentation-cover h1 {
+    font-size: clamp(46px, 11vw, 76px);
+  }
+}
+
+@media print {
+  .presentation-cover-action,
+  .presentation-controls {
+    display: none !important;
+  }
+}
