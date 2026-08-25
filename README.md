@@ -78,7 +78,7 @@ As migrations criam:
 - `publish_proposal_version`
 - `get_public_proposal`
 
-O acesso anônimo não possui `SELECT` direto nas tabelas. A proposta pública é retornada somente pelo RPC `get_public_proposal` quando o token corresponde a uma versão publicada.
+O papel Postgres `anon` não possui `SELECT` direto nas tabelas. A proposta pública é retornada somente pelo RPC `get_public_proposal` quando o token corresponde a uma versão publicada.
 
 ### 2. Autenticação
 
@@ -92,18 +92,20 @@ https://viagate.com.br/apresentacao/proposta/
 
 ### 3. Configuração do frontend
 
-Preencha `proposal/config.js`:
+Preencha `proposal/config.js` com a URL do projeto e a **Publishable Key** (`sb_publishable_...`):
 
 ```javascript
 export const proposalConfig = Object.freeze({
   supabaseUrl: 'https://SEU-PROJETO.supabase.co',
-  supabaseAnonKey: 'SUA_ANON_KEY',
+  supabasePublishableKey: 'sb_publishable_...',
   publicProposalUrl: '/apresentacao/proposta/view.html',
   loginUrl: '/apresentacao/proposta/',
 });
 ```
 
-A `anon key` pode ser utilizada no frontend porque a segurança dos dados está nas políticas RLS. **Nunca coloque a `service_role` no repositório ou no navegador.**
+A Publishable Key é própria para aplicações web e pode existir no frontend. A segurança dos dados continua sendo controlada pelas políticas RLS e pela sessão do usuário autenticado.
+
+A **Secret Key** (`sb_secret_...`) nunca deve ser colocada no repositório, no JavaScript entregue ao navegador ou em qualquer outro componente público.
 
 ## Servidor
 
