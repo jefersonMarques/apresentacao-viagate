@@ -1,0 +1,340 @@
+html,
+body.public-proposal {
+  width: 100%;
+  min-height: 100%;
+  background: #071827;
+}
+
+body.public-proposal {
+  overflow-x: hidden;
+}
+
+body.proposal-locked {
+  height: 100%;
+  overflow: hidden;
+}
+
+#proposalPresentation {
+  transition: filter 280ms ease, transform 280ms ease;
+}
+
+body.proposal-locked #proposalPresentation {
+  filter: blur(14px) brightness(.68);
+  transform: scale(1.012);
+  pointer-events: none;
+  user-select: none;
+}
+
+.proposal-view-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  display: grid;
+  place-items: center;
+  background: rgba(3, 14, 24, .18);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 220ms ease, visibility 220ms ease;
+}
+
+body.proposal-locked .proposal-view-gate {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.proposal-view-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+}
+
+.proposal-view-action-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.proposal-view-button {
+  min-width: 290px;
+  min-height: 62px;
+  padding: 0 30px;
+  border: 1px solid #ff6b18;
+  background: #ff6b18;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .24);
+  transition: transform 180ms ease, background 180ms ease;
+}
+
+.proposal-view-button:hover {
+  transform: translateY(-2px);
+  background: #df5208;
+}
+
+.proposal-view-button.secondary {
+  min-width: 190px;
+  border-color: rgba(255, 255, 255, .28);
+  background: rgba(7, 24, 39, .72);
+  box-shadow: none;
+}
+
+.proposal-view-button.secondary:hover {
+  background: rgba(255, 255, 255, .08);
+}
+
+.proposal-view-logo {
+  width: 128px;
+  height: auto;
+  opacity: .34;
+  pointer-events: none;
+  user-select: none;
+}
+
+.proposal-view-navigation {
+  position: fixed;
+  left: 50%;
+  bottom: 22px;
+  z-index: 1300;
+  display: inline-flex;
+  align-items: center;
+  transform: translateX(-50%);
+  border: 1px solid rgba(255, 255, 255, .16);
+  background: rgba(7, 24, 39, .88);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 14px 38px rgba(0, 0, 0, .24);
+}
+
+.proposal-view-navigation[hidden] {
+  display: none;
+}
+
+.proposal-view-navigation button {
+  width: 46px;
+  height: 44px;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  font-size: 19px;
+}
+
+.proposal-view-navigation button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, .08);
+}
+
+.proposal-view-navigation button:disabled {
+  opacity: .3;
+  cursor: default;
+}
+
+.proposal-view-navigation span {
+  min-width: 88px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-left: 1px solid rgba(255, 255, 255, .12);
+  border-right: 1px solid rgba(255, 255, 255, .12);
+  color: rgba(255, 255, 255, .8);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.proposal-model-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 34px;
+}
+
+.proposal-model-card {
+  padding: 24px;
+  border: 1px solid rgba(7, 24, 39, .14);
+  background: #fff;
+}
+
+.dark .proposal-model-card {
+  border-color: rgba(255, 255, 255, .14);
+  background: rgba(255, 255, 255, .05);
+}
+
+.proposal-model-card small,
+.proposal-model-card strong,
+.proposal-model-card span {
+  display: block;
+}
+
+.proposal-model-card small {
+  color: #ff6b18;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.proposal-model-card strong {
+  margin-top: 9px;
+  font-size: 21px;
+}
+
+.proposal-model-card span {
+  margin-top: 10px;
+  color: #687680;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.dark .proposal-model-card span {
+  color: rgba(255, 255, 255, .66);
+}
+
+.proposal-price-groups {
+  display: grid;
+  gap: 18px;
+  margin-top: 28px;
+}
+
+.proposal-price-group {
+  border: 1px solid rgba(255, 255, 255, .14);
+  background: rgba(255, 255, 255, .035);
+}
+
+.proposal-price-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, .12);
+}
+
+.proposal-price-group-header strong {
+  font-size: 12px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.proposal-optional-label {
+  display: inline-flex;
+  padding: 5px 8px;
+  border: 1px solid rgba(67, 205, 132, .42);
+  color: #65d89c;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.proposal-price-group .proposal-price-table {
+  margin: 0;
+}
+
+.proposal-price-group .proposal-price-table th,
+.proposal-price-group .proposal-price-table td {
+  padding-left: 18px;
+  padding-right: 18px;
+}
+
+.proposal-commercial-note {
+  max-width: 900px;
+  margin: 22px 0 0;
+  color: rgba(255, 255, 255, .64);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.proposal-validity {
+  margin-top: 28px;
+  display: inline-flex;
+  gap: 14px;
+  align-items: center;
+  padding: 12px 16px;
+  border: 1px solid rgba(7, 24, 39, .12);
+  background: #fff;
+}
+
+.proposal-validity strong {
+  color: #071827;
+  font-size: 13px;
+}
+
+.proposal-contact-final {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+  gap: 70px;
+  align-items: center;
+}
+
+.proposal-contact-data {
+  padding: 28px;
+  border: 1px solid rgba(255, 255, 255, .18);
+  background: rgba(7, 24, 39, .16);
+}
+
+.proposal-contact-data img {
+  width: 82px;
+  height: 82px;
+  object-fit: cover;
+  margin-bottom: 20px;
+}
+
+.proposal-contact-data small,
+.proposal-contact-data strong,
+.proposal-contact-data span {
+  display: block;
+}
+
+.proposal-contact-data small {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.proposal-contact-data strong {
+  margin-top: 8px;
+  font-size: 24px;
+}
+
+.proposal-contact-data span {
+  margin-top: 6px;
+  color: rgba(255, 255, 255, .82);
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .proposal-model-grid,
+  .proposal-contact-final {
+    grid-template-columns: 1fr;
+  }
+
+  .proposal-contact-final {
+    gap: 30px;
+  }
+}
+
+@media (max-width: 640px) {
+  .proposal-view-action-row {
+    width: min(92vw, 340px);
+  }
+
+  .proposal-view-button,
+  .proposal-view-button.secondary {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .proposal-view-navigation {
+    bottom: 14px;
+  }
+}
