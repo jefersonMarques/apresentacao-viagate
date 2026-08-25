@@ -49,6 +49,18 @@ export function buildPublicPresentationUrl(token) {
 }
 
 if (document.getElementById('adminView')) {
+  document.title = 'ViaGate — Hub Comercial';
+
+  const brandEyebrow = document.querySelector('.auth-brand-copy small');
+  const brandTitle = document.querySelector('.auth-brand-copy h1');
+  const brandCopy = document.querySelector('.auth-brand-copy p');
+  const brandFooter = document.querySelector('.auth-brand-footer');
+
+  if (brandEyebrow) brandEyebrow.textContent = 'HUB COMERCIAL';
+  if (brandTitle) brandTitle.textContent = 'Apresentações e propostas em um único lugar.';
+  if (brandCopy) brandCopy.textContent = 'Gere materiais personalizados, publique links individuais e acompanhe abertura e leitura.';
+  if (brandFooter) brandFooter.textContent = 'ViaGate · Hub Comercial · 2026';
+
   import('./commercial-hub.js').catch((error) => {
     console.error('Não foi possível carregar o hub comercial.', error);
   });
