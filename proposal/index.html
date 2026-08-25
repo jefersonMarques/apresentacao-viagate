@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#071827" />
+  <title>ViaGate — Propostas Comerciais</title>
+  <meta name="robots" content="noindex,nofollow,noarchive" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./proposal.css" />
+</head>
+<body>
+  <section class="auth-shell" id="authView">
+    <div class="auth-brand-panel">
+      <img src="../assets/logo-viagate-white.svg" alt="ViaGate" />
+      <div class="auth-brand-copy">
+        <small>ÁREA COMERCIAL</small>
+        <h1>Propostas personalizadas, versionadas e seguras.</h1>
+        <p>Crie propostas por cliente, mantenha o histórico de versões e publique apenas o material que deve ser compartilhado.</p>
+      </div>
+      <span class="auth-brand-footer">ViaGate · Propostas Comerciais · 2026</span>
+    </div>
+
+    <div class="auth-form-panel">
+      <div class="auth-card" id="loginCard">
+        <span class="form-eyebrow">ACESSO RESTRITO</span>
+        <h2>Entrar</h2>
+        <p>Use o usuário criado no Supabase para acessar a área comercial.</p>
+        <form id="loginForm">
+          <div class="form-grid">
+            <div class="form-field full">
+              <label for="loginEmail">E-mail</label>
+              <input id="loginEmail" name="email" type="email" autocomplete="email" required />
+            </div>
+            <div class="form-field full">
+              <label for="loginPassword">Senha</label>
+              <input id="loginPassword" name="password" type="password" autocomplete="current-password" required />
+            </div>
+          </div>
+          <div class="auth-actions">
+            <button class="primary-button" type="submit">Entrar</button>
+            <button class="link-button" type="button" data-show-recovery>Esqueci minha senha</button>
+          </div>
+          <div class="message-box" id="loginMessage" hidden></div>
+        </form>
+      </div>
+
+      <div class="auth-card" id="recoveryCard" hidden>
+        <span class="form-eyebrow">RECUPERAÇÃO DE ACESSO</span>
+        <h2>Recuperar senha</h2>
+        <p>Informe o e-mail cadastrado. O Supabase enviará o link para redefinição da senha.</p>
+        <form id="recoveryForm">
+          <div class="form-field">
+            <label for="recoveryEmail">E-mail</label>
+            <input id="recoveryEmail" name="email" type="email" autocomplete="email" required />
+          </div>
+          <div class="auth-actions">
+            <button class="primary-button" type="submit">Enviar link</button>
+            <button class="link-button" type="button" data-show-login>Voltar para o login</button>
+          </div>
+          <div class="message-box" id="recoveryMessage" hidden></div>
+        </form>
+      </div>
+
+      <div class="auth-card" id="passwordCard" hidden>
+        <span class="form-eyebrow">NOVA SENHA</span>
+        <h2>Definir nova senha</h2>
+        <p>Crie uma nova senha para concluir a recuperação do acesso.</p>
+        <form id="passwordForm">
+          <div class="form-grid">
+            <div class="form-field full">
+              <label for="newPassword">Nova senha</label>
+              <input id="newPassword" name="password" type="password" autocomplete="new-password" minlength="8" required />
+            </div>
+            <div class="form-field full">
+              <label for="confirmPassword">Confirmar senha</label>
+              <input id="confirmPassword" name="confirmPassword" type="password" autocomplete="new-password" minlength="8" required />
+            </div>
+          </div>
+          <div class="auth-actions">
+            <button class="primary-button" type="submit">Salvar nova senha</button>
+          </div>
+          <div class="message-box" id="passwordMessage" hidden></div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <section class="admin-shell" id="adminView" hidden>
+    <header class="admin-topbar">
+      <img src="../assets/logo-viagate-white.svg" alt="ViaGate" />
+      <div class="admin-topbar-actions">
+        <span class="admin-user" id="adminUserEmail"></span>
+        <button class="ghost-button" type="button" id="logoutButton">Sair</button>
+      </div>
+    </header>
+
+    <main class="admin-main">
+      <section id="dashboardView">
+        <div class="admin-header">
+          <div>
+            <span class="admin-eyebrow">PROPOSTAS COMERCIAIS</span>
+            <h1>Clientes e propostas</h1>
+            <p>As versões publicadas permanecem imutáveis. Qualquer alteração comercial gera uma nova versão.</p>
+          </div>
+          <button class="primary-button" type="button" id="newProposalButton">Nova proposta</button>
+        </div>
+
+        <div class="dashboard-grid">
+          <section class="panel">
+            <header class="panel-header">
+              <h2>Propostas</h2>
+              <button class="link-button" type="button" id="refreshButton">Atualizar</button>
+            </header>
+            <div class="proposal-list" id="proposalList">
+              <div class="empty-state">Carregando propostas...</div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <header class="panel-header">
+              <h2>Meu perfil comercial</h2>
+            </header>
+            <div class="panel-body">
+              <form id="salesProfileForm">
+                <div class="form-grid">
+                  <div class="form-field full">
+                    <label for="salesName">Nome</label>
+                    <input id="salesName" name="name" required />
+                  </div>
+                  <div class="form-field full">
+                    <label for="salesRole">Cargo</label>
+                    <input id="salesRole" name="role" placeholder="Sócio-Diretor Comercial" />
+                  </div>
+                  <div class="form-field full">
+                    <label for="salesEmail">E-mail comercial</label>
+                    <input id="salesEmail" name="email" type="email" />
+                  </div>
+                  <div class="form-field full">
+                    <label for="salesPhone">Telefone / WhatsApp</label>
+                    <input id="salesPhone" name="phone" />
+                  </div>
+                  <div class="form-field full">
+                    <label for="salesPhotoUrl">URL da foto</label>
+                    <input id="salesPhotoUrl" name="photoUrl" type="url" />
+                  </div>
+                </div>
+                <div class="pricing-actions">
+                  <button class="secondary-button" type="submit">Salvar perfil</button>
+                </div>
+                <div class="message-box" id="salesProfileMessage" hidden></div>
+              </form>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section id="editorView" hidden>
+        <div class="editor-header">
+          <div>
+            <span class="admin-eyebrow">EDITOR DE PROPOSTA</span>
+            <h1 id="editorTitle">Nova proposta</h1>
+            <p>Preencha apenas o que fizer sentido para a negociação. O material público será montado como apresentação personalizada.</p>
+          </div>
+          <button class="ghost-button" type="button" id="backToDashboardButton">Voltar</button>
+        </div>
+
+        <form id="proposalForm">
+          <input id="proposalId" name="proposalId" type="hidden" />
+          <input id="proposalVersionId" name="proposalVersionId" type="hidden" />
+
+          <section class="editor-section">
+            <header class="editor-section-header"><h2>Cliente</h2></header>
+            <div class="editor-section-body">
+              <div class="form-grid">
+                <div class="form-field">
+                  <label for="companyName">Empresa</label>
+                  <input id="companyName" name="companyName" required />
+                </div>
+                <div class="form-field">
+                  <label for="clientLogoUrl">URL do logo</label>
+                  <input id="clientLogoUrl" name="clientLogoUrl" type="url" />
+                </div>
+                <div class="form-field">
+                  <label for="contactName">Contato</label>
+                  <input id="contactName" name="contactName" />
+                </div>
+                <div class="form-field">
+                  <label for="contactRole">Cargo do contato</label>
+                  <input id="contactRole" name="contactRole" />
+                </div>
+                <div class="form-field">
+                  <label for="contactEmail">E-mail</label>
+                  <input id="contactEmail" name="contactEmail" type="email" />
+                </div>
+                <div class="form-field">
+                  <label for="contactPhone">Telefone</label>
+                  <input id="contactPhone" name="contactPhone" />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="editor-section">
+            <header class="editor-section-header"><h2>Contexto da negociação</h2></header>
+            <div class="editor-section-body">
+              <div class="form-grid">
+                <div class="form-field">
+                  <label for="proposalTitle">Título</label>
+                  <input id="proposalTitle" name="proposalTitle" value="Proposta Comercial ViaGate" required />
+                </div>
+                <div class="form-field">
+                  <label for="validUntil">Validade</label>
+                  <input id="validUntil" name="validUntil" type="date" />
+                </div>
+                <div class="form-field full">
+                  <label for="operationContext">Cenário considerado</label>
+                  <textarea id="operationContext" name="operationContext" placeholder="Ex.: Validação de motoristas antes do carregamento, com volume estimado de 1.500 análises por mês."></textarea>
+                </div>
+                <div class="form-field full">
+                  <label for="customerPriorities">Prioridades do cliente</label>
+                  <textarea id="customerPriorities" name="customerPriorities" placeholder="Uma prioridade por linha."></textarea>
+                </div>
+                <div class="form-field">
+                  <label for="solutionTitle">Solução proposta</label>
+                  <input id="solutionTitle" name="solutionTitle" placeholder="Cargo Score + Biometria" />
+                </div>
+                <div class="form-field">
+                  <label for="pricingModel">Modelo comercial</label>
+                  <select id="pricingModel" name="pricingModel">
+                    <option value="per_item">Análise por item</option>
+                    <option value="bundle">Análise por conjunto</option>
+                    <option value="custom">Personalizado</option>
+                  </select>
+                </div>
+                <div class="form-field full">
+                  <label for="solutionScope">Escopo da solução</label>
+                  <textarea id="solutionScope" name="solutionScope" placeholder="Um item por linha: Biometria facial, CNH, ANTT/RNTRC..."></textarea>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="editor-section">
+            <header class="editor-section-header">
+              <h2>Investimento</h2>
+              <button class="link-button" type="button" id="addPricingItemButton">Adicionar item</button>
+            </header>
+            <div class="editor-section-body">
+              <div class="table-scroll">
+                <table class="pricing-table">
+                  <thead>
+                    <tr>
+                      <th>Item</th>
+                      <th>Unidade</th>
+                      <th>Valor</th>
+                      <th>Opcional</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody id="pricingItemsBody"></tbody>
+                </table>
+              </div>
+              <div class="pricing-actions">
+                <div class="form-field">
+                  <label for="minimumInvoice">Fatura mínima mensal</label>
+                  <input id="minimumInvoice" name="minimumInvoice" type="number" min="0" step="0.01" />
+                </div>
+                <div class="form-field">
+                  <label for="setupFee">Implantação</label>
+                  <input id="setupFee" name="setupFee" type="number" min="0" step="0.01" />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="editor-section">
+            <header class="editor-section-header"><h2>Condições comerciais</h2></header>
+            <div class="editor-section-body">
+              <div class="form-grid">
+                <div class="form-field full">
+                  <label for="commercialConditions">Condições e observações</label>
+                  <textarea id="commercialConditions" name="commercialConditions" placeholder="Uma condição por linha."></textarea>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <div class="editor-footer">
+            <span class="admin-user" id="editorVersionLabel">Rascunho ainda não salvo</span>
+            <div class="editor-footer-actions">
+              <button class="ghost-button" type="button" id="copyProposalLinkButton" hidden>Copiar link</button>
+              <button class="secondary-button" type="submit">Salvar rascunho</button>
+              <button class="primary-button" type="button" id="publishProposalButton">Publicar nova versão</button>
+            </div>
+          </div>
+          <div class="message-box" id="proposalMessage" hidden></div>
+        </form>
+      </section>
+    </main>
+  </section>
+
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <script type="module" src="./admin.js"></script>
+</body>
+</html>
