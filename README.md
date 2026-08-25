@@ -6,10 +6,12 @@
 
 - `/apresentacao/` — redireciona para o Hub Comercial autenticado.
 - `/apresentacao/proposta/` — Hub Comercial protegido por Supabase Auth.
-- `/apresentacao/view.html?token=...` — apresentação institucional publicada e personalizada.
-- `/apresentacao/proposta/view.html?token=...` — proposta comercial publicada.
+- `/apresentacao/view.html?token=...` — apresentação institucional publicada e personalizada quando o projeto está montado em `/apresentacao/`.
+- `/apresentacao/proposta/view.html?token=...` — proposta comercial publicada quando o projeto está montado em `/apresentacao/`.
 - `presentation-content.html` — template institucional reutilizado pelas apresentações geradas.
-- `supabase/migrations/` — banco, RLS, versionamento, publicação e analytics.
+- `supabase/migrations/` — banco, RLS, versionamento, publicação, analytics e Storage.
+
+Os links públicos são montados de forma relativa ao Hub Comercial. Assim, em desenvolvimento o projeto também pode ser servido diretamente na raiz sem depender do prefixo `/apresentacao/`.
 
 ## Hub Comercial
 
@@ -51,6 +53,33 @@ Cada proposta possui:
 
 Ao alterar uma versão publicada, uma nova versão em rascunho é criada. O link antigo continua representando a versão publicada anteriormente.
 
+## Imagens comerciais
+
+Fotos de vendedores e logos de clientes são enviados diretamente para o Supabase Storage. O usuário não precisa informar URL manualmente.
+
+Bucket utilizado:
+
+```text
+commercial-assets
+```
+
+Estrutura dos objetos:
+
+```text
+commercial-assets/
+├── salespeople/{auth_user_id}/{uuid}.{ext}
+└── clients/{auth_user_id}/{uuid}.{ext}
+```
+
+Regras atuais:
+
+- bucket público somente para leitura dos arquivos publicados;
+- upload, alteração e exclusão somente por usuário autenticado dentro da própria pasta;
+- PNG, JPG, WEBP e SVG;
+- limite de 2 MB por arquivo;
+- nome físico gerado com UUID;
+- arquivos substituídos não são apagados automaticamente, porque versões publicadas antigas podem continuar utilizando a imagem anterior.
+
 ## Estatísticas de leitura
 
 Apresentações e propostas registram os seguintes eventos pelo token publicado:
@@ -78,7 +107,7 @@ A sessão de leitura utiliza somente um UUID aleatório salvo em `sessionStorage
 
 ## Supabase
 
-### Banco
+### Banco e Storage
 
 Execute as migrations na ordem:
 
@@ -88,6 +117,7 @@ Execute as migrations na ordem:
 20260825_proposals_immutability_fix.sql
 20260825_commercial_hub_analytics.sql
 20260825_commercial_hub_access_control.sql
+20260825_commercial_assets_storage.sql
 ```
 
 As migrations do Hub Comercial adicionam:
@@ -101,9 +131,10 @@ As migrations do Hub Comercial adicionam:
 - `get_public_presentation`;
 - `track_shared_document_event`;
 - `get_my_shared_document_stats`;
-- endurecimento de `publish_proposal_version` para impedir publicação de material de outro comercial.
+- endurecimento de `publish_proposal_version` para impedir publicação de material de outro comercial;
+- bucket `commercial-assets` e políticas de upload por usuário.
 
-O papel Postgres `anon` não possui `SELECT` direto nas tabelas comerciais ou de analytics. Links públicos acessam somente RPCs limitadas por token publicado.
+O papel Postgres `anon` não possui `SELECT` direto nas tabelas comerciais ou de analytics. Links públicos acessam somente RPCs limitadas por token publicado. As imagens do bucket são públicas porque fazem parte de materiais públicos compartilhados por token.
 
 ### Autenticação
 
@@ -115,7 +146,7 @@ Configure como redirect permitido para recuperação de senha:
 https://viagate.com.br/apresentacao/proposta/
 ```
 
-Para desenvolvimento local, adicione também:
+Para desenvolvimento local com o projeto montado em `/apresentacao/`, adicione também:
 
 ```text
 http://localhost:8080/apresentacao/proposta/
@@ -129,9 +160,10 @@ A configuração fica em `proposal/config.js`:
 export const proposalConfig = Object.freeze({
   supabaseUrl: 'https://SEU-PROJETO.supabase.co',
   supabasePublishableKey: 'sb_publishable_...',
-  publicProposalUrl: '/apresentacao/proposta/view.html',
-  publicPresentationUrl: '/apresentacao/view.html',
-  loginUrl: '/apresentacao/proposta/',
+  publicProposalUrl: './view.html',
+  publicPresentationUrl: '../view.html',
+  loginUrl: './',
+  assetBucket: 'commercial-assets',
 });
 ```
 
@@ -141,13 +173,15 @@ Nunca coloque `sb_secret_...` no repositório ou no navegador.
 
 ## Servidor
 
-Não é necessário backend próprio nesta versão. Supabase Auth, PostgREST e RPCs atendem o fluxo atual.
+Não é necessário backend próprio nesta versão. Supabase Auth, PostgREST, Storage e RPCs atendem o fluxo atual.
 
 Se surgir uma função que realmente exija backend próprio, ela deverá ser implementada em Go.
 
 ## Executar localmente
 
-Sirva o diretório pai que contém o junction `/apresentacao/`:
+### Com o junction `/apresentacao/`
+
+Sirva o diretório pai que contém o junction:
 
 ```bash
 python -m http.server 8080
@@ -158,3 +192,19 @@ Acesse:
 ```text
 http://localhost:8080/apresentacao/
 ```
+
+### Servindo o repositório diretamente
+
+Também é possível executar o servidor dentro da pasta do projeto:
+
+```bash
+python -m http.server 8080
+```
+
+Nesse caso acesse:
+
+```text
+http://localhost:8080/
+```
+
+Os links gerados serão ajustados automaticamente para a estrutura usada no acesso atual.
