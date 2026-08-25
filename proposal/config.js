@@ -1,6 +1,6 @@
 export const proposalConfig = Object.freeze({
   supabaseUrl: '',
-  supabaseAnonKey: '',
+  supabasePublishableKey: '',
   publicProposalUrl: '/apresentacao/proposta/view.html',
   loginUrl: '/apresentacao/proposta/',
 });
