@@ -36,6 +36,7 @@ async function loadPresentationMode(attempt = 0) {
 
   appendStylesheet('./presentation-story.css', 'data-presentation-story');
   await appendScript('./presentation-story.js', 'data-presentation-story');
+  await appendScript('./presentation-contact.js', 'data-presentation-contact');
 
   appendStylesheet('./presentation-mode.css', 'data-presentation-mode');
   await appendScript('./presentation-mode.js', 'data-presentation-mode');
