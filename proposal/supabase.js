@@ -53,3 +53,9 @@ if (document.getElementById('adminView')) {
     console.error('Não foi possível carregar o hub comercial.', error);
   });
 }
+
+if (document.getElementById('proposalPresentation')) {
+  import('./analytics.js').catch((error) => {
+    console.error('Não foi possível carregar as estatísticas da proposta.', error);
+  });
+}
