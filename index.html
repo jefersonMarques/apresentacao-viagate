@@ -3,413 +3,64 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <base href="/apresentacao/" />
   <meta name="theme-color" content="#071827" />
   <title>ViaGate — Apresentação Institucional</title>
-  <meta name="description" content="Apresentação institucional ViaGate — validação de motoristas, gestão de risco e operação logística." />
+  <meta name="description" content="Apresentação institucional ViaGate — validação, análise de risco e operação logística." />
   <link rel="canonical" href="https://viagate.com.br/apresentacao" />
-  <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://viagate.com.br/apresentacao" />
-  <meta property="og:title" content="ViaGate — Apresentação Institucional" />
-  <meta property="og:description" content="Validação de motoristas, gestão de risco e operação logística." />
-  <meta property="og:image" content="https://viagate.com.br/apresentacao/assets/viagate-whatsapp-cover.jpg" />
-  <meta property="og:image:secure_url" content="https://viagate.com.br/apresentacao/assets/viagate-whatsapp-cover.jpg" />
-  <meta property="og:image:type" content="image/jpeg" />
-  <meta property="og:image:width" content="400" />
-  <meta property="og:image:height" content="210" />
-  <meta property="og:image:alt" content="ViaGate — Apresentação Institucional" />
-  <meta property="og:site_name" content="ViaGate" />
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="ViaGate — Apresentação Institucional" />
-  <meta name="twitter:description" content="Validação de motoristas, gestão de risco e operação logística." />
-  <meta name="twitter:image" content="https://viagate.com.br/apresentacao/assets/viagate-whatsapp-cover.jpg" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./styles.css" />
   <style>
-    .contact-whatsapp {
-      position: fixed;
-      left: 34px;
-      bottom: 72px;
-      z-index: 40;
-      min-height: 48px;
-      padding: 0 18px 0 14px;
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      border: 1px solid rgba(255, 255, 255, .16);
-      background: rgba(7, 24, 39, .88);
-      color: #fff;
-      text-decoration: none;
-      backdrop-filter: blur(10px);
-      box-shadow: 0 16px 38px rgba(0, 0, 0, .22);
-      transition: transform .18s ease, background-color .18s ease, border-color .18s ease, box-shadow .18s ease;
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #071827;
     }
-    .contact-whatsapp:hover {
-      transform: translateY(-2px);
-      background: rgba(255, 107, 24, .96);
-      border-color: rgba(255, 107, 24, .96);
-      box-shadow: 0 18px 42px rgba(223, 82, 8, .28);
-    }
-    .contact-whatsapp:focus-visible {
-      outline: 2px solid rgba(255, 107, 24, .9);
-      outline-offset: 3px;
-    }
-    .contact-whatsapp svg { width: 18px; height: 18px; flex: 0 0 auto; }
-    .contact-whatsapp span { font-size: 12px; font-weight: 700; letter-spacing: .04em; white-space: nowrap; }
-    @media (max-width: 860px) {
-      .contact-whatsapp { left: 18px; bottom: 58px; min-height: 44px; padding: 0 12px; }
-      .contact-whatsapp span { display: none; }
-      .contact-whatsapp svg { width: 20px; height: 20px; }
-    }
-    @media print {
-      .contact-whatsapp { display: none !important; }
+
+    .presentation-frame {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: #071827;
     }
   </style>
 </head>
 <body>
-  <header class="presentation-header">
-    <a class="brand" href="#slide-01" aria-label="ViaGate — início">
-      <img class="brand-logo brand-logo-white" src="./assets/logo-viagate-white.svg" alt="ViaGate" />
-      <img class="brand-logo brand-logo-color" src="./assets/logo-viagate-color.svg" alt="ViaGate" />
-    </a>
-    <div class="presentation-meta">APRESENTAÇÃO INSTITUCIONAL · 2026</div>
-  </header>
+  <iframe
+    class="presentation-frame"
+    id="presentationFrame"
+    src="./presentation-content.html"
+    title="Apresentação Institucional ViaGate"
+    allow="fullscreen"
+    allowfullscreen
+  ></iframe>
 
-  <main class="presentation" id="presentation">
-    <section class="slide slide-dark hero" id="slide-01" data-slide="1">
-      <div class="slide-inner hero-grid">
-        <div class="hero-copy">
-          <p class="kicker">TECNOLOGIA PARA OPERAÇÕES LOGÍSTICAS</p>
-          <h1>Validação de motoristas<br /><span>e gestão de risco antes da viagem.</span></h1>
-          <p class="lead">Biometria facial, consultas cadastrais, regras de risco e acompanhamento logístico em uma única plataforma.</p>
-          <div class="hero-proof">
-            <div><strong>300+</strong><span>clientes diretos</span></div>
-            <div><strong>5 anos</strong><span>de empresa</span></div>
-            <div><strong>100%</strong><span>tecnologia própria</span></div>
-          </div>
-        </div>
-        <figure class="media-placeholder hero-media">
-          <div class="placeholder-content">
-            <i data-lucide="image"></i>
-            <strong>IMAGEM HERO</strong>
-            <span>1600 × 1200 px</span>
-            <small>Motorista + carga + smartphone + validação facial<br />Imagem corporativa, limpa e de alto impacto</small>
-          </div>
-        </figure>
-      </div>
-      <div class="slide-footer"><span>ViaGate</span><span>01 / 15</span></div>
-    </section>
+  <script>
+    const frame = document.getElementById('presentationFrame');
 
-    <section class="slide slide-light" id="slide-02" data-slide="2">
-      <div class="slide-inner market-layout">
-        <div class="section-copy market-copy">
-          <p class="kicker dark-kicker">CENÁRIO DO MERCADO</p>
-          <h2>O mercado ainda depende de <span>bases desatualizadas, análise manual e validações sem biometria.</span></h2>
-          <p class="lead dark-lead">Esse modelo aumenta o tempo da análise, reduz a rastreabilidade, amplia o risco operacional e expõe dados pessoais de forma desnecessária.</p>
-        </div>
-        <div class="market-grid">
-          <article class="danger-card"><i data-lucide="database-zap"></i><h3>Bases desatualizadas</h3><p>Decisões podem partir de informações incompletas ou inconsistentes.</p></article>
-          <article class="warning-card"><i data-lucide="files"></i><h3>Análise manual</h3><p>Conferência de documentos é lenta, operacionalmente pesada e sujeita a erro.</p></article>
-          <article class="warning-card"><i data-lucide="shield-ellipsis"></i><h3>Exposição de dados</h3><p>Circulação de documentos aumenta a exposição de dados pessoais e o risco de conformidade.</p></article>
-          <article class="danger-card"><i data-lucide="user-round-x"></i><h3>Sem biometria</h3><p>Sem prova de vida, a identidade pode não ser confirmada com segurança.</p></article>
-          <article class="warning-card"><i data-lucide="clock-3"></i><h3>Demora operacional</h3><p>O tempo de análise atrasa a liberação da operação e reduz eficiência.</p></article>
-          <article class="warning-card"><i data-lucide="route-off"></i><h3>Baixa rastreabilidade</h3><p>O processo se perde entre canais e dificulta auditoria e governança.</p></article>
-        </div>
-      </div>
-      <div class="slide-footer dark-footer"><span>Contexto do mercado</span><span>02 / 15</span></div>
-    </section>
+    frame.addEventListener('load', () => {
+      const frameDocument = frame.contentDocument;
+      const frameWindow = frame.contentWindow;
 
-    <section class="slide slide-dark" id="slide-03" data-slide="3">
-      <div class="slide-inner biometrics-layout">
-        <div class="section-copy centered-copy biometrics-heading">
-          <p class="kicker">VALIDAÇÃO CADASTRAL</p>
-          <h2>Biometria facial <span>com prova de vida</span></h2>
-          <p class="lead">A validação é feita pelo navegador, no celular ou computador com câmera. O motorista pode receber um link por WhatsApp e concluir a biometria sem instalar aplicativo.</p>
-        </div>
-        <div class="biometrics-stage">
-          <article class="benefit-card benefit-top-left"><i data-lucide="scan-face"></i><h3>Prova de vida</h3><p>Detecta se há uma pessoa presente e evita validações apenas com foto ou vídeo.</p></article>
-          <article class="benefit-card benefit-top-right"><i data-lucide="shield-check"></i><h3>Validação de identidade</h3><p>Confirma se a pessoa validada corresponde aos dados informados.</p></article>
-          <article class="benefit-card benefit-mid-left"><i data-lucide="folder-lock"></i><h3>Sem cópia de documentos</h3><p>O processo pode ocorrer sem circulação desnecessária de cópias do documento.</p></article>
-          <figure class="phone-stage">
-            <div class="phone-shell">
-              <div class="phone-screen">
-                <div class="phone-topbar"></div>
-                <div class="phone-avatar"><i data-lucide="scan-search"></i></div>
-                <strong>BIOMETRIA FACIAL</strong>
-                <span>Imagem central 1080 × 1920 px</span>
-                <small>Foto real da biometria no celular<br />com enquadramento limpo e profissional</small>
-                <div class="phone-status">
-                  <div><span>Presença</span><strong class="status-success">CONFIRMADA</strong></div>
-                  <div><span>Prova de vida</span><strong class="status-success">ATIVA</strong></div>
-                </div>
-              </div>
-            </div>
-          </figure>
-          <article class="benefit-card benefit-mid-right"><i data-lucide="message-circle"></i><h3>Link por WhatsApp</h3><p>A validação pode ser enviada por link, sem cadastro longo e sem instalação.</p></article>
-          <article class="benefit-card benefit-bottom-left"><i data-lucide="globe"></i><h3>Via navegador</h3><p>Funciona no celular ou computador com câmera, usando apenas o navegador.</p></article>
-          <article class="benefit-card benefit-bottom-right"><i data-lucide="plug"></i><h3>Integração por API</h3><p>A biometria pode ser integrada ao sistema do cliente e operada em white label.</p></article>
-        </div>
-      </div>
-      <div class="slide-footer"><span>Biometria facial</span><span>03 / 15</span></div>
-    </section>
+      if (!frameDocument || !frameWindow) {
+        return;
+      }
 
-    <section class="slide slide-light" id="slide-04" data-slide="4">
-      <div class="slide-inner score-overview-layout">
-        <div class="score-copy">
-          <p class="kicker dark-kicker">CARGO SCORE</p>
-          <h2>O Cargo Score reúne <span>biometria, CNH, ANTT, processos, veículo e regras</span> em uma única análise.</h2>
-          <p class="lead dark-lead">Depois da identificação do motorista, o sistema consulta as fontes disponíveis, aplica as regras definidas pelo cliente e apresenta o resultado para apoiar a decisão operacional.</p>
-          <div class="score-pill-row">
-            <span><i data-lucide="scan-face"></i> Biometria</span>
-            <span><i data-lucide="badge-check"></i> CNH</span>
-            <span><i data-lucide="truck"></i> ANTT</span>
-            <span><i data-lucide="scale"></i> Processos</span>
-            <span><i data-lucide="car-front"></i> Veículo</span>
-            <span><i data-lucide="settings-2"></i> Regras</span>
-          </div>
-        </div>
-        <div class="decision-panel">
-          <div class="decision-panel-head"><span>RESULTADO DA ANÁLISE</span><small>Exemplo visual</small></div>
-          <div class="decision-person">
-            <div class="decision-avatar"><i data-lucide="user-round"></i></div>
-            <div><strong>Motorista pesquisado</strong><span>Identidade e dados verificados</span></div>
-          </div>
-          <div class="decision-checks">
-            <div><span>Biometria</span><strong class="status-success">VALIDADA</strong></div>
-            <div><span>CNH</span><strong class="status-success">REGULAR</strong></div>
-            <div><span>Contexto de risco</span><strong class="status-warning">ANALISADO</strong></div>
-          </div>
-          <div class="decision-result status-success-bg">
-            <i data-lucide="shield-check"></i>
-            <div><small>DECISÃO OPERACIONAL</small><strong>APROVADO</strong></div>
-          </div>
-        </div>
-      </div>
-      <div class="slide-footer dark-footer"><span>Cargo Score</span><span>04 / 15</span></div>
-    </section>
+      const styleLink = frameDocument.createElement('link');
+      styleLink.rel = 'stylesheet';
+      styleLink.href = './presentation-mode.css';
+      frameDocument.head.appendChild(styleLink);
 
-    <section class="slide slide-deep" id="slide-05" data-slide="5">
-      <div class="slide-inner score-flow-layout">
-        <div class="section-copy centered-copy score-flow-heading">
-          <p class="kicker">COMO O CARGO SCORE FUNCIONA</p>
-          <h2>O Cargo Score funciona em <span>seis etapas.</span></h2>
-          <p class="lead">A empresa inicia a pesquisa, o motorista realiza a biometria, o sistema consulta os dados, aplica as regras configuradas e retorna o resultado.</p>
-        </div>
-        <div class="score-flow">
-          <article><span class="step-number">01</span><i data-lucide="send"></i><strong>Início da pesquisa</strong><p>A empresa inicia a análise e disponibiliza um link seguro ao pesquisado.</p></article>
-          <article><span class="step-number">02</span><i data-lucide="scan-face"></i><strong>Biometria</strong><p>O motorista realiza a validação facial com prova de vida.</p></article>
-          <article><span class="step-number">03</span><i data-lucide="badge-check"></i><strong>Dados cadastrais</strong><p>Identidade e CNH são confrontadas com as informações consultadas.</p></article>
-          <article><span class="step-number">04</span><i data-lucide="database"></i><strong>Consultas</strong><p>ANTT, processos, veículo, proprietário e outros dados entram na análise.</p></article>
-          <article><span class="step-number">05</span><i data-lucide="settings-2"></i><strong>Regras de risco</strong><p>Os critérios são parametrizados conforme o perfil operacional do cliente.</p></article>
-          <article class="flow-final"><span class="step-number">06</span><i data-lucide="shield-check"></i><strong>Resultado</strong><p>O sistema apresenta a decisão operacional e mantém o processo rastreável.</p></article>
-        </div>
-        <div class="score-flow-note"><i data-lucide="timer"></i><strong>1 a 10 minutos</strong><span>Tempo informado no material institucional para a análise após a validação facial, conforme a parametrização.</span></div>
-      </div>
-      <div class="slide-footer"><span>Fluxo Cargo Score</span><span>05 / 15</span></div>
-    </section>
-
-    <section class="slide slide-light" id="slide-06" data-slide="6">
-      <div class="slide-inner score-data-layout">
-        <div class="section-copy score-data-copy">
-          <p class="kicker dark-kicker">O QUE O CARGO SCORE CONSULTA E VALIDA</p>
-          <h2>As fontes consultadas formam o <span>contexto da decisão.</span></h2>
-          <p class="lead dark-lead">O Cargo Score reúne sinais relevantes para apoiar a análise de risco e a liberação da operação.</p>
-        </div>
-        <div class="data-grid">
-          <article><i data-lucide="scan-face"></i><small>PESSOA</small><h3>Identidade</h3><p>Biometria facial, prova de vida e validação cadastral.</p></article>
-          <article><i data-lucide="badge-check"></i><small>DOCUMENTO</small><h3>CNH</h3><p>Validação dos dados da habilitação sem depender da circulação de cópias do documento.</p></article>
-          <article><i data-lucide="scale"></i><small>CONTEXTO</small><h3>Processos</h3><p>Processos cíveis, trabalhistas e criminais ampliam o contexto da análise.</p></article>
-          <article><i data-lucide="truck"></i><small>TRANSPORTE</small><h3>ANTT</h3><p>Regularidade e dados relacionados ao transporte rodoviário e ao veículo consultado.</p></article>
-          <article><i data-lucide="car-front"></i><small>VEÍCULO</small><h3>Veículo e proprietário</h3><p>Veículo e proprietário são validados em conjunto para ampliar a consistência da operação.</p></article>
-          <article><i data-lucide="shield-alert"></i><small>RISCO</small><h3>Fraude</h3><p>As consultas e regras ajudam a identificar sinais associados a situações de fraude.</p></article>
-        </div>
-      </div>
-      <div class="slide-footer dark-footer"><span>Contexto de análise</span><span>06 / 15</span></div>
-    </section>
-
-    <section class="slide slide-dark" id="slide-07" data-slide="7">
-      <div class="slide-inner catalog-layout">
-        <div class="section-copy">
-          <p class="kicker">CONSULTAS AVULSAS</p>
-          <h2>Além do Cargo Score, a ViaGate oferece <span>consultas avulsas.</span></h2>
-          <p class="lead">As consultas podem ser contratadas separadamente conforme a necessidade da operação.</p>
-        </div>
-        <div class="catalog-grid dark three-cols">
-          <article class="catalog-item"><i data-lucide="truck"></i><div><small>CONSULTA</small><h3>ANTT</h3><p>Consulta de regularidade e dados do transporte rodoviário.</p></div></article>
-          <article class="catalog-item"><i data-lucide="badge-check"></i><div><small>CONSULTA</small><h3>CNH</h3><p>Consulta e validação dos dados da habilitação.</p></div></article>
-          <article class="catalog-item"><i data-lucide="car-front"></i><div><small>CONSULTA</small><h3>Histórico veicular completo</h3><p>Base completa de histórico e contexto do veículo.</p></div></article>
-          <article class="catalog-item"><i data-lucide="scale"></i><div><small>CONSULTA</small><h3>Processos</h3><p>Consulta de processos para ampliar o contexto da análise.</p></div></article>
-          <article class="catalog-item"><i data-lucide="search"></i><div><small>CONSULTA</small><h3>Consulta especial</h3><p>Pesquisa adicional conforme a necessidade específica da operação.</p></div></article>
-          <article class="catalog-item"><i data-lucide="scan-face"></i><div><small>BIOMETRIA</small><h3>Biometria</h3><p>Authenticador PIX, formulário com pergunta e validação de CPF.</p></div></article>
-        </div>
-      </div>
-      <div class="slide-footer"><span>Consultas avulsas</span><span>07 / 15</span></div>
-    </section>
-
-    <section class="slide slide-dark" id="slide-08" data-slide="8">
-      <div class="slide-inner fraud-layout">
-        <div class="fraud-copy">
-          <p class="kicker">AUTENTICADOR</p>
-          <h2>Evita fraudes em que terceiros se passam <span>pela transportadora ou pelo motorista.</span></h2>
-          <p class="lead">O autenticador foi desenvolvido para reduzir golpes na intermediação de pagamentos e confirmar a identidade do motorista antes do contrato ou do adiantamento de frete.</p>
-          <div class="fraud-features">
-            <div><i data-lucide="map-pin"></i><span>Geolocalização e dispositivo</span></div>
-            <div><i data-lucide="scan-face"></i><span>Biometria vinculada ao CPF pesquisado</span></div>
-            <div><i data-lucide="send-horizontal"></i><span>Dados enviados diretamente à contratante</span></div>
-          </div>
-        </div>
-        <div class="fraud-visual">
-          <div class="fraud-block fraud-danger-block"><div class="fraud-icon"><i data-lucide="triangle-alert"></i></div><div><small>RISCO</small><strong>Golpe na intermediação</strong><span>Fraudadores podem se passar pela empresa ou pelo motorista para solicitar pagamentos.</span></div></div>
-          <div class="fraud-divider"><span>SUBSTITUÍDO POR</span></div>
-          <div class="fraud-block fraud-success-block"><div class="fraud-icon"><i data-lucide="link-2"></i></div><div><small>FLUXO SEGURO</small><strong>Link único + validações</strong><span>O link valida identidade, coleta dados e envia as informações diretamente à empresa.</span></div></div>
-        </div>
-      </div>
-      <div class="slide-footer"><span>Autenticador</span><span>08 / 15</span></div>
-    </section>
-
-    <section class="slide slide-dark" id="slide-09" data-slide="9">
-      <div class="slide-inner catalog-layout">
-        <div class="section-copy">
-          <p class="kicker">PRODUTOS VIAGATE</p>
-          <h2>Principais produtos, módulos <span>e linhas de solução.</span></h2>
-          <p class="lead">Visão resumida do portfólio ViaGate.</p>
-        </div>
-        <div class="catalog-grid dark four-cols">
-          <article class="catalog-item name-only"><h3>Cargo Score</h3></article>
-          <article class="catalog-item name-only"><h3>Biometria Facial</h3></article>
-          <article class="catalog-item name-only"><h3>Autenticador</h3></article>
-          <article class="catalog-item name-only"><h3>Cargo Truck</h3></article>
-          <article class="catalog-item name-only"><h3>Plataforma Cargo</h3></article>
-          <article class="catalog-item name-only"><h3>Pesquisa Cadastral</h3></article>
-          <article class="catalog-item name-only"><h3>Validação de CNH</h3></article>
-          <article class="catalog-item name-only"><h3>Consulta ANTT</h3></article>
-          <article class="catalog-item name-only"><h3>Histórico Veicular</h3></article>
-          <article class="catalog-item name-only"><h3>Processos</h3></article>
-          <article class="catalog-item name-only"><h3>Antecedentes Criminais</h3></article>
-          <article class="catalog-item name-only"><h3>Vitimologia</h3></article>
-          <article class="catalog-item name-only"><h3>API</h3></article>
-          <article class="catalog-item name-only"><h3>White Label</h3></article>
-          <article class="catalog-item name-only"><h3>Gestão Logística</h3></article>
-          <article class="catalog-item name-only"><h3>Gestão Securitária</h3></article>
-        </div>
-      </div>
-      <div class="slide-footer"><span>Produtos ViaGate</span><span>09 / 15</span></div>
-    </section>
-
-    <section class="slide slide-light" id="slide-10" data-slide="10">
-      <div class="slide-inner ecosystem-layout">
-        <div class="section-copy ecosystem-copy">
-          <p class="kicker dark-kicker">DEPOIS DA APROVAÇÃO</p>
-          <h2>Depois da aprovação, <span>Cargo Truck e Plataforma Cargo acompanham a viagem.</span></h2>
-          <p class="lead dark-lead">O Cargo Score analisa o motorista antes da liberação. Depois disso, Cargo Truck e Plataforma Cargo acompanham a execução da operação.</p>
-        </div>
-        <div class="ecosystem-flow">
-          <article><span class="ecosystem-index">01</span><i data-lucide="shield-check"></i><strong>Cargo Score</strong><p>Analisa o motorista e retorna a decisão operacional.</p></article>
-          <div class="ecosystem-arrow"><i data-lucide="arrow-right"></i></div>
-          <article><span class="ecosystem-index">02</span><i data-lucide="smartphone"></i><strong>Cargo Truck</strong><p>O motorista recebe atividades, rota, paradas e entrega no aplicativo.</p></article>
-          <div class="ecosystem-arrow"><i data-lucide="arrow-right"></i></div>
-          <article><span class="ecosystem-index">03</span><i data-lucide="monitor-dot"></i><strong>Plataforma Cargo</strong><p>A empresa acompanha a operação, o rastreamento e a timeline da viagem.</p></article>
-        </div>
-      </div>
-      <div class="slide-footer dark-footer"><span>Fluxo do ecossistema</span><span>10 / 15</span></div>
-    </section>
-
-    <section class="slide slide-dark" id="slide-11" data-slide="11">
-      <div class="slide-inner operation-layout">
-        <figure class="media-placeholder operation-media"><div class="placeholder-content"><i data-lucide="map"></i><strong>IMAGEM / SCREENSHOT DA OPERAÇÃO</strong><span>1600 × 1100 px</span><small>Mapa + aplicativo + eventos da viagem<br />Evitar montagem carregada</small></div></figure>
-        <div class="operation-copy">
-          <p class="kicker">CARGO TRUCK + PLATAFORMA CARGO</p>
-          <h2>O motorista inicia a viagem, registra paradas <span>e conclui a entrega.</span></h2>
-          <div class="operation-steps">
-            <div><span>01</span><i data-lucide="package-open"></i><div><strong>Atividade</strong><small>Coletas e entregas são enviadas ao motorista pelo aplicativo.</small></div></div>
-            <div><span>02</span><i data-lucide="route"></i><div><strong>Viagem</strong><small>Ao iniciar a atividade, o aplicativo passa a registrar a rota e a execução.</small></div></div>
-            <div><span>03</span><i data-lucide="circle-dot-dashed"></i><div><strong>Eventos</strong><small>Paradas para descanso, alimentação, abastecimento ou manutenção ficam registradas.</small></div></div>
-            <div><span>04</span><i data-lucide="file-check-2"></i><div><strong>Entrega</strong><small>A entrega pode ser concluída com o envio de imagem do canhoto assinado.</small></div></div>
-          </div>
-        </div>
-      </div>
-      <div class="slide-footer"><span>Operação logística</span><span>11 / 15</span></div>
-    </section>
-
-    <section class="slide slide-light" id="slide-12" data-slide="12">
-      <div class="slide-inner integration-layout">
-        <div class="integration-copy-large">
-          <p class="kicker dark-kicker">API + WHITE LABEL</p>
-          <h2>As soluções ViaGate podem ser <span>integradas por API ou entregues em white label.</span></h2>
-          <p class="lead dark-lead">Biometria, CNH, ANTT, veículo, antecedentes e outras consultas podem ser integradas ao software do cliente. A operação também pode ser entregue com logo, cores e URL próprias.</p>
-        </div>
-        <div class="integration-cards">
-          <article><i data-lucide="plug"></i><h3>API</h3><p>Integra biometria facial, validação de CNH, ANTT, veículo, antecedentes e outras consultas diretamente ao sistema do cliente.</p></article>
-          <article><i data-lucide="panels-top-left"></i><h3>White label</h3><p>Entrega a solução com identidade visual do cliente, incluindo logo, cores e URL personalizada.</p></article>
-          <figure class="mini-placeholder"><span>IMAGEM 1200 × 700 px</span><small>Integração / white label</small></figure>
-        </div>
-      </div>
-      <div class="slide-footer dark-footer"><span>Integrações</span><span>12 / 15</span></div>
-    </section>
-
-    <section class="slide slide-dark proof-slide" id="slide-13" data-slide="13">
-      <div class="slide-inner proof-layout">
-        <div class="section-copy proof-copy">
-          <p class="kicker">VALIDAÇÃO DE MERCADO</p>
-          <h2>Números e reconhecimento <span>de mercado.</span></h2>
-          <p class="lead">O material institucional apresenta uma operação já utilizada por empresas, auditada pela FENSEG e reconhecida no mercado securitário.</p>
-        </div>
-        <div class="metric-wall">
-          <article class="metric-primary"><strong>300+</strong><span>clientes diretos</span></article>
-          <article><strong>5 anos</strong><span>de empresa</span></article>
-          <article class="metric-success"><strong>5 anos</strong><span>de operação com biometria e validação de CNH sem evento adverso informado no material institucional</span></article>
-          <article class="metric-certification"><i data-lucide="badge-check"></i><span>Auditada pela FENSEG e reconhecida pelas principais seguradoras, segundo a apresentação institucional.</span></article>
-        </div>
-      </div>
-      <div class="slide-footer"><span>Validação de mercado</span><span>13 / 15</span></div>
-    </section>
-
-    <section class="slide slide-deep people-slide" id="slide-14" data-slide="14">
-      <div class="slide-inner people-layout">
-        <div class="people-heading">
-          <p class="kicker">PESSOAS POR TRÁS DO PROJETO</p>
-          <h2>Sócios com experiência em <span>seguros, finanças e tecnologia.</span></h2>
-          <p class="lead">A equipe combina experiência em seguro de transportes, mercado financeiro, comércio exterior e desenvolvimento de tecnologia aplicada à logística e ao gerenciamento de riscos.</p>
-        </div>
-        <div class="people-grid">
-          <article class="person"><figure class="person-photo"><span>FOTO ANTÔNIO<br /><small>800 × 1000 px</small></span></figure><div class="person-info"><span class="person-index">01</span><h3>Antônio Santos</h3><p class="person-role">Sócio-Diretor Comercial</p><p class="person-description">34 anos de atuação em seguro de transportes, gerenciamento de riscos e segurança em operações logísticas.</p></div></article>
-          <article class="person"><figure class="person-photo"><span>FOTO ANÉSIO<br /><small>800 × 1000 px</small></span></figure><div class="person-info"><span class="person-index">02</span><h3>Anésio Santos</h3><p class="person-role">Sócio-Financeiro</p><p class="person-description">Especialista no mercado financeiro e comércio exterior, com atuação executiva em uma das maiores montadoras do mundo.</p></div></article>
-          <article class="person"><figure class="person-photo"><span>FOTO MATEUS<br /><small>800 × 1000 px</small></span></figure><div class="person-info"><span class="person-index">03</span><h3>Mateus Insa</h3><p class="person-role">Sócio-Diretor de TI</p><p class="person-description">Especialista em sistemas de alto desempenho e desenvolvimento de tecnologias de rastreamento, pesquisa cadastral e gerenciamento de riscos.</p></div></article>
-        </div>
-      </div>
-      <div class="slide-footer"><span>Time</span><span>14 / 15</span></div>
-    </section>
-
-    <section class="slide slide-orange" id="slide-15" data-slide="15">
-      <div class="slide-inner closing-layout">
-        <img class="closing-logo" src="./assets/logo-viagate-white.svg" alt="ViaGate" />
-        <p class="kicker closing-kicker">VIAGATE</p>
-        <h2>Biometria, score e logística <br />em uma única operação.</h2>
-        <p>viagate.com.br</p>
-        <div class="contact-line"><span>viagate.com.br</span><span>antonio.santos@viagate.com.br</span><span>(41) 99962-3600</span></div>
-      </div>
-      <div class="slide-footer orange-footer"><span>ViaGate</span><span>15 / 15</span></div>
-    </section>
-  </main>
-
-  <div class="presentation-progress" aria-hidden="true"><span id="progressBar"></span></div>
-  <button class="next-slide" type="button" id="nextSlide" aria-label="Próxima página"><i data-lucide="arrow-down"></i></button>
-  <a
-    class="contact-whatsapp"
-    href="https://wa.me/5541999623600?text=Ol%C3%A1%2C%20quero%20falar%20sobre%20a%20ViaGate."
-    target="_blank"
-    rel="noopener noreferrer"
-    aria-label="Falar com a ViaGate no WhatsApp"
-  >
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path fill="currentColor" d="M20.52 3.48A11.8 11.8 0 0 0 12.06 0C5.5 0 .15 5.35.15 11.91c0 2.1.55 4.15 1.6 5.96L0 24l6.33-1.66a11.88 11.88 0 0 0 5.73 1.46h.01c6.56 0 11.91-5.35 11.91-11.91 0-3.18-1.24-6.17-3.46-8.41ZM12.07 21.8h-.01a9.9 9.9 0 0 1-5.05-1.39l-.36-.21-3.76.99 1-3.67-.23-.38a9.87 9.87 0 0 1-1.52-5.25c0-5.46 4.45-9.91 9.92-9.91 2.64 0 5.12 1.03 6.98 2.9a9.8 9.8 0 0 1 2.9 6.98c0 5.47-4.45 9.92-9.91 9.92Zm5.44-7.42c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.76.97-.93 1.17-.17.2-.35.22-.65.08-.3-.15-1.25-.46-2.38-1.47-.88-.78-1.48-1.74-1.65-2.03-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.08-.8.37-.27.3-1.05 1.02-1.05 2.48 0 1.47 1.08 2.88 1.23 3.08.15.2 2.12 3.24 5.14 4.54.72.31 1.28.5 1.72.64.72.23 1.37.2 1.88.12.57-.08 1.76-.72 2.01-1.42.25-.7.25-1.3.17-1.42-.07-.12-.27-.2-.57-.35Z" />
-    </svg>
-    <span>Falar no WhatsApp</span>
-  </a>
-
-  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-  <script src="./script.js"></script>
+      const presentationScript = frameDocument.createElement('script');
+      presentationScript.src = './presentation-mode.js';
+      presentationScript.addEventListener('load', () => {
+        if (typeof frameWindow.initializePresentationMode === 'function') {
+          frameWindow.initializePresentationMode();
+        }
+      });
+      frameDocument.body.appendChild(presentationScript);
+    }, { once: true });
+  </script>
 </body>
 </html>
