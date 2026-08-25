@@ -56,11 +56,12 @@ Ao alterar uma versão já publicada, o painel cria uma nova versão em rascunho
 
 ### 1. Banco
 
-Execute as migrations do diretório `supabase/migrations/` na ordem do nome dos arquivos:
+Execute as migrations do diretório `supabase/migrations/` na ordem abaixo:
 
 ```text
 20260825_proposals.sql
 20260825_proposals_grants.sql
+20260825_proposals_immutability_fix.sql
 ```
 
 As migrations criam:
@@ -73,6 +74,7 @@ As migrations criam:
 - `proposal_version_items`
 - políticas RLS
 - permissões explícitas para `authenticated`
+- imutabilidade de versões publicadas
 - `publish_proposal_version`
 - `get_public_proposal`
 
