@@ -15,6 +15,7 @@ const viewerState = {
   sessionId: null,
   content: null,
   frameLoaded: false,
+  bridgeReady: false,
   slideNumber: 1,
   slideTotal: 1,
 };
@@ -54,6 +55,7 @@ async function track(eventName, slideNumber = null, slideTotal = null) {
 }
 
 function showError(message) {
+  loadingElement.hidden = false;
   loadingElement.innerHTML = `<div class="error">${message}</div>`;
 }
 
@@ -80,6 +82,8 @@ function installPresentation(frameDocument, frameWindow) {
     email: salesperson.email || '',
     phone: salesperson.phone || '',
     whatsapp: salesperson.whatsapp || '',
+    linkedin: salesperson.linkedin || '',
+    instagram: salesperson.instagram || '',
     photoUrl: salesperson.photo_url || './assets/logo-viagate-color.svg',
   });
 
@@ -90,16 +94,17 @@ function installPresentation(frameDocument, frameWindow) {
   });
 
   const bootstrapScript = frameDocument.createElement('script');
-  bootstrapScript.src = './presentation-bootstrap.js?v=20260825-6';
+  bootstrapScript.src = './presentation-bootstrap.js?v=20260825-7';
   bootstrapScript.dataset.presentationBootstrap = 'true';
   frameDocument.body.appendChild(bootstrapScript);
 }
 
-async function waitForBridge(timeoutMs = 4000) {
+async function waitForBridge(timeoutMs = 8000) {
   const startedAt = Date.now();
 
   while (Date.now() - startedAt < timeoutMs) {
     if (typeof frame.contentWindow?.hostStartPresentation === 'function') {
+      viewerState.bridgeReady = true;
       return true;
     }
 
@@ -123,6 +128,7 @@ function showGate(mode) {
 
   const continuing = mode === 'continue';
   startButton.textContent = continuing ? 'CONTINUAR APRESENTAÇÃO' : 'INICIAR APRESENTAÇÃO';
+  startButton.disabled = !viewerState.bridgeReady;
   restartButton.hidden = !continuing;
 
   frame.contentWindow?.hostPausePresentation?.();
@@ -135,19 +141,28 @@ function revealPresentation() {
   syncNavigationFromFrame();
 }
 
+async function preparePresentationStart() {
+  const bridgeReady = viewerState.bridgeReady || await waitForBridge();
+
+  if (!bridgeReady) {
+    showError('Não foi possível inicializar os controles da apresentação. Atualize a página e tente novamente.');
+    return false;
+  }
+
+  loadingElement.hidden = true;
+  showGate('start');
+  syncNavigationFromFrame();
+  return true;
+}
+
 async function startPresentation() {
-  if (!viewerState.frameLoaded) {
+  if (!viewerState.frameLoaded || !viewerState.bridgeReady) {
     return;
   }
 
   try {
     if (!document.fullscreenElement) {
       await document.documentElement.requestFullscreen();
-    }
-
-    const bridgeReady = await waitForBridge();
-    if (!bridgeReady) {
-      return;
     }
 
     const firstStart = !viewerState.started;
@@ -208,18 +223,18 @@ async function initializeViewer() {
   const clientName = viewerState.content.client?.company_name;
   document.title = clientName ? `ViaGate — Apresentação para ${clientName}` : 'ViaGate — Apresentação';
 
-  frame.addEventListener('load', () => {
+  frame.addEventListener('load', async () => {
     viewerState.frameLoaded = true;
     installPresentation(frame.contentDocument, frame.contentWindow);
-    loadingElement.hidden = true;
-    showGate('start');
+    await preparePresentationStart();
   }, { once: true });
 
-  frame.src = './presentation-content.html?v=20260825-6';
+  frame.src = './presentation-content.html?v=20260825-7';
   frame.hidden = false;
   await track('open');
 }
 
+startButton.disabled = true;
 startButton.addEventListener('click', startPresentation);
 restartButton.addEventListener('click', restartPresentation);
 previousButton.addEventListener('click', () => navigatePresentation(-1));
@@ -245,6 +260,11 @@ window.addEventListener('message', (event) => {
 
   const slideNumber = Number(event.data.slideNumber || 0) || null;
   const slideTotal = Number(event.data.slideTotal || 0) || null;
+
+  if (event.data.type === 'bridge_ready') {
+    viewerState.bridgeReady = true;
+    startButton.disabled = false;
+  }
 
   if (slideNumber && slideTotal) {
     updateNavigation(slideNumber, slideTotal);
