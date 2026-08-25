@@ -77,16 +77,34 @@ function pausePresentation() {
   frame.contentWindow?.hostPausePresentation?.();
 }
 
+async function waitForPresentationBridge(attempt = 0) {
+  if (typeof frame.contentWindow?.hostStartPresentation === 'function') {
+    return true;
+  }
+
+  if (attempt >= 60) {
+    return false;
+  }
+
+  await new Promise((resolve) => window.setTimeout(resolve, 50));
+  return waitForPresentationBridge(attempt + 1);
+}
+
 async function startPresentation() {
   try {
     if (!document.fullscreenElement) {
       await document.documentElement.requestFullscreen();
     }
 
+    const bridgeReady = await waitForPresentationBridge();
+    if (!bridgeReady) {
+      return;
+    }
+
     const firstStart = !viewerState.started;
     viewerState.started = true;
     document.body.classList.remove('is-paused');
-    frame.contentWindow?.hostStartPresentation?.(firstStart);
+    frame.contentWindow.hostStartPresentation(firstStart);
     await track('start');
   } catch {
   }
@@ -118,13 +136,13 @@ async function initializeViewer() {
   const clientName = viewerState.content.client?.company_name;
   document.title = clientName ? `ViaGate — Apresentação para ${clientName}` : 'ViaGate — Apresentação';
 
+  frame.addEventListener('load', () => {
+    installPresentation(frame.contentDocument, frame.contentWindow);
+  }, { once: true });
+
   frame.src = './presentation-content.html?v=20260825-5';
   frame.hidden = false;
   loadingElement.hidden = true;
-
-  frame.addEventListener('load', () => {
-    installPresentation(frame.contentDocument, frame.contentWindow);
-  });
 
   await track('open');
 }
