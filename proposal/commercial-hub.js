@@ -1,5 +1,6 @@
 import {
   buildPublicPresentationUrl,
+  buildPublicProposalUrl,
   supabase,
 } from './supabase.js';
 
@@ -9,6 +10,7 @@ const hubState = {
   stats: [],
   presentation: null,
   version: null,
+  activeTab: 'overview',
 };
 
 function appendStylesheet() {
@@ -18,7 +20,7 @@ function appendStylesheet() {
 
   const link = document.createElement('link');
   link.rel = 'stylesheet';
-  link.href = './commercial-hub.css';
+  link.href = './commercial-hub.css?v=20260825-6';
   link.dataset.commercialHub = 'true';
   document.head.appendChild(link);
 }
@@ -31,7 +33,7 @@ function escapeHtml(value) {
 
 function formatDateTime(value) {
   if (!value) {
-    return 'Nunca';
+    return 'Nunca aberta';
   }
 
   return new Intl.DateTimeFormat('pt-BR', {
@@ -46,7 +48,7 @@ function getStat(kind, documentId) {
 
 function getReadingStatus(stat) {
   if (!stat || Number(stat.opens) === 0) {
-    return { label: 'Não aberta', className: '' };
+    return { label: 'Não aberta', className: 'unopened' };
   }
 
   if (Number(stat.completions) > 0) {
@@ -61,21 +63,99 @@ function getReadingStatus(stat) {
 }
 
 function buildStatsText(stat) {
-  if (!stat) {
-    return 'Sem dados de leitura';
+  if (!stat || Number(stat.opens) === 0) {
+    return 'O link ainda não foi aberto';
   }
 
-  return `${Number(stat.opens) || 0} abertura(s) · ${Number(stat.max_progress) || 0}% máximo · última ${formatDateTime(stat.last_opened_at)}`;
+  return `${Number(stat.opens)} abertura(s) · ${Number(stat.max_progress) || 0}% de progresso máximo`;
+}
+
+function getPublicUrl(kind, token) {
+  if (!token) {
+    return '';
+  }
+
+  return kind === 'presentation'
+    ? buildPublicPresentationUrl(token)
+    : buildPublicProposalUrl(token);
+}
+
+async function copyPublicLink(kind, token, button = null) {
+  const url = getPublicUrl(kind, token);
+  if (!url) {
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(url);
+
+    if (button) {
+      const original = button.textContent;
+      button.textContent = 'Copiado';
+      window.setTimeout(() => {
+        button.textContent = original;
+      }, 1200);
+    }
+  } catch {
+    window.prompt('Copie o link:', url);
+  }
+}
+
+function ensureProposalPricingModels() {
+  const select = document.getElementById('pricingModel');
+  if (!select || select.querySelector('option[value="item_and_bundle"]')) {
+    return;
+  }
+
+  const customOption = select.querySelector('option[value="custom"]');
+  const combinedOption = document.createElement('option');
+  combinedOption.value = 'item_and_bundle';
+  combinedOption.textContent = 'Análise por item + conjunto';
+
+  select.insertBefore(combinedOption, customOption ?? null);
+
+  const perItem = select.querySelector('option[value="per_item"]');
+  const bundle = select.querySelector('option[value="bundle"]');
+
+  if (perItem) perItem.textContent = 'Análise por item';
+  if (bundle) bundle.textContent = 'Análise por conjunto';
+  if (customOption) customOption.textContent = 'Condições específicas';
+}
+
+function createHubHeader(title, description, actions = '') {
+  return `
+    <header class="hub-view-header">
+      <div>
+        <h2>${escapeHtml(title)}</h2>
+        ${description ? `<p>${escapeHtml(description)}</p>` : ''}
+      </div>
+      ${actions}
+    </header>
+  `;
 }
 
 function ensureHubStructure() {
   const dashboard = document.getElementById('dashboardView');
   const adminHeader = dashboard?.querySelector('.admin-header');
   const dashboardGrid = dashboard?.querySelector('.dashboard-grid');
-  const adminMain = document.querySelector('.admin-main');
+  const proposalList = document.getElementById('proposalList');
+  const profileForm = document.getElementById('salesProfileForm');
   const proposalButton = document.getElementById('newProposalButton');
+  const adminMain = document.querySelector('.admin-main');
 
-  if (!dashboard || !adminHeader || !dashboardGrid || !adminMain || document.getElementById('presentationList')) {
+  if (!dashboard || !adminHeader || !dashboardGrid || !proposalList || !profileForm || !proposalButton || !adminMain) {
+    return;
+  }
+
+  if (dashboard.dataset.hubReady === 'true') {
+    return;
+  }
+
+  dashboard.dataset.hubReady = 'true';
+
+  const proposalPanel = proposalList.closest('.panel');
+  const profilePanel = profileForm.closest('.panel');
+  if (!proposalPanel || !profilePanel) {
     return;
   }
 
@@ -84,41 +164,88 @@ function ensureHubStructure() {
   const description = adminHeader.querySelector('p');
 
   if (eyebrow) eyebrow.textContent = 'HUB COMERCIAL';
-  if (title) title.textContent = 'Apresentações e propostas';
-  if (description) description.textContent = 'Gere links individuais, personalize o material e acompanhe abertura e leitura.';
+  if (title) title.textContent = 'Gestão comercial';
+  if (description) description.textContent = 'Crie materiais, publique links individuais e acompanhe a leitura de cada envio.';
 
-  if (proposalButton) {
-    proposalButton.textContent = 'Nova proposta';
-    const actions = document.createElement('div');
-    actions.className = 'hub-actions';
-    proposalButton.parentNode.insertBefore(actions, proposalButton);
-    actions.appendChild(proposalButton);
-
-    const presentationButton = document.createElement('button');
-    presentationButton.className = 'secondary-button';
-    presentationButton.type = 'button';
-    presentationButton.id = 'newPresentationButton';
-    presentationButton.textContent = 'Nova apresentação';
-    actions.prepend(presentationButton);
+  const originalActions = Array.from(adminHeader.children).find((child) => child.contains(proposalButton));
+  if (originalActions && originalActions !== adminHeader.firstElementChild) {
+    originalActions.remove();
   }
 
-  const summary = document.createElement('section');
-  summary.className = 'hub-summary';
-  summary.id = 'hubSummary';
-  dashboard.insertBefore(summary, dashboardGrid);
-
-  const presentationPanel = document.createElement('section');
-  presentationPanel.className = 'panel hub-stats-panel';
-  presentationPanel.innerHTML = `
-    <header class="panel-header">
-      <h2>Apresentações geradas</h2>
-      <button class="link-button" type="button" id="refreshPresentationButton">Atualizar</button>
-    </header>
-    <div class="panel-body">
-      <div id="presentationList" class="proposal-list"><div class="hub-empty">Carregando apresentações...</div></div>
-    </div>
+  const nav = document.createElement('nav');
+  nav.className = 'hub-nav';
+  nav.setAttribute('aria-label', 'Seções do Hub Comercial');
+  nav.innerHTML = `
+    <button type="button" data-hub-tab="overview">Visão geral</button>
+    <button type="button" data-hub-tab="presentations">Apresentações</button>
+    <button type="button" data-hub-tab="proposals">Propostas</button>
+    <button type="button" data-hub-tab="profile">Meu perfil</button>
   `;
-  dashboardGrid.prepend(presentationPanel);
+
+  const views = document.createElement('div');
+  views.className = 'hub-views';
+
+  const overviewView = document.createElement('section');
+  overviewView.className = 'hub-view';
+  overviewView.dataset.hubView = 'overview';
+  overviewView.innerHTML = `
+    ${createHubHeader('Visão geral', 'Acompanhe o que aconteceu depois que cada link foi enviado.')}
+    <section class="hub-summary" id="hubSummary"></section>
+    <section class="hub-panel">
+      <header class="hub-panel-header">
+        <div>
+          <h3>Acompanhamento dos materiais publicados</h3>
+          <p>Abertura, progresso de leitura e último acesso por link.</p>
+        </div>
+        <button class="link-button" type="button" id="refreshHubButton">Atualizar</button>
+      </header>
+      <div class="hub-tracking-table" id="hubTrackingTable"></div>
+    </section>
+  `;
+
+  const presentationsView = document.createElement('section');
+  presentationsView.className = 'hub-view';
+  presentationsView.dataset.hubView = 'presentations';
+  presentationsView.innerHTML = `
+    ${createHubHeader(
+      'Apresentações',
+      'Gere um link da apresentação institucional com identificação do cliente e contato comercial quando necessário.',
+      '<button class="primary-button" type="button" id="newPresentationButton">Nova apresentação</button>',
+    )}
+    <section class="hub-panel">
+      <header class="hub-panel-header">
+        <div><h3>Apresentações geradas</h3></div>
+        <button class="link-button" type="button" id="refreshPresentationButton">Atualizar</button>
+      </header>
+      <div id="presentationList" class="hub-document-list"></div>
+    </section>
+  `;
+
+  const proposalsView = document.createElement('section');
+  proposalsView.className = 'hub-view';
+  proposalsView.dataset.hubView = 'proposals';
+  proposalsView.innerHTML = createHubHeader(
+    'Propostas comerciais',
+    'Crie, versione, publique e acompanhe propostas por cliente.',
+  );
+
+  const proposalActions = document.createElement('div');
+  proposalActions.className = 'hub-view-actions';
+  proposalActions.appendChild(proposalButton);
+  proposalsView.querySelector('.hub-view-header')?.appendChild(proposalActions);
+  proposalsView.appendChild(proposalPanel);
+
+  const profileView = document.createElement('section');
+  profileView.className = 'hub-view';
+  profileView.dataset.hubView = 'profile';
+  profileView.innerHTML = createHubHeader(
+    'Meu perfil comercial',
+    'Estes dados são usados no contato final das apresentações e propostas geradas por este usuário.',
+  );
+  profileView.appendChild(profilePanel);
+
+  views.append(overviewView, presentationsView, proposalsView, profileView);
+  dashboardGrid.replaceWith(nav, views);
 
   const editor = document.createElement('section');
   editor.className = 'hub-editor';
@@ -128,11 +255,11 @@ function ensureHubStructure() {
     <div class="hub-editor-shell">
       <div class="hub-editor-top">
         <div>
-          <span class="hub-section-eyebrow">EDITOR DE APRESENTAÇÃO</span>
+          <span class="hub-section-eyebrow">APRESENTAÇÃO INSTITUCIONAL</span>
           <h1 id="presentationEditorTitle">Nova apresentação</h1>
-          <p>O conteúdo institucional permanece padronizado; personalize somente o que fizer sentido para este envio.</p>
+          <p>O conteúdo institucional permanece o mesmo. Configure somente a identificação deste envio.</p>
         </div>
-        <button class="ghost-button" type="button" id="closePresentationEditor">Fechar</button>
+        <button class="ghost-button" type="button" id="closePresentationEditor">Voltar</button>
       </div>
 
       <form id="presentationForm">
@@ -140,7 +267,7 @@ function ensureHubStructure() {
         <input id="presentationVersionId" type="hidden" />
 
         <section class="hub-editor-card">
-          <header><h2>Identificação</h2></header>
+          <header><h2>Identificação do envio</h2></header>
           <div class="hub-editor-body">
             <div class="form-grid">
               <div class="form-field full">
@@ -149,32 +276,31 @@ function ensureHubStructure() {
               </div>
               <div class="form-field">
                 <label for="presentationClientName">Empresa do cliente</label>
-                <input id="presentationClientName" placeholder="Opcional" />
+                <input id="presentationClientName" />
               </div>
               <div class="form-field">
                 <label for="presentationContactName">Contato do cliente</label>
-                <input id="presentationContactName" placeholder="Opcional" />
+                <input id="presentationContactName" />
               </div>
               <div class="form-field full">
-                <label for="presentationClientLogo">URL do logo do cliente</label>
-                <input id="presentationClientLogo" type="url" placeholder="Opcional" />
+                <label for="presentationClientLogo">Logo do cliente</label>
+                <input id="presentationClientLogo" type="url" />
               </div>
             </div>
-            <div class="hub-client-note">Esses dados são opcionais. A apresentação pode continuar institucional e usar apenas o contato do vendedor.</div>
           </div>
         </section>
 
         <section class="hub-editor-card">
-          <header><h2>Personalização deste link</h2></header>
+          <header><h2>Conteúdo personalizado</h2></header>
           <div class="hub-editor-body">
             <div class="hub-check-grid">
               <label class="hub-check">
                 <input id="presentationShowContact" type="checkbox" checked />
-                <span><strong>Slide final do comercial</strong><small>Usa foto, nome, cargo, e-mail e telefone do perfil logado.</small></span>
+                <span><strong>Exibir contato comercial no final</strong><small>Nome, cargo, foto, telefone e e-mail do perfil logado.</small></span>
               </label>
               <label class="hub-check">
                 <input id="presentationShowClient" type="checkbox" />
-                <span><strong>Identificação do cliente</strong><small>Permite mostrar empresa/contato neste link personalizado.</small></span>
+                <span><strong>Identificar o cliente na apresentação</strong><small>Exibe empresa, contato e logo cadastrados acima.</small></span>
               </label>
             </div>
           </div>
@@ -185,19 +311,36 @@ function ensureHubStructure() {
           <div class="hub-actions">
             <button class="ghost-button" id="copyPresentationLink" type="button" hidden>Copiar link</button>
             <button class="secondary-button" type="submit">Salvar rascunho</button>
-            <button class="primary-button" id="publishPresentationButton" type="button">Publicar nova versão</button>
+            <button class="primary-button" id="publishPresentationButton" type="button">Publicar</button>
           </div>
         </div>
         <div class="message-box" id="presentationMessage" hidden></div>
       </form>
     </div>
   `;
+
   adminMain.appendChild(editor);
+  ensureProposalPricingModels();
+}
+
+function activateHubTab(tabName) {
+  hubState.activeTab = tabName;
+
+  document.querySelectorAll('[data-hub-tab]').forEach((button) => {
+    const active = button.dataset.hubTab === tabName;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-current', active ? 'page' : 'false');
+  });
+
+  document.querySelectorAll('[data-hub-view]').forEach((view) => {
+    view.hidden = view.dataset.hubView !== tabName;
+  });
 }
 
 function showMessage(message, type = '') {
   const element = document.getElementById('presentationMessage');
   if (!element) return;
+
   element.textContent = message;
   element.className = `message-box${type ? ` ${type}` : ''}`;
   element.hidden = false;
@@ -218,6 +361,7 @@ async function loadSalesProfile() {
     .maybeSingle();
 
   if (error) throw error;
+
   hubState.salesProfile = data;
   return data;
 }
@@ -249,6 +393,7 @@ function collectPresentationContent() {
 function resetPresentationEditor() {
   hubState.presentation = null;
   hubState.version = null;
+
   document.getElementById('presentationForm')?.reset();
   document.getElementById('presentationId').value = '';
   document.getElementById('presentationVersionId').value = '';
@@ -263,11 +408,16 @@ function resetPresentationEditor() {
 
 function openPresentationEditor() {
   resetPresentationEditor();
+  document.getElementById('dashboardView').hidden = true;
+  document.getElementById('editorView').hidden = true;
   document.getElementById('presentationEditorView').hidden = false;
+  window.scrollTo({ top: 0, behavior: 'auto' });
 }
 
 function closePresentationEditor() {
   document.getElementById('presentationEditorView').hidden = true;
+  document.getElementById('dashboardView').hidden = false;
+  activateHubTab('presentations');
 }
 
 async function openExistingPresentation(presentationId) {
@@ -309,7 +459,11 @@ async function openExistingPresentation(presentationId) {
   const copyButton = document.getElementById('copyPresentationLink');
   copyButton.hidden = !version?.published_at;
   copyButton.dataset.token = version?.published_at ? version.public_token : '';
+
+  document.getElementById('dashboardView').hidden = true;
+  document.getElementById('editorView').hidden = true;
   document.getElementById('presentationEditorView').hidden = false;
+  window.scrollTo({ top: 0, behavior: 'auto' });
 }
 
 async function ensurePresentation() {
@@ -329,7 +483,7 @@ async function ensurePresentation() {
   }
 
   if (!hubState.salesProfile?.id) {
-    throw new Error('Preencha e salve seu perfil comercial antes de gerar uma apresentação.');
+    throw new Error('Salve seu perfil comercial antes de gerar uma apresentação.');
   }
 
   const { data, error } = await supabase
@@ -343,6 +497,7 @@ async function ensurePresentation() {
     .single();
 
   if (error) throw error;
+
   hubState.presentation = data;
   return data;
 }
@@ -352,13 +507,15 @@ async function ensureDraftVersion(presentationId) {
     return hubState.version;
   }
 
-  const { data: latest } = await supabase
+  const { data: latest, error: latestError } = await supabase
     .from('presentation_versions')
     .select('version_number')
     .eq('presentation_id', presentationId)
     .order('version_number', { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  if (latestError) throw latestError;
 
   const nextVersion = Number(latest?.version_number ?? 0) + 1;
   const { data, error } = await supabase
@@ -373,6 +530,7 @@ async function ensureDraftVersion(presentationId) {
     .single();
 
   if (error) throw error;
+
   hubState.version = data;
   return data;
 }
@@ -394,6 +552,7 @@ async function savePresentationDraft(event) {
       .single();
 
     if (error) throw error;
+
     hubState.version = data;
     document.getElementById('presentationId').value = presentation.id;
     document.getElementById('presentationVersionId').value = data.id;
@@ -420,24 +579,25 @@ async function publishPresentation() {
   }
 
   const published = Array.isArray(data) ? data[0] : data;
-  hubState.version = { ...version, published_at: published?.published_at, public_token: published?.public_token };
+  hubState.version = {
+    ...version,
+    published_at: published?.published_at,
+    public_token: published?.public_token,
+  };
+
   const copyButton = document.getElementById('copyPresentationLink');
   copyButton.hidden = false;
   copyButton.dataset.token = published?.public_token ?? '';
   document.getElementById('presentationEditorVersion').textContent = `Versão ${version.version_number} · publicada`;
-  showMessage('Apresentação publicada. O link já pode ser compartilhado.', 'success');
+  showMessage('Apresentação publicada. O link está disponível para envio.', 'success');
   await refreshHub();
-}
-
-async function copyPresentationLink(token) {
-  if (!token) return;
-  await navigator.clipboard.writeText(buildPublicPresentationUrl(token));
 }
 
 async function loadStats() {
   const { data, error } = await supabase.rpc('get_my_shared_document_stats');
   hubState.stats = error || !Array.isArray(data) ? [] : data;
   renderSummary();
+  renderTrackingTable();
   decorateProposalRows();
 }
 
@@ -448,14 +608,59 @@ function renderSummary() {
   const published = hubState.stats.length;
   const opens = hubState.stats.reduce((total, item) => total + Number(item.opens || 0), 0);
   const read = hubState.stats.filter((item) => Number(item.completions) > 0).length;
-  const active = hubState.stats.filter((item) => Number(item.opens) > 0 && Number(item.completions) === 0).length;
+  const active = hubState.stats.filter((item) => Number(item.starts) > 0 && Number(item.completions) === 0).length;
 
   element.innerHTML = `
     <article class="hub-metric"><small>Links publicados</small><strong>${published}</strong></article>
     <article class="hub-metric"><small>Aberturas</small><strong>${opens}</strong></article>
-    <article class="hub-metric"><small>Materiais lidos</small><strong>${read}</strong></article>
-    <article class="hub-metric"><small>Em acompanhamento</small><strong>${active}</strong></article>
+    <article class="hub-metric"><small>Lidos até o final</small><strong>${read}</strong></article>
+    <article class="hub-metric"><small>Em leitura</small><strong>${active}</strong></article>
   `;
+}
+
+function renderTrackingTable() {
+  const element = document.getElementById('hubTrackingTable');
+  if (!element) return;
+
+  if (!hubState.stats.length) {
+    element.innerHTML = '<div class="hub-empty">Nenhum material publicado ainda.</div>';
+    return;
+  }
+
+  element.innerHTML = `
+    <div class="hub-tracking-head">
+      <span>Material</span>
+      <span>Leitura</span>
+      <span>Aberturas</span>
+      <span>Progresso</span>
+      <span>Última abertura</span>
+      <span></span>
+    </div>
+    ${hubState.stats.map((stat) => {
+      const status = getReadingStatus(stat);
+      const typeLabel = stat.document_kind === 'presentation' ? 'Apresentação' : 'Proposta';
+      const title = stat.client_name || stat.title || typeLabel;
+
+      return `
+        <article class="hub-tracking-row">
+          <div><strong>${escapeHtml(title)}</strong><small>${typeLabel} · versão ${Number(stat.version_number) || 1}</small></div>
+          <div><span class="hub-reading-status ${status.className}">${status.label}</span></div>
+          <div><strong>${Number(stat.opens) || 0}</strong></div>
+          <div><strong>${Number(stat.max_progress) || 0}%</strong></div>
+          <div><span>${escapeHtml(formatDateTime(stat.last_opened_at))}</span></div>
+          <div><button class="link-button" type="button" data-copy-tracking-kind="${stat.document_kind}" data-copy-tracking-token="${stat.public_token}">Copiar link</button></div>
+        </article>
+      `;
+    }).join('')}
+  `;
+
+  element.querySelectorAll('[data-copy-tracking-token]').forEach((button) => {
+    button.addEventListener('click', () => copyPublicLink(
+      button.dataset.copyTrackingKind,
+      button.dataset.copyTrackingToken,
+      button,
+    ));
+  });
 }
 
 async function loadPresentations() {
@@ -473,21 +678,31 @@ async function loadPresentations() {
   }
 
   if (!data?.length) {
-    list.innerHTML = '<div class="hub-empty">Nenhuma apresentação gerada ainda.</div>';
+    list.innerHTML = '<div class="hub-empty">Nenhuma apresentação criada.</div>';
     return;
   }
 
   list.innerHTML = data.map((presentation) => {
     const stat = getStat('presentation', presentation.id);
     const status = getReadingStatus(stat);
+
     return `
       <article class="hub-document-row">
-        <div><strong>${escapeHtml(presentation.title)}</strong><small>Apresentação institucional personalizada</small></div>
-        <div><span class="hub-reading-status ${status.className}">${status.label}</span><small>${buildStatsText(stat)}</small></div>
-        <div><span>${presentation.status === 'published' ? `Publicada · v${presentation.current_version}` : 'Rascunho'}</span><small>${stat?.client_name ? escapeHtml(stat.client_name) : 'Sem cliente vinculado'}</small></div>
+        <div class="hub-document-main">
+          <strong>${escapeHtml(presentation.title)}</strong>
+          <small>${presentation.status === 'published' ? `Publicada · versão ${presentation.current_version}` : 'Rascunho'}</small>
+        </div>
+        <div class="hub-document-reading">
+          <span class="hub-reading-status ${status.className}">${status.label}</span>
+          <small>${escapeHtml(buildStatsText(stat))}</small>
+        </div>
+        <div class="hub-document-last">
+          <strong>${escapeHtml(formatDateTime(stat?.last_opened_at))}</strong>
+          <small>Última abertura</small>
+        </div>
         <div class="hub-row-actions">
           ${stat?.public_token ? `<button class="link-button" type="button" data-copy-presentation="${stat.public_token}">Copiar link</button>` : ''}
-          <button class="link-button" type="button" data-open-presentation="${presentation.id}">Abrir</button>
+          <button class="link-button" type="button" data-open-presentation="${presentation.id}">Editar</button>
         </div>
       </article>
     `;
@@ -498,11 +713,7 @@ async function loadPresentations() {
   });
 
   list.querySelectorAll('[data-copy-presentation]').forEach((button) => {
-    button.addEventListener('click', async () => {
-      await copyPresentationLink(button.dataset.copyPresentation);
-      button.textContent = 'Copiado';
-      window.setTimeout(() => { button.textContent = 'Copiar link'; }, 1200);
-    });
+    button.addEventListener('click', () => copyPublicLink('presentation', button.dataset.copyPresentation, button));
   });
 }
 
@@ -513,35 +724,85 @@ function decorateProposalRows() {
   list.querySelectorAll('[data-open-proposal]').forEach((button) => {
     const row = button.closest('.proposal-row');
     const documentId = button.dataset.openProposal;
-    const firstColumn = row?.querySelector('div');
-    if (!firstColumn || firstColumn.querySelector('.hub-analytics-inline')) return;
+    if (!row) return;
+
+    row.classList.add('hub-proposal-row');
+    row.querySelector('.hub-proposal-tracking')?.remove();
+    row.querySelector('[data-copy-proposal-tracking]')?.remove();
 
     const stat = getStat('proposal', documentId);
     const status = getReadingStatus(stat);
-    const info = document.createElement('small');
-    info.className = 'hub-analytics-inline';
-    info.textContent = `${status.label} · ${buildStatsText(stat)}`;
-    firstColumn.appendChild(info);
+    const tracking = document.createElement('div');
+    tracking.className = 'hub-proposal-tracking';
+    tracking.innerHTML = `
+      <span class="hub-reading-status ${status.className}">${status.label}</span>
+      <small>${escapeHtml(buildStatsText(stat))}</small>
+      <small>${escapeHtml(formatDateTime(stat?.last_opened_at))}</small>
+    `;
+
+    const actionCell = row.lastElementChild;
+    row.insertBefore(tracking, actionCell);
+
+    if (stat?.public_token && actionCell) {
+      const copyButton = document.createElement('button');
+      copyButton.className = 'link-button';
+      copyButton.type = 'button';
+      copyButton.dataset.copyProposalTracking = stat.public_token;
+      copyButton.textContent = 'Copiar link';
+      copyButton.addEventListener('click', () => copyPublicLink('proposal', stat.public_token, copyButton));
+      actionCell.prepend(copyButton);
+    }
+
+    const statusBadge = row.querySelector('.status-badge');
+    if (statusBadge) {
+      const labels = {
+        draft: 'Rascunho',
+        published: 'Publicada',
+        accepted: 'Aceita',
+        declined: 'Recusada',
+        expired: 'Expirada',
+      };
+      statusBadge.textContent = labels[statusBadge.textContent.trim()] ?? statusBadge.textContent;
+    }
   });
 }
 
 async function refreshHub() {
   if (!hubState.session?.user) return;
+
   await loadStats();
   await loadPresentations();
+  decorateProposalRows();
 }
 
 function bindHubEvents() {
+  document.querySelectorAll('[data-hub-tab]').forEach((button) => {
+    button.addEventListener('click', () => activateHubTab(button.dataset.hubTab));
+  });
+
   document.getElementById('newPresentationButton')?.addEventListener('click', openPresentationEditor);
   document.getElementById('closePresentationEditor')?.addEventListener('click', closePresentationEditor);
   document.getElementById('refreshPresentationButton')?.addEventListener('click', refreshHub);
+  document.getElementById('refreshHubButton')?.addEventListener('click', refreshHub);
   document.getElementById('presentationForm')?.addEventListener('submit', savePresentationDraft);
   document.getElementById('publishPresentationButton')?.addEventListener('click', publishPresentation);
-  document.getElementById('copyPresentationLink')?.addEventListener('click', (event) => copyPresentationLink(event.currentTarget.dataset.token));
+  document.getElementById('copyPresentationLink')?.addEventListener('click', (event) => {
+    copyPublicLink('presentation', event.currentTarget.dataset.token, event.currentTarget);
+  });
+
+  document.getElementById('newProposalButton')?.addEventListener('click', () => {
+    hubState.activeTab = 'proposals';
+  });
+
+  document.getElementById('backToDashboardButton')?.addEventListener('click', () => {
+    window.setTimeout(() => activateHubTab('proposals'), 0);
+  });
 
   const proposalList = document.getElementById('proposalList');
   if (proposalList) {
-    new MutationObserver(decorateProposalRows).observe(proposalList, { childList: true, subtree: true });
+    new MutationObserver(() => {
+      window.setTimeout(decorateProposalRows, 0);
+    }).observe(proposalList, { childList: true, subtree: true });
   }
 }
 
@@ -552,6 +813,7 @@ async function handleAuthenticatedSession(session) {
   try {
     await loadSalesProfile();
     await refreshHub();
+    activateHubTab(hubState.activeTab);
   } catch (error) {
     console.error('Não foi possível carregar o hub comercial.', error);
   }
@@ -561,6 +823,7 @@ async function initializeCommercialHub() {
   appendStylesheet();
   ensureHubStructure();
   bindHubEvents();
+  activateHubTab('overview');
 
   const { data } = await supabase.auth.getSession();
   await handleAuthenticatedSession(data.session);
