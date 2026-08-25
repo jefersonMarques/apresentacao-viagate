@@ -26,152 +26,128 @@ body.presentation-shell .brand {
   pointer-events: none;
 }
 
-.presentation-cover {
-  background:
-    radial-gradient(circle at 82% 20%, rgba(255, 107, 24, 0.16), transparent 30%),
-    linear-gradient(135deg, #071827 0%, #071827 56%, #0b2234 100%);
+.presentation,
+.presentation-header,
+.presentation-progress {
+  transition: filter 260ms ease, transform 260ms ease, opacity 220ms ease;
 }
 
-.presentation-cover::before,
-.presentation-cover::after {
-  content: "";
-  position: absolute;
-  pointer-events: none;
+body.presentation-paused .presentation,
+body.presentation-paused .presentation-header,
+body.presentation-paused .presentation-progress {
+  filter: blur(14px);
 }
 
-.presentation-cover::before {
+body.presentation-paused .presentation {
+  transform: scale(1.012);
+}
+
+.presentation-gate {
+  position: fixed;
   inset: 0;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
-  background-size: 72px 72px;
-  mask-image: linear-gradient(to right, rgba(0, 0, 0, 0.8), transparent 82%);
-}
-
-.presentation-cover::after {
-  top: 0;
-  right: 10vw;
-  width: 1px;
-  height: 100%;
-  background: linear-gradient(transparent, rgba(255, 107, 24, 0.7), transparent);
-}
-
-.presentation-cover-inner {
-  position: relative;
-  z-index: 1;
-  width: min(calc(100% - 120px), 1440px);
-  min-height: 100svh;
-  margin: 0 auto;
+  z-index: 1000;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 96px;
-  align-items: center;
-  padding: 112px 0 86px;
+  place-items: center;
+  padding: 32px;
+  background:
+    radial-gradient(circle at 70% 25%, rgba(255, 107, 24, 0.14), transparent 34%),
+    rgba(3, 12, 20, 0.58);
+  backdrop-filter: blur(8px) saturate(0.82);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 220ms ease, visibility 220ms ease;
 }
 
-.presentation-cover-brand {
-  width: 176px;
+body.presentation-gate-visible .presentation-gate {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.presentation-gate-panel {
+  width: min(560px, calc(100vw - 48px));
+  padding: 46px 48px 42px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(7, 24, 39, 0.88);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.38);
+  text-align: center;
+}
+
+.presentation-gate-logo {
+  width: 154px;
   height: auto;
-  margin-bottom: 54px;
+  margin-bottom: 38px;
 }
 
-.presentation-cover-kicker {
-  margin: 0 0 22px;
+.presentation-gate-eyebrow {
+  display: block;
+  margin-bottom: 15px;
   color: #ff6b18;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 10px;
+  font-weight: 800;
   letter-spacing: 0.2em;
   text-transform: uppercase;
 }
 
-.presentation-cover h1 {
-  max-width: 920px;
+.presentation-gate-panel h1 {
   margin: 0;
-  font-size: clamp(54px, 6.2vw, 98px);
+  color: #fff;
+  font-size: clamp(34px, 4vw, 54px);
   font-weight: 700;
-  letter-spacing: -0.065em;
-  line-height: 0.94;
+  letter-spacing: -0.045em;
+  line-height: 1;
 }
 
-.presentation-cover h1 span {
-  color: #ff6b18;
-}
-
-.presentation-cover-lead {
-  max-width: 720px;
-  margin: 30px 0 0;
-  color: #afbdc7;
-  font-size: clamp(17px, 1.3vw, 21px);
-  line-height: 1.58;
-}
-
-.presentation-cover-action {
-  align-self: end;
-  padding-bottom: 42px;
+.presentation-gate-panel > p {
+  max-width: 430px;
+  margin: 18px auto 30px;
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 15px;
+  line-height: 1.6;
 }
 
 .presentation-start-button {
   width: 100%;
   min-height: 62px;
-  border: 1px solid rgba(255, 107, 24, 0.7);
+  border: 1px solid #ff6b18;
   background: #ff6b18;
   color: #fff;
   display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  padding: 0 22px;
+  justify-content: center;
+  gap: 14px;
+  padding: 0 24px;
   cursor: pointer;
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  transition: transform 180ms ease, background-color 180ms ease;
+  transition: transform 180ms ease, background-color 180ms ease, border-color 180ms ease;
 }
 
 .presentation-start-button:hover {
   transform: translateY(-2px);
   background: #df5208;
+  border-color: #df5208;
+}
+
+.presentation-start-button:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 4px;
 }
 
 .presentation-start-button svg {
-  width: 20px;
-  height: 20px;
+  width: 19px;
+  height: 19px;
 }
 
-.presentation-cover-hint {
+.presentation-gate-hint {
   display: block;
   margin-top: 14px;
-  color: rgba(255, 255, 255, 0.48);
-  font-size: 11px;
-  line-height: 1.5;
-}
-
-.presentation-cover-status {
-  display: none;
-  margin-top: 14px;
-  color: rgba(255, 255, 255, 0.56);
-  font-size: 11px;
-  letter-spacing: 0.04em;
-}
-
-body.presentation-started .presentation-start-button {
-  display: none;
-}
-
-body.presentation-started .presentation-cover-status {
-  display: block;
-}
-
-body:not(.presentation-started) .presentation-header,
-body:not(.presentation-started) .presentation-progress {
-  opacity: 0;
-  pointer-events: none;
-}
-
-.presentation-header,
-.presentation-progress {
-  transition: opacity 220ms ease;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 10px;
+  letter-spacing: 0.03em;
 }
 
 .presentation-controls {
@@ -192,7 +168,7 @@ body:not(.presentation-started) .presentation-progress {
   transition: opacity 180ms ease, transform 180ms ease;
 }
 
-body.presentation-started.presentation-controls-visible .presentation-controls {
+body.presentation-started.presentation-controls-visible:not(.presentation-paused) .presentation-controls {
   opacity: 1;
   pointer-events: auto;
   transform: translate(-50%, 0);
@@ -240,76 +216,226 @@ body.presentation-cursor-hidden * {
   cursor: none !important;
 }
 
-.presentation-sales-contact {
-  margin-top: 34px;
+.presentation-contact-slide {
+  background:
+    linear-gradient(90deg, rgba(255, 107, 24, 0.04) 1px, transparent 1px),
+    linear-gradient(rgba(255, 107, 24, 0.04) 1px, transparent 1px),
+    #071827;
+  background-size: 72px 72px;
+}
+
+.presentation-contact-slide::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 16%;
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(transparent, rgba(255, 107, 24, 0.72), transparent);
+  pointer-events: none;
+}
+
+.presentation-contact-layout {
+  grid-template-columns: minmax(0, 0.9fr) minmax(520px, 1.1fr);
+  gap: clamp(70px, 8vw, 150px);
+}
+
+.presentation-contact-heading {
+  position: relative;
+  z-index: 1;
+}
+
+.presentation-contact-heading h2 {
+  max-width: 650px;
+  margin: 15px 0 0;
+  font-size: clamp(48px, 5.3vw, 82px);
+  line-height: 0.98;
+  letter-spacing: -0.055em;
+}
+
+.presentation-contact-heading h2 span {
+  color: #ff6b18;
+}
+
+.presentation-contact-heading .lead {
+  max-width: 620px;
+  margin-top: 28px;
+}
+
+.presentation-contact-card {
+  position: relative;
+  z-index: 1;
   display: grid;
-  grid-template-columns: 72px 1fr;
-  gap: 18px;
-  align-items: center;
-  max-width: 520px;
-  padding-top: 26px;
-  border-top: 1px solid rgba(255, 255, 255, 0.24);
+  grid-template-columns: minmax(190px, 0.72fr) minmax(280px, 1fr);
+  min-height: 470px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  background: rgba(9, 31, 49, 0.78);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.22);
 }
 
-.presentation-sales-contact img {
-  width: 72px;
-  height: 72px;
-  object-fit: cover;
-  background: rgba(255, 255, 255, 0.12);
+.presentation-contact-photo-wrap {
+  position: relative;
+  overflow: hidden;
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
 }
 
-.presentation-sales-contact small,
-.presentation-sales-contact span,
-.presentation-sales-contact strong {
+.presentation-contact-photo-wrap::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 38%;
+  background: linear-gradient(transparent, rgba(7, 24, 39, 0.74));
+  pointer-events: none;
+}
+
+.presentation-contact-photo {
+  width: 100%;
+  height: 100%;
+  min-height: 470px;
   display: block;
+  object-fit: cover;
+  object-position: center top;
 }
 
-.presentation-sales-contact small {
-  margin-bottom: 5px;
-  color: rgba(255, 255, 255, 0.72);
+.presentation-contact-person {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 54px 48px;
+}
+
+.presentation-contact-person > small {
+  margin-bottom: 13px;
+  color: #ff6b18;
   font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-weight: 800;
+  letter-spacing: 0.16em;
 }
 
-.presentation-sales-contact strong {
-  font-size: 18px;
+.presentation-contact-person h3 {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(34px, 3vw, 48px);
+  letter-spacing: -0.045em;
 }
 
-.presentation-sales-contact span {
-  margin-top: 4px;
+.presentation-contact-person > p {
+  margin: 8px 0 0;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 14px;
+}
+
+.presentation-contact-details {
+  display: grid;
+  gap: 13px;
+  margin-top: 38px;
+  padding-top: 28px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.presentation-contact-details a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   color: rgba(255, 255, 255, 0.82);
-  font-size: 12px;
+  text-decoration: none;
+  font-size: 13px;
 }
 
-@media (max-width: 900px) {
-  .presentation-cover-inner {
-    width: min(calc(100% - 48px), 760px);
+.presentation-contact-details svg {
+  width: 17px;
+  height: 17px;
+  color: #ff6b18;
+}
+
+.presentation-contact-cta {
+  min-height: 52px;
+  margin-top: 34px;
+  padding: 0 18px;
+  border: 1px solid rgba(255, 107, 24, 0.68);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #fff;
+  background: rgba(255, 107, 24, 0.08);
+  text-decoration: none;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: background-color 180ms ease, border-color 180ms ease;
+}
+
+.presentation-contact-cta:hover {
+  background: #ff6b18;
+  border-color: #ff6b18;
+}
+
+.presentation-contact-cta svg {
+  width: 18px;
+  height: 18px;
+}
+
+@media (max-width: 1100px) {
+  .presentation-contact-layout {
     grid-template-columns: 1fr;
-    gap: 42px;
-    padding: 80px 0 62px;
+    gap: 36px;
+    align-content: center;
   }
 
-  .presentation-cover-action {
-    align-self: auto;
-    padding-bottom: 0;
-    max-width: 360px;
+  .presentation-contact-heading h2 {
+    font-size: clamp(40px, 7vw, 64px);
   }
 
-  .presentation-cover-brand {
-    width: 148px;
-    margin-bottom: 42px;
+  .presentation-contact-card {
+    min-height: 340px;
+    grid-template-columns: 220px 1fr;
   }
 
-  .presentation-cover h1 {
-    font-size: clamp(46px, 11vw, 76px);
+  .presentation-contact-photo {
+    min-height: 340px;
+  }
+}
+
+@media (max-width: 720px) {
+  .presentation-gate {
+    padding: 18px;
+  }
+
+  .presentation-gate-panel {
+    width: min(100%, 500px);
+    padding: 38px 26px 32px;
+  }
+
+  .presentation-gate-logo {
+    width: 132px;
+    margin-bottom: 30px;
+  }
+
+  .presentation-contact-card {
+    grid-template-columns: 1fr;
+  }
+
+  .presentation-contact-photo-wrap {
+    display: none;
+  }
+
+  .presentation-contact-person {
+    padding: 38px 28px;
   }
 }
 
 @media print {
-  .presentation-cover-action,
+  .presentation-gate,
   .presentation-controls {
     display: none !important;
+  }
+
+  body.presentation-paused .presentation,
+  body.presentation-paused .presentation-header,
+  body.presentation-paused .presentation-progress {
+    filter: none;
+    transform: none;
   }
 }
