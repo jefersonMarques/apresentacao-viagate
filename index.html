@@ -8,6 +8,11 @@
   <meta name="description" content="Apresentação institucional ViaGate — validação, análise de risco e operação logística." />
   <link rel="canonical" href="https://viagate.com.br/apresentacao" />
   <style>
+    :root {
+      font-family: Inter, Arial, sans-serif;
+      color-scheme: dark;
+    }
+
     html,
     body {
       width: 100%;
@@ -23,23 +28,167 @@
       height: 100%;
       border: 0;
       background: #071827;
+      transition: filter 280ms ease, transform 280ms ease;
+    }
+
+    body.presentation-host-paused .presentation-frame {
+      filter: blur(14px) brightness(.62);
+      transform: scale(1.012);
+      pointer-events: none;
+    }
+
+    .presentation-host-gate {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: grid;
+      place-items: center;
+      padding: 32px;
+      background: rgba(3, 14, 24, .34);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 220ms ease, visibility 220ms ease;
+    }
+
+    body.presentation-host-paused .presentation-host-gate {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .presentation-host-panel {
+      width: min(520px, calc(100vw - 48px));
+      padding: 44px;
+      border: 1px solid rgba(255, 255, 255, .16);
+      background: rgba(7, 24, 39, .86);
+      box-shadow: 0 28px 90px rgba(0, 0, 0, .42);
+      backdrop-filter: blur(18px);
+      text-align: center;
+    }
+
+    .presentation-host-logo {
+      width: 164px;
+      height: auto;
+      margin-bottom: 34px;
+    }
+
+    .presentation-host-eyebrow {
+      display: block;
+      margin-bottom: 13px;
+      color: #ff6b18;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+
+    .presentation-host-panel h1 {
+      margin: 0;
+      color: #fff;
+      font-size: clamp(34px, 5vw, 54px);
+      line-height: 1;
+      letter-spacing: -.045em;
+    }
+
+    .presentation-host-copy {
+      margin: 18px auto 30px;
+      max-width: 400px;
+      color: rgba(255, 255, 255, .68);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .presentation-host-button {
+      width: 100%;
+      min-height: 62px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #ff6b18;
+      background: #ff6b18;
+      color: #fff;
+      cursor: pointer;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      transition: background 180ms ease, transform 180ms ease;
+    }
+
+    .presentation-host-button:hover {
+      background: #df5208;
+      transform: translateY(-2px);
+    }
+
+    .presentation-host-hint {
+      display: block;
+      margin-top: 15px;
+      color: rgba(255, 255, 255, .4);
+      font-size: 11px;
     }
   </style>
 </head>
-<body>
+<body class="presentation-host-paused">
   <iframe
     class="presentation-frame"
     id="presentationFrame"
-    src="./presentation-content.html"
+    src="./presentation-content.html?v=20260825-2"
     title="Apresentação Institucional ViaGate"
     allow="fullscreen"
     allowfullscreen
   ></iframe>
 
+  <div class="presentation-host-gate" id="presentationGate" role="dialog" aria-modal="true" aria-label="Iniciar apresentação">
+    <div class="presentation-host-panel">
+      <img class="presentation-host-logo" src="./assets/logo-viagate-white.svg" alt="ViaGate" />
+      <span class="presentation-host-eyebrow" id="presentationGateEyebrow">APRESENTAÇÃO INSTITUCIONAL · 2026</span>
+      <h1 id="presentationGateTitle">ViaGate</h1>
+      <p class="presentation-host-copy" id="presentationGateCopy">Validação, análise de risco e operação logística.</p>
+      <button class="presentation-host-button" id="presentationStartButton" type="button">INICIAR APRESENTAÇÃO</button>
+      <small class="presentation-host-hint" id="presentationGateHint">A apresentação será aberta em tela cheia.</small>
+    </div>
+  </div>
+
   <script>
     const frame = document.getElementById('presentationFrame');
+    const startButton = document.getElementById('presentationStartButton');
+    const gateEyebrow = document.getElementById('presentationGateEyebrow');
+    const gateTitle = document.getElementById('presentationGateTitle');
+    const gateCopy = document.getElementById('presentationGateCopy');
+    const gateHint = document.getElementById('presentationGateHint');
+    let presentationStarted = false;
 
-    frame.addEventListener('load', () => {
+    function setGateMode(mode) {
+      if (mode === 'continue') {
+        gateEyebrow.textContent = 'APRESENTAÇÃO PAUSADA';
+        gateTitle.textContent = 'Continuar apresentação';
+        gateCopy.textContent = 'A apresentação permanece exatamente no slide em que você parou.';
+        startButton.textContent = 'CONTINUAR APRESENTAÇÃO';
+        gateHint.textContent = 'Clique para retornar à tela cheia.';
+        return;
+      }
+
+      gateEyebrow.textContent = 'APRESENTAÇÃO INSTITUCIONAL · 2026';
+      gateTitle.textContent = 'ViaGate';
+      gateCopy.textContent = 'Validação, análise de risco e operação logística.';
+      startButton.textContent = 'INICIAR APRESENTAÇÃO';
+      gateHint.textContent = 'A apresentação será aberta em tela cheia.';
+    }
+
+    function showGate(mode) {
+      setGateMode(mode);
+      document.body.classList.add('presentation-host-paused');
+      frame.contentWindow?.hostPausePresentation?.();
+    }
+
+    function hideGate() {
+      document.body.classList.remove('presentation-host-paused');
+      frame.contentWindow?.hostStartPresentation?.(!presentationStarted);
+    }
+
+    function installPresentationBootstrap() {
       const frameDocument = frame.contentDocument;
 
       if (!frameDocument || frameDocument.querySelector('script[data-presentation-bootstrap]')) {
@@ -47,10 +196,45 @@
       }
 
       const bootstrapScript = frameDocument.createElement('script');
-      bootstrapScript.src = './presentation-bootstrap.js';
+      bootstrapScript.src = './presentation-bootstrap.js?v=20260825-2';
       bootstrapScript.dataset.presentationBootstrap = 'true';
       frameDocument.body.appendChild(bootstrapScript);
-    }, { once: true });
+    }
+
+    frame.addEventListener('load', installPresentationBootstrap);
+
+    if (frame.contentDocument?.readyState === 'complete') {
+      installPresentationBootstrap();
+    }
+
+    startButton.addEventListener('click', async () => {
+      try {
+        if (!document.fullscreenElement) {
+          await document.documentElement.requestFullscreen();
+        }
+
+        const firstStart = !presentationStarted;
+        presentationStarted = true;
+        document.body.classList.remove('presentation-host-paused');
+        frame.contentWindow?.hostStartPresentation?.(firstStart);
+      } catch (error) {
+        gateHint.textContent = 'O navegador não conseguiu ativar a tela cheia. Clique novamente ou permita fullscreen.';
+      }
+    });
+
+    document.addEventListener('fullscreenchange', () => {
+      if (document.fullscreenElement) {
+        document.body.classList.remove('presentation-host-paused');
+        frame.contentWindow?.hostStartPresentation?.(!presentationStarted);
+        return;
+      }
+
+      if (presentationStarted) {
+        showGate('continue');
+      }
+    });
+
+    setGateMode('start');
   </script>
 </body>
 </html>
