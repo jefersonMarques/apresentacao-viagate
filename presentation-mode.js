@@ -1,5 +1,7 @@
 const presentationState = {
+  initialized: false,
   started: false,
+  paused: true,
   wheelLocked: false,
   controlsTimer: null,
   cursorTimer: null,
@@ -49,37 +51,83 @@ function renumberPresentationSlides() {
   });
 }
 
-function createPresentationCover() {
-  const presentation = document.getElementById('presentation');
+function escapePresentationText(value) {
+  const element = document.createElement('span');
+  element.textContent = String(value ?? '');
+  return element.innerHTML;
+}
 
-  if (!presentation || presentation.querySelector('.presentation-cover')) {
+function getPresentationContact() {
+  return window.presentationContact ?? {
+    name: 'ViaGate',
+    role: 'Comercial',
+    email: 'contato@viagate.com.br',
+    phone: '',
+    whatsapp: '',
+    photoUrl: './assets/logo-viagate-color.svg',
+  };
+}
+
+function createPresentationGate() {
+  if (document.querySelector('.presentation-gate')) {
     return;
   }
 
-  const cover = document.createElement('section');
-  cover.className = 'slide slide-dark presentation-cover';
-  cover.dataset.slide = '1';
-  cover.innerHTML = `
-    <div class="presentation-cover-inner">
-      <div class="presentation-cover-copy">
-        <img class="presentation-cover-brand" src="./assets/logo-viagate-white.svg" alt="ViaGate" />
-        <p class="presentation-cover-kicker">APRESENTAÇÃO INSTITUCIONAL · 2026</p>
-        <h1>Validação, análise de risco<br /><span>e operação logística.</span></h1>
-        <p class="presentation-cover-lead">Tecnologia própria para identificar quem está na operação, apoiar decisões de risco e acompanhar a execução da viagem.</p>
-      </div>
-      <div class="presentation-cover-action">
-        <button class="presentation-start-button" type="button" data-presentation-start>
-          <span>Iniciar apresentação</span>
-          <i data-lucide="maximize-2"></i>
-        </button>
-        <span class="presentation-cover-hint">Abre em tela cheia. Use as setas, Page Up/Page Down ou a roda do mouse para navegar.</span>
-        <span class="presentation-cover-status">Apresentação iniciada · pressione F para alternar tela cheia.</span>
-      </div>
+  const gate = document.createElement('div');
+  gate.className = 'presentation-gate';
+  gate.setAttribute('role', 'dialog');
+  gate.setAttribute('aria-modal', 'true');
+  gate.setAttribute('aria-label', 'Iniciar apresentação ViaGate');
+  gate.innerHTML = `
+    <div class="presentation-gate-panel">
+      <img class="presentation-gate-logo" src="./assets/logo-viagate-white.svg" alt="ViaGate" />
+      <span class="presentation-gate-eyebrow" data-presentation-gate-eyebrow>APRESENTAÇÃO INSTITUCIONAL · 2026</span>
+      <h1 data-presentation-gate-title>ViaGate</h1>
+      <p data-presentation-gate-copy>Validação, análise de risco e operação logística.</p>
+      <button class="presentation-start-button" type="button" data-presentation-start>
+        <span data-presentation-start-label>Iniciar apresentação</span>
+        <i data-lucide="maximize-2"></i>
+      </button>
+      <small class="presentation-gate-hint" data-presentation-gate-hint>A apresentação será aberta em tela cheia.</small>
     </div>
-    <div class="slide-footer"><span>ViaGate</span><span></span></div>
   `;
 
-  presentation.prepend(cover);
+  document.body.appendChild(gate);
+}
+
+function setPresentationGateMode(mode) {
+  const eyebrow = document.querySelector('[data-presentation-gate-eyebrow]');
+  const title = document.querySelector('[data-presentation-gate-title]');
+  const copy = document.querySelector('[data-presentation-gate-copy]');
+  const label = document.querySelector('[data-presentation-start-label]');
+  const hint = document.querySelector('[data-presentation-gate-hint]');
+
+  if (mode === 'continue') {
+    if (eyebrow) eyebrow.textContent = 'APRESENTAÇÃO PAUSADA';
+    if (title) title.textContent = 'Continuar apresentação';
+    if (copy) copy.textContent = 'Você saiu da tela cheia. A apresentação permanece exatamente no ponto em que parou.';
+    if (label) label.textContent = 'Continuar apresentação';
+    if (hint) hint.textContent = 'Clique para retornar à tela cheia.';
+    return;
+  }
+
+  if (eyebrow) eyebrow.textContent = 'APRESENTAÇÃO INSTITUCIONAL · 2026';
+  if (title) title.textContent = 'ViaGate';
+  if (copy) copy.textContent = 'Validação, análise de risco e operação logística.';
+  if (label) label.textContent = 'Iniciar apresentação';
+  if (hint) hint.textContent = 'A apresentação será aberta em tela cheia.';
+}
+
+function showPresentationGate(mode) {
+  presentationState.paused = true;
+  setPresentationGateMode(mode);
+  document.body.classList.add('presentation-paused', 'presentation-gate-visible');
+  document.body.classList.remove('presentation-controls-visible', 'presentation-cursor-hidden');
+}
+
+function hidePresentationGate() {
+  presentationState.paused = false;
+  document.body.classList.remove('presentation-paused', 'presentation-gate-visible');
 }
 
 function createPresentationControls() {
@@ -134,33 +182,85 @@ function freezeAnalysisMetrics() {
   }
 }
 
-function enhanceClosingSlide() {
-  const slides = getPresentationSlides();
-  const closingSlide = slides.at(-1);
-  const closingLayout = closingSlide?.querySelector('.closing-layout');
+function prepareInstitutionalClosingSlide() {
+  const presentation = document.getElementById('presentation');
+  const closingLayout = presentation?.querySelector('.closing-layout');
 
-  if (!closingLayout || closingLayout.querySelector('.presentation-sales-contact')) {
+  if (!closingLayout) {
     return;
   }
 
-  const existingContactLine = closingLayout.querySelector('.contact-line');
-  if (existingContactLine) {
-    existingContactLine.remove();
+  closingLayout.querySelector('.contact-line')?.remove();
+  closingLayout.querySelector('.presentation-sales-contact')?.remove();
+}
+
+function createSalesContactSlide() {
+  const presentation = document.getElementById('presentation');
+
+  if (!presentation || presentation.querySelector('.presentation-contact-slide')) {
+    return;
   }
 
-  const salesContact = document.createElement('div');
-  salesContact.className = 'presentation-sales-contact';
-  salesContact.innerHTML = `
-    <img src="./assets/antonio-photo.svg" alt="Antônio Santos" />
-    <div>
-      <small>Contato comercial</small>
-      <strong>Antônio Santos</strong>
-      <span>Sócio-Diretor Comercial</span>
-      <span>antonio.santos@viagate.com.br · (41) 99962-3600</span>
+  const contact = getPresentationContact();
+  const name = escapePresentationText(contact.name);
+  const role = escapePresentationText(contact.role);
+  const email = escapePresentationText(contact.email);
+  const phone = escapePresentationText(contact.phone);
+  const photoUrl = escapePresentationText(contact.photoUrl);
+  const whatsapp = String(contact.whatsapp ?? '').replace(/\D/g, '');
+  const whatsappUrl = whatsapp
+    ? `https://wa.me/${whatsapp}?text=${encodeURIComponent(`Olá ${contact.name}, gostaria de falar sobre as soluções da ViaGate.`)}`
+    : '';
+
+  const slide = document.createElement('section');
+  slide.className = 'slide slide-deep presentation-contact-slide';
+  slide.dataset.slide = String(getPresentationSlides().length + 1);
+  slide.innerHTML = `
+    <div class="slide-inner presentation-contact-layout">
+      <div class="presentation-contact-heading">
+        <p class="kicker">CONTATO COMERCIAL</p>
+        <h2>Vamos conversar sobre <span>a sua operação?</span></h2>
+        <p class="lead">Este é o contato responsável por apresentar a ViaGate e entender como as soluções podem ser aplicadas à sua operação.</p>
+      </div>
+
+      <div class="presentation-contact-card">
+        <div class="presentation-contact-photo-wrap">
+          <img class="presentation-contact-photo" src="${photoUrl}" alt="${name}" />
+        </div>
+        <div class="presentation-contact-person">
+          <small>SEU CONTATO NA VIAGATE</small>
+          <h3>${name}</h3>
+          <p>${role}</p>
+          <div class="presentation-contact-details">
+            ${phone ? `<a href="tel:${escapePresentationText(String(contact.phone).replace(/\D/g, ''))}"><i data-lucide="phone"></i><span>${phone}</span></a>` : ''}
+            ${email ? `<a href="mailto:${email}"><i data-lucide="mail"></i><span>${email}</span></a>` : ''}
+          </div>
+          ${whatsappUrl ? `<a class="presentation-contact-cta" href="${whatsappUrl}" target="_blank" rel="noopener noreferrer"><span>Falar no WhatsApp</span><i data-lucide="arrow-up-right"></i></a>` : ''}
+        </div>
+      </div>
     </div>
+    <div class="slide-footer"><span>Contato comercial</span><span></span></div>
   `;
 
-  closingLayout.appendChild(salesContact);
+  presentation.appendChild(slide);
+}
+
+async function requestPresentationFullscreen() {
+  if (document.fullscreenElement) {
+    return true;
+  }
+
+  if (!document.documentElement.requestFullscreen) {
+    return false;
+  }
+
+  try {
+    await document.documentElement.requestFullscreen();
+    return Boolean(document.fullscreenElement);
+  } catch (error) {
+    console.warn('Não foi possível ativar tela cheia automaticamente.', error);
+    return false;
+  }
 }
 
 async function togglePresentationFullscreen() {
@@ -169,23 +269,34 @@ async function togglePresentationFullscreen() {
     return;
   }
 
-  await document.documentElement.requestFullscreen();
+  await requestPresentationFullscreen();
 }
 
-async function startPresentation() {
-  presentationState.started = true;
-  document.body.classList.add('presentation-started');
-  showPresentationControls();
+async function startOrResumePresentation() {
+  const isFirstStart = !presentationState.started;
 
-  try {
-    if (!document.fullscreenElement) {
-      await document.documentElement.requestFullscreen();
-    }
-  } catch (error) {
-    console.warn('Não foi possível ativar tela cheia automaticamente.', error);
+  if (isFirstStart) {
+    presentationState.started = true;
+    document.body.classList.add('presentation-started');
   }
 
-  goToPresentationSlide(0, 'auto');
+  const fullscreenStarted = await requestPresentationFullscreen();
+
+  if (!fullscreenStarted) {
+    const hint = document.querySelector('[data-presentation-gate-hint]');
+    if (hint) {
+      hint.textContent = 'O navegador bloqueou a tela cheia. Clique novamente ou permita fullscreen para continuar.';
+    }
+    showPresentationGate(isFirstStart ? 'start' : 'continue');
+    return;
+  }
+
+  if (isFirstStart) {
+    goToPresentationSlide(0, 'auto');
+  }
+
+  hidePresentationGate();
+  showPresentationControls();
   updatePresentationControls();
 }
 
@@ -209,14 +320,13 @@ function updatePresentationControls() {
     nextButton.disabled = currentIndex === slides.length - 1;
   }
 
-  const fullscreenIcon = fullscreenButton?.querySelector('svg');
-  if (fullscreenButton && fullscreenIcon) {
+  if (fullscreenButton) {
     fullscreenButton.setAttribute('aria-label', document.fullscreenElement ? 'Sair da tela cheia' : 'Entrar em tela cheia');
   }
 }
 
 function showPresentationControls() {
-  if (!presentationState.started) {
+  if (!presentationState.started || presentationState.paused) {
     return;
   }
 
@@ -231,7 +341,7 @@ function showPresentationCursor() {
   document.body.classList.remove('presentation-cursor-hidden');
   window.clearTimeout(presentationState.cursorTimer);
 
-  if (!presentationState.started) {
+  if (!presentationState.started || presentationState.paused) {
     return;
   }
 
@@ -241,7 +351,7 @@ function showPresentationCursor() {
 }
 
 function handlePresentationWheel(event) {
-  if (!presentationState.started || Math.abs(event.deltaY) < 18) {
+  if (!presentationState.started || presentationState.paused || Math.abs(event.deltaY) < 18) {
     return;
   }
 
@@ -261,6 +371,10 @@ function handlePresentationWheel(event) {
 }
 
 function handlePresentationKeyboard(event) {
+  if (presentationState.paused) {
+    return;
+  }
+
   if (event.key.toLowerCase() === 'f') {
     event.preventDefault();
     togglePresentationFullscreen().catch(() => {});
@@ -279,8 +393,21 @@ function handlePresentationKeyboard(event) {
   }
 }
 
+function handleFullscreenChange() {
+  updatePresentationControls();
+
+  if (document.fullscreenElement) {
+    hidePresentationGate();
+    return;
+  }
+
+  if (presentationState.started) {
+    showPresentationGate('continue');
+  }
+}
+
 function bindPresentationEvents() {
-  document.querySelector('[data-presentation-start]')?.addEventListener('click', startPresentation);
+  document.querySelector('[data-presentation-start]')?.addEventListener('click', startOrResumePresentation);
 
   document.querySelector('[data-presentation-previous]')?.addEventListener('click', () => {
     goToPresentationSlide(getPresentationCurrentIndex() - 1);
@@ -305,7 +432,7 @@ function bindPresentationEvents() {
     showPresentationCursor();
   }, { passive: true });
   window.addEventListener('touchstart', showPresentationControls, { passive: true });
-  document.addEventListener('fullscreenchange', updatePresentationControls);
+  document.addEventListener('fullscreenchange', handleFullscreenChange);
 }
 
 function disableWebsiteBehaviors() {
@@ -318,19 +445,26 @@ function disableWebsiteBehaviors() {
 }
 
 function initializePresentationMode() {
-  document.body.classList.add('presentation-shell');
-  createPresentationCover();
+  if (presentationState.initialized) {
+    return;
+  }
+
+  presentationState.initialized = true;
+  document.body.classList.add('presentation-shell', 'presentation-paused', 'presentation-gate-visible');
   freezeAnalysisMetrics();
-  enhanceClosingSlide();
+  prepareInstitutionalClosingSlide();
+  createSalesContactSlide();
   renumberPresentationSlides();
   createPresentationControls();
+  createPresentationGate();
   disableWebsiteBehaviors();
   bindPresentationEvents();
   updatePresentationControls();
+  setPresentationGateMode('start');
 
   if (window.lucide) {
     window.lucide.createIcons();
   }
 }
 
-window.addEventListener('load', initializePresentationMode, { once: true });
+window.initializePresentationMode = initializePresentationMode;
