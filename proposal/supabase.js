@@ -34,8 +34,22 @@ export function formatDate(value) {
   return new Intl.DateTimeFormat('pt-BR').format(date);
 }
 
-export function buildPublicProposalUrl(token) {
-  const url = new URL(proposalConfig.publicProposalUrl, window.location.origin);
+function buildPublicUrl(baseUrl, token) {
+  const url = new URL(baseUrl, window.location.origin);
   url.searchParams.set('token', token);
   return url.toString();
+}
+
+export function buildPublicProposalUrl(token) {
+  return buildPublicUrl(proposalConfig.publicProposalUrl, token);
+}
+
+export function buildPublicPresentationUrl(token) {
+  return buildPublicUrl(proposalConfig.publicPresentationUrl, token);
+}
+
+if (document.getElementById('adminView')) {
+  import('./commercial-hub.js').catch((error) => {
+    console.error('Não foi possível carregar o hub comercial.', error);
+  });
 }
