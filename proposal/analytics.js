@@ -5,6 +5,7 @@ const analyticsState = {
   sessionId: null,
   lastSlide: 0,
   initialized: false,
+  started: false,
 };
 
 function getSessionId() {
@@ -46,6 +47,10 @@ function getSlides() {
 }
 
 function reportCurrentSlide() {
+  if (!analyticsState.started) {
+    return;
+  }
+
   const slides = getSlides();
   if (!slides.length) {
     return;
@@ -82,17 +87,21 @@ function bindAnalytics() {
   analyticsState.sessionId = getSessionId();
   track('open');
 
-  document.addEventListener('click', (event) => {
-    if (event.target.closest('[data-proposal-start]')) {
-      track('start');
-      window.setTimeout(reportCurrentSlide, 150);
-    }
-  }, true);
+  document.addEventListener('proposal:started', () => {
+    analyticsState.started = true;
+    track('start');
+    window.setTimeout(reportCurrentSlide, 120);
+  });
+
+  document.addEventListener('proposal:restarted', () => {
+    analyticsState.started = false;
+    analyticsState.lastSlide = 0;
+  });
 
   window.addEventListener('scroll', reportCurrentSlide, { passive: true });
 
   const observer = new MutationObserver(() => {
-    if (getSlides().length) {
+    if (analyticsState.started && getSlides().length) {
       reportCurrentSlide();
     }
   });
