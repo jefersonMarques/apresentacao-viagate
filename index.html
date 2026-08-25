@@ -41,25 +41,15 @@
 
     frame.addEventListener('load', () => {
       const frameDocument = frame.contentDocument;
-      const frameWindow = frame.contentWindow;
 
-      if (!frameDocument || !frameWindow) {
+      if (!frameDocument || frameDocument.querySelector('script[data-presentation-bootstrap]')) {
         return;
       }
 
-      const styleLink = frameDocument.createElement('link');
-      styleLink.rel = 'stylesheet';
-      styleLink.href = './presentation-mode.css';
-      frameDocument.head.appendChild(styleLink);
-
-      const presentationScript = frameDocument.createElement('script');
-      presentationScript.src = './presentation-mode.js';
-      presentationScript.addEventListener('load', () => {
-        if (typeof frameWindow.initializePresentationMode === 'function') {
-          frameWindow.initializePresentationMode();
-        }
-      });
-      frameDocument.body.appendChild(presentationScript);
+      const bootstrapScript = frameDocument.createElement('script');
+      bootstrapScript.src = './presentation-bootstrap.js';
+      bootstrapScript.dataset.presentationBootstrap = 'true';
+      frameDocument.body.appendChild(bootstrapScript);
     }, { once: true });
   </script>
 </body>
