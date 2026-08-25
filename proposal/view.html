@@ -10,16 +10,29 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="./proposal.css" />
+  <link rel="stylesheet" href="./proposal-view.css?v=20260825-6" />
 </head>
-<body class="public-proposal">
+<body class="public-proposal proposal-locked">
   <div class="loading-screen" id="proposalLoading">Carregando proposta...</div>
+
   <main id="proposalPresentation" hidden></main>
-  <div class="proposal-floating-controls" id="proposalControls" hidden>
-    <button type="button" data-proposal-previous aria-label="Slide anterior">‹</button>
-    <span data-proposal-counter>01 / 01</span>
-    <button type="button" data-proposal-next aria-label="Próximo slide">›</button>
-    <button type="button" data-proposal-fullscreen aria-label="Alternar tela cheia">⛶</button>
+
+  <div class="proposal-view-gate" id="proposalGate" role="dialog" aria-modal="true" aria-label="Controle da proposta">
+    <div class="proposal-view-action">
+      <div class="proposal-view-action-row">
+        <button class="proposal-view-button secondary" id="proposalRestartButton" type="button" hidden>VOLTAR AO INÍCIO</button>
+        <button class="proposal-view-button" id="proposalStartButton" type="button" data-proposal-start>INICIAR APRESENTAÇÃO</button>
+      </div>
+      <img class="proposal-view-logo" src="../assets/logo-viagate-white.svg" alt="ViaGate" />
+    </div>
   </div>
-  <script type="module" src="./view.js"></script>
+
+  <div class="proposal-view-navigation" id="proposalControls" aria-label="Navegação da proposta" hidden>
+    <button type="button" data-proposal-previous aria-label="Slide anterior">↑</button>
+    <span data-proposal-counter>01 / 01</span>
+    <button type="button" data-proposal-next aria-label="Próximo slide">↓</button>
+  </div>
+
+  <script type="module" src="./view.js?v=20260825-6"></script>
 </body>
 </html>
