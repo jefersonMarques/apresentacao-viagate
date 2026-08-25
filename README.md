@@ -6,64 +6,82 @@
 
 - `/apresentacao/` — redireciona para o Hub Comercial autenticado.
 - `/apresentacao/proposta/` — Hub Comercial protegido por Supabase Auth.
-- `/apresentacao/view.html?token=...` — apresentação institucional publicada e personalizada quando o projeto está montado em `/apresentacao/`.
-- `/apresentacao/proposta/view.html?token=...` — proposta comercial publicada quando o projeto está montado em `/apresentacao/`.
-- `presentation-content.html` — template institucional reutilizado pelas apresentações geradas.
+- `/apresentacao/view.html?token=...` — apresentação institucional publicada.
+- `/apresentacao/proposta/view.html?token=...` — proposta comercial publicada.
+- `presentation-content.html` — conteúdo institucional reutilizado pelas apresentações geradas.
 - `supabase/migrations/` — banco, RLS, versionamento, publicação, analytics e Storage.
 
-Os links públicos são montados de forma relativa ao Hub Comercial. Assim, em desenvolvimento o projeto também pode ser servido diretamente na raiz sem depender do prefixo `/apresentacao/`.
+Os links públicos são montados de forma relativa ao Hub Comercial, permitindo executar o projeto com ou sem o prefixo `/apresentacao/`.
 
 ## Hub Comercial
 
-Depois do login, o comercial pode gerar dois tipos de material:
+A gestão autenticada é separada em:
+
+- **Visão geral** — materiais publicados e acompanhamento de leitura;
+- **Apresentações** — criação, publicação e edição das apresentações institucionais;
+- **Propostas** — criação, versionamento, publicação e acompanhamento das propostas;
+- **Meu perfil** — foto e dados do comercial usados nos materiais publicados.
 
 ### Apresentação institucional
 
-O conteúdo institucional permanece padronizado, mas cada link publicado pode ter personalização própria:
+Cada publicação possui token próprio e pode configurar:
 
 - vendedor responsável;
-- foto, cargo, telefone, WhatsApp e e-mail do vendedor;
+- foto, cargo, telefone, WhatsApp e e-mail;
 - slide final de contato ativado ou desativado;
-- empresa do cliente opcional;
-- contato do cliente opcional;
-- logo do cliente opcional;
+- empresa do cliente;
+- contato do cliente;
+- logo do cliente;
 - identificação do cliente ativada ou desativada.
 
-Cada publicação possui token público próprio e versão imutável.
+O conteúdo somente é liberado após entrada em tela cheia. Ao sair do fullscreen, a apresentação volta para o estado bloqueado e oferece **Continuar apresentação** ou **Voltar ao início**.
+
+A navegação fica centralizada no rodapé com:
+
+```text
+↑   05 / 18   ↓
+```
 
 ### Proposta comercial
+
+A proposta utiliza o mesmo comportamento de tela cheia da apresentação. O conteúdo permanece bloqueado até o visitante iniciar a apresentação em fullscreen.
 
 Cada proposta possui:
 
 - cliente e contato;
 - vendedor responsável;
-- foto e contatos do vendedor;
 - logo do cliente;
-- contexto da negociação;
-- prioridades do cliente;
-- solução e escopo propostos;
-- modelo comercial;
-- itens de preço e opcionais;
+- cenário operacional considerado;
+- solução e escopo;
+- modelo de análise cadastral;
+- itens de investimento e opcionais;
 - fatura mínima;
 - implantação;
 - condições comerciais;
 - validade;
-- versões imutáveis depois da publicação;
+- versões imutáveis após publicação;
 - token público aleatório por versão.
 
-Ao alterar uma versão publicada, uma nova versão em rascunho é criada. O link antigo continua representando a versão publicada anteriormente.
+Modelos comerciais suportados:
+
+- análise por item;
+- análise por conjunto;
+- análise por item + conjunto;
+- condições específicas.
+
+O viewer comercial usa como referência a estrutura já utilizada pela ViaGate: Score, consultas e autenticação, prevenção, aplicativo/logística, monitoramento de veículos e fatura mínima.
 
 ## Imagens comerciais
 
-Fotos de vendedores e logos de clientes são enviados diretamente para o Supabase Storage. O usuário não precisa informar URL manualmente.
+Fotos de vendedores e logos de clientes são enviados diretamente para o Supabase Storage.
 
-Bucket utilizado:
+Bucket:
 
 ```text
 commercial-assets
 ```
 
-Estrutura dos objetos:
+Estrutura:
 
 ```text
 commercial-assets/
@@ -71,39 +89,41 @@ commercial-assets/
 └── clients/{auth_user_id}/{uuid}.{ext}
 ```
 
-Regras atuais:
+Regras:
 
-- bucket público somente para leitura dos arquivos publicados;
+- leitura pública dos arquivos usados nos materiais publicados;
 - upload, alteração e exclusão somente por usuário autenticado dentro da própria pasta;
 - PNG, JPG, WEBP e SVG;
-- limite de 2 MB por arquivo;
+- limite de 2 MB;
 - nome físico gerado com UUID;
-- arquivos substituídos não são apagados automaticamente, porque versões publicadas antigas podem continuar utilizando a imagem anterior.
+- arquivos substituídos não são apagados automaticamente, preservando versões já publicadas.
 
 ## Estatísticas de leitura
 
-Apresentações e propostas registram os seguintes eventos pelo token publicado:
+Apresentações e propostas registram:
 
-- `open` — link válido foi aberto;
-- `start` — visitante iniciou a apresentação/proposta;
-- `slide_view` — primeiro acesso daquele visitante a cada slide;
-- `complete` — visitante chegou ao último slide.
+- `open` — link válido aberto;
+- `start` — visitante iniciou o material em tela cheia;
+- `slide_view` — primeiro acesso da sessão a cada slide;
+- `complete` — sessão chegou ao último slide.
 
-O painel classifica o material como:
+O Hub classifica cada link como:
 
-- **Não aberta** — nenhuma abertura registrada;
-- **Aberta** — o link foi aberto, mas a apresentação ainda não avançou de forma relevante;
-- **Em leitura** — o visitante iniciou ou avançou pelos slides;
+- **Não aberta** — nenhuma abertura;
+- **Aberta** — link aberto, mas apresentação não iniciada;
+- **Em leitura** — material iniciado ou parcialmente percorrido;
 - **Lida** — pelo menos uma sessão chegou ao último slide.
 
 Também são exibidos:
 
 - número de aberturas;
-- progresso máximo alcançado;
-- data/hora da última abertura;
+- progresso máximo;
+- primeira e última abertura disponíveis na RPC;
+- última inicialização;
+- última conclusão;
 - quantidade geral de materiais publicados e lidos.
 
-A sessão de leitura utiliza somente um UUID aleatório salvo em `sessionStorage`. Não é utilizado fingerprinting do dispositivo.
+A sessão utiliza um UUID aleatório em `sessionStorage`. Não é utilizado fingerprinting.
 
 ## Supabase
 
@@ -118,35 +138,34 @@ Execute as migrations na ordem:
 20260825_commercial_hub_analytics.sql
 20260825_commercial_hub_access_control.sql
 20260825_commercial_assets_storage.sql
+20260825_proposal_pricing_models.sql
+20260825_commercial_hub_read_status.sql
 ```
 
-As migrations do Hub Comercial adicionam:
+As migrations adicionam:
 
-- `presentations`;
-- `presentation_versions`;
-- `shared_document_events`;
-- RLS para apresentações e eventos;
-- isolamento de clientes, propostas, versões e itens por usuário autenticado;
-- `publish_presentation_version`;
-- `get_public_presentation`;
-- `track_shared_document_event`;
-- `get_my_shared_document_stats`;
-- endurecimento de `publish_proposal_version` para impedir publicação de material de outro comercial;
-- bucket `commercial-assets` e políticas de upload por usuário.
+- propostas e versões;
+- apresentações e versões;
+- eventos de leitura;
+- RLS e isolamento por usuário;
+- publicação por token;
+- estatísticas de abertura e conclusão;
+- suporte aos modelos por item, conjunto e item + conjunto;
+- bucket `commercial-assets` e políticas de upload.
 
-O papel Postgres `anon` não possui `SELECT` direto nas tabelas comerciais ou de analytics. Links públicos acessam somente RPCs limitadas por token publicado. As imagens do bucket são públicas porque fazem parte de materiais públicos compartilhados por token.
+O papel Postgres `anon` não possui `SELECT` direto nas tabelas comerciais ou de analytics. Os viewers públicos acessam somente RPCs limitadas por token publicado.
 
 ### Autenticação
 
-Os usuários são criados diretamente no Supabase Authentication. Não existe cadastro público na aplicação.
+Os usuários são criados diretamente no Supabase Authentication. Não existe cadastro público.
 
-Configure como redirect permitido para recuperação de senha:
+Redirect de produção:
 
 ```text
 https://viagate.com.br/apresentacao/proposta/
 ```
 
-Para desenvolvimento local com o projeto montado em `/apresentacao/`, adicione também:
+Para desenvolvimento local com `/apresentacao/`:
 
 ```text
 http://localhost:8080/apresentacao/proposta/
@@ -167,19 +186,17 @@ export const proposalConfig = Object.freeze({
 });
 ```
 
-A Publishable Key é própria para aplicações web. A segurança dos dados depende das políticas RLS e da sessão autenticada.
-
 Nunca coloque `sb_secret_...` no repositório ou no navegador.
 
 ## Servidor
 
 Não é necessário backend próprio nesta versão. Supabase Auth, PostgREST, Storage e RPCs atendem o fluxo atual.
 
-Se surgir uma função que realmente exija backend próprio, ela deverá ser implementada em Go.
+Se futuramente houver necessidade de backend próprio, ele deverá ser implementado em Go.
 
 ## Executar localmente
 
-### Com o junction `/apresentacao/`
+### Com junction `/apresentacao/`
 
 Sirva o diretório pai que contém o junction:
 
@@ -195,16 +212,14 @@ http://localhost:8080/apresentacao/
 
 ### Servindo o repositório diretamente
 
-Também é possível executar o servidor dentro da pasta do projeto:
+Dentro da pasta do projeto:
 
 ```bash
 python -m http.server 8080
 ```
 
-Nesse caso acesse:
+Acesse:
 
 ```text
 http://localhost:8080/
 ```
-
-Os links gerados serão ajustados automaticamente para a estrutura usada no acesso atual.
