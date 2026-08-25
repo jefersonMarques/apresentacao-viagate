@@ -35,7 +35,7 @@ export function formatDate(value) {
 }
 
 function buildPublicUrl(baseUrl, token) {
-  const url = new URL(baseUrl, window.location.origin);
+  const url = new URL(baseUrl, window.location.href);
   url.searchParams.set('token', token);
   return url.toString();
 }
@@ -63,6 +63,10 @@ if (document.getElementById('adminView')) {
 
   import('./commercial-hub.js').catch((error) => {
     console.error('Não foi possível carregar o hub comercial.', error);
+  });
+
+  import('./storage-ui.js').catch((error) => {
+    console.error('Não foi possível carregar os uploads do Storage.', error);
   });
 }
 
