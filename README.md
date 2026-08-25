@@ -87,18 +87,21 @@ Execute as migrations na ordem:
 20260825_proposals_grants.sql
 20260825_proposals_immutability_fix.sql
 20260825_commercial_hub_analytics.sql
+20260825_commercial_hub_access_control.sql
 ```
 
-A migration do Hub Comercial adiciona:
+As migrations do Hub Comercial adicionam:
 
 - `presentations`;
 - `presentation_versions`;
 - `shared_document_events`;
 - RLS para apresentações e eventos;
+- isolamento de clientes, propostas, versões e itens por usuário autenticado;
 - `publish_presentation_version`;
 - `get_public_presentation`;
 - `track_shared_document_event`;
-- `get_my_shared_document_stats`.
+- `get_my_shared_document_stats`;
+- endurecimento de `publish_proposal_version` para impedir publicação de material de outro comercial.
 
 O papel Postgres `anon` não possui `SELECT` direto nas tabelas comerciais ou de analytics. Links públicos acessam somente RPCs limitadas por token publicado.
 
