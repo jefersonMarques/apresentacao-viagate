@@ -7,7 +7,7 @@ Apresentação institucional e área de propostas comerciais da ViaGate.
 - `/apresentacao/` — apresentação institucional em modo apresentação.
 - `/apresentacao/proposta/` — área comercial protegida por Supabase Auth.
 - `/apresentacao/proposta/view.html?token=...` — proposta publicada para o cliente.
-- `supabase/migrations/20260825_proposals.sql` — estrutura, versionamento, RLS e RPCs das propostas.
+- `supabase/migrations/` — estrutura, versionamento, RLS, grants e RPCs das propostas.
 
 ## Apresentação institucional
 
@@ -22,10 +22,11 @@ A página principal utiliza uma camada de apresentação sobre o conteúdo insti
 - `F` para alternar tela cheia;
 - scrollbar e elementos com comportamento de site ocultos;
 - controles discretos que desaparecem quando o mouse fica inativo;
+- slide narrativo com um exemplo completo de operação;
 - contato comercial personalizado no encerramento;
 - métricas exibidas como base consolidada, sem contador simulando tempo real.
 
-O conteúdo institucional original foi preservado em `presentation-content.html`. O `index.html` funciona apenas como shell de apresentação e injeta `presentation-mode.css` e `presentation-mode.js` no conteúdo existente.
+O conteúdo institucional original foi preservado em `presentation-content.html`. O `index.html` funciona apenas como shell de apresentação e carrega as melhorias depois que os slides executivos existentes terminam de ser montados.
 
 ## Propostas comerciais
 
@@ -55,13 +56,14 @@ Ao alterar uma versão já publicada, o painel cria uma nova versão em rascunho
 
 ### 1. Banco
 
-Execute no SQL Editor do Supabase:
+Execute as migrations do diretório `supabase/migrations/` na ordem do nome dos arquivos:
 
 ```text
-supabase/migrations/20260825_proposals.sql
+20260825_proposals.sql
+20260825_proposals_grants.sql
 ```
 
-A migration cria:
+As migrations criam:
 
 - `salespeople`
 - `clients`
@@ -70,6 +72,7 @@ A migration cria:
 - `proposal_versions`
 - `proposal_version_items`
 - políticas RLS
+- permissões explícitas para `authenticated`
 - `publish_proposal_version`
 - `get_public_proposal`
 
