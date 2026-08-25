@@ -1,53 +1,35 @@
-# Apresentação ViaGate
+# ViaGate — Hub Comercial
 
-Apresentação institucional e área de propostas comerciais da ViaGate.
+Área comercial para gerar, publicar e acompanhar apresentações institucionais e propostas comerciais.
 
 ## Estrutura
 
-- `/apresentacao/` — apresentação institucional em modo apresentação.
-- `/apresentacao/proposta/` — área comercial protegida por Supabase Auth.
-- `/apresentacao/proposta/view.html?token=...` — proposta publicada para o cliente.
-- `supabase/migrations/` — estrutura, versionamento, RLS, grants e RPCs das propostas.
+- `/apresentacao/` — redireciona para o Hub Comercial autenticado.
+- `/apresentacao/proposta/` — Hub Comercial protegido por Supabase Auth.
+- `/apresentacao/view.html?token=...` — apresentação institucional publicada e personalizada.
+- `/apresentacao/proposta/view.html?token=...` — proposta comercial publicada.
+- `presentation-content.html` — template institucional reutilizado pelas apresentações geradas.
+- `supabase/migrations/` — banco, RLS, versionamento, publicação e analytics.
 
-## Apresentação institucional
+## Hub Comercial
 
-A página principal utiliza uma camada de apresentação sobre o conteúdo institucional existente:
+Depois do login, o comercial pode gerar dois tipos de material:
 
-- camada inicial sobre toda a apresentação com blur de fundo;
-- botão **Iniciar apresentação** centralizado;
-- entrada pela Fullscreen API;
-- ao sair da tela cheia, a apresentação é pausada e a camada retorna com **Continuar apresentação**;
-- retomada no mesmo slide em que a apresentação foi interrompida;
-- navegação por setas, Page Up/Page Down e roda do mouse;
-- `Home` para o primeiro slide;
-- `End` para o último slide;
-- `F` para alternar tela cheia;
-- scrollbar e elementos com comportamento de site ocultos;
-- controles discretos que desaparecem quando o mouse fica inativo;
-- slide narrativo com um exemplo completo de operação;
-- slide final exclusivo para o contato comercial;
-- métricas exibidas como base consolidada, sem contador simulando tempo real.
+### Apresentação institucional
 
-O contato exibido no último slide fica em `presentation-contact.js`, separado do conteúdo institucional. Isso permite trocar nome, cargo, foto, telefone, e-mail e WhatsApp do comercial sem alterar os slides.
+O conteúdo institucional permanece padronizado, mas cada link publicado pode ter personalização própria:
 
-Exemplo:
+- vendedor responsável;
+- foto, cargo, telefone, WhatsApp e e-mail do vendedor;
+- slide final de contato ativado ou desativado;
+- empresa do cliente opcional;
+- contato do cliente opcional;
+- logo do cliente opcional;
+- identificação do cliente ativada ou desativada.
 
-```javascript
-window.presentationContact = Object.freeze({
-  name: 'Antônio Santos',
-  role: 'Sócio-Diretor Comercial',
-  email: 'antonio.santos@viagate.com.br',
-  phone: '(41) 99962-3600',
-  whatsapp: '5541999623600',
-  photoUrl: './assets/antonio-photo.svg',
-});
-```
+Cada publicação possui token público próprio e versão imutável.
 
-O conteúdo institucional original foi preservado em `presentation-content.html`. O `index.html` funciona apenas como shell de apresentação e carrega as melhorias depois que os slides executivos existentes terminam de ser montados.
-
-## Propostas comerciais
-
-A proposta é um produto separado da apresentação institucional, embora compartilhe a identidade visual.
+### Proposta comercial
 
 Cada proposta possui:
 
@@ -67,81 +49,109 @@ Cada proposta possui:
 - versões imutáveis depois da publicação;
 - token público aleatório por versão.
 
-Ao alterar uma versão já publicada, o painel cria uma nova versão em rascunho. A versão publicada anteriormente permanece disponível pelo token original.
+Ao alterar uma versão publicada, uma nova versão em rascunho é criada. O link antigo continua representando a versão publicada anteriormente.
+
+## Estatísticas de leitura
+
+Apresentações e propostas registram os seguintes eventos pelo token publicado:
+
+- `open` — link válido foi aberto;
+- `start` — visitante iniciou a apresentação/proposta;
+- `slide_view` — primeiro acesso daquele visitante a cada slide;
+- `complete` — visitante chegou ao último slide.
+
+O painel classifica o material como:
+
+- **Não aberta** — nenhuma abertura registrada;
+- **Aberta** — o link foi aberto, mas a apresentação ainda não avançou de forma relevante;
+- **Em leitura** — o visitante iniciou ou avançou pelos slides;
+- **Lida** — pelo menos uma sessão chegou ao último slide.
+
+Também são exibidos:
+
+- número de aberturas;
+- progresso máximo alcançado;
+- data/hora da última abertura;
+- quantidade geral de materiais publicados e lidos.
+
+A sessão de leitura utiliza somente um UUID aleatório salvo em `sessionStorage`. Não é utilizado fingerprinting do dispositivo.
 
 ## Supabase
 
-### 1. Banco
+### Banco
 
-Execute as migrations do diretório `supabase/migrations/` na ordem abaixo:
+Execute as migrations na ordem:
 
 ```text
 20260825_proposals.sql
 20260825_proposals_grants.sql
 20260825_proposals_immutability_fix.sql
+20260825_commercial_hub_analytics.sql
 ```
 
-As migrations criam:
+A migration do Hub Comercial adiciona:
 
-- `salespeople`
-- `clients`
-- `client_contacts`
-- `proposals`
-- `proposal_versions`
-- `proposal_version_items`
-- políticas RLS
-- permissões explícitas para `authenticated`
-- imutabilidade de versões publicadas
-- `publish_proposal_version`
-- `get_public_proposal`
+- `presentations`;
+- `presentation_versions`;
+- `shared_document_events`;
+- RLS para apresentações e eventos;
+- `publish_presentation_version`;
+- `get_public_presentation`;
+- `track_shared_document_event`;
+- `get_my_shared_document_stats`.
 
-O papel Postgres `anon` não possui `SELECT` direto nas tabelas. A proposta pública é retornada somente pelo RPC `get_public_proposal` quando o token corresponde a uma versão publicada.
+O papel Postgres `anon` não possui `SELECT` direto nas tabelas comerciais ou de analytics. Links públicos acessam somente RPCs limitadas por token publicado.
 
-### 2. Autenticação
+### Autenticação
 
-Os usuários são criados diretamente no **Supabase Authentication**, sem cadastro público pela aplicação.
+Os usuários são criados diretamente no Supabase Authentication. Não existe cadastro público na aplicação.
 
-No Supabase Auth, configure a URL abaixo como redirect permitido para recuperação de senha:
+Configure como redirect permitido para recuperação de senha:
 
 ```text
 https://viagate.com.br/apresentacao/proposta/
 ```
 
-### 3. Configuração do frontend
+Para desenvolvimento local, adicione também:
 
-Preencha `proposal/config.js` com a URL do projeto e a **Publishable Key** (`sb_publishable_...`):
+```text
+http://localhost:8080/apresentacao/proposta/
+```
+
+### Frontend
+
+A configuração fica em `proposal/config.js`:
 
 ```javascript
 export const proposalConfig = Object.freeze({
   supabaseUrl: 'https://SEU-PROJETO.supabase.co',
   supabasePublishableKey: 'sb_publishable_...',
   publicProposalUrl: '/apresentacao/proposta/view.html',
+  publicPresentationUrl: '/apresentacao/view.html',
   loginUrl: '/apresentacao/proposta/',
 });
 ```
 
-A Publishable Key é própria para aplicações web e pode existir no frontend. A segurança dos dados continua sendo controlada pelas políticas RLS e pela sessão do usuário autenticado.
+A Publishable Key é própria para aplicações web. A segurança dos dados depende das políticas RLS e da sessão autenticada.
 
-A **Secret Key** (`sb_secret_...`) nunca deve ser colocada no repositório, no JavaScript entregue ao navegador ou em qualquer outro componente público.
+Nunca coloque `sb_secret_...` no repositório ou no navegador.
 
 ## Servidor
 
-Nesta versão não é necessário backend próprio. A aplicação continua estática e utiliza Supabase Auth, PostgREST e RPCs.
+Não é necessário backend próprio nesta versão. Supabase Auth, PostgREST e RPCs atendem o fluxo atual.
 
-Se futuramente houver uma função que realmente exija servidor próprio, o backend deverá ser implementado em Go.
+Se surgir uma função que realmente exija backend próprio, ela deverá ser implementada em Go.
 
 ## Executar localmente
 
-A aplicação precisa ser servida por HTTP; não abra os arquivos diretamente com `file://`.
+Sirva o diretório pai que contém o junction `/apresentacao/`:
 
 ```bash
 python -m http.server 8080
 ```
 
-Depois acesse:
+Acesse:
 
 ```text
-http://localhost:8080/
+http://localhost:8080/apresentacao/
 ```
-
-Para testar o caminho utilizado em produção, o servidor local deve reproduzir o prefixo `/apresentacao/` ou o `<base>` do conteúdo institucional deve ser ajustado apenas no ambiente local.
