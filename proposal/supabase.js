@@ -2,11 +2,11 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import { proposalConfig } from './config.js';
 
 export function hasSupabaseConfiguration() {
-  return Boolean(proposalConfig.supabaseUrl && proposalConfig.supabaseAnonKey);
+  return Boolean(proposalConfig.supabaseUrl && proposalConfig.supabasePublishableKey);
 }
 
 export const supabase = hasSupabaseConfiguration()
-  ? createClient(proposalConfig.supabaseUrl, proposalConfig.supabaseAnonKey, {
+  ? createClient(proposalConfig.supabaseUrl, proposalConfig.supabasePublishableKey, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
