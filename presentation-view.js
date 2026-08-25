@@ -4,26 +4,41 @@ const token = new URLSearchParams(window.location.search).get('token');
 const loadingElement = document.getElementById('presentationLoading');
 const frame = document.getElementById('presentationFrame');
 const startButton = document.getElementById('presentationStartButton');
+const restartButton = document.getElementById('presentationRestartButton');
+const navigation = document.getElementById('presentationNavigation');
+const previousButton = document.getElementById('presentationPreviousButton');
+const nextButton = document.getElementById('presentationNextButton');
+const counter = document.getElementById('presentationCounter');
 
 const viewerState = {
   started: false,
   sessionId: null,
   content: null,
+  frameLoaded: false,
+  slideNumber: 1,
+  slideTotal: 1,
 };
 
 function getSessionId() {
-  if (!token) return crypto.randomUUID();
+  if (!token) {
+    return crypto.randomUUID();
+  }
+
   const key = `viagate:presentation:${token}:session`;
   let value = sessionStorage.getItem(key);
+
   if (!value) {
     value = crypto.randomUUID();
     sessionStorage.setItem(key, value);
   }
+
   return value;
 }
 
 async function track(eventName, slideNumber = null, slideTotal = null) {
-  if (!token || !viewerState.sessionId || !supabase) return;
+  if (!token || !viewerState.sessionId || !supabase) {
+    return;
+  }
 
   try {
     await supabase.rpc('track_shared_document_event', {
@@ -42,6 +57,15 @@ function showError(message) {
   loadingElement.innerHTML = `<div class="error">${message}</div>`;
 }
 
+function updateNavigation(slideNumber = viewerState.slideNumber, slideTotal = viewerState.slideTotal) {
+  viewerState.slideNumber = Math.max(1, Number(slideNumber) || 1);
+  viewerState.slideTotal = Math.max(1, Number(slideTotal) || 1);
+
+  counter.textContent = `${String(viewerState.slideNumber).padStart(2, '0')} / ${String(viewerState.slideTotal).padStart(2, '0')}`;
+  previousButton.disabled = viewerState.slideNumber <= 1;
+  nextButton.disabled = viewerState.slideNumber >= viewerState.slideTotal;
+}
+
 function installPresentation(frameDocument, frameWindow) {
   if (!frameDocument || !frameWindow || frameDocument.querySelector('script[data-presentation-bootstrap]')) {
     return;
@@ -52,7 +76,7 @@ function installPresentation(frameDocument, frameWindow) {
 
   frameWindow.presentationContact = Object.freeze({
     name: salesperson.name || 'ViaGate Comercial',
-    role: salesperson.role || 'Equipe Comercial',
+    role: salesperson.role || '',
     email: salesperson.email || '',
     phone: salesperson.phone || '',
     whatsapp: salesperson.whatsapp || '',
@@ -66,48 +90,96 @@ function installPresentation(frameDocument, frameWindow) {
   });
 
   const bootstrapScript = frameDocument.createElement('script');
-  bootstrapScript.src = './presentation-bootstrap.js?v=20260825-5';
+  bootstrapScript.src = './presentation-bootstrap.js?v=20260825-6';
   bootstrapScript.dataset.presentationBootstrap = 'true';
   frameDocument.body.appendChild(bootstrapScript);
 }
 
-function pausePresentation() {
+async function waitForBridge(timeoutMs = 4000) {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    if (typeof frame.contentWindow?.hostStartPresentation === 'function') {
+      return true;
+    }
+
+    await new Promise((resolve) => window.setTimeout(resolve, 50));
+  }
+
+  return false;
+}
+
+function syncNavigationFromFrame() {
+  const state = frame.contentWindow?.hostGetPresentationState?.();
+
+  if (state) {
+    updateNavigation(state.slideNumber, state.slideTotal);
+  }
+}
+
+function showGate(mode) {
   document.body.classList.add('is-paused');
-  startButton.textContent = viewerState.started ? 'CONTINUAR APRESENTAÇÃO' : 'INICIAR APRESENTAÇÃO';
+  navigation.hidden = true;
+
+  const continuing = mode === 'continue';
+  startButton.textContent = continuing ? 'CONTINUAR APRESENTAÇÃO' : 'INICIAR APRESENTAÇÃO';
+  restartButton.hidden = !continuing;
+
   frame.contentWindow?.hostPausePresentation?.();
 }
 
-async function waitForPresentationBridge(attempt = 0) {
-  if (typeof frame.contentWindow?.hostStartPresentation === 'function') {
-    return true;
-  }
-
-  if (attempt >= 60) {
-    return false;
-  }
-
-  await new Promise((resolve) => window.setTimeout(resolve, 50));
-  return waitForPresentationBridge(attempt + 1);
+function revealPresentation() {
+  document.body.classList.remove('is-paused');
+  navigation.hidden = false;
+  restartButton.hidden = true;
+  syncNavigationFromFrame();
 }
 
 async function startPresentation() {
+  if (!viewerState.frameLoaded) {
+    return;
+  }
+
   try {
     if (!document.fullscreenElement) {
       await document.documentElement.requestFullscreen();
     }
 
-    const bridgeReady = await waitForPresentationBridge();
+    const bridgeReady = await waitForBridge();
     if (!bridgeReady) {
       return;
     }
 
     const firstStart = !viewerState.started;
     viewerState.started = true;
-    document.body.classList.remove('is-paused');
     frame.contentWindow.hostStartPresentation(firstStart);
+    revealPresentation();
+    syncNavigationFromFrame();
     await track('start');
   } catch {
+    showGate(viewerState.started ? 'continue' : 'start');
   }
+}
+
+function restartPresentation() {
+  frame.contentWindow?.hostRestartPresentation?.();
+  viewerState.started = false;
+  updateNavigation(1, viewerState.slideTotal);
+  showGate('start');
+}
+
+function navigatePresentation(direction) {
+  if (!viewerState.started || !document.fullscreenElement) {
+    return;
+  }
+
+  if (direction < 0) {
+    frame.contentWindow?.hostPreviousSlide?.();
+  } else {
+    frame.contentWindow?.hostNextSlide?.();
+  }
+
+  window.setTimeout(syncNavigationFromFrame, 80);
 }
 
 async function initializeViewer() {
@@ -137,26 +209,32 @@ async function initializeViewer() {
   document.title = clientName ? `ViaGate — Apresentação para ${clientName}` : 'ViaGate — Apresentação';
 
   frame.addEventListener('load', () => {
+    viewerState.frameLoaded = true;
     installPresentation(frame.contentDocument, frame.contentWindow);
+    loadingElement.hidden = true;
+    showGate('start');
   }, { once: true });
 
-  frame.src = './presentation-content.html?v=20260825-5';
+  frame.src = './presentation-content.html?v=20260825-6';
   frame.hidden = false;
-  loadingElement.hidden = true;
-
   await track('open');
 }
 
 startButton.addEventListener('click', startPresentation);
+restartButton.addEventListener('click', restartPresentation);
+previousButton.addEventListener('click', () => navigatePresentation(-1));
+nextButton.addEventListener('click', () => navigatePresentation(1));
 
 document.addEventListener('fullscreenchange', () => {
   if (document.fullscreenElement) {
-    document.body.classList.remove('is-paused');
+    if (viewerState.started) {
+      revealPresentation();
+    }
     return;
   }
 
   if (viewerState.started) {
-    pausePresentation();
+    showGate('continue');
   }
 });
 
@@ -168,6 +246,10 @@ window.addEventListener('message', (event) => {
   const slideNumber = Number(event.data.slideNumber || 0) || null;
   const slideTotal = Number(event.data.slideTotal || 0) || null;
 
+  if (slideNumber && slideTotal) {
+    updateNavigation(slideNumber, slideTotal);
+  }
+
   if (event.data.type === 'slide_view' && slideNumber && slideTotal) {
     track('slide_view', slideNumber, slideTotal);
   }
@@ -177,4 +259,5 @@ window.addEventListener('message', (event) => {
   }
 });
 
+updateNavigation();
 initializeViewer();
