@@ -33,7 +33,7 @@ func NewGenerator(pool *pgxpool.Pool, store *Store, renderer *Renderer, pdf *PDF
 	return &Generator{pool: pool, store: store, renderer: renderer, pdf: pdf, storage: storageClient}
 }
 
-func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID, createdBy string) (Generated, error) {
+func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID string) (Generated, error) {
 	var templateVersionID string
 	var templateMarkdown string
 	err := g.pool.QueryRow(ctx, `
@@ -47,14 +47,14 @@ func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID, cre
 		return Generated{}, fmt.Errorf("default contract template: %w",err)
 	}
 
-	var proposalVersionID string
+	var proposalVersionID,createdBy string
 	var legalName,tradeName,cnpj,street,number,complement,district,city,state,postalCode string
 	var repName,repCPF,repEmail,repPhone,repRole string
 	var minimumInvoice,setupFee float64
 	var acceptedAt time.Time
 	var validUntil *time.Time
 	err = g.pool.QueryRow(ctx, `
-		select pv.id::text,
+		select pv.id::text,p.created_by::text,
 		       o.legal_name,coalesce(o.trade_name,''),o.cnpj,coalesce(o.street,''),coalesce(o.street_number,''),
 		       coalesce(o.complement,''),coalesce(o.district,''),coalesce(o.city,''),coalesce(o.state,''),coalesce(o.postal_code,''),
 		       o.company_responsible_name,o.company_responsible_cpf,o.company_responsible_email::text,o.company_responsible_phone,coalesce(o.company_responsible_role,''),
@@ -65,7 +65,7 @@ func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID, cre
 		join proposals p on p.id=pv.proposal_id
 		where o.id=$1 and o.status='submitted'
 	`,onboardingID).Scan(
-		&proposalVersionID,&legalName,&tradeName,&cnpj,&street,&number,&complement,&district,&city,&state,&postalCode,
+		&proposalVersionID,&createdBy,&legalName,&tradeName,&cnpj,&street,&number,&complement,&district,&city,&state,&postalCode,
 		&repName,&repCPF,&repEmail,&repPhone,&repRole,&minimumInvoice,&setupFee,&acceptedAt,&validUntil,
 	)
 	if err != nil { return Generated{},fmt.Errorf("load contract data: %w",err) }
