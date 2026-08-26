@@ -66,6 +66,10 @@ if (document.getElementById('adminView')) {
     console.error('Não foi possível carregar o hub comercial.', error);
   });
 
+  import('./hub-responsive.js?v=20260825-1').catch((error) => {
+    console.error('Não foi possível carregar a camada responsiva do Hub.', error);
+  });
+
   import('./storage-ui.js?v=20260825-7').catch((error) => {
     console.error('Não foi possível carregar os uploads do Storage.', error);
   });
