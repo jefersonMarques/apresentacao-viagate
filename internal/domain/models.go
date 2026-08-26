@@ -3,14 +3,17 @@ package domain
 import "time"
 
 type User struct {
-	ID        string
-	Email     string
-	Name      string
-	Phone     string
-	JobTitle  string
-	Status    string
-	Roles     []string
-	CreatedAt time.Time
+	ID           string
+	Email        string
+	Name         string
+	Phone        string
+	JobTitle     string
+	PhotoURL     string
+	LinkedInURL  string
+	InstagramURL string
+	Status       string
+	Roles        []string
+	CreatedAt    time.Time
 }
 
 type Proposal struct {
