@@ -98,9 +98,9 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal,errorMessage st
 					if errorMessage!="" { <div class="notice error">{ errorMessage }</div> }
 					<form method="post" action={ templ.SafeURL("/p/" + proposal.PublicToken + "/accept") } class="grid" style="margin-top:28px;background:#fff;color:#132432;padding:24px">
 						<div class="field"><label>Nome completo do responsável</label><input name="name" autocomplete="name" required/></div>
-						<div class="field"><label>CPF</label><input name="cpf" inputmode="numeric" autocomplete="off" required/></div>
+						<div class="field"><label>CPF</label><input name="cpf" data-mask="cpf" autocomplete="off" required/></div>
 						<div class="field"><label>E-mail</label><input name="email" type="email" autocomplete="email" required/></div>
-						<div class="field"><label>Telefone</label><input name="phone" inputmode="tel" autocomplete="tel" required/></div>
+						<div class="field"><label>Telefone</label><input name="phone" data-mask="phone" autocomplete="tel" required/></div>
 						<div class="field full"><label>Cargo / função</label><input name="role"/></div>
 						<div class="field full"><label><input type="checkbox" name="authority" value="1" required/> { legaltext.ProposalAcceptanceText }</label></div>
 						<div class="field full"><button class="btn primary" type="submit" data-processing="Registrando aceite...">Aceitar proposta e continuar</button></div>
