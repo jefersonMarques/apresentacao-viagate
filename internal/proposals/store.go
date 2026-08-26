@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -68,6 +69,8 @@ func (s *Store) PublicByToken(ctx context.Context, token string) (PublicProposal
 	var result PublicProposal
 	var contentJSON []byte
 	var conditionsJSON []byte
+	var currentTitle,currentClientName,currentClientCNPJ string
+	var currentValidUntil *time.Time
 	err := s.pool.QueryRow(ctx, `
 		select p.id::text, v.id::text, v.version_number, v.public_token::text, p.title,
 		       c.id::text, c.legal_name, coalesce(c.cnpj,''), v.pricing_model,
@@ -82,26 +85,34 @@ func (s *Store) PublicByToken(ctx context.Context, token string) (PublicProposal
 		&result.VersionID,
 		&result.VersionNumber,
 		&result.PublicToken,
-		&result.Title,
+		&currentTitle,
 		&result.ClientID,
-		&result.ClientName,
-		&result.ClientCNPJ,
+		&currentClientName,
+		&currentClientCNPJ,
 		&result.PricingModel,
 		&contentJSON,
 		&conditionsJSON,
 		&result.MinimumInvoice,
 		&result.SetupFee,
 		&result.ContentHash,
-		&result.ValidUntil,
+		&currentValidUntil,
 	)
 	if err != nil {
 		return PublicProposal{}, err
 	}
-	if result.ValidUntil != nil && result.ValidUntil.Before(time.Now().Truncate(24*time.Hour)) {
-		return PublicProposal{}, fmt.Errorf("proposal expired")
-	}
 	if err := json.Unmarshal(contentJSON, &result.Content); err != nil {
 		return PublicProposal{}, fmt.Errorf("decode proposal content: %w", err)
+	}
+	result.Title=snapshotString(result.Content,"proposal","title",currentTitle)
+	result.ClientName=snapshotString(result.Content,"client","legal_name",currentClientName)
+	result.ClientCNPJ=snapshotString(result.Content,"client","cnpj",currentClientCNPJ)
+	result.ValidUntil=currentValidUntil
+	if value:=snapshotString(result.Content,"proposal","valid_until","");value!=""{
+		if parsed,parseErr:=time.Parse("2006-01-02",value);parseErr==nil{result.ValidUntil=&parsed}
+	}
+	if result.ValidUntil != nil {
+		today:=time.Now().In(time.Local);today=time.Date(today.Year(),today.Month(),today.Day(),0,0,0,0,today.Location())
+		if result.ValidUntil.Before(today) { return PublicProposal{}, fmt.Errorf("proposal expired") }
 	}
 	if len(conditionsJSON) > 0 {
 		_ = json.Unmarshal(conditionsJSON, &result.Conditions)
@@ -127,6 +138,12 @@ func (s *Store) PublicByToken(ctx context.Context, token string) (PublicProposal
 	return result, rows.Err()
 }
 
+func snapshotString(content map[string]any,section,key,fallback string) string {
+	group,ok:=content[section].(map[string]any);if !ok{return fallback}
+	value,ok:=group[key].(string);if !ok||strings.TrimSpace(value)==""{return fallback}
+	return value
+}
+
 func (s *Store) Accept(ctx context.Context, proposal PublicProposal, input AcceptanceInput) (AcceptanceResult, error) {
 	if !input.AuthorityDeclared {
 		return AcceptanceResult{}, fmt.Errorf("authority declaration is required")
@@ -147,6 +164,22 @@ func (s *Store) Accept(ctx context.Context, proposal PublicProposal, input Accep
 		return AcceptanceResult{}, fmt.Errorf("proposal is not available for acceptance")
 	}
 
+	var existing AcceptanceResult
+	var existingName,existingEmail,existingCPF string
+	err=tx.QueryRow(ctx,`
+		select pa.id::text,o.id::text,pa.accepted_by_name,pa.accepted_by_email::text,pa.accepted_by_cpf
+		from proposal_acceptances pa join onboardings o on o.proposal_acceptance_id=pa.id
+		where pa.proposal_version_id=$1
+	`,proposal.VersionID).Scan(&existing.AcceptanceID,&existing.OnboardingID,&existingName,&existingEmail,&existingCPF)
+	if err==nil{
+		if strings.EqualFold(strings.TrimSpace(existingEmail),strings.TrimSpace(input.Email))&&existingCPF==input.CPF&&strings.EqualFold(strings.TrimSpace(existingName),strings.TrimSpace(input.Name)){
+			if err:=tx.Commit(ctx);err!=nil{return AcceptanceResult{},err}
+			return existing,nil
+		}
+		return AcceptanceResult{},fmt.Errorf("proposal version already accepted by another representative")
+	}
+	if err!=pgx.ErrNoRows{return AcceptanceResult{},err}
+
 	var result AcceptanceResult
 	err = tx.QueryRow(ctx, `
 		insert into proposal_acceptances(
@@ -154,7 +187,6 @@ func (s *Store) Accept(ctx context.Context, proposal PublicProposal, input Accep
 			accepted_by_name,accepted_by_email,accepted_by_cpf,accepted_by_phone,accepted_by_role,
 			authority_declared,acceptance_text_version,ip_address,user_agent,session_id
 		) values ($1,$2,$3,$4,$5,$6,$7,$8,true,'v1',$9,$10,$11)
-		on conflict (proposal_version_id) do update set proposal_version_id=excluded.proposal_version_id
 		returning id::text
 	`,
 		proposal.ProposalID,
@@ -184,7 +216,6 @@ func (s *Store) Accept(ctx context.Context, proposal PublicProposal, input Accep
 		       c.street,c.street_number,c.complement,c.district,c.city,c.state,c.postal_code,
 		       $2,$3,$4,$5,$6,true
 		from clients c where c.id=$7
-		on conflict (proposal_acceptance_id) do update set updated_at=now()
 		returning id::text
 	`, result.AcceptanceID,input.Name,input.CPF,input.Phone,input.Email,input.Role,proposal.ClientID).Scan(&result.OnboardingID)
 	if err != nil {
@@ -197,8 +228,8 @@ func (s *Store) Accept(ctx context.Context, proposal PublicProposal, input Accep
 
 	if _, err := tx.Exec(ctx, `
 		insert into audit_events(actor_type,event_type,resource_type,resource_id,ip_address,user_agent,metadata)
-		values ('customer','proposal.accepted','proposal',$1,$2,$3,jsonb_build_object('acceptance_id',$4,'version',$5))
-	`,proposal.ProposalID,nullableIP(input.IPAddress),input.UserAgent,result.AcceptanceID,proposal.VersionNumber); err != nil {
+		values ('customer','proposal.accepted','proposal',$1,$2,$3,jsonb_build_object('acceptance_id',$4,'version',$5,'version_hash',$6))
+	`,proposal.ProposalID,nullableIP(input.IPAddress),input.UserAgent,result.AcceptanceID,proposal.VersionNumber,fmt.Sprintf("%x",proposal.ContentHash)); err != nil {
 		return AcceptanceResult{}, err
 	}
 
