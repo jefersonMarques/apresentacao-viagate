@@ -18,6 +18,7 @@ import (
 	"github.com/jefersonMarques/apresentacao-viagate/internal/httpapp"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/notifications"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/onboarding"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/pipeline"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/companyregistry"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/database"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/email"
@@ -40,11 +41,13 @@ func main(){
 	authStore:=auth.NewStore(pool)
 	proposalStore:=proposals.NewStore(pool)
 	presentationStore:=presentations.NewStore(pool)
+	pipelineStore:=pipeline.NewStore(pool)
 	onboardingStore:=onboarding.NewStore(pool)
 	contractStore:=contracts.NewStore(pool)
 	renderer:=contracts.NewRenderer()
 	pdfRenderer:=contracts.NewPDFRenderer(cfg.ChromiumPath)
-	generator:=contracts.NewGenerator(pool,contractStore,renderer,pdfRenderer,storageClient)
+	generator:=contracts.NewGenerator(pool,contractStore,renderer,pdfRenderer,storageClient,cfg.Company)
+	finalizer:=contracts.NewFinalizer(pool,pdfRenderer,storageClient,cfg.Company)
 
 	if err:=bootstrapAdmin(ctx,cfg,authStore,pool,logger);err!=nil{logger.Error("bootstrap admin failed","error",err);os.Exit(1)}
 
@@ -53,8 +56,8 @@ func main(){
 
 	app:=httpapp.New(httpapp.Dependencies{
 		Config:cfg,Pool:pool,Logger:logger,AuthStore:authStore,ProposalStore:proposalStore,PresentationStore:presentationStore,
-		OnboardingStore:onboardingStore,ContractStore:contractStore,ContractRenderer:renderer,ContractGenerator:generator,
-		Storage:storageClient,Mailer:mailer,Registry:registry,
+		PipelineStore:pipelineStore,OnboardingStore:onboardingStore,ContractStore:contractStore,ContractRenderer:renderer,
+		ContractGenerator:generator,ContractFinalizer:finalizer,Storage:storageClient,Mailer:mailer,Registry:registry,
 	})
 	server:=&http.Server{
 		Addr:cfg.Address,Handler:app.Routes(),ReadHeaderTimeout:5*time.Second,ReadTimeout:30*time.Second,WriteTimeout:60*time.Second,IdleTimeout:90*time.Second,
