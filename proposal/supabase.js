@@ -61,17 +61,29 @@ if (document.getElementById('adminView')) {
   if (brandCopy) brandCopy.textContent = 'Gere materiais personalizados, publique links individuais e acompanhe abertura e leitura.';
   if (brandFooter) brandFooter.textContent = 'ViaGate · Hub Comercial · 2026';
 
-  import('./commercial-hub.js?v=20260825-6').catch((error) => {
+  import('./commercial-hub.js?v=20260825-7').catch((error) => {
     console.error('Não foi possível carregar o hub comercial.', error);
   });
 
-  import('./storage-ui.js?v=20260825-6').catch((error) => {
+  import('./storage-ui.js?v=20260825-7').catch((error) => {
     console.error('Não foi possível carregar os uploads do Storage.', error);
+  });
+
+  import('./profile-socials.js?v=20260825-7').catch((error) => {
+    console.error('Não foi possível carregar as redes sociais do perfil.', error);
+  });
+
+  import('./duplicate-proposal.js?v=20260825-7').catch((error) => {
+    console.error('Não foi possível carregar a duplicação de propostas.', error);
   });
 }
 
 if (document.getElementById('proposalPresentation')) {
-  import('./analytics.js?v=20260825-6').catch((error) => {
+  import('./analytics.js?v=20260825-7').catch((error) => {
     console.error('Não foi possível carregar as estatísticas da proposta.', error);
+  });
+
+  import('./social-links.js?v=20260825-7').catch((error) => {
+    console.error('Não foi possível carregar as redes sociais do comercial.', error);
   });
 }
