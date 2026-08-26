@@ -97,6 +97,7 @@ func (a *App) Routes() http.Handler {
 	router.Use(a.requestBodyLimit)
 
 	router.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServer(http.Dir("web/assets"))))
+	registerV1VisualAssets(router)
 	router.Get("/healthz", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) })
 	router.Get("/readyz",a.ready)
 
@@ -161,6 +162,41 @@ func (a *App) Routes() http.Handler {
 	return router
 }
 
+func registerV1VisualAssets(router chi.Router){
+	router.Handle("/v1/assets/*",http.StripPrefix("/v1/assets/",http.FileServer(http.Dir("assets"))))
+	files:=map[string]string{
+		"/v1/presentation-content.html":"presentation-content.html",
+		"/v1/styles.css":"styles.css",
+		"/v1/script.js":"script.js",
+		"/v1/enhancements.css":"enhancements.css",
+		"/v1/insurers.css":"insurers.css",
+		"/v1/hero-v2.css":"hero-v2.css",
+		"/v1/executive-v2.css":"executive-v2.css",
+		"/v1/executive-v2.js":"executive-v2.js",
+		"/v1/presentation-fixes.css":"presentation-fixes.css",
+		"/v1/presentation-story.css":"presentation-story.css",
+		"/v1/presentation-story.js":"presentation-story.js",
+		"/v1/presentation-contact.js":"presentation-contact.js",
+		"/v1/presentation-mode.css":"presentation-mode.css",
+		"/v1/presentation-mode.js":"presentation-mode.js",
+		"/v1/presentation-personalization.js":"presentation-personalization.js",
+		"/v1/presentation-social-links.js":"presentation-social-links.js",
+		"/v1/presentation-host-bridge.js":"presentation-host-bridge.js",
+		"/v1/presentation-bootstrap.js":"presentation-bootstrap.js",
+		"/v1/viewer-active.css":"viewer-active.css",
+		"/v1/proposal.css":"proposal/proposal.css",
+		"/v1/proposal-view.css":"proposal/proposal-view.css",
+		"/v1/proposal-premium.css":"proposal/proposal-premium.css",
+		"/v1/proposal-social.css":"proposal/proposal-social.css",
+		"/v1/proposal-experience.css":"proposal/proposal-experience.css",
+	}
+	for route,path:=range files{router.Get(route,serveProjectFile(path))}
+}
+
+func serveProjectFile(path string) http.HandlerFunc{
+	return func(w http.ResponseWriter,r *http.Request){http.ServeFile(w,r,path)}
+}
+
 func (a *App) proxyClientIP(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter,r *http.Request){
 		if !a.cfg.TrustProxyHeaders {
@@ -182,10 +218,10 @@ func (a *App) proxyClientIP(next http.Handler) http.Handler {
 func (a *App) securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
-		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("X-Frame-Options", "SAMEORIGIN")
 		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
 		w.Header().Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
-		w.Header().Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://unpkg.com; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'")
 		if a.cfg.Environment == "production" {
 			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 		}
