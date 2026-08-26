@@ -1,0 +1,114 @@
+package templates
+
+import (
+	"github.com/a-h/templ"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/catalog"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/presentations"
+)
+
+templ PresentationEditorPage(user domain.User,input presentations.EditorInput,draft presentations.SavedDraft,message,errorMessage string) {
+	@AdminLayout("ViaGate — Editar apresentação",user) {
+		<header class="header">
+			<div><span class="step-title">APRESENTAÇÃO</span><h1>Gerador institucional</h1><p>O conteúdo institucional é padronizado. O comercial escolhe cliente, contato e quais soluções fazem sentido para a conversa.</p></div>
+			<div class="actions">
+				<a class="btn" href="/admin/presentations">Voltar</a>
+				if draft.PublicToken != "" && draft.VersionNumber > 0 { <a class="btn dark" target="_blank" href={ templ.SafeURL("/a/" + draft.PublicToken) }>Abrir link</a> }
+			</div>
+		</header>
+		if message != "" { <div class="notice">{ message }</div> }
+		if errorMessage != "" { <div class="notice error">{ errorMessage }</div> }
+		<form method="post" action="/admin/presentations/save">
+			<input type="hidden" name="presentation_id" value={ input.PresentationID }/>
+			<section class="panel"><div class="panel-head"><h2>1. Cliente e material</h2></div><div class="panel-body grid">
+				<div class="field full"><label>Título interno</label><input name="title" value={ input.Title } required/></div>
+				<div class="field"><label>Razão social</label><input name="client_legal_name" value={ input.ClientLegalName }/></div>
+				<div class="field"><label>Nome fantasia</label><input name="client_trade_name" value={ input.ClientTradeName }/></div>
+				<div class="field"><label>CNPJ</label><input name="client_cnpj" value={ input.ClientCNPJ } inputmode="numeric"/></div>
+				<div class="field"><label><input type="checkbox" name="show_client_identity" value="1" checked?={ input.ShowClientIdentity }/> Personalizar capa com o cliente</label></div>
+			</div></section>
+			<section class="panel"><div class="panel-head"><h2>2. Contato do cliente</h2></div><div class="panel-body grid">
+				<div class="field"><label>Nome</label><input name="contact_name" value={ input.ContactName }/></div>
+				<div class="field"><label>Cargo</label><input name="contact_role" value={ input.ContactRole }/></div>
+				<div class="field"><label>E-mail</label><input name="contact_email" type="email" value={ input.ContactEmail }/></div>
+				<div class="field"><label><input type="checkbox" name="show_contact_slide" value="1" checked?={ input.ShowContactSlide }/> Mostrar contato no encerramento</label></div>
+			</div></section>
+			<section class="panel"><div class="panel-head"><h2>3. Soluções a apresentar</h2></div><div class="panel-body solution-grid">
+				for _,group := range catalog.Groups {
+					<label class="solution-card">
+						<input type="checkbox" name="module" value={ group.ID } checked?={ PresentationModuleSelected(input,group.ID) }/>
+						<h3>{ group.ShortTitle }</h3><p>{ group.Summary }</p>
+					</label>
+				}
+			</div></section>
+			<section class="panel"><div class="panel-body"><div class="actions">
+				<button class="btn" type="submit" name="action" value="save">Salvar rascunho</button>
+				<button class="btn primary" type="submit" name="action" value="publish">Publicar apresentação</button>
+			</div></div></section>
+		</form>
+	}
+}
+
+templ PublicPresentationPage(p presentations.PublicPresentation) {
+	@Base("ViaGate — " + p.Title) {
+		<div class="viewer-shell viewer-locked" data-secure-viewer>
+			<section class="viewer-slide dark" data-viewer-slide><div class="viewer-slide-inner">
+				<span class="step-title">VIAGATE · APRESENTAÇÃO INSTITUCIONAL · VERSÃO { p.VersionNumber }</span>
+				if p.ShowClientIdentity && PresentationClientName(p) != "sua operação" {
+					<h1>Preparada para<br/><span style="color:#ff6b18">{ PresentationClientName(p) }</span></h1>
+				} else { <h1>Tecnologia para<br/><span style="color:#ff6b18">gestão de risco.</span></h1> }
+				<p>Validação cadastral, autenticação, prevenção, rastreabilidade e tecnologia para operações logísticas.</p>
+			</div><div class="viewer-footer"><span>ViaGate</span><span>01</span></div></section>
+
+			<section class="viewer-slide light" data-viewer-slide><div class="viewer-slide-inner">
+				<span class="step-title">QUEM SOMOS</span><h2>Tecnologia aplicada à decisão operacional.</h2>
+				<p>A ViaGate organiza validações, consultas, autenticação e rastreabilidade em uma experiência única para reduzir tarefas manuais e dar velocidade às decisões de risco.</p>
+				<div class="viewer-card-grid">
+					<article class="viewer-card"><strong>Segurança</strong><span>Fluxos rastreáveis, controle de acesso e tratamento estruturado das informações.</span></article>
+					<article class="viewer-card"><strong>Integração</strong><span>APIs e módulos que podem ser conectados ao processo operacional já existente.</span></article>
+					<article class="viewer-card"><strong>Experiência</strong><span>Jornada simples para comercial, operação, motorista e responsáveis pelo processo.</span></article>
+				</div>
+			</div><div class="viewer-footer"><span>Quem somos</span><span>02</span></div></section>
+
+			<section class="viewer-slide dark" data-viewer-slide><div class="viewer-slide-inner">
+				<span class="step-title">DIFERENCIAIS</span><h2>Uma plataforma conectada à operação real.</h2>
+				<div class="viewer-card-grid">
+					<article class="viewer-card"><strong>Biometria e identidade</strong><span>Validação do responsável e do motorista integrada ao processo cadastral.</span></article>
+					<article class="viewer-card"><strong>Dados e consultas</strong><span>Informações organizadas para reduzir dependência de processos manuais e fontes dispersas.</span></article>
+					<article class="viewer-card"><strong>Rastreabilidade</strong><span>Registro da jornada, dos eventos e das decisões tomadas ao longo da operação.</span></article>
+				</div>
+			</div><div class="viewer-footer"><span>Diferenciais</span><span>03</span></div></section>
+
+			<section class="viewer-slide light" data-viewer-slide><div class="viewer-slide-inner">
+				<span class="step-title">SOLUÇÕES VIAGATE</span><h2>Somente o que faz sentido para esta conversa.</h2>
+				<div class="solution-grid">
+					for _,group := range PresentationGroups(p.SelectedModules) { <article class="solution-card"><h3>{ group.ShortTitle }</h3><p>{ group.Summary }</p></article> }
+				</div>
+			</div><div class="viewer-footer"><span>Soluções</span><span>04</span></div></section>
+
+			for index,group := range PresentationGroups(p.SelectedModules) {
+				<section class="viewer-slide dark" data-viewer-slide><div class="viewer-slide-inner">
+					<span class="step-title">{ group.ShortTitle }</span><h2>{ group.Summary }</h2>
+					<div class="viewer-card-grid">
+						for _,item := range group.Items { <article class="viewer-card"><strong>{ item.Label }</strong><span>Unidade comercial: { item.Unit }</span></article> }
+					</div>
+				</div><div class="viewer-footer"><span>{ group.ShortTitle }</span><span>{ index + 5 }</span></div></section>
+			}
+
+			<section class="viewer-slide light" data-viewer-slide><div class="viewer-slide-inner">
+				<span class="step-title">INTEGRAÇÃO</span><h2>API, automação e white label.</h2><p>A plataforma pode integrar consultas, validações e eventos a sistemas existentes, reduzindo retrabalho e permitindo que a experiência acompanhe a identidade e o processo de cada operação.</p>
+				<div class="viewer-card-grid"><article class="viewer-card"><strong>API</strong><span>Integração com sistemas internos e fluxos já existentes.</span></article><article class="viewer-card"><strong>White label</strong><span>Experiência configurável para projetos que exigem identidade própria.</span></article><article class="viewer-card"><strong>Auditoria</strong><span>Eventos importantes registrados para acompanhamento e rastreabilidade.</span></article></div>
+			</div><div class="viewer-footer"><span>Integração</span><span></span></div></section>
+
+			if p.ShowContactSlide {
+				<section class="viewer-slide orange" data-viewer-slide><div class="viewer-slide-inner"><span class="step-title" style="color:#fff">PRÓXIMO PASSO</span><h2>Vamos conversar sobre a operação?</h2>
+					if p.ContactName != "" { <p>Aos cuidados de { p.ContactName }if p.ContactRole != "" { · { p.ContactRole } }</p> }
+					<p><strong>{ p.SalespersonName }</strong><br/>{ p.SalespersonEmail }</p>
+				</div><div class="viewer-footer"><span>Contato</span><span></span></div></section>
+			}
+		</div>
+		<div class="viewer-gate" data-viewer-gate><div class="viewer-gate-box"><strong class="brand" style="color:#fff">VIAGATE</strong><div class="viewer-gate-actions"><button class="btn dark" type="button" data-viewer-restart hidden>Voltar ao início</button><button class="btn primary" type="button" data-viewer-start>Iniciar</button></div></div></div>
+		<div class="viewer-controls"><button type="button" data-viewer-previous aria-label="Anterior">↑</button><span data-viewer-counter>01 / 01</span><button type="button" data-viewer-next aria-label="Próximo">↓</button></div>
+		<script src="/assets/public-viewer.js" defer></script>
+	}
+}
