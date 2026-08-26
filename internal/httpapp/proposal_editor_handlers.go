@@ -90,7 +90,11 @@ func (a *App) proposalInputFromForm(r *http.Request,salesperson domain.User)(pro
 	input.Content=map[string]any{
 		"proposal":map[string]any{"title":input.Title,"valid_until":validUntil},
 		"client":map[string]any{"legal_name":input.ClientLegalName,"trade_name":input.ClientTradeName,"cnpj":input.ClientCNPJ,"email":input.ClientEmail,"phone":input.ClientPhone},
-		"salesperson":map[string]any{"name":salesperson.Name,"email":salesperson.Email,"phone":salesperson.Phone,"job_title":salesperson.JobTitle},
+		"salesperson":map[string]any{
+			"name":salesperson.Name,"email":salesperson.Email,"phone":salesperson.Phone,
+			"job_title":salesperson.JobTitle,"role":salesperson.JobTitle,"photo_url":salesperson.PhotoURL,
+			"linkedin":salesperson.LinkedInURL,"instagram":salesperson.InstagramURL,
+		},
 	}
 	canonical:=struct{Content map[string]any `json:"content"`;PricingModel string `json:"pricing_model"`;MinimumInvoice float64 `json:"minimum_invoice"`;SetupFee float64 `json:"setup_fee"`;Conditions []string `json:"conditions"`;Items []proposals.EditorItem `json:"items"`}{input.Content,input.PricingModel,input.MinimumInvoice,input.SetupFee,input.Conditions,input.Items}
 	encoded,_:=json.Marshal(canonical);hash:=sha256.Sum256(encoded);input.ContentHash=hash[:]
