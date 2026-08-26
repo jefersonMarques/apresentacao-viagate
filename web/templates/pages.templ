@@ -1,0 +1,154 @@
+package templates
+
+import (
+	"github.com/a-h/templ"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/contracts"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/proposals"
+)
+
+templ Login(errorMessage string) {
+	@Base("ViaGate — Acesso comercial") {
+		<section class="auth">
+			<div class="auth-brand">
+				<div class="brand">VIAGATE</div>
+				<div><span class="step-title">PLATAFORMA COMERCIAL</span><h1>Propostas, contratação e assinatura em um único fluxo.</h1></div>
+				<small>ViaGate · Ambiente restrito</small>
+			</div>
+			<div class="auth-form">
+				<form class="auth-card" method="post" action="/login">
+					<span class="step-title">ACESSO RESTRITO</span>
+					<h1>Entrar</h1>
+					if errorMessage != "" { <div class="notice error">{ errorMessage }</div> }
+					<div class="field"><label for="email">E-mail</label><input id="email" name="email" type="email" autocomplete="email" required/></div>
+					<div class="field" style="margin-top:12px"><label for="password">Senha</label><input id="password" name="password" type="password" autocomplete="current-password" required/></div>
+					<div class="actions" style="margin-top:18px"><button class="btn primary" type="submit">Entrar</button></div>
+				</form>
+			</div>
+		</section>
+	}
+}
+
+templ Dashboard(user domain.User) {
+	@AdminLayout("ViaGate — Comercial", user) {
+		<header class="header"><div><span class="step-title">HUB COMERCIAL</span><h1>Pipeline de contratação</h1><p>O sistema passa a acompanhar a negociação desde a proposta até o onboarding e a assinatura do contrato.</p></div></header>
+		<section class="grid">
+			<a class="panel" href="/admin/proposals" style="text-decoration:none"><div class="panel-body"><span class="step-title">COMERCIAL</span><h2>Propostas</h2><p>Criação, publicação, versões imutáveis e acompanhamento de aceite.</p></div></a>
+			<a class="panel" href="/admin/presentations" style="text-decoration:none"><div class="panel-body"><span class="step-title">INSTITUCIONAL</span><h2>Apresentações</h2><p>Materiais personalizados por comercial e cliente.</p></div></a>
+			if HasRole(user,"super_admin") {
+				<a class="panel" href="/admin/contracts/templates" style="text-decoration:none"><div class="panel-body"><span class="step-title">JURÍDICO</span><h2>Modelos de contrato</h2><p>Markdown versionado com variáveis controladas.</p></div></a>
+				<a class="panel" href="/admin/users" style="text-decoration:none"><div class="panel-body"><span class="step-title">ADMINISTRAÇÃO</span><h2>Usuários</h2><p>Convites, funções e permissões.</p></div></a>
+			}
+		</section>
+	}
+}
+
+templ UsersPage(user domain.User, users []domain.User, message string) {
+	@AdminLayout("ViaGate — Usuários", user) {
+		<header class="header"><div><span class="step-title">SUPER ADMIN</span><h1>Usuários</h1><p>Novos acessos são criados exclusivamente por convite.</p></div></header>
+		if message != "" { <div class="notice">{ message }</div> }
+		<section class="panel"><div class="panel-head"><h2>Convidar usuário</h2></div><div class="panel-body">
+			<form method="post" action="/admin/users/invite" class="grid">
+				<div class="field"><label>Nome</label><input name="name" required/></div>
+				<div class="field"><label>E-mail</label><input name="email" type="email" required/></div>
+				<div class="field"><label>Perfil</label><select name="role"><option value="commercial">Comercial</option><option value="operations">Operações</option><option value="legal">Jurídico</option><option value="super_admin">Super Admin</option></select></div>
+				<div class="field" style="align-content:end"><button class="btn primary" type="submit">Enviar convite</button></div>
+			</form>
+		</div></section>
+		<section class="panel"><div class="panel-head"><h2>Lista de usuários</h2></div><div class="table-wrap"><table class="table"><thead><tr><th>Nome</th><th>E-mail</th><th>Perfis</th><th>Status</th><th>Criado em</th></tr></thead><tbody>
+			for _, item := range users { <tr><td><strong>{ item.Name }</strong></td><td>{ item.Email }</td><td>{ Join(item.Roles) }</td><td><span class="badge">{ item.Status }</span></td><td>{ item.CreatedAt.Format("02/01/2006 15:04") }</td></tr> }
+		</tbody></table></div></section>
+	}
+}
+
+templ InvitationPage(name, email, token, errorMessage string) {
+	@Base("ViaGate — Ativar acesso") {
+		<section class="auth"><div class="auth-brand"><div class="brand">VIAGATE</div><div><span class="step-title">CONVITE</span><h1>Ative seu acesso comercial.</h1></div><small>O convite é individual e de uso único.</small></div><div class="auth-form">
+			<form class="auth-card" method="post" action={ templ.SafeURL("/invite/" + token) }>
+				<span class="step-title">CRIAR SENHA</span><h1>{ name }</h1><p>{ email }</p>
+				if errorMessage != "" { <div class="notice error">{ errorMessage }</div> }
+				<div class="field"><label>Senha</label><input name="password" type="password" minlength="10" autocomplete="new-password" required/></div>
+				<div class="field" style="margin-top:12px"><label>Confirmar senha</label><input name="confirm_password" type="password" minlength="10" autocomplete="new-password" required/></div>
+				<div class="actions" style="margin-top:18px"><button class="btn primary" type="submit">Ativar acesso</button></div>
+			</form>
+		</div></section>
+	}
+}
+
+templ ContractTemplatesPage(user domain.User, items []domain.ContractTemplate, variables []string, message string) {
+	@AdminLayout("ViaGate — Modelos de contrato", user) {
+		<header class="header"><div><span class="step-title">CONTRATOS</span><h1>Modelos versionados</h1><p>Cada salvamento cria uma nova versão. Contratos já gerados nunca são modificados retroativamente.</p></div></header>
+		if message != "" { <div class="notice">{ message }</div> }
+		<section class="panel"><div class="panel-head"><h2>Novo modelo / nova versão</h2></div><div class="panel-body">
+			<form method="post" action="/admin/contracts/templates" class="grid">
+				<div class="field"><label>Modelo existente</label><select name="template_id"><option value="">Novo modelo</option>for _, item := range items { <option value={ item.ID }>{ item.Name } · v{ item.CurrentVersion }</option> }</select></div>
+				<div class="field"><label>Nome</label><input name="name" required/></div>
+				<div class="field full"><label>Descrição</label><input name="description"/></div>
+				<div class="field full"><label>Markdown</label><textarea name="markdown" required placeholder="# CONTRATO\n\nCONTRATANTE: {client.legal_name} ..."></textarea></div>
+				<div class="field full"><label><input type="checkbox" name="make_default" value="1"/> Tornar este modelo padrão para novos contratos</label></div>
+				<div class="field full"><button class="btn primary" type="submit">Salvar nova versão</button></div>
+			</form>
+			<div style="margin-top:20px"><span class="step-title">VARIÁVEIS DISPONÍVEIS</span><p style="line-height:1.8">for _, variable := range variables { <code>{ "{" + variable + "}" }</code>{ " " } }</p></div>
+		</div></section>
+		<section class="panel"><div class="panel-head"><h2>Modelos disponíveis</h2></div><div class="table-wrap"><table class="table"><thead><tr><th>Nome</th><th>Descrição</th><th>Versão</th><th>Status</th></tr></thead><tbody>for _, item := range items { <tr><td>{ item.Name }</td><td>{ item.Description }</td><td>v{ item.CurrentVersion }</td><td><span class="badge">if item.IsActive { Ativo } else { Inativo }</span></td></tr> }</tbody></table></div></section>
+	}
+}
+
+templ PublicProposalPage(proposal proposals.PublicProposal, errorMessage string) {
+	@Base("ViaGate — Proposta comercial") {
+		<div class="public"><main class="proposal-page">
+			<section class="proposal-hero"><span class="step-title">PROPOSTA COMERCIAL · VERSÃO { proposal.VersionNumber }</span><h1>Preparada para<br/><span style="color:#ff6b18">{ proposal.ClientName }</span></h1><p>{ proposal.Title }</p></section>
+			<section class="proposal-section"><span class="step-title">INVESTIMENTO</span><h2>Valores da proposta</h2><div class="table-wrap"><table class="price-table"><thead><tr><th>Solução</th><th>Unidade</th><th>Status</th><th>Valor</th></tr></thead><tbody>for _, item := range proposal.Items { <tr><td><strong>{ item.GroupName }</strong><br/><small>{ item.Label }</small></td><td>{ item.Unit }</td><td>if item.IsOptional { Opcional } else { Incluído }</td><td>{ Money(item.Price) }</td></tr> }</tbody></table></div></section>
+			<section class="proposal-section"><span class="step-title">RESUMO COMERCIAL</span><div class="grid"><div><small>Modelo</small><h3>{ proposal.PricingModel }</h3></div><div><small>Fatura mínima</small><h3>{ Money(proposal.MinimumInvoice) }</h3></div><div><small>Implantação</small><h3>{ Money(proposal.SetupFee) }</h3></div><div><small>Validade</small><h3>{ Date(proposal.ValidUntil) }</h3></div></div></section>
+			if len(proposal.Conditions) > 0 { <section class="proposal-section"><span class="step-title">CONDIÇÕES</span><ul>for _, condition := range proposal.Conditions { <li>{ condition }</li> }</ul></section> }
+			<section class="accept-box"><span class="step-title">ACEITE DA PROPOSTA</span><h2>Prosseguir com a contratação</h2><p>O responsável abaixo confirma que está prosseguindo em nome da empresa. A assinatura do contrato ocorrerá em etapa posterior com verificação por código de uso único; a biometria facial já está prevista para a versão final.</p>
+				if errorMessage != "" { <div class="notice error">{ errorMessage }</div> }
+				<form method="post" action={ templ.SafeURL("/p/" + proposal.PublicToken + "/accept") } class="grid">
+					<div class="field"><label>Nome completo do responsável</label><input name="name" required/></div><div class="field"><label>CPF</label><input name="cpf" inputmode="numeric" required/></div><div class="field"><label>E-mail</label><input name="email" type="email" required/></div><div class="field"><label>Telefone</label><input name="phone" required/></div><div class="field full"><label>Cargo / função</label><input name="role"/></div><div class="field full"><label><input type="checkbox" name="authority" value="1" required/> Declaro possuir poderes ou autorização para prosseguir com esta contratação em nome da empresa.</label></div><div class="field full"><button class="btn primary" type="submit">Aceitar proposta e continuar</button></div>
+				</form>
+			</section>
+		</main></div>
+	}
+}
+
+templ OnboardingPage(onboarding domain.Onboarding, message, errorMessage string) {
+	@Base("ViaGate — Dados da operação") {
+		<header class="topbar"><span class="brand">VIAGATE · IMPLANTAÇÃO</span><span>{ onboarding.LegalName }</span></header><main class="shell">
+		<header class="header"><div><span class="step-title">DADOS DA OPERAÇÃO</span><h1>Informações para implantação</h1><p>Revise os dados preenchidos pelo CNPJ e complete as informações operacionais, responsáveis e usuários do sistema.</p></div></header>
+		if message != "" { <div class="notice">{ message }</div> } if errorMessage != "" { <div class="notice error">{ errorMessage }</div> }
+		<form method="post" action={ templ.SafeURL("/onboarding/" + onboarding.ID) }>
+			<section class="panel"><div class="panel-head"><h2>Contratante</h2><button class="btn" type="button" onclick="lookupCNPJ()">Preencher pelo CNPJ</button></div><div class="panel-body grid">
+				<div class="field"><label>CNPJ</label><input id="cnpj" name="cnpj" value={ onboarding.CNPJ } required/></div><div class="field"><label>Razão social</label><input id="legal_name" name="legal_name" value={ onboarding.LegalName } required/></div><div class="field"><label>Nome fantasia</label><input id="trade_name" name="trade_name" value={ onboarding.TradeName }/></div><div class="field"><label>CEP</label><input id="postal_code" name="postal_code" value={ onboarding.PostalCode }/></div><div class="field"><label>Logradouro</label><input id="street" name="street" value={ onboarding.Street }/></div><div class="field"><label>Número</label><input id="street_number" name="street_number" value={ onboarding.StreetNumber }/></div><div class="field"><label>Complemento</label><input id="complement" name="complement" value={ onboarding.Complement }/></div><div class="field"><label>Bairro</label><input id="district" name="district" value={ onboarding.District }/></div><div class="field"><label>Cidade</label><input id="city" name="city" value={ onboarding.City }/></div><div class="field"><label>UF</label><input id="state" name="state" maxlength="2" value={ onboarding.State }/></div>
+			</div></section>
+			<section class="panel"><div class="panel-head"><h2>Operação e apólice</h2></div><div class="panel-body grid"><div class="field"><label>Tipo de operação</label><select name="operation_type"><option value="normal" selected?={ onboarding.OperationType == "normal" }>Normal</option><option value="avulsa" selected?={ onboarding.OperationType == "avulsa" }>Avulsa</option></select></div><div class="field"><label>Seguradora</label><input name="insurer" value={ onboarding.Insurer } required/></div><div class="field"><label>Início da vigência</label><input name="policy_start_date" type="date" value={ onboarding.PolicyStartDate } required/></div><div class="field"><label>Fim da vigência</label><input name="policy_end_date" type="date" value={ onboarding.PolicyEndDate } required/></div><div class="field"><label>Corretor parceiro</label><input name="broker_company" value={ onboarding.BrokerCompany }/></div><div class="field"><label>Produtor do corretor</label><input name="broker_producer" value={ onboarding.BrokerProducer }/></div></div></section>
+			<section class="panel"><div class="panel-head"><h2>Responsável pela empresa</h2></div><div class="panel-body grid"><div class="field"><label>Nome completo</label><input name="responsible_name" value={ onboarding.CompanyResponsibleName } required/></div><div class="field"><label>CPF</label><input name="responsible_cpf" value={ onboarding.CompanyResponsibleCPF } required/></div><div class="field"><label>Telefone</label><input name="responsible_phone" value={ onboarding.CompanyResponsiblePhone } required/></div><div class="field"><label>E-mail</label><input name="responsible_email" type="email" value={ onboarding.CompanyResponsibleEmail } required/></div><div class="field full"><label>Cargo / função</label><input name="responsible_role" value={ onboarding.CompanyResponsibleRole }/></div><div class="field full"><label><input type="checkbox" name="responsible_authority" value="1" checked?={ onboarding.AuthorityDeclared } required/> Declaro possuir poderes ou autorização para representar a empresa nesta contratação.</label></div></div></section>
+			<section class="panel"><div class="panel-head"><h2>Responsável financeiro</h2></div><div class="panel-body grid"><div class="field"><label>Nome</label><input name="finance_name" value={ onboarding.FinanceResponsibleName }/></div><div class="field"><label>Telefone</label><input name="finance_phone" value={ onboarding.FinanceResponsiblePhone }/></div><div class="field"><label>E-mail</label><input name="finance_email" type="email" value={ onboarding.FinanceResponsibleEmail }/></div></div></section>
+			<section class="panel"><div class="panel-head"><h2>Mercadorias transportadas</h2></div><div class="panel-body" id="goods-list">for _, good := range onboarding.Goods { <div class="field" style="margin-bottom:8px"><input name="goods" value={ good }/></div> }<div class="field"><input name="goods" placeholder="Ex.: Queijos frescos"/></div><button class="btn" type="button" onclick="addGood()" style="margin-top:10px">Adicionar mercadoria</button></div></section>
+			<section class="panel"><div class="panel-head"><h2>Usuários que utilizarão o sistema</h2></div><div class="panel-body" id="users-list">for _, systemUser := range onboarding.SystemUsers { <div class="repeat-row"><input name="system_user_name" placeholder="Nome" value={ systemUser.Name }/><input name="system_user_phone" placeholder="Telefone" value={ systemUser.Phone }/><input name="system_user_email" type="email" placeholder="E-mail" value={ systemUser.Email }/><button class="btn danger" type="button" onclick="this.parentElement.remove()">Remover</button></div> }<div class="repeat-row"><input name="system_user_name" placeholder="Nome"/><input name="system_user_phone" placeholder="Telefone"/><input name="system_user_email" type="email" placeholder="E-mail"/><button class="btn danger" type="button" onclick="this.parentElement.remove()">Remover</button></div><button class="btn" type="button" onclick="addSystemUser()">Adicionar usuário</button></div></section>
+			<div class="actions"><button class="btn primary" type="submit">Salvar dados</button></div>
+		</form>
+		<section class="panel" style="margin-top:18px"><div class="panel-head"><h2>Apólice</h2></div><div class="panel-body"><form method="post" action={ templ.SafeURL("/onboarding/" + onboarding.ID + "/documents") } enctype="multipart/form-data"><div class="upload-drop"><div class="field"><label>Arquivo da apólice</label><input name="document" type="file" accept="application/pdf,image/jpeg,image/png" required/></div><button class="btn dark" type="submit" style="margin-top:12px">Enviar apólice</button></div></form></div></section>
+		<form method="post" action={ templ.SafeURL("/onboarding/" + onboarding.ID + "/submit") }><button class="btn primary" type="submit">Enviar dados e gerar contrato</button></form>
+		<script>
+		async function lookupCNPJ(){const cnpj=document.getElementById('cnpj').value.replace(/\D/g,'');if(cnpj.length!==14){alert('Informe um CNPJ válido.');return;}const r=await fetch('/api/cnpj/'+cnpj);if(!r.ok){alert('Não foi possível consultar o CNPJ. Preencha manualmente.');return;}const d=await r.json();for(const [id,key] of Object.entries({legal_name:'legal_name',trade_name:'trade_name',postal_code:'postal_code',street:'street',street_number:'number',complement:'complement',district:'district',city:'city',state:'state'})){const e=document.getElementById(id);if(e&&d[key])e.value=d[key];}}
+		function addGood(){const root=document.getElementById('goods-list');const wrapper=document.createElement('div');wrapper.className='field';wrapper.style.marginBottom='8px';wrapper.innerHTML='<input name="goods" placeholder="Mercadoria"/>';root.insertBefore(wrapper,root.lastElementChild);}
+		function addSystemUser(){const root=document.getElementById('users-list');const row=document.createElement('div');row.className='repeat-row';row.innerHTML='<input name="system_user_name" placeholder="Nome"/><input name="system_user_phone" placeholder="Telefone"/><input name="system_user_email" type="email" placeholder="E-mail"/><button class="btn danger" type="button" onclick="this.parentElement.remove()">Remover</button>';root.insertBefore(row,root.lastElementChild);}
+		</script>
+		</main>
+	}
+}
+
+templ SignaturePage(access contracts.SignerAccess, token string, message, errorMessage string) {
+	@Base("ViaGate — Assinatura do contrato") {
+		<div class="public"><main class="proposal-page"><header style="margin-bottom:20px"><span class="step-title">ASSINATURA ELETRÔNICA</span><h1>Contrato para assinatura</h1><p>Responsável: { access.Signer.Name } · { access.Signer.Email }</p></header>
+			if message != "" { <div class="notice">{ message }</div> } if errorMessage != "" { <div class="notice error">{ errorMessage }</div> }
+			<article class="document-view">@templ.Raw(access.HTML)</article>
+			if access.Signer.Status != "signed" {
+				<section class="accept-box"><h2>Confirmar identidade</h2><p>Enviaremos um código de uso único para o e-mail do responsável. A assinatura registra o hash do documento, data/hora, IP, navegador e a trilha de eventos.</p>
+					<form method="post" action={ templ.SafeURL("/sign/" + token + "/otp") } class="actions"><button class="btn dark" type="submit">Enviar código por e-mail</button></form>
+					<form method="post" action={ templ.SafeURL("/sign/" + token + "/confirm") } class="grid" style="margin-top:16px"><div class="field"><label>Código recebido</label><input name="otp" inputmode="numeric" maxlength="6" required/></div><div class="field"><label><input type="checkbox" name="consent" value="1" required/> Li o contrato e concordo em assiná-lo eletronicamente.</label></div><div class="field full"><button class="btn primary" type="submit">Assinar contrato</button></div></form>
+				</section>
+			} else { <div class="notice" style="margin-top:18px">Contrato assinado em { access.Signer.SignedAt.Format("02/01/2006 15:04:05") }.</div> }
+		</main></div>
+	}
+}
