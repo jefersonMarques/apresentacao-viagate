@@ -29,8 +29,13 @@ templ AdminLayout(title string, user domain.User) {
 				<a class="btn dark" href="/admin/pipeline">Pipeline</a>
 				<a class="btn dark" href="/admin/proposals">Propostas</a>
 				<a class="btn dark" href="/admin/presentations">Apresentações</a>
-				if HasRole(user, "super_admin") {
+				if HasRole(user,"super_admin") || HasRole(user,"operations") {
+					<a class="btn dark" href="/admin/onboardings">Cadastros</a>
+				}
+				if HasRole(user,"super_admin") || HasRole(user,"legal") {
 					<a class="btn dark" href="/admin/contracts/templates">Contratos</a>
+				}
+				if HasRole(user,"super_admin") {
 					<a class="btn dark" href="/admin/users">Usuários</a>
 				}
 				<form method="post" action="/logout"><button class="btn dark" type="submit">Sair</button></form>
