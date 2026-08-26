@@ -250,11 +250,16 @@ function enhanceProposalRow(row) {
     return;
   }
 
-  const originalEditHandler = () => originalEditButton.click();
   const host = originalEditButton.parentElement;
   if (!host) {
     return;
   }
+
+  const editHandler = () => originalEditButton.dispatchEvent(new MouseEvent('click', {
+    bubbles: true,
+    cancelable: true,
+    view: window,
+  }));
 
   row.dataset.actionsEnhanced = 'true';
   host.innerHTML = '';
@@ -267,7 +272,7 @@ function enhanceProposalRow(row) {
       icon: 'edit',
       label: 'Editar',
       title: 'Editar proposta',
-      handler: originalEditHandler,
+      handler: editHandler,
     }),
     createActionButton({
       icon: 'external',
