@@ -198,6 +198,6 @@ grant execute on function public.set_proposal_access_password(uuid, text) to aut
 revoke all on function public.get_proposal_access_settings(uuid) from public;
 grant execute on function public.get_proposal_access_settings(uuid) to authenticated;
 
-revoke all on function public.get_public_proposal(uuid) from anon, authenticated;
+revoke all on function public.get_public_proposal(uuid) from public, anon, authenticated;
 revoke all on function public.get_public_proposal_secure(uuid, text) from public;
 grant execute on function public.get_public_proposal_secure(uuid, text) to anon, authenticated;
