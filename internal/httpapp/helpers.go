@@ -58,13 +58,43 @@ func digits(value string) string { return nonDigits.ReplaceAllString(value,"") }
 func cleanCPF(value string) (string,error) {
 	value=digits(value)
 	if len(value)!=11 { return "",fmt.Errorf("CPF deve possuir 11 dígitos") }
+	if repeatedDigits(value)||cpfDigit(value[:9],10)!=int(value[9]-'0')||cpfDigit(value[:10],11)!=int(value[10]-'0'){
+		return "",fmt.Errorf("CPF inválido")
+	}
 	return value,nil
+}
+
+func cpfDigit(value string,startWeight int)int{
+	sum:=0
+	for index:=0;index<len(value);index++{sum+=int(value[index]-'0')*(startWeight-index)}
+	remainder:=sum%11
+	if remainder<2{return 0}
+	return 11-remainder
 }
 
 func cleanCNPJ(value string) (string,error) {
 	value=digits(value)
 	if len(value)!=14 { return "",fmt.Errorf("CNPJ deve possuir 14 dígitos") }
+	firstWeights:=[]int{5,4,3,2,9,8,7,6,5,4,3,2}
+	secondWeights:=[]int{6,5,4,3,2,9,8,7,6,5,4,3,2}
+	if repeatedDigits(value)||cnpjDigit(value[:12],firstWeights)!=int(value[12]-'0')||cnpjDigit(value[:13],secondWeights)!=int(value[13]-'0'){
+		return "",fmt.Errorf("CNPJ inválido")
+	}
 	return value,nil
+}
+
+func cnpjDigit(value string,weights []int)int{
+	sum:=0
+	for index:=0;index<len(value);index++{sum+=int(value[index]-'0')*weights[index]}
+	remainder:=sum%11
+	if remainder<2{return 0}
+	return 11-remainder
+}
+
+func repeatedDigits(value string)bool{
+	if value==""{return false}
+	for index:=1;index<len(value);index++{if value[index]!=value[0]{return false}}
+	return true
 }
 
 func sanitizeFilename(value string) string {
