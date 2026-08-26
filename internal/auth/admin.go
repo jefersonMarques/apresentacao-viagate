@@ -3,9 +3,37 @@ package auth
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 )
+
+func (s *Store) CreateManagedInvitation(ctx context.Context,email,name,roleCode string,tokenHash []byte,expiresAt time.Time,createdBy string)(string,error){
+	tx,err:=s.pool.BeginTx(ctx,pgx.TxOptions{IsoLevel:pgx.Serializable})
+	if err!=nil{return "",err}
+	defer tx.Rollback(ctx)
+
+	var roleID string
+	if err:=tx.QueryRow(ctx,`select id::text from roles where code=$1`,roleCode).Scan(&roleID);err!=nil{return "",fmt.Errorf("invalid role")}
+
+	var userID,status string
+	err=tx.QueryRow(ctx,`select id::text,status::text from users where email=$1 for update`,email).Scan(&userID,&status)
+	if err==pgx.ErrNoRows{
+		if err:=tx.QueryRow(ctx,`insert into users(email,name,status) values($1,$2,'invited') returning id::text`,email,name).Scan(&userID);err!=nil{return "",err}
+		status="invited"
+	}else if err!=nil{return "",err}else{
+		if status=="active"{return "",fmt.Errorf("user is already active")}
+		if status=="disabled"{return "",fmt.Errorf("user is disabled; enable the existing account instead")}
+		if _,err:=tx.Exec(ctx,`update users set name=$2,updated_at=now() where id=$1`,userID,name);err!=nil{return "",err}
+	}
+
+	if _,err:=tx.Exec(ctx,`delete from user_roles where user_id=$1`,userID);err!=nil{return "",err}
+	if _,err:=tx.Exec(ctx,`insert into user_roles(user_id,role_id) values($1,$2)`,userID,roleID);err!=nil{return "",err}
+	if _,err:=tx.Exec(ctx,`update user_invitations set expires_at=now() where user_id=$1 and accepted_at is null and expires_at>now()`,userID);err!=nil{return "",err}
+	if _,err:=tx.Exec(ctx,`insert into user_invitations(user_id,token_hash,expires_at,created_by) values($1,$2,$3,$4)`,userID,tokenHash,expiresAt,createdBy);err!=nil{return "",err}
+	if err:=tx.Commit(ctx);err!=nil{return "",err}
+	return userID,nil
+}
 
 func (s *Store) UpdateAccess(ctx context.Context,targetUserID,status,roleCode string) error {
 	if status!="active"&&status!="disabled"&&status!="invited"{
