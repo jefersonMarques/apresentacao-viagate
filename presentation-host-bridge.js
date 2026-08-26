@@ -12,6 +12,10 @@ function getPresentationHostState() {
   };
 }
 
+function getParentTargetOrigin() {
+  return window.location.origin === 'null' ? '*' : window.location.origin;
+}
+
 function reportPresentationState(type) {
   if (window.parent === window) {
     return;
@@ -24,7 +28,7 @@ function reportPresentationState(type) {
     type,
     slideNumber: state.slideNumber,
     slideTotal: state.slideTotal,
-  }, window.location.origin);
+  }, getParentTargetOrigin());
 }
 
 function reportCurrentSlide(force = false) {
@@ -53,6 +57,7 @@ function clearEmbeddedPauseState() {
   }
 
   presentationState.paused = false;
+  document.body.classList.add('presentation-host-active');
   document.body.classList.remove(
     'presentation-paused',
     'presentation-gate-visible',
@@ -69,6 +74,7 @@ const pauseStateObserver = new MutationObserver(() => {
   if (
     document.body.classList.contains('presentation-paused')
     || document.body.classList.contains('presentation-gate-visible')
+    || !document.body.classList.contains('presentation-host-active')
   ) {
     clearEmbeddedPauseState();
   }
@@ -84,7 +90,7 @@ window.hostStartPresentation = function hostStartPresentation(firstStart = false
   presentationState.started = true;
   presentationState.paused = false;
 
-  document.body.classList.add('presentation-started');
+  document.body.classList.add('presentation-started', 'presentation-host-active');
   clearEmbeddedPauseState();
   document.querySelector('.presentation-gate')?.remove();
   document.querySelector('.presentation-controls')?.remove();
@@ -96,12 +102,14 @@ window.hostStartPresentation = function hostStartPresentation(firstStart = false
 
   window.requestAnimationFrame(clearEmbeddedPauseState);
   window.setTimeout(clearEmbeddedPauseState, 80);
+  window.setTimeout(clearEmbeddedPauseState, 250);
   reportCurrentSlide(true);
 };
 
 window.hostPausePresentation = function hostPausePresentation() {
   hostPresentationActive = false;
   presentationState.paused = true;
+  document.body.classList.remove('presentation-host-active');
   document.body.classList.add('presentation-paused');
   document.body.classList.remove('presentation-controls-visible', 'presentation-cursor-hidden');
 };
@@ -113,7 +121,12 @@ window.hostRestartPresentation = function hostRestartPresentation() {
   lastReportedSlide = 0;
 
   goToPresentationSlide(0, 'auto');
-  document.body.classList.remove('presentation-started', 'presentation-controls-visible', 'presentation-cursor-hidden');
+  document.body.classList.remove(
+    'presentation-started',
+    'presentation-host-active',
+    'presentation-controls-visible',
+    'presentation-cursor-hidden',
+  );
   document.body.classList.add('presentation-paused');
   reportCurrentSlide(true);
 };
@@ -142,4 +155,4 @@ window.parent?.postMessage({
   source: 'viagate-presentation',
   type: 'bridge_ready',
   ...getPresentationHostState(),
-}, window.location.origin);
+}, getParentTargetOrigin());
