@@ -14,6 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/config"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/brfields"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/storage"
 )
 
@@ -43,18 +44,18 @@ type EvidenceReport struct {
 }
 
 type EvidenceAcceptance struct {
-	Name          string    `json:"name"`
-	Email         string    `json:"email"`
-	CPF           string    `json:"cpf"`
-	Role          string    `json:"role,omitempty"`
-	AcceptedAt    time.Time `json:"accepted_at"`
-	IPAddress     string    `json:"ip_address,omitempty"`
-	UserAgent     string    `json:"user_agent,omitempty"`
-	SessionID     string    `json:"session_id"`
-	TextVersion   string    `json:"text_version"`
-	Text          string    `json:"text"`
-	TextSHA256    string    `json:"text_sha256"`
-	ProposalSHA256 string   `json:"proposal_sha256"`
+	Name           string    `json:"name"`
+	Email          string    `json:"email"`
+	CPF            string    `json:"cpf"`
+	Role           string    `json:"role,omitempty"`
+	AcceptedAt     time.Time `json:"accepted_at"`
+	IPAddress      string    `json:"ip_address,omitempty"`
+	UserAgent      string    `json:"user_agent,omitempty"`
+	SessionID      string    `json:"session_id"`
+	TextVersion    string    `json:"text_version"`
+	Text           string    `json:"text"`
+	TextSHA256     string    `json:"text_sha256"`
+	ProposalSHA256 string    `json:"proposal_sha256"`
 }
 
 type EvidenceSigner struct {
@@ -225,30 +226,32 @@ func renderEvidenceHTML(report EvidenceReport) (string, error) {
 	const page = `
 	<h1>Relatório de evidências da assinatura</h1>
 	<p><strong>Contrato:</strong> {{.ContractID}}</p>
-	<p><strong>Contratante:</strong> {{.ClientLegalName}} · CNPJ {{.ClientCNPJ}}</p>
+	<p><strong>Contratante:</strong> {{.ClientLegalName}} · CNPJ {{cnpj .ClientCNPJ}}</p>
 	<p><strong>SHA-256 do contrato:</strong><br><code>{{.DocumentSHA256}}</code></p>
 	<p><strong>Versão da proposta:</strong> {{.ProposalVersion}} · <strong>Versão do modelo:</strong> {{.TemplateVersion}}</p>
 	<p><strong>Contrato gerado em:</strong> {{time .GeneratedAt}} · <strong>Assinatura concluída em:</strong> {{time .FullySignedAt}}</p>
 	<h2>Aceite da proposta</h2>
-	<p><strong>{{.Acceptance.Name}}</strong> · CPF {{.Acceptance.CPF}} · {{.Acceptance.Email}}</p>
+	<p><strong>{{.Acceptance.Name}}</strong> · CPF {{cpf .Acceptance.CPF}} · {{.Acceptance.Email}}</p>
 	<p>Aceite em {{time .Acceptance.AcceptedAt}} · IP {{.Acceptance.IPAddress}} · sessão {{.Acceptance.SessionID}}</p>
 	<p><strong>Hash da proposta aceita:</strong><br><code>{{.Acceptance.ProposalSHA256}}</code></p>
 	<p><strong>Texto de aceite {{.Acceptance.TextVersion}}:</strong> {{.Acceptance.Text}}</p>
 	<p><strong>SHA-256 do texto de aceite:</strong><br><code>{{.Acceptance.TextSHA256}}</code></p>
 	<h2>Signatários</h2>
 	<table><thead><tr><th>Nome</th><th>CPF</th><th>E-mail</th><th>Verificação</th><th>Assinado em</th></tr></thead><tbody>
-	{{range .Signers}}<tr><td>{{.Name}}</td><td>{{.CPF}}</td><td>{{.Email}}</td><td>{{if .OTP}}OTP e-mail{{end}}{{if .Face}} · Face{{end}}{{if .Liveness}} · Prova de vida{{end}}</td><td>{{timePtr .SignedAt}}</td></tr>{{end}}
+	{{range .Signers}}<tr><td>{{.Name}}</td><td>{{cpf .CPF}}</td><td>{{.Email}}</td><td>{{if .OTP}}OTP e-mail{{end}}{{if .Face}} · Face{{end}}{{if .Liveness}} · Prova de vida{{end}}</td><td>{{timePtr .SignedAt}}</td></tr>{{end}}
 	</tbody></table>
 	{{range .Signers}}<p><strong>Consentimento de {{.Name}} ({{.ConsentVersion}}):</strong> {{.ConsentText}}<br><strong>SHA-256:</strong> <code>{{.ConsentSHA256}}</code></p>{{end}}
 	<h2>Linha de evidências</h2>
 	<table><thead><tr><th>Data/hora</th><th>Evento</th><th>IP</th><th>Sessão</th></tr></thead><tbody>
 	{{range .Events}}<tr><td>{{time .OccurredAt}}</td><td>{{.Type}}</td><td>{{.IPAddress}}</td><td>{{.SessionID}}</td></tr>{{end}}
 	</tbody></table>
-	<p>Relatório emitido em {{time .IssuedAt}} por {{.CompanyLegalName}} · CNPJ {{.CompanyCNPJ}}.</p>`
+	<p>Relatório emitido em {{time .IssuedAt}} por {{.CompanyLegalName}} · CNPJ {{cnpj .CompanyCNPJ}}.</p>`
 
 	functions := template.FuncMap{
 		"time": func(value time.Time) string { return value.UTC().Format("02/01/2006 15:04:05 MST") },
 		"timePtr": func(value *time.Time) string { if value == nil { return "—" };return value.UTC().Format("02/01/2006 15:04:05 MST") },
+		"cpf": brfields.FormatCPF,
+		"cnpj": brfields.FormatCNPJ,
 	}
 	parsed, err := template.New("evidence").Funcs(functions).Parse(page)
 	if err != nil { return "", err }
