@@ -114,12 +114,17 @@ func (s *Store) SaveDraft(ctx context.Context,userID string,allowAll bool,input 
 	clientID:=""
 
 	if input.PresentationID==""{
-		if input.ClientCNPJ!=""{_ = tx.QueryRow(ctx,`select id::text from clients where cnpj=$1`,input.ClientCNPJ).Scan(&clientID)}
+		if input.ClientCNPJ!=""{_ = tx.QueryRow(ctx,`select id::text from clients where cnpj=$1 and created_by=$2`,input.ClientCNPJ,userID).Scan(&clientID)}
 		if clientID=="" && input.ClientLegalName!=""{
 			if err:=tx.QueryRow(ctx,`
 				insert into clients(legal_name,trade_name,cnpj,created_by)
 				values($1,nullif($2,''),nullif($3,''),$4) returning id::text
 			`,input.ClientLegalName,input.ClientTradeName,input.ClientCNPJ,userID).Scan(&clientID);err!=nil{return SavedDraft{},err}
+		}else if clientID!=""&&input.ClientLegalName!=""{
+			if _,err:=tx.Exec(ctx,`
+				update clients set legal_name=$2,trade_name=nullif($3,''),updated_at=now()
+				where id=$1 and created_by=$4
+			`,clientID,input.ClientLegalName,input.ClientTradeName,userID);err!=nil{return SavedDraft{},err}
 		}
 		if err:=tx.QueryRow(ctx,`
 			insert into presentations(client_id,title,status,created_by)
