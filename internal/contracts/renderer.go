@@ -3,6 +3,7 @@ package contracts
 import (
 	"bytes"
 	"fmt"
+	"html"
 	"html/template"
 	"regexp"
 	"sort"
@@ -13,6 +14,22 @@ import (
 
 var placeholderPattern = regexp.MustCompile(`\{([a-zA-Z0-9_.-]+)\}`)
 var conditionalPattern = regexp.MustCompile(`(?s)\{%\s*if\s+([a-zA-Z0-9_.-]+)\s*%\}(.*?)\{%\s*endif\s*%\}`)
+var markdownSpecialCharacters = strings.NewReplacer(
+	`\`, `\\`,
+	`*`, `\*`,
+	`_`, `\_`,
+	`[`, `\[`,
+	`]`, `\]`,
+	`(`, `\(`,
+	`)`, `\)`,
+	`#`, `\#`,
+	`+`, `\+`,
+	`-`, `\-`,
+	`!`, `\!`,
+	`|`, `\|`,
+	`>`, `\>`,
+	"`", "\\`",
+)
 
 type Data map[string]any
 
@@ -47,7 +64,7 @@ func (r *Renderer) Render(markdown string, data Data) (renderedMarkdown string, 
 			missing[matches[1]] = struct{}{}
 			return token
 		}
-		return fmt.Sprint(value)
+		return markdownLiteral(value)
 	})
 
 	if len(missing) > 0 {
@@ -59,14 +76,28 @@ func (r *Renderer) Render(markdown string, data Data) (renderedMarkdown string, 
 		return "", "", fmt.Errorf("missing contract variables: %s", strings.Join(keys, ", "))
 	}
 
-	var html bytes.Buffer
-	if err := r.markdown.Convert([]byte(text), &html); err != nil {
+	var htmlBuffer bytes.Buffer
+	if err := r.markdown.Convert([]byte(text), &htmlBuffer); err != nil {
 		return "", "", fmt.Errorf("render markdown: %w", err)
 	}
 
-	// The generated HTML is rendered inside a controlled document template.
-	page := template.HTML(html.String())
+	page := template.HTML(htmlBuffer.String())
 	return text, string(page), nil
+}
+
+func markdownLiteral(value any) string {
+	text:=fmt.Sprint(value)
+	text=strings.Map(func(r rune)rune{
+		switch r{
+		case '\r','\n','\t':
+			return ' '
+		default:
+			if r<32||r==127{return -1}
+			return r
+		}
+	},text)
+	text=html.EscapeString(text)
+	return markdownSpecialCharacters.Replace(text)
 }
 
 func resolve(data Data, path string) any {
