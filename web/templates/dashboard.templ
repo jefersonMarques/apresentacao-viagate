@@ -90,7 +90,7 @@ templ AdminDashboardPage(user domain.User, items []DashboardRecord) {
 								<td><span class={ "badge status-badge status-"+item.Status }>{ humanStatus(item.Status) }</span></td>
 								<td>{ item.OwnerName }</td>
 								<td>
-									<span class="record-meta">v{ item.Version }</span>
+									<span class="record-meta">{ DashboardVersionLabel(item) }</span>
 									if item.ValidUntil != nil {
 										<small>até { Date(item.ValidUntil) }</small>
 									}
