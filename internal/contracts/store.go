@@ -1,6 +1,7 @@
 package contracts
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net"
@@ -19,6 +20,13 @@ type SignerAccess struct {
 	Signer   domain.ContractSigner
 	Contract domain.Contract
 	HTML     string
+}
+
+type ArtifactKeys struct {
+	ContractKey string
+	EvidenceKey string
+	PackageKey  string
+	Finalized   bool
 }
 
 func NewStore(pool *pgxpool.Pool) *Store { return &Store{pool: pool} }
@@ -67,6 +75,14 @@ func (s *Store) SaveTemplateVersion(ctx context.Context, templateID,name,descrip
 	return version,nil
 }
 
+func (s *Store) SetDefaultTemplate(ctx context.Context,templateID string) error {
+	tx,err:=s.pool.Begin(ctx);if err!=nil{return err};defer tx.Rollback(ctx)
+	if _,err:=tx.Exec(ctx,`update contract_templates set is_default=false where is_default=true`);err!=nil{return err}
+	command,err:=tx.Exec(ctx,`update contract_templates set is_default=true where id=$1 and is_active=true`,templateID);if err!=nil{return err}
+	if command.RowsAffected()!=1{return fmt.Errorf("contract template not found")}
+	return tx.Commit(ctx)
+}
+
 func (s *Store) LatestTemplateVersion(ctx context.Context, templateID string) (domain.ContractTemplateVersion,error) {
 	var v domain.ContractTemplateVersion
 	err := s.pool.QueryRow(ctx, `
@@ -106,13 +122,18 @@ func (s *Store) SignerByPublicToken(ctx context.Context,token string) (SignerAcc
 	err := s.pool.QueryRow(ctx, `
 		select s.id::text,s.contract_id::text,s.signer_type,s.name,s.email::text,s.cpf,coalesce(s.role,''),s.sign_order,s.status::text,s.signed_at,
 		       c.id::text,c.onboarding_id::text,c.proposal_version_id::text,c.template_version_id::text,c.status::text,
-		       coalesce(c.rendered_markdown,''),coalesce(c.rendered_html,''),coalesce(c.pdf_storage_key,''),c.document_sha256,c.generated_at,c.sent_at,c.fully_signed_at
+		       coalesce(c.rendered_markdown,''),coalesce(c.rendered_html,''),coalesce(c.pdf_storage_key,''),c.document_sha256,
+		       coalesce(c.evidence_report_storage_key,''),c.evidence_report_sha256,
+		       coalesce(c.final_package_storage_key,''),c.final_package_sha256,
+		       c.generated_at,c.sent_at,c.fully_signed_at,c.finalized_at
 		from contract_signers s join contracts c on c.id=s.contract_id
 		where s.public_token=$1 and c.status in ('generated','sent','partially_signed','signed')
 	`,token).Scan(
 		&access.Signer.ID,&access.Signer.ContractID,&access.Signer.SignerType,&access.Signer.Name,&access.Signer.Email,&access.Signer.CPF,&access.Signer.Role,&access.Signer.SignOrder,&access.Signer.Status,&access.Signer.SignedAt,
 		&access.Contract.ID,&access.Contract.OnboardingID,&access.Contract.ProposalVersionID,&access.Contract.TemplateVersionID,&access.Contract.Status,
-		&access.Contract.RenderedMarkdown,&access.Contract.RenderedHTML,&access.Contract.PDFStorageKey,&access.Contract.DocumentSHA256,&access.Contract.GeneratedAt,&access.Contract.SentAt,&access.Contract.FullySignedAt,
+		&access.Contract.RenderedMarkdown,&access.Contract.RenderedHTML,&access.Contract.PDFStorageKey,&access.Contract.DocumentSHA256,
+		&access.Contract.EvidenceReportStorageKey,&access.Contract.EvidenceReportSHA256,&access.Contract.FinalPackageStorageKey,&access.Contract.FinalPackageSHA256,
+		&access.Contract.GeneratedAt,&access.Contract.SentAt,&access.Contract.FullySignedAt,&access.Contract.FinalizedAt,
 	)
 	access.HTML=access.Contract.RenderedHTML
 	return access,err
@@ -122,6 +143,19 @@ func (s *Store) SignerPublicToken(ctx context.Context,signerID string) (string,e
 	var token string
 	err := s.pool.QueryRow(ctx, `select public_token::text from contract_signers where id=$1`,signerID).Scan(&token)
 	return token,err
+}
+
+func (s *Store) ArtifactKeysBySignerToken(ctx context.Context,token string) (ArtifactKeys,error) {
+	var keys ArtifactKeys
+	var finalizedAt *time.Time
+	err:=s.pool.QueryRow(ctx,`
+		select c.pdf_storage_key,coalesce(c.evidence_report_storage_key,''),coalesce(c.final_package_storage_key,''),c.finalized_at
+		from contract_signers s join contracts c on c.id=s.contract_id
+		where s.public_token=$1 and s.status='signed' and c.status='signed'
+	`,token).Scan(&keys.ContractKey,&keys.EvidenceKey,&keys.PackageKey,&finalizedAt)
+	if err!=nil{return ArtifactKeys{},err}
+	keys.Finalized=finalizedAt!=nil
+	return keys,nil
 }
 
 func (s *Store) CreateChallenge(ctx context.Context,signerID string,otpHash []byte,expiresAt time.Time) error {
@@ -148,7 +182,7 @@ func (s *Store) VerifyChallenge(ctx context.Context,signerID string,otpHash []by
 	`,signerID).Scan(&challengeID,&expected,&attempts)
 	if err!=nil{return err}
 	if attempts>=5{return fmt.Errorf("maximum OTP attempts reached")}
-	if string(expected)!=string(otpHash){
+	if !bytes.Equal(expected,otpHash){
 		_,_ = tx.Exec(ctx,`update signature_challenges set attempts=attempts+1 where id=$1`,challengeID)
 		_ = tx.Commit(ctx)
 		return fmt.Errorf("invalid OTP")
@@ -158,9 +192,9 @@ func (s *Store) VerifyChallenge(ctx context.Context,signerID string,otpHash []by
 	return tx.Commit(ctx)
 }
 
-func (s *Store) Sign(ctx context.Context,signerID string,documentHash []byte,sessionID string,ip net.IP,userAgent string) error {
+func (s *Store) Sign(ctx context.Context,signerID string,documentHash []byte,sessionID string,ip net.IP,userAgent string) (string,bool,error) {
 	tx,err:=s.pool.BeginTx(ctx,pgx.TxOptions{IsoLevel:pgx.Serializable})
-	if err!=nil{return err}
+	if err!=nil{return "",false,err}
 	defer tx.Rollback(ctx)
 
 	var contractID string
@@ -171,24 +205,26 @@ func (s *Store) Sign(ctx context.Context,signerID string,documentHash []byte,ses
 		from contract_signers s join contracts c on c.id=s.contract_id
 		where s.id=$1 for update of s,c
 	`,signerID).Scan(&contractID,&storedHash,&status)
-	if err!=nil{return err}
-	if status!="verified" { return fmt.Errorf("signer identity is not verified") }
-	if string(storedHash)!=string(documentHash){return fmt.Errorf("contract document hash changed")}
+	if err!=nil{return "",false,err}
+	if status!="verified" { return "",false,fmt.Errorf("signer identity is not verified") }
+	if !bytes.Equal(storedHash,documentHash){return "",false,fmt.Errorf("contract document hash changed")}
 
-	if _,err:=tx.Exec(ctx,`update contract_signers set status='signed',signed_at=now(),signed_document_hash=$2,signature_session_id=$3 where id=$1`,signerID,documentHash,sessionID);err!=nil{return err}
+	if _,err:=tx.Exec(ctx,`update contract_signers set status='signed',signed_at=now(),signed_document_hash=$2,signature_session_id=$3 where id=$1`,signerID,documentHash,sessionID);err!=nil{return "",false,err}
 	if _,err:=tx.Exec(ctx,`
 		insert into signature_events(contract_id,contract_signer_id,event_type,document_hash,ip_address,user_agent,session_id)
 		values($1,$2,'contract.signed',$3,$4,$5,$6)
-	`,contractID,signerID,documentHash,nullableIP(ip),userAgent,sessionID);err!=nil{return err}
+	`,contractID,signerID,documentHash,nullableIP(ip),userAgent,sessionID);err!=nil{return "",false,err}
 
 	var pending int
-	if err:=tx.QueryRow(ctx,`select count(*) from contract_signers where contract_id=$1 and status<>'signed'`,contractID).Scan(&pending);err!=nil{return err}
-	if pending==0 {
-		if _,err:=tx.Exec(ctx,`update contracts set status='signed',fully_signed_at=now(),updated_at=now() where id=$1`,contractID);err!=nil{return err}
+	if err:=tx.QueryRow(ctx,`select count(*) from contract_signers where contract_id=$1 and status<>'signed'`,contractID).Scan(&pending);err!=nil{return "",false,err}
+	fullySigned:=pending==0
+	if fullySigned {
+		if _,err:=tx.Exec(ctx,`update contracts set status='signed',fully_signed_at=now(),updated_at=now() where id=$1`,contractID);err!=nil{return "",false,err}
 	} else {
-		if _,err:=tx.Exec(ctx,`update contracts set status='partially_signed',updated_at=now() where id=$1`,contractID);err!=nil{return err}
+		if _,err:=tx.Exec(ctx,`update contracts set status='partially_signed',updated_at=now() where id=$1`,contractID);err!=nil{return "",false,err}
 	}
-	return tx.Commit(ctx)
+	if err:=tx.Commit(ctx);err!=nil{return "",false,err}
+	return contractID,fullySigned,nil
 }
 
 func (s *Store) MarkSent(ctx context.Context,contractID string) error {
