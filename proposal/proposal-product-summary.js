@@ -24,6 +24,8 @@ function appendStyles() {
 }
 
 function enhanceCards() {
+  let enhancedCount = 0;
+
   document.querySelectorAll('.proposal-content-card h3').forEach((heading) => {
     const card = heading.closest('.proposal-content-card');
     const text = heading.textContent?.trim() ?? '';
@@ -48,24 +50,40 @@ function enhanceCards() {
     `;
     card.querySelector('h3').textContent = title;
     card.querySelector('p').textContent = description;
+    enhancedCount += 1;
   });
 
-  window.lucide?.createIcons();
+  if (enhancedCount > 0) {
+    window.lucide?.createIcons();
+  }
+
+  return enhancedCount;
 }
 
 function initialize() {
   appendStyles();
-  enhanceCards();
+
+  if (enhanceCards() > 0) {
+    return;
+  }
 
   const presentation = document.getElementById('proposalPresentation');
   if (!presentation) {
     return;
   }
 
-  new MutationObserver(enhanceCards).observe(presentation, {
+  const observer = new MutationObserver(() => {
+    if (enhanceCards() > 0 || presentation.querySelector('[data-proposal-slide]')) {
+      observer.disconnect();
+    }
+  });
+
+  observer.observe(presentation, {
     childList: true,
     subtree: true,
   });
+
+  window.setTimeout(() => observer.disconnect(), 5000);
 }
 
 initialize();
