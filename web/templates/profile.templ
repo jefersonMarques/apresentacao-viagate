@@ -44,8 +44,15 @@ templ ProfilePage(current domain.User, profile domain.User, message, errorMessag
 					<div class="profile-preview">
 						<span class="eyebrow">COMO APARECE NOS MATERIAIS</span>
 						<strong>{ profile.Name }</strong>
-						if profile.JobTitle != "" { <span>{ profile.JobTitle }</span> }
-						<span>{ profile.Email }if profile.Phone != "" { · { Phone(profile.Phone) } }</span>
+						if profile.JobTitle != "" {
+							<span>{ profile.JobTitle }</span>
+						}
+						<span>
+							{ profile.Email }
+							if profile.Phone != "" {
+								<span> · { Phone(profile.Phone) }</span>
+							}
+						</span>
 					</div>
 					<div class="actions"><button class="btn primary" type="submit" data-processing="Salvando perfil...">Salvar alterações</button></div>
 				</form>
