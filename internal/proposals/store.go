@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/legaltext"
 )
 
 type Store struct {
@@ -24,6 +25,7 @@ type PublicProposal struct {
 	Title            string
 	ClientID         string
 	ClientName       string
+	ClientTradeName  string
 	ClientCNPJ       string
 	PricingModel     string
 	Content          map[string]any
@@ -105,6 +107,7 @@ func (s *Store) PublicByToken(ctx context.Context, token string) (PublicProposal
 	}
 	result.Title=snapshotString(result.Content,"proposal","title",currentTitle)
 	result.ClientName=snapshotString(result.Content,"client","legal_name",currentClientName)
+	result.ClientTradeName=snapshotString(result.Content,"client","trade_name","")
 	result.ClientCNPJ=snapshotString(result.Content,"client","cnpj",currentClientCNPJ)
 	result.ValidUntil=currentValidUntil
 	if value:=snapshotString(result.Content,"proposal","valid_until","");value!=""{
@@ -180,13 +183,15 @@ func (s *Store) Accept(ctx context.Context, proposal PublicProposal, input Accep
 	}
 	if err!=pgx.ErrNoRows{return AcceptanceResult{},err}
 
+	acceptanceHash:=legaltext.SHA256(legaltext.ProposalAcceptanceText)
 	var result AcceptanceResult
 	err = tx.QueryRow(ctx, `
 		insert into proposal_acceptances(
 			proposal_id,proposal_version_id,proposal_hash,
 			accepted_by_name,accepted_by_email,accepted_by_cpf,accepted_by_phone,accepted_by_role,
-			authority_declared,acceptance_text_version,ip_address,user_agent,session_id
-		) values ($1,$2,$3,$4,$5,$6,$7,$8,true,'v1',$9,$10,$11)
+			authority_declared,acceptance_text_version,acceptance_text,acceptance_text_sha256,
+			ip_address,user_agent,session_id
+		) values ($1,$2,$3,$4,$5,$6,$7,$8,true,$9,$10,$11,$12,$13,$14)
 		returning id::text
 	`,
 		proposal.ProposalID,
@@ -197,6 +202,9 @@ func (s *Store) Accept(ctx context.Context, proposal PublicProposal, input Accep
 		input.CPF,
 		input.Phone,
 		input.Role,
+		legaltext.ProposalAcceptanceVersion,
+		legaltext.ProposalAcceptanceText,
+		acceptanceHash,
 		nullableIP(input.IPAddress),
 		input.UserAgent,
 		input.SessionID,
@@ -208,16 +216,11 @@ func (s *Store) Accept(ctx context.Context, proposal PublicProposal, input Accep
 	err = tx.QueryRow(ctx, `
 		insert into onboardings(
 			proposal_acceptance_id,client_id,status,cnpj,legal_name,trade_name,
-			street,street_number,complement,district,city,state,postal_code,
 			company_responsible_name,company_responsible_cpf,company_responsible_phone,
 			company_responsible_email,company_responsible_role,company_responsible_authority_declared
-		)
-		select $1,c.id,'pending',coalesce(c.cnpj,''),c.legal_name,c.trade_name,
-		       c.street,c.street_number,c.complement,c.district,c.city,c.state,c.postal_code,
-		       $2,$3,$4,$5,$6,true
-		from clients c where c.id=$7
+		) values($1,$2,'pending',$3,$4,nullif($5,''),$6,$7,$8,$9,$10,true)
 		returning id::text
-	`, result.AcceptanceID,input.Name,input.CPF,input.Phone,input.Email,input.Role,proposal.ClientID).Scan(&result.OnboardingID)
+	`,result.AcceptanceID,proposal.ClientID,proposal.ClientCNPJ,proposal.ClientName,proposal.ClientTradeName,input.Name,input.CPF,input.Phone,input.Email,input.Role).Scan(&result.OnboardingID)
 	if err != nil {
 		return AcceptanceResult{}, fmt.Errorf("create onboarding: %w", err)
 	}
@@ -228,8 +231,9 @@ func (s *Store) Accept(ctx context.Context, proposal PublicProposal, input Accep
 
 	if _, err := tx.Exec(ctx, `
 		insert into audit_events(actor_type,event_type,resource_type,resource_id,ip_address,user_agent,metadata)
-		values ('customer','proposal.accepted','proposal',$1,$2,$3,jsonb_build_object('acceptance_id',$4,'version',$5,'version_hash',$6))
-	`,proposal.ProposalID,nullableIP(input.IPAddress),input.UserAgent,result.AcceptanceID,proposal.VersionNumber,fmt.Sprintf("%x",proposal.ContentHash)); err != nil {
+		values ('customer','proposal.accepted','proposal',$1,$2,$3,
+		        jsonb_build_object('acceptance_id',$4,'version',$5,'version_hash',$6,'acceptance_text_version',$7,'acceptance_text_sha256',$8))
+	`,proposal.ProposalID,nullableIP(input.IPAddress),input.UserAgent,result.AcceptanceID,proposal.VersionNumber,fmt.Sprintf("%x",proposal.ContentHash),legaltext.ProposalAcceptanceVersion,fmt.Sprintf("%x",acceptanceHash)); err != nil {
 		return AcceptanceResult{}, err
 	}
 
