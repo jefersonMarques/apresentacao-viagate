@@ -164,7 +164,18 @@ templ PublicPresentationPage(p presentations.PublicPresentation) {
 								}
 							</p>
 						}
-						<p><strong>{ p.SalespersonName }</strong><br/>{ p.SalespersonEmail }</p>
+						<div class="viewer-card-grid" style="grid-template-columns:minmax(280px,520px)">
+							<article class="viewer-card">
+								<strong>{ p.SalespersonName }</strong>
+								if p.SalespersonJobTitle != "" {
+									<span>{ p.SalespersonJobTitle }</span>
+								}
+								<span>{ p.SalespersonEmail }</span>
+								if p.SalespersonPhone != "" {
+									<span>{ Phone(p.SalespersonPhone) }</span>
+								}
+							</article>
+						</div>
 					</div>
 					<div class="viewer-footer"><span>Contato</span><span></span></div>
 				</section>
