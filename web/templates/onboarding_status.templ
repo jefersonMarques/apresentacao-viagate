@@ -31,7 +31,7 @@ templ OnboardingStatusPage(onboarding domain.Onboarding, message string) {
 			<section class="panel" style="margin-top:18px">
 				<div class="panel-body grid">
 					<div><small>Empresa</small><strong style="display:block;margin-top:4px">{ onboarding.LegalName }</strong></div>
-					<div><small>CNPJ</small><strong style="display:block;margin-top:4px">{ onboarding.CNPJ }</strong></div>
+					<div><small>CNPJ</small><strong style="display:block;margin-top:4px">{ CNPJ(onboarding.CNPJ) }</strong></div>
 					<div><small>Responsável</small><strong style="display:block;margin-top:4px">{ onboarding.CompanyResponsibleName }</strong></div>
 					<div><small>E-mail</small><strong style="display:block;margin-top:4px">{ onboarding.CompanyResponsibleEmail }</strong></div>
 				</div>
