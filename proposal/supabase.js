@@ -74,6 +74,10 @@ if (document.getElementById('adminView')) {
     console.error('Não foi possível carregar o configurador guiado da proposta.', error);
   });
 
+  import('./proposal-generator-flow.js?v=20260826-1').catch((error) => {
+    console.error('Não foi possível carregar o fluxo simplificado de propostas.', error);
+  });
+
   import('./storage-ui.js?v=20260825-7').catch((error) => {
     console.error('Não foi possível carregar os uploads do Storage.', error);
   });
