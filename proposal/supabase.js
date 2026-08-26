@@ -74,8 +74,12 @@ if (document.getElementById('adminView')) {
     console.error('Não foi possível carregar o configurador guiado da proposta.', error);
   });
 
-  import('./proposal-generator-flow.js?v=20260826-1').catch((error) => {
-    console.error('Não foi possível carregar o fluxo simplificado de propostas.', error);
+  import('./proposal-generator-flow.js?v=20260826-3').catch((error) => {
+    console.error('Não foi possível carregar o gerador simplificado de propostas.', error);
+  });
+
+  import('./proposal-list-actions.js?v=20260826-1').catch((error) => {
+    console.error('Não foi possível carregar as ações da lista de propostas.', error);
   });
 
   import('./storage-ui.js?v=20260825-7').catch((error) => {
