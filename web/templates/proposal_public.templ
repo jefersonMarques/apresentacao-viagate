@@ -2,6 +2,7 @@ package templates
 
 import (
 	"github.com/a-h/templ"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/legaltext"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/proposals"
 )
 
@@ -57,7 +58,7 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal,errorMessage st
 					<span class="step-title">INVESTIMENTO</span><h2>Valores da proposta comercial.</h2>
 					<div class="table-wrap" style="margin-top:28px"><table class="price-table viewer-price-table"><thead><tr><th>Solução</th><th>Unidade</th><th>Status</th><th>Valor</th></tr></thead><tbody>
 						for _,item := range proposal.Items {
-							<tr><td><strong>{ item.GroupName }</strong><br/><small>{ item.Label }</small></td><td>{ item.Unit }</td><td>if item.IsOptional { Opcional } else { Incluído }</td><td><strong>{ Money(item.Price) }</strong></td></tr>
+							<tr><td><strong>{ item.GroupName }</strong><br/><small>{ item.Label }</small></td><td>{ item.Unit }</td><td>{ ProposalItemStatus(item) }</td><td><strong>{ Money(item.Price) }</strong></td></tr>
 						}
 					</tbody></table></div>
 					<div class="viewer-card-grid">
@@ -101,8 +102,8 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal,errorMessage st
 						<div class="field"><label>E-mail</label><input name="email" type="email" autocomplete="email" required/></div>
 						<div class="field"><label>Telefone</label><input name="phone" inputmode="tel" autocomplete="tel" required/></div>
 						<div class="field full"><label>Cargo / função</label><input name="role"/></div>
-						<div class="field full"><label><input type="checkbox" name="authority" value="1" required/> Declaro possuir poderes ou autorização para prosseguir com esta contratação em nome da empresa.</label></div>
-						<div class="field full"><button class="btn primary" type="submit">Aceitar proposta e continuar</button></div>
+						<div class="field full"><label><input type="checkbox" name="authority" value="1" required/> { legaltext.ProposalAcceptanceText }</label></div>
+						<div class="field full"><button class="btn primary" type="submit" data-processing="Registrando aceite...">Aceitar proposta e continuar</button></div>
 					</form>
 					if ProposalSalesperson(proposal,"name")!="" { <p>Responsável comercial: <strong>{ ProposalSalesperson(proposal,"name") }</strong> · { ProposalSalesperson(proposal,"email") }</p> }
 				</div><div class="viewer-footer"><span>Aceite</span><span></span></div>
