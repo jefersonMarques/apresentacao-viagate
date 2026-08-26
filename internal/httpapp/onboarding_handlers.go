@@ -48,17 +48,25 @@ func (a *App) saveOnboarding(w http.ResponseWriter,r *http.Request) {
 	if err:=r.ParseForm();err!=nil{http.Error(w,"dados inválidos",http.StatusBadRequest);return}
 	cnpj,err:=cleanCNPJ(r.FormValue("cnpj"));if err!=nil{render(r.Context(),w,http.StatusBadRequest,templates.OnboardingFormPage(current,"",err.Error(),a.cfg.RequireOnboardingReview));return}
 	cpf,err:=cleanCPF(r.FormValue("responsible_cpf"));if err!=nil{render(r.Context(),w,http.StatusBadRequest,templates.OnboardingFormPage(current,"",err.Error(),a.cfg.RequireOnboardingReview));return}
+	postalCode,err:=cleanPostalCode(r.FormValue("postal_code"),false);if err!=nil{render(r.Context(),w,http.StatusBadRequest,templates.OnboardingFormPage(current,"",err.Error(),a.cfg.RequireOnboardingReview));return}
+	responsiblePhone,err:=cleanPhone(r.FormValue("responsible_phone"),true);if err!=nil{render(r.Context(),w,http.StatusBadRequest,templates.OnboardingFormPage(current,"",err.Error(),a.cfg.RequireOnboardingReview));return}
+	financePhone,err:=cleanPhone(r.FormValue("finance_phone"),false);if err!=nil{render(r.Context(),w,http.StatusBadRequest,templates.OnboardingFormPage(current,"","Telefone do responsável financeiro inválido.",a.cfg.RequireOnboardingReview));return}
 
 	current.CNPJ=cnpj
 	current.LegalName=strings.TrimSpace(r.FormValue("legal_name"));current.TradeName=strings.TrimSpace(r.FormValue("trade_name"))
-	current.Street=strings.TrimSpace(r.FormValue("street"));current.StreetNumber=strings.TrimSpace(r.FormValue("street_number"));current.Complement=strings.TrimSpace(r.FormValue("complement"));current.District=strings.TrimSpace(r.FormValue("district"));current.City=strings.TrimSpace(r.FormValue("city"));current.State=strings.ToUpper(strings.TrimSpace(r.FormValue("state")));current.PostalCode=strings.TrimSpace(r.FormValue("postal_code"))
+	current.Street=strings.TrimSpace(r.FormValue("street"));current.StreetNumber=strings.TrimSpace(r.FormValue("street_number"));current.Complement=strings.TrimSpace(r.FormValue("complement"));current.District=strings.TrimSpace(r.FormValue("district"));current.City=strings.TrimSpace(r.FormValue("city"));current.State=strings.ToUpper(strings.TrimSpace(r.FormValue("state")));current.PostalCode=postalCode
 	current.OperationType=strings.ToLower(strings.TrimSpace(r.FormValue("operation_type")));current.Insurer=strings.TrimSpace(r.FormValue("insurer"));current.PolicyStartDate=r.FormValue("policy_start_date");current.PolicyEndDate=r.FormValue("policy_end_date");current.BrokerCompany=strings.TrimSpace(r.FormValue("broker_company"));current.BrokerProducer=strings.TrimSpace(r.FormValue("broker_producer"))
-	current.CompanyResponsibleName=strings.TrimSpace(r.FormValue("responsible_name"));current.CompanyResponsibleCPF=cpf;current.CompanyResponsiblePhone=strings.TrimSpace(r.FormValue("responsible_phone"));current.CompanyResponsibleEmail=strings.TrimSpace(strings.ToLower(r.FormValue("responsible_email")));current.CompanyResponsibleRole=strings.TrimSpace(r.FormValue("responsible_role"));current.AuthorityDeclared=r.FormValue("responsible_authority")=="1"
-	current.FinanceResponsibleName=strings.TrimSpace(r.FormValue("finance_name"));current.FinanceResponsiblePhone=strings.TrimSpace(r.FormValue("finance_phone"));current.FinanceResponsibleEmail=strings.TrimSpace(strings.ToLower(r.FormValue("finance_email")))
+	current.CompanyResponsibleName=strings.TrimSpace(r.FormValue("responsible_name"));current.CompanyResponsibleCPF=cpf;current.CompanyResponsiblePhone=responsiblePhone;current.CompanyResponsibleEmail=strings.TrimSpace(strings.ToLower(r.FormValue("responsible_email")));current.CompanyResponsibleRole=strings.TrimSpace(r.FormValue("responsible_role"));current.AuthorityDeclared=r.FormValue("responsible_authority")=="1"
+	current.FinanceResponsibleName=strings.TrimSpace(r.FormValue("finance_name"));current.FinanceResponsiblePhone=financePhone;current.FinanceResponsibleEmail=strings.TrimSpace(strings.ToLower(r.FormValue("finance_email")))
 	current.Goods=nil
 	for _,value:=range r.Form["goods"]{if value=strings.TrimSpace(value);value!=""{current.Goods=append(current.Goods,value)}}
 	current.SystemUsers=nil
-	for _,row:=range formValuesAligned(r.Form["system_user_name"],r.Form["system_user_phone"],r.Form["system_user_email"]){if row[0]!=""&&row[2]!=""{current.SystemUsers=append(current.SystemUsers,domain.OnboardingSystemUser{Name:row[0],Phone:row[1],Email:strings.ToLower(row[2])})}}
+	for _,row:=range formValuesAligned(r.Form["system_user_name"],r.Form["system_user_phone"],r.Form["system_user_email"]){
+		if row[0]==""||row[2]==""{continue}
+		phone,phoneErr:=cleanPhone(row[1],false)
+		if phoneErr!=nil{render(r.Context(),w,http.StatusBadRequest,templates.OnboardingFormPage(current,"","Há um telefone inválido na lista de usuários do sistema.",a.cfg.RequireOnboardingReview));return}
+		current.SystemUsers=append(current.SystemUsers,domain.OnboardingSystemUser{Name:row[0],Phone:phone,Email:strings.ToLower(row[2])})
+	}
 
 	if validationError:=validateOnboarding(current);validationError!=""{render(r.Context(),w,http.StatusBadRequest,templates.OnboardingFormPage(current,"",validationError,a.cfg.RequireOnboardingReview));return}
 	if err:=a.onboardingStore.Save(r.Context(),current);err!=nil{a.logger.Error("save onboarding failed","error",err);render(r.Context(),w,http.StatusBadRequest,templates.OnboardingFormPage(current,"","Não foi possível salvar os dados. O cadastro pode já ter sido enviado para revisão.",a.cfg.RequireOnboardingReview));return}
