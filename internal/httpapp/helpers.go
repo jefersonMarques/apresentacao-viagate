@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/mail"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -77,6 +78,17 @@ func cleanCNPJ(value string) (string,error) {
 	normalized,err:=brtaxid.CleanCNPJ(value)
 	if err!=nil{return "",fmt.Errorf("CNPJ inválido")}
 	return normalized,nil
+}
+
+func cleanEmail(value string,required bool)(string,error){
+	value=strings.TrimSpace(strings.ToLower(value))
+	if value==""{
+		if required{return "",fmt.Errorf("E-mail é obrigatório")}
+		return "",nil
+	}
+	parsed,err:=mail.ParseAddress(value)
+	if err!=nil||!strings.EqualFold(parsed.Address,value){return "",fmt.Errorf("E-mail inválido")}
+	return strings.ToLower(parsed.Address),nil
 }
 
 func repeatedDigits(value string)bool{
