@@ -86,14 +86,28 @@ function appendStyles() {
   document.head.appendChild(style);
 }
 
-function initialize() {
-  appendStyles();
-  enhanceTrackingRows();
+async function waitForTrackingTable(attempts = 80) {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const table = document.getElementById('hubTrackingTable');
+    if (table) {
+      return table;
+    }
 
-  const table = document.getElementById('hubTrackingTable');
+    await new Promise((resolve) => window.setTimeout(resolve, 100));
+  }
+
+  return null;
+}
+
+async function initialize() {
+  appendStyles();
+
+  const table = await waitForTrackingTable();
   if (!table) {
     return;
   }
+
+  enhanceTrackingRows();
 
   new MutationObserver(enhanceTrackingRows).observe(table, {
     childList: true,
