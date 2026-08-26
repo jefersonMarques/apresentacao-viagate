@@ -1,6 +1,7 @@
 package httpapp
 
 import (
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
@@ -69,6 +70,6 @@ func cleanProfileURL(value string)(string,error){
 	value=strings.TrimSpace(value)
 	if value==""{return "",nil}
 	parsed,err:=url.ParseRequestURI(value)
-	if err!=nil||parsed.Host==""||(parsed.Scheme!="https"&&parsed.Scheme!="http"){return "",http.ErrNotSupported}
+	if err!=nil||parsed.Host==""||(parsed.Scheme!="https"&&parsed.Scheme!="http"){return "",errors.New("invalid URL")}
 	return parsed.String(),nil
 }
