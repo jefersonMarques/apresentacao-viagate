@@ -134,9 +134,10 @@ function handleKeyboard(event) {
 }
 
 function initialize() {
-  // O snap obrigatório fazia seções maiores que a viewport avançarem cedo.
-  // Com proximity, o scroll é livre dentro da seção e encaixa ao chegar à borda.
-  document.body.style.scrollSnapType = 'y proximity';
+  // O snap obrigatório do CSS base pode antecipar a próxima seção.
+  // A navegação passa a ser controlada apenas quando a borda da viewport
+  // realmente alcança o início ou o fim da seção atual.
+  document.body.style.scrollSnapType = 'none';
 
   window.addEventListener('wheel', handleWheel, {
     capture: true,
