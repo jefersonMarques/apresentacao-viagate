@@ -1,0 +1,41 @@
+package templates
+
+import "github.com/jefersonMarques/apresentacao-viagate/internal/domain"
+
+templ OnboardingStatusPage(onboarding domain.Onboarding, message string) {
+	@Base("ViaGate — Dados recebidos") {
+		<header class="topbar">
+			<span class="brand">VIAGATE · IMPLANTAÇÃO</span>
+			<span>{ onboarding.LegalName }</span>
+		</header>
+		<main class="shell">
+			<section class="proposal-hero" style="background:var(--deep);color:#fff">
+				<span class="step-title">CADASTRO RECEBIDO</span>
+				if onboarding.Status == "submitted" {
+					<h1>Dados enviados para revisão.</h1>
+					<p>A equipe ViaGate recebeu as informações e a apólice. Assim que a revisão for concluída, o responsável receberá o contrato por e-mail para conferência e assinatura.</p>
+				} else if onboarding.Status == "under_review" {
+					<h1>Cadastro em revisão.</h1>
+					<p>A equipe ViaGate está conferindo os dados e documentos enviados. Caso seja necessário algum ajuste, o responsável receberá um novo link por e-mail.</p>
+				} else if onboarding.Status == "approved" {
+					<h1>Cadastro aprovado.</h1>
+					<p>O contrato está sendo preparado ou já foi encaminhado ao e-mail do responsável indicado no cadastro.</p>
+				} else {
+					<h1>Cadastro recebido.</h1>
+					<p>O processo de contratação está em andamento.</p>
+				}
+			</section>
+			if message != "" {
+				<div class="notice" style="margin-top:18px">{ message }</div>
+			}
+			<section class="panel" style="margin-top:18px">
+				<div class="panel-body grid">
+					<div><small>Empresa</small><strong style="display:block;margin-top:4px">{ onboarding.LegalName }</strong></div>
+					<div><small>CNPJ</small><strong style="display:block;margin-top:4px">{ onboarding.CNPJ }</strong></div>
+					<div><small>Responsável</small><strong style="display:block;margin-top:4px">{ onboarding.CompanyResponsibleName }</strong></div>
+					<div><small>E-mail</small><strong style="display:block;margin-top:4px">{ onboarding.CompanyResponsibleEmail }</strong></div>
+				</div>
+			</section>
+		</main>
+	}
+}
