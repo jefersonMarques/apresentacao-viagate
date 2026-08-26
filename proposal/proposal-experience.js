@@ -28,7 +28,7 @@ const moduleDescriptions = {
 
 const state = {
   started: false,
-  gateEnhanced: false,
+  initialized: false,
 };
 
 function getGate() {
@@ -39,17 +39,20 @@ function getControls() {
   return document.getElementById('proposalControls');
 }
 
-function replaceStartButton() {
-  const current = document.getElementById('proposalStartButton');
-  if (!current || current.dataset.experienceButton === 'true') {
-    return current;
-  }
+function getStartButton() {
+  return document.getElementById('proposalStartButton');
+}
 
-  const replacement = current.cloneNode(true);
-  replacement.dataset.experienceButton = 'true';
-  replacement.textContent = 'VER PROPOSTA';
-  current.replaceWith(replacement);
-  return replacement;
+function getModuleIcon(icon) {
+  const icons = {
+    'shield-check': '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.8 8 7 10 4.2-2 7-5.4 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg>',
+    'scan-face': '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3H4a1 1 0 0 0-1 1v3M17 3h3a1 1 0 0 1 1 1v3M7 21H4a1 1 0 0 1-1-1v-3M17 21h3a1 1 0 0 0 1-1v-3"/><circle cx="12" cy="10" r="3"/><path d="M7.5 18c1-2 2.5-3 4.5-3s3.5 1 4.5 3"/></svg>',
+    route: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M8 18h3a3 3 0 0 0 3-3V9a3 3 0 0 1 3-3"/></svg>',
+    'shield-alert': '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.8 8 7 10 4.2-2 7-5.4 7-10V6l-7-3Z"/><path d="M12 8v5M12 16h.01"/></svg>',
+    satellite: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M9 5l3 3-4 4-3-3 4-4ZM15 12l4 4-3 3-4-4 3-3ZM5 19c0-3.3 2.7-6 6-6M3 19c0-4.4 3.6-8 8-8"/></svg>',
+  };
+
+  return icons[icon] ?? icons['shield-check'];
 }
 
 function revealProposal() {
@@ -59,11 +62,19 @@ function revealProposal() {
 
   const gate = getGate();
   const controls = getControls();
-  if (gate) gate.hidden = true;
-  if (controls) controls.hidden = false;
+
+  if (gate) {
+    gate.hidden = true;
+    gate.style.visibility = 'hidden';
+    gate.style.pointerEvents = 'none';
+  }
+
+  if (controls) {
+    controls.hidden = false;
+  }
 
   document.dispatchEvent(new CustomEvent('proposal:started'));
-  window.setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 0);
+  window.scrollTo({ top: 0, behavior: 'auto' });
 }
 
 async function toggleFullscreen() {
@@ -77,18 +88,6 @@ async function toggleFullscreen() {
   } catch {
     return;
   }
-}
-
-function getModuleIcon(icon) {
-  const icons = {
-    'shield-check': '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.8 8 7 10 4.2-2 7-5.4 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg>',
-    'scan-face': '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3H4a1 1 0 0 0-1 1v3M17 3h3a1 1 0 0 1 1 1v3M7 21H4a1 1 0 0 1-1-1v-3M17 21h3a1 1 0 0 0 1-1v-3"/><circle cx="12" cy="10" r="3"/><path d="M7.5 18c1-2 2.5-3 4.5-3s3.5 1 4.5 3"/></svg>',
-    route: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M8 18h3a3 3 0 0 0 3-3V9a3 3 0 0 1 3-3"/></svg>',
-    'shield-alert': '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.8 8 7 10 4.2-2 7-5.4 7-10V6l-7-3Z"/><path d="M12 8v5M12 16h.01"/></svg>',
-    satellite: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M9 5l3 3-4 4-3-3 4-4ZM15 12l4 4-3 3-4-4 3-3ZM5 19c0-3.3 2.7-6 6-6M3 19c0-4.4 3.6-8 8-8"/></svg>',
-  };
-
-  return icons[icon] ?? icons['shield-check'];
 }
 
 function getSelectedModules() {
@@ -210,71 +209,43 @@ function addReadingActions() {
   document.body.appendChild(actions);
 }
 
-function enhanceGate() {
-  if (state.gateEnhanced) {
+function initialize() {
+  if (state.initialized) {
     return;
   }
 
-  const startButton = replaceStartButton();
+  const startButton = getStartButton();
   const gate = getGate();
+
   if (!startButton || !gate) {
     return;
   }
 
-  state.gateEnhanced = true;
+  state.initialized = true;
+  startButton.textContent = 'VER PROPOSTA';
   addAboutButton();
   addReadingActions();
 
-  startButton.addEventListener('click', revealProposal);
+  startButton.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    revealProposal();
+  }, true);
 
   const restartButton = document.getElementById('proposalRestartButton');
   if (restartButton) {
     restartButton.hidden = true;
   }
-}
 
-function keepNormalReadingMode() {
-  if (!state.started) {
-    return;
-  }
-
-  document.body.classList.remove('proposal-locked');
-  const gate = getGate();
-  if (gate) gate.hidden = true;
-}
-
-async function waitForProposal(attempts = 150) {
-  for (let attempt = 0; attempt < attempts; attempt += 1) {
-    const presentation = document.getElementById('proposalPresentation');
-    if (presentation && !presentation.hidden && presentation.querySelector('[data-proposal-slide]')) {
-      return true;
+  document.addEventListener('fullscreenchange', () => {
+    if (state.started) {
+      revealProposal();
     }
-
-    await new Promise((resolve) => window.setTimeout(resolve, 100));
-  }
-
-  return false;
-}
-
-async function initialize() {
-  const ready = await waitForProposal();
-  if (!ready) {
-    return;
-  }
-
-  enhanceGate();
-
-  const observer = new MutationObserver(() => {
-    enhanceGate();
-    keepNormalReadingMode();
   });
-
-  observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'hidden'] });
-  window.setTimeout(() => observer.disconnect(), 15000);
-
-  document.addEventListener('fullscreenchange', keepNormalReadingMode);
 }
 
-initialize().catch((error) => {
-  console.error('Não foi possível inicializar a experiência pública da proposta.', error);
-});
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initialize, { once: true });
+} else {
+  initialize();
+}
