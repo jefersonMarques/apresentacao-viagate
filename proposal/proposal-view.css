@@ -15,12 +15,10 @@ body.proposal-locked {
 }
 
 #proposalPresentation {
-  transition: filter 280ms ease, transform 280ms ease;
+  transition: opacity 220ms ease;
 }
 
 body.proposal-locked #proposalPresentation {
-  filter: blur(14px) brightness(.68);
-  transform: scale(1.012);
   pointer-events: none;
   user-select: none;
 }
@@ -31,11 +29,14 @@ body.proposal-locked #proposalPresentation {
   z-index: 1400;
   display: grid;
   place-items: center;
-  background: rgba(3, 14, 24, .18);
+  background: rgba(3, 14, 24, .34);
+  -webkit-backdrop-filter: blur(12px) brightness(.7);
+  backdrop-filter: blur(12px) brightness(.7);
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
   transition: opacity 220ms ease, visibility 220ms ease;
+  contain: strict;
 }
 
 body.proposal-locked .proposal-view-gate {
