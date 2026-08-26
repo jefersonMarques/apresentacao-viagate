@@ -1,0 +1,57 @@
+version: '3'
+
+dotenv:
+  - .env
+
+vars:
+  TEMPL_VERSION: v0.3.943
+
+tasks:
+  deps:
+    desc: Resolve and normalize Go dependencies
+    cmds:
+      - go mod tidy
+
+  generate:
+    desc: Generate templ components
+    cmds:
+      - go run github.com/a-h/templ/cmd/templ@{{.TEMPL_VERSION}} generate
+
+  migrate:
+    desc: Apply pending PostgreSQL migrations
+    cmds:
+      - go run ./cmd/migrate up
+
+  test:
+    desc: Generate templates and run all Go tests
+    deps:
+      - generate
+    cmds:
+      - go test ./...
+
+  check:
+    desc: Run generation, vet, tests and builds
+    cmds:
+      - task: generate
+      - go vet ./...
+      - go test ./...
+      - go build ./cmd/migrate
+      - go build ./cmd/server
+
+  dev:
+    desc: Prepare dependencies, generate templates, migrate and start the server
+    cmds:
+      - task: deps
+      - task: generate
+      - task: migrate
+      - go run ./cmd/server
+
+  server:
+    desc: Start the server without changing dependencies or schema
+    cmds:
+      - go run ./cmd/server
+
+  clean-generated:
+    desc: Remove locally generated templ Go files
+    cmds:
+      - '{{if eq OS "windows"}}powershell -NoProfile -Command "Get-ChildItem web/templates -Filter *_templ.go | Remove-Item -Force"{{else}}find web/templates -name "*_templ.go" -type f -delete{{end}}'
