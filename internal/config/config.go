@@ -8,17 +8,18 @@ import (
 )
 
 type Config struct {
-	Environment  string
-	Address      string
-	BaseURL      string
-	DatabaseURL  string
-	ChromiumPath string
-	Company      CompanyConfig
-	Session      SessionConfig
-	S3           S3Config
-	Brevo        BrevoConfig
-	Registry     RegistryConfig
-	Bootstrap    BootstrapConfig
+	Environment       string
+	Address           string
+	BaseURL           string
+	DatabaseURL       string
+	ChromiumPath      string
+	TrustProxyHeaders bool
+	Company           CompanyConfig
+	Session           SessionConfig
+	S3                S3Config
+	Brevo             BrevoConfig
+	Registry          RegistryConfig
+	Bootstrap         BootstrapConfig
 }
 
 type CompanyConfig struct {
@@ -63,11 +64,12 @@ type BootstrapConfig struct {
 
 func Load() (Config, error) {
 	cfg := Config{
-		Environment:  env("APP_ENV", "development"),
-		Address:      env("APP_ADDR", ":8080"),
-		BaseURL:      env("APP_BASE_URL", "http://localhost:8080"),
-		DatabaseURL:  os.Getenv("DATABASE_URL"),
-		ChromiumPath: env("CHROMIUM_PATH", "chromium"),
+		Environment:       env("APP_ENV", "development"),
+		Address:           env("APP_ADDR", ":8080"),
+		BaseURL:           env("APP_BASE_URL", "http://localhost:8080"),
+		DatabaseURL:       os.Getenv("DATABASE_URL"),
+		ChromiumPath:      env("CHROMIUM_PATH", "chromium"),
+		TrustProxyHeaders: boolean("TRUST_PROXY_HEADERS", false),
 		Company: CompanyConfig{
 			LegalName: os.Getenv("VIAGATE_LEGAL_NAME"),
 			CNPJ:      os.Getenv("VIAGATE_CNPJ"),
