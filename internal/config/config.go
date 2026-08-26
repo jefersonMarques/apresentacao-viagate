@@ -12,6 +12,7 @@ type Config struct {
 	Address     string
 	BaseURL     string
 	DatabaseURL string
+	ChromiumPath string
 	Session     SessionConfig
 	S3          S3Config
 	Brevo       BrevoConfig
@@ -20,10 +21,10 @@ type Config struct {
 }
 
 type SessionConfig struct {
-	CookieName       string
-	TTL              time.Duration
-	InviteTTL        time.Duration
-	SignatureOTPTTL  time.Duration
+	CookieName      string
+	TTL             time.Duration
+	InviteTTL       time.Duration
+	SignatureOTPTTL time.Duration
 }
 
 type S3Config struct {
@@ -53,10 +54,11 @@ type BootstrapConfig struct {
 
 func Load() (Config, error) {
 	cfg := Config{
-		Environment: env("APP_ENV", "development"),
-		Address:     env("APP_ADDR", ":8080"),
-		BaseURL:     env("APP_BASE_URL", "http://localhost:8080"),
-		DatabaseURL: os.Getenv("DATABASE_URL"),
+		Environment:  env("APP_ENV", "development"),
+		Address:      env("APP_ADDR", ":8080"),
+		BaseURL:      env("APP_BASE_URL", "http://localhost:8080"),
+		DatabaseURL:  os.Getenv("DATABASE_URL"),
+		ChromiumPath: env("CHROMIUM_PATH", "chromium"),
 		Session: SessionConfig{
 			CookieName:      env("SESSION_COOKIE_NAME", "viagate_session"),
 			TTL:             hours("SESSION_TTL_HOURS", 12),
