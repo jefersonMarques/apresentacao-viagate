@@ -82,6 +82,14 @@ if (document.getElementById('adminView')) {
     console.error('Não foi possível carregar as ações da lista de propostas.', error);
   });
 
+  import('./presentation-delete-actions.js?v=20260826-1').catch((error) => {
+    console.error('Não foi possível carregar a exclusão de apresentações.', error);
+  });
+
+  import('./proposal-publish-state.js?v=20260826-1').catch((error) => {
+    console.error('Não foi possível carregar o indicador de publicação.', error);
+  });
+
   import('./storage-ui.js?v=20260825-7').catch((error) => {
     console.error('Não foi possível carregar os uploads do Storage.', error);
   });
@@ -108,7 +116,7 @@ if (document.getElementById('proposalPresentation')) {
     console.error('Não foi possível carregar as estatísticas da proposta.', error);
   });
 
-  import('./proposal-product-summary.js?v=20260825-1').catch((error) => {
+  import('./proposal-product-summary.js?v=20260826-2').catch((error) => {
     console.error('Não foi possível carregar o resumo visual dos produtos.', error);
   });
 }
