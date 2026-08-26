@@ -10,19 +10,24 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/catalog"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/presentations"
 	"github.com/jefersonMarques/apresentacao-viagate/web/templates"
 )
 
 func (a *App) newPresentationPage(w http.ResponseWriter,r *http.Request){
 	user,_:=currentUser(r.Context())
+	profile,err:=a.authStore.Profile(r.Context(),user.ID)
+	if err!=nil{profile=user}
 	input:=presentations.EditorInput{
 		Title:"Apresentação Institucional ViaGate",
 		ShowClientIdentity:true,
 		ShowContactSlide:true,
 		SelectedModules:defaultPresentationModules(),
-		SalespersonName:user.Name,
-		SalespersonEmail:user.Email,
+		SalespersonName:profile.Name,
+		SalespersonEmail:profile.Email,
+		SalespersonPhone:profile.Phone,
+		SalespersonJobTitle:profile.JobTitle,
 	}
 	render(r.Context(),w,http.StatusOK,templates.PresentationEditorPage(user,input,presentations.SavedDraft{},"",""))
 }
@@ -42,7 +47,9 @@ func (a *App) savePresentation(w http.ResponseWriter,r *http.Request){
 	user,_:=currentUser(r.Context())
 	allowAll,_:=a.authStore.HasPermission(r.Context(),user.ID,"presentation.read_all")
 	if err:=r.ParseForm();err!=nil{http.Error(w,"dados inválidos",http.StatusBadRequest);return}
-	input,err:=presentationInputFromForm(r,user.Name,user.Email)
+	profile,profileErr:=a.authStore.Profile(r.Context(),user.ID)
+	if profileErr!=nil{a.logger.Error("load commercial profile failed","user_id",user.ID,"error",profileErr);profile=user}
+	input,err:=presentationInputFromForm(r,profile)
 	if err!=nil{render(r.Context(),w,http.StatusBadRequest,templates.PresentationEditorPage(user,input,presentations.SavedDraft{},"",err.Error()));return}
 	draft,err:=a.presentationStore.SaveDraft(r.Context(),user.ID,allowAll,input)
 	if err!=nil{a.logger.Error("save presentation failed","error",err);render(r.Context(),w,http.StatusBadRequest,templates.PresentationEditorPage(user,input,presentations.SavedDraft{},"","Não foi possível salvar a apresentação."));return}
@@ -68,7 +75,7 @@ func (a *App) publicPresentationPage(w http.ResponseWriter,r *http.Request){
 	render(r.Context(),w,http.StatusOK,templates.PublicPresentationPage(presentation))
 }
 
-func presentationInputFromForm(r *http.Request,salespersonName,salespersonEmail string)(presentations.EditorInput,error){
+func presentationInputFromForm(r *http.Request,salesperson domain.User)(presentations.EditorInput,error){
 	contactEmail,err:=cleanEmail(r.FormValue("contact_email"),false)
 	input:=presentations.EditorInput{
 		PresentationID:strings.TrimSpace(r.FormValue("presentation_id")),
@@ -80,8 +87,10 @@ func presentationInputFromForm(r *http.Request,salespersonName,salespersonEmail 
 		ContactEmail:contactEmail,
 		ShowClientIdentity:r.FormValue("show_client_identity")=="1",
 		ShowContactSlide:r.FormValue("show_contact_slide")=="1",
-		SalespersonName:salespersonName,
-		SalespersonEmail:salespersonEmail,
+		SalespersonName:salesperson.Name,
+		SalespersonEmail:salesperson.Email,
+		SalespersonPhone:salesperson.Phone,
+		SalespersonJobTitle:salesperson.JobTitle,
 	}
 	if err!=nil{return input,fmt.Errorf("E-mail do contato inválido.")}
 	if input.Title==""{input.Title="Apresentação Institucional ViaGate"}
@@ -102,7 +111,9 @@ func presentationInputFromForm(r *http.Request,salespersonName,salespersonEmail 
 		SelectedModules []string `json:"selected_modules"`
 		SalespersonName string `json:"salesperson_name"`
 		SalespersonEmail string `json:"salesperson_email"`
-	}{input.ClientLegalName,input.ClientTradeName,input.ClientCNPJ,input.Title,input.ContactName,input.ContactRole,input.ContactEmail,input.ShowClientIdentity,input.ShowContactSlide,input.SelectedModules,input.SalespersonName,input.SalespersonEmail}
+		SalespersonPhone string `json:"salesperson_phone"`
+		SalespersonJobTitle string `json:"salesperson_job_title"`
+	}{input.ClientLegalName,input.ClientTradeName,input.ClientCNPJ,input.Title,input.ContactName,input.ContactRole,input.ContactEmail,input.ShowClientIdentity,input.ShowContactSlide,input.SelectedModules,input.SalespersonName,input.SalespersonEmail,input.SalespersonPhone,input.SalespersonJobTitle}
 	encoded,_:=json.Marshal(canonical);hash:=sha256.Sum256(encoded);input.ContentHash=hash[:]
 	return input,nil
 }
