@@ -87,9 +87,14 @@
       transition: background 180ms ease, transform 180ms ease;
     }
 
-    .presentation-button:hover {
+    .presentation-button:hover:not(:disabled) {
       background: #df5208;
       transform: translateY(-2px);
+    }
+
+    .presentation-button:disabled {
+      opacity: .55;
+      cursor: wait;
     }
 
     .presentation-button.secondary {
@@ -232,6 +237,6 @@
     <button id="presentationNextButton" type="button" aria-label="Próximo slide">↓</button>
   </div>
 
-  <script type="module" src="./presentation-view.js?v=20260825-6"></script>
+  <script type="module" src="./presentation-view.js?v=20260825-7"></script>
 </body>
 </html>
