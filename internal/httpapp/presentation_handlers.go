@@ -106,4 +106,3 @@ func presentationInputFromForm(r *http.Request,salespersonName,salespersonEmail 
 }
 
 func defaultPresentationModules()[]string{result:=make([]string,0,len(catalog.Groups));for _,group:=range catalog.Groups{result=append(result,group.ID)};return result}
-func nullableUUID(value string)any{if strings.TrimSpace(value)==""{return nil};return value}
