@@ -15,6 +15,7 @@ import (
 	"github.com/jefersonMarques/apresentacao-viagate/internal/contracts"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/onboarding"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/pipeline"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/companyregistry"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/email"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/storage"
@@ -33,10 +34,12 @@ type App struct {
 	authStore         *auth.Store
 	proposalStore     *proposals.Store
 	presentationStore *presentations.Store
+	pipelineStore     *pipeline.Store
 	onboardingStore   *onboarding.Store
 	contractStore     *contracts.Store
 	contractRenderer  *contracts.Renderer
 	contractGenerator *contracts.Generator
+	contractFinalizer *contracts.Finalizer
 	storage           *storage.S3
 	mailer            *email.Brevo
 	registry          companyregistry.Provider
@@ -49,10 +52,12 @@ type Dependencies struct {
 	AuthStore         *auth.Store
 	ProposalStore     *proposals.Store
 	PresentationStore *presentations.Store
+	PipelineStore     *pipeline.Store
 	OnboardingStore   *onboarding.Store
 	ContractStore     *contracts.Store
 	ContractRenderer  *contracts.Renderer
 	ContractGenerator *contracts.Generator
+	ContractFinalizer *contracts.Finalizer
 	Storage           *storage.S3
 	Mailer            *email.Brevo
 	Registry          companyregistry.Provider
@@ -66,10 +71,12 @@ func New(deps Dependencies) *App {
 		authStore: deps.AuthStore,
 		proposalStore: deps.ProposalStore,
 		presentationStore: deps.PresentationStore,
+		pipelineStore: deps.PipelineStore,
 		onboardingStore: deps.OnboardingStore,
 		contractStore: deps.ContractStore,
 		contractRenderer: deps.ContractRenderer,
 		contractGenerator: deps.ContractGenerator,
+		contractFinalizer: deps.ContractFinalizer,
 		storage: deps.Storage,
 		mailer: deps.Mailer,
 		registry: deps.Registry,
@@ -94,6 +101,7 @@ func (a *App) Routes() http.Handler {
 
 	router.Get("/p/{token}", a.publicProposalPage)
 	router.Post("/p/{token}/accept", a.acceptProposal)
+	router.Get("/a/{token}", a.publicPresentationPage)
 
 	router.Group(func(customer chi.Router) {
 		customer.Use(a.customerSessionRequired)
@@ -107,15 +115,25 @@ func (a *App) Routes() http.Handler {
 	router.Get("/sign/{token}", a.signaturePage)
 	router.Post("/sign/{token}/otp", a.sendSignatureOTP)
 	router.Post("/sign/{token}/confirm", a.confirmSignature)
+	router.Get("/sign/{token}/contract", a.downloadSignedContract)
+	router.Get("/sign/{token}/evidence", a.downloadSignatureEvidence)
+	router.Get("/sign/{token}/package", a.downloadSignaturePackage)
 
 	router.Group(func(admin chi.Router) {
 		admin.Use(a.authenticated)
 		admin.Get("/admin", a.dashboard)
+		admin.Get("/admin/pipeline", a.pipelinePage)
+		admin.Get("/admin/pipeline/{proposalID}", a.pipelineDetailPage)
+
 		admin.Get("/admin/proposals", a.adminProposals)
 		admin.With(a.permission("proposal.create")).Get("/admin/proposals/new", a.newProposalPage)
 		admin.With(a.permission("proposal.create")).Get("/admin/proposals/{id}/edit", a.editProposalPage)
 		admin.With(a.permission("proposal.create")).Post("/admin/proposals/save", a.saveProposal)
+
 		admin.Get("/admin/presentations", a.adminPresentations)
+		admin.With(a.permission("presentation.create")).Get("/admin/presentations/new", a.newPresentationPage)
+		admin.With(a.permission("presentation.create")).Get("/admin/presentations/{id}/edit", a.editPresentationPage)
+		admin.With(a.permission("presentation.create")).Post("/admin/presentations/save", a.savePresentation)
 
 		admin.With(a.permission("user.manage")).Get("/admin/users", a.usersPage)
 		admin.With(a.permission("user.manage")).Post("/admin/users/invite", a.inviteUser)
@@ -149,6 +167,10 @@ func (a *App) sameOriginWrites(next http.Handler) http.Handler {
 
 		source := r.Header.Get("Origin")
 		if source == "" { source = r.Header.Get("Referer") }
+		if source == "" && a.cfg.Environment == "production" {
+			http.Error(w,"origem da requisição ausente",http.StatusForbidden)
+			return
+		}
 		if source != "" {
 			parsed, err := url.Parse(source)
 			if err != nil || !strings.EqualFold(parsed.Host, r.Host) {
