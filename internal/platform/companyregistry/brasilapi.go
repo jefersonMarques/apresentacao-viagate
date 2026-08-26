@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"regexp"
+	"net/url"
 	"strings"
 	"time"
+
+	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/brtaxid"
 )
 
 type Company struct {
@@ -40,12 +42,10 @@ func NewBrasilAPI(timeout time.Duration) *BrasilAPI {
 }
 
 func (b *BrasilAPI) Lookup(ctx context.Context, cnpj string) (Company, error) {
-	digits := regexp.MustCompile(`\D`).ReplaceAllString(cnpj, "")
-	if len(digits) != 14 {
-		return Company{}, fmt.Errorf("invalid CNPJ")
-	}
+	normalized,err:=brtaxid.CleanCNPJ(cnpj)
+	if err!=nil{return Company{},fmt.Errorf("invalid CNPJ")}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://brasilapi.com.br/api/cnpj/v1/"+digits, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://brasilapi.com.br/api/cnpj/v1/"+url.PathEscape(normalized), nil)
 	if err != nil {
 		return Company{}, fmt.Errorf("create CNPJ request: %w", err)
 	}
@@ -64,27 +64,29 @@ func (b *BrasilAPI) Lookup(ctx context.Context, cnpj string) (Company, error) {
 	}
 
 	var raw struct {
-		CNPJ               string `json:"cnpj"`
-		RazaoSocial        string `json:"razao_social"`
-		NomeFantasia       string `json:"nome_fantasia"`
-		Email              string `json:"email"`
-		DDDTelefone1       string `json:"ddd_telefone_1"`
-		Logradouro         string `json:"logradouro"`
-		Numero             string `json:"numero"`
-		Complemento        string `json:"complemento"`
-		Bairro             string `json:"bairro"`
-		Municipio          string `json:"municipio"`
-		UF                 string `json:"uf"`
-		CEP                string `json:"cep"`
-		DescricaoSituacao  string `json:"descricao_situacao_cadastral"`
+		CNPJ                string `json:"cnpj"`
+		RazaoSocial         string `json:"razao_social"`
+		NomeFantasia        string `json:"nome_fantasia"`
+		Email               string `json:"email"`
+		DDDTelefone1        string `json:"ddd_telefone_1"`
+		Logradouro          string `json:"logradouro"`
+		Numero              string `json:"numero"`
+		Complemento         string `json:"complemento"`
+		Bairro              string `json:"bairro"`
+		Municipio           string `json:"municipio"`
+		UF                  string `json:"uf"`
+		CEP                 string `json:"cep"`
+		DescricaoSituacao   string `json:"descricao_situacao_cadastral"`
 		CNAEFiscalDescricao string `json:"cnae_fiscal_descricao"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
 		return Company{}, fmt.Errorf("decode CNPJ response: %w", err)
 	}
 
+	responseCNPJ:=normalized
+	if candidate,cleanErr:=brtaxid.CleanCNPJ(raw.CNPJ);cleanErr==nil{responseCNPJ=candidate}
 	return Company{
-		CNPJ:        raw.CNPJ,
+		CNPJ:        responseCNPJ,
 		LegalName:   strings.TrimSpace(raw.RazaoSocial),
 		TradeName:   strings.TrimSpace(raw.NomeFantasia),
 		Email:       strings.TrimSpace(raw.Email),
