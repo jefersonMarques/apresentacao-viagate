@@ -2,6 +2,7 @@ package httpapp
 
 import (
 	"fmt"
+	"html"
 	"net/http"
 	"strings"
 	"time"
@@ -70,10 +71,12 @@ func (a *App) acceptInvitation(w http.ResponseWriter,r *http.Request) {
 	}
 	passwordHash,err:=security.HashPassword(password)
 	if err!=nil { render(r.Context(),w,http.StatusBadRequest,templates.InvitationPage(user.Name,user.Email,token,err.Error()));return }
-	if _,err:=a.authStore.AcceptInvitation(r.Context(),hashToken(token),passwordHash);err!=nil {
+	activated,err:=a.authStore.AcceptInvitation(r.Context(),hashToken(token),passwordHash)
+	if err!=nil {
 		a.logger.Error("accept invitation failed","error",err)
 		render(r.Context(),w,http.StatusInternalServerError,templates.InvitationPage(user.Name,user.Email,token,"Não foi possível ativar o acesso."));return
 	}
+	_,_ = a.pool.Exec(r.Context(),`insert into audit_events(actor_user_id,event_type,resource_type,resource_id,ip_address,user_agent,metadata) values($1,'user.activated','user',$1,$2,$3,'{}')`,activated.ID,requestIP(r),r.UserAgent())
 	http.Redirect(w,r,"/login",http.StatusSeeOther)
 }
 
@@ -87,12 +90,17 @@ func (a *App) inviteUser(w http.ResponseWriter,r *http.Request) {
 
 	token,hash,err:=security.RandomToken(32)
 	if err!=nil { http.Error(w,"erro ao criar convite",http.StatusInternalServerError);return }
-	if _,err:=a.authStore.CreateInvitation(r.Context(),emailAddress,name,role,hash,time.Now().Add(a.cfg.Session.InviteTTL),admin.ID);err!=nil {
+	userID,err:=a.authStore.CreateManagedInvitation(r.Context(),emailAddress,name,role,hash,time.Now().Add(a.cfg.Session.InviteTTL),admin.ID)
+	if err!=nil {
 		a.logger.Error("create invitation failed","error",err)
-		http.Error(w,"não foi possível criar o convite",http.StatusBadRequest);return
+		http.Redirect(w,r,"/admin/users?error="+queryEscape("Não foi possível criar o convite: "+err.Error()),http.StatusSeeOther);return
 	}
 	link:=strings.TrimRight(a.cfg.BaseURL,"/")+"/invite/"+token
-	htmlBody:=fmt.Sprintf("<p>Olá, %s.</p><p>Você recebeu um convite para acessar a plataforma comercial da ViaGate.</p><p><a href=\"%s\">Ativar meu acesso</a></p><p>O link é individual e expira em %s.</p>",name,link,a.cfg.Session.InviteTTL)
-	_ = notifications.Enqueue(r.Context(),a.pool,name,emailAddress,"Convite para a plataforma ViaGate",htmlBody,"Acesse "+link)
+	htmlBody:=fmt.Sprintf("<p>Olá, %s.</p><p>Você recebeu um convite para acessar a plataforma comercial da ViaGate.</p><p><a href=\"%s\">Ativar meu acesso</a></p><p>O link é individual e expira em %s.</p>",html.EscapeString(name),html.EscapeString(link),a.cfg.Session.InviteTTL)
+	if err:=notifications.Enqueue(r.Context(),a.pool,name,emailAddress,"Convite para a plataforma ViaGate",htmlBody,"Acesse "+link);err!=nil{
+		a.logger.Error("queue invitation email failed","error",err,"user_id",userID)
+		http.Redirect(w,r,"/admin/users?error="+queryEscape("Convite criado, mas o e-mail não entrou na fila do Brevo."),http.StatusSeeOther);return
+	}
+	_,_ = a.pool.Exec(r.Context(),`insert into audit_events(actor_user_id,event_type,resource_type,resource_id,ip_address,user_agent,metadata) values($1,'user.invited','user',$2,$3,$4,jsonb_build_object('role',$5))`,admin.ID,userID,requestIP(r),r.UserAgent(),role)
 	http.Redirect(w,r,"/admin/users?invited=1",http.StatusSeeOther)
 }
