@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/a-h/templ"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/brfields"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/brtaxid"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/security"
 )
@@ -77,6 +78,18 @@ func cpfDigit(value string,startWeight int)int{
 func cleanCNPJ(value string) (string,error) {
 	normalized,err:=brtaxid.CleanCNPJ(value)
 	if err!=nil{return "",fmt.Errorf("CNPJ inválido")}
+	return normalized,nil
+}
+
+func cleanPhone(value string,required bool)(string,error){
+	normalized,err:=brfields.NormalizePhone(value,required)
+	if err!=nil{return "",fmt.Errorf("Telefone inválido")}
+	return normalized,nil
+}
+
+func cleanPostalCode(value string,required bool)(string,error){
+	normalized,err:=brfields.NormalizePostalCode(value,required)
+	if err!=nil{return "",fmt.Errorf("CEP inválido")}
 	return normalized,nil
 }
 
