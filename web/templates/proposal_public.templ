@@ -1,0 +1,115 @@
+package templates
+
+import (
+	"github.com/a-h/templ"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/proposals"
+)
+
+templ PublicProposalViewerPage(proposal proposals.PublicProposal,errorMessage string) {
+	@Base("ViaGate — Proposta para " + proposal.ClientName) {
+		<div class="viewer-shell" data-secure-viewer>
+			<section class="viewer-slide dark" data-viewer-slide>
+				<div class="viewer-slide-inner">
+					<span class="step-title">PROPOSTA COMERCIAL · VERSÃO { proposal.VersionNumber }</span>
+					<h1>Preparada para<br/><span style="color:#ff6b18">{ proposal.ClientName }</span></h1>
+					<p>{ proposal.Title }</p>
+					<div class="viewer-card-grid">
+						<article class="viewer-card"><strong>{ ProposalModelLabel(proposal.PricingModel) }</strong><span>Modelo comercial desta versão.</span></article>
+						<article class="viewer-card"><strong>{ Date(proposal.ValidUntil) }</strong><span>Validade da condição apresentada.</span></article>
+						<article class="viewer-card"><strong>v{ proposal.VersionNumber }</strong><span>Esta versão é individual e imutável após o aceite.</span></article>
+					</div>
+				</div><div class="viewer-footer"><span>ViaGate · Proposta comercial</span><span></span></div>
+			</section>
+
+			<section class="viewer-slide light" data-viewer-slide>
+				<div class="viewer-slide-inner">
+					<span class="step-title">RESUMO DA SOLUÇÃO RECOMENDADA</span>
+					<h2>O que está sendo proposto para esta operação.</h2>
+					<p>A ViaGate conecta validação cadastral, autenticação, prevenção e recursos operacionais conforme os módulos selecionados nesta negociação.</p>
+					<div class="solution-grid">
+						for _,solution := range ProposalSolutions(proposal) {
+							<article class="solution-card"><div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start"><h3>{ solution.Title }</h3><span class="viewer-status">{ solution.Status }</span></div><p>{ solution.Summary }</p></article>
+						}
+					</div>
+					<div class="viewer-card-grid">
+						<article class="viewer-card"><strong>Biometria e identidade</strong><span>Validação integrada aos fluxos cadastrais e de contratação.</span></article>
+						<article class="viewer-card"><strong>Segurança e rastreabilidade</strong><span>Versões, eventos e decisões importantes registrados ao longo da jornada.</span></article>
+						<article class="viewer-card"><strong>Integração</strong><span>APIs e módulos que podem acompanhar o processo operacional existente.</span></article>
+					</div>
+				</div><div class="viewer-footer"><span>Resumo da solução</span><span></span></div>
+			</section>
+
+			<section class="viewer-slide dark" data-viewer-slide>
+				<div class="viewer-slide-inner">
+					<span class="step-title">MODELO COMERCIAL</span>
+					<h2>{ ProposalModelLabel(proposal.PricingModel) }</h2>
+					<p>Os itens abaixo refletem somente as soluções incluídas ou apresentadas como opcionais nesta versão.</p>
+					<div class="viewer-card-grid">
+						for _,solution := range ProposalSolutions(proposal) {
+							<article class="viewer-card"><strong>{ solution.Title }</strong><span>{ solution.Status } · { solution.Summary }</span></article>
+						}
+					</div>
+				</div><div class="viewer-footer"><span>Modelo comercial</span><span></span></div>
+			</section>
+
+			<section class="viewer-slide dark" data-viewer-slide>
+				<div class="viewer-slide-inner">
+					<span class="step-title">INVESTIMENTO</span><h2>Valores da proposta comercial.</h2>
+					<div class="table-wrap" style="margin-top:28px"><table class="price-table viewer-price-table"><thead><tr><th>Solução</th><th>Unidade</th><th>Status</th><th>Valor</th></tr></thead><tbody>
+						for _,item := range proposal.Items {
+							<tr><td><strong>{ item.GroupName }</strong><br/><small>{ item.Label }</small></td><td>{ item.Unit }</td><td>if item.IsOptional { Opcional } else { Incluído }</td><td><strong>{ Money(item.Price) }</strong></td></tr>
+						}
+					</tbody></table></div>
+					<div class="viewer-card-grid">
+						<article class="viewer-card"><strong>{ Money(proposal.MinimumInvoice) }</strong><span>Fatura mínima mensal</span></article>
+						<article class="viewer-card"><strong>{ Money(proposal.SetupFee) }</strong><span>Implantação</span></article>
+						<article class="viewer-card"><strong>{ Date(proposal.ValidUntil) }</strong><span>Validade da proposta</span></article>
+					</div>
+				</div><div class="viewer-footer"><span>Investimento</span><span></span></div>
+			</section>
+
+			<section class="viewer-slide light" data-viewer-slide>
+				<div class="viewer-slide-inner">
+					<span class="step-title">RESUMO COMERCIAL</span><h2>Os principais pontos da negociação.</h2>
+					<div class="viewer-card-grid">
+						<article class="viewer-card"><strong>{ ProposalModelLabel(proposal.PricingModel) }</strong><span>Modelo de contratação</span></article>
+						<article class="viewer-card"><strong>{ Money(proposal.MinimumInvoice) }</strong><span>Fatura mínima mensal</span></article>
+						<article class="viewer-card"><strong>{ Date(proposal.ValidUntil) }</strong><span>Validade</span></article>
+					</div>
+					<div class="solution-grid">
+						for _,solution := range ProposalSolutions(proposal) { <article class="solution-card"><div style="display:flex;justify-content:space-between;gap:12px"><h3>{ solution.Title }</h3><span class="viewer-status">{ solution.Status }</span></div></article> }
+					</div>
+				</div><div class="viewer-footer"><span>Resumo comercial</span><span></span></div>
+			</section>
+
+			if len(proposal.Conditions)>0 {
+				<section class="viewer-slide light" data-viewer-slide>
+					<div class="viewer-slide-inner"><span class="step-title">CONDIÇÕES COMERCIAIS</span><h2>Condições desta versão.</h2><div class="viewer-card-grid">
+						for _,condition := range proposal.Conditions { <article class="viewer-card"><strong>Condição</strong><span>{ condition }</span></article> }
+					</div></div><div class="viewer-footer"><span>Condições comerciais</span><span></span></div>
+				</section>
+			}
+
+			<section class="viewer-slide orange" data-viewer-slide>
+				<div class="viewer-slide-inner">
+					<span class="step-title" style="color:#fff">PRÓXIMO PASSO</span><h2>Aceitar proposta e iniciar a contratação.</h2>
+					<p>O aceite registra exatamente esta versão da proposta. Em seguida serão solicitados os dados da operação e a apólice para geração do contrato.</p>
+					if errorMessage!="" { <div class="notice error">{ errorMessage }</div> }
+					<form method="post" action={ templ.SafeURL("/p/" + proposal.PublicToken + "/accept") } class="grid" style="margin-top:28px;background:#fff;color:#132432;padding:24px">
+						<div class="field"><label>Nome completo do responsável</label><input name="name" autocomplete="name" required/></div>
+						<div class="field"><label>CPF</label><input name="cpf" inputmode="numeric" autocomplete="off" required/></div>
+						<div class="field"><label>E-mail</label><input name="email" type="email" autocomplete="email" required/></div>
+						<div class="field"><label>Telefone</label><input name="phone" inputmode="tel" autocomplete="tel" required/></div>
+						<div class="field full"><label>Cargo / função</label><input name="role"/></div>
+						<div class="field full"><label><input type="checkbox" name="authority" value="1" required/> Declaro possuir poderes ou autorização para prosseguir com esta contratação em nome da empresa.</label></div>
+						<div class="field full"><button class="btn primary" type="submit">Aceitar proposta e continuar</button></div>
+					</form>
+					if ProposalSalesperson(proposal,"name")!="" { <p>Responsável comercial: <strong>{ ProposalSalesperson(proposal,"name") }</strong> · { ProposalSalesperson(proposal,"email") }</p> }
+				</div><div class="viewer-footer"><span>Aceite</span><span></span></div>
+			</section>
+		</div>
+		<div class="viewer-gate" data-viewer-gate><div class="viewer-gate-box"><strong class="brand" style="color:#fff">VIAGATE</strong><div class="viewer-gate-actions"><button class="btn dark" type="button" data-viewer-restart hidden>Voltar ao início</button><button class="btn primary" type="button" data-viewer-start>Ver proposta</button></div></div></div>
+		<div class="viewer-controls"><button type="button" data-viewer-previous aria-label="Anterior">↑</button><span data-viewer-counter>01 / 01</span><button type="button" data-viewer-next aria-label="Próximo">↓</button></div>
+		<script src="/assets/public-viewer.js" defer></script>
+	}
+}
