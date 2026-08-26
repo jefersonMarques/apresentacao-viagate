@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/legaltext"
 )
 
 type Store struct {
@@ -209,11 +210,18 @@ func (s *Store) Sign(ctx context.Context,signerID string,documentHash []byte,ses
 	if status!="verified" { return "",false,fmt.Errorf("signer identity is not verified") }
 	if !bytes.Equal(storedHash,documentHash){return "",false,fmt.Errorf("contract document hash changed")}
 
-	if _,err:=tx.Exec(ctx,`update contract_signers set status='signed',signed_at=now(),signed_document_hash=$2,signature_session_id=$3 where id=$1`,signerID,documentHash,sessionID);err!=nil{return "",false,err}
+	consentHash:=legaltext.SHA256(legaltext.SignatureConsentText)
 	if _,err:=tx.Exec(ctx,`
-		insert into signature_events(contract_id,contract_signer_id,event_type,document_hash,ip_address,user_agent,session_id)
-		values($1,$2,'contract.signed',$3,$4,$5,$6)
-	`,contractID,signerID,documentHash,nullableIP(ip),userAgent,sessionID);err!=nil{return "",false,err}
+		update contract_signers
+		set status='signed',signed_at=now(),signed_document_hash=$2,signature_session_id=$3,
+		    signature_consent_version=$4,signature_consent_text=$5,signature_consent_sha256=$6
+		where id=$1
+	`,signerID,documentHash,sessionID,legaltext.SignatureConsentVersion,legaltext.SignatureConsentText,consentHash);err!=nil{return "",false,err}
+	if _,err:=tx.Exec(ctx,`
+		insert into signature_events(contract_id,contract_signer_id,event_type,document_hash,ip_address,user_agent,session_id,metadata)
+		values($1,$2,'contract.signed',$3,$4,$5,$6,
+		       jsonb_build_object('consent_version',$7,'consent_sha256',$8))
+	`,contractID,signerID,documentHash,nullableIP(ip),userAgent,sessionID,legaltext.SignatureConsentVersion,fmt.Sprintf("%x",consentHash));err!=nil{return "",false,err}
 
 	var pending int
 	if err:=tx.QueryRow(ctx,`select count(*) from contract_signers where contract_id=$1 and status<>'signed'`,contractID).Scan(&pending);err!=nil{return "",false,err}
