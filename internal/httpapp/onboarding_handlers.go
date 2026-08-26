@@ -13,14 +13,33 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/notifications"
 	onboardingpkg "github.com/jefersonMarques/apresentacao-viagate/internal/onboarding"
 	"github.com/jefersonMarques/apresentacao-viagate/web/templates"
 )
 
 func (a *App) onboardingPage(w http.ResponseWriter,r *http.Request) {
-	onboarding,err:=a.currentOnboarding(r);if err!=nil{http.Error(w,"Cadastro não encontrado.",http.StatusForbidden);return}
+	onboarding,err:=a.currentOnboarding(r)
+	if err!=nil{http.Error(w,"Cadastro não encontrado.",http.StatusForbidden);return}
+
 	message:=""
-	switch r.URL.Query().Get("saved") {case "1":message="Dados salvos.";case "document":message="Apólice enviada com sucesso."}
+	switch {
+	case r.URL.Query().Get("saved")=="1":
+		message="Dados salvos."
+	case r.URL.Query().Get("saved")=="document":
+		message="Apólice enviada com sucesso."
+	case r.URL.Query().Get("submitted")=="1":
+		message="Dados e documentos recebidos com sucesso."
+	case r.URL.Query().Get("contract_pending")=="1":
+		message="Cadastro aprovado. O contrato será encaminhado por e-mail assim que a preparação for concluída."
+	case onboarding.Status=="correction_requested"&&strings.TrimSpace(onboarding.ReviewNotes)!="":
+		message="Correção solicitada pela ViaGate: "+onboarding.ReviewNotes
+	}
+
+	if onboarding.Status=="submitted"||onboarding.Status=="under_review"||onboarding.Status=="approved"{
+		render(r.Context(),w,http.StatusOK,templates.OnboardingStatusPage(onboarding,message))
+		return
+	}
 	render(r.Context(),w,http.StatusOK,templates.OnboardingPage(onboarding,message,""))
 }
 
@@ -42,7 +61,7 @@ func (a *App) saveOnboarding(w http.ResponseWriter,r *http.Request) {
 	for _,row:=range formValuesAligned(r.Form["system_user_name"],r.Form["system_user_phone"],r.Form["system_user_email"]){if row[0]!=""&&row[2]!=""{current.SystemUsers=append(current.SystemUsers,domain.OnboardingSystemUser{Name:row[0],Phone:row[1],Email:strings.ToLower(row[2])})}}
 
 	if validationError:=validateOnboarding(current);validationError!=""{render(r.Context(),w,http.StatusBadRequest,templates.OnboardingPage(current,"",validationError));return}
-	if err:=a.onboardingStore.Save(r.Context(),current);err!=nil{a.logger.Error("save onboarding failed","error",err);render(r.Context(),w,http.StatusBadRequest,templates.OnboardingPage(current,"","Não foi possível salvar os dados."));return}
+	if err:=a.onboardingStore.Save(r.Context(),current);err!=nil{a.logger.Error("save onboarding failed","error",err);render(r.Context(),w,http.StatusBadRequest,templates.OnboardingPage(current,"","Não foi possível salvar os dados. O cadastro pode já ter sido enviado para revisão."));return}
 	http.Redirect(w,r,"/onboarding/"+current.ID+"?saved=1",http.StatusSeeOther)
 }
 
@@ -52,13 +71,18 @@ func validateOnboarding(current domain.Onboarding) string {
 	if current.FinanceResponsibleEmail!=""{if _,err:=mail.ParseAddress(current.FinanceResponsibleEmail);err!=nil{return "O e-mail do responsável financeiro é inválido."}}
 	if current.OperationType!="normal"&&current.OperationType!="avulsa"{return "Selecione um tipo de operação válido."}
 	if len(current.State)>2{return "UF inválida."}
-	if current.PolicyStartDate!=""&&current.PolicyEndDate!=""{start,err1:=time.Parse("2006-01-02",current.PolicyStartDate);end,err2:=time.Parse("2006-01-02",current.PolicyEndDate);if err1!=nil||err2!=nil{return "A vigência da apólice é inválida."};if end.Before(start){return "O fim da vigência da apólice não pode ser anterior ao início."}}
+	if current.PolicyStartDate==""||current.PolicyEndDate==""{return "Informe a vigência da apólice."}
+	start,err1:=time.Parse("2006-01-02",current.PolicyStartDate);end,err2:=time.Parse("2006-01-02",current.PolicyEndDate)
+	if err1!=nil||err2!=nil{return "A vigência da apólice é inválida."}
+	if end.Before(start){return "O fim da vigência da apólice não pode ser anterior ao início."}
 	for _,user:=range current.SystemUsers{if _,err:=mail.ParseAddress(user.Email);err!=nil{return "Há um e-mail inválido na lista de usuários do sistema."}}
 	return ""
 }
 
 func (a *App) lookupCNPJ(w http.ResponseWriter,r *http.Request) {
-	if _,err:=a.currentOnboarding(r);err!=nil{http.Error(w,"acesso negado",http.StatusForbidden);return}
+	current,err:=a.currentOnboarding(r)
+	if err!=nil{http.Error(w,"acesso negado",http.StatusForbidden);return}
+	if current.Status!="pending"&&current.Status!="in_progress"&&current.Status!="correction_requested"{http.Error(w,"cadastro não está disponível para edição",http.StatusConflict);return}
 	company,err:=a.registry.Lookup(r.Context(),chi.URLParam(r,"cnpj"));if err!=nil{http.Error(w,"CNPJ não encontrado",http.StatusNotFound);return}
 	w.Header().Set("Content-Type","application/json")
 	w.Header().Set("Cache-Control","private, max-age=300")
@@ -70,6 +94,7 @@ func (a *App) lookupCNPJ(w http.ResponseWriter,r *http.Request) {
 
 func (a *App) uploadOnboardingDocument(w http.ResponseWriter,r *http.Request) {
 	current,err:=a.currentOnboarding(r);if err!=nil{http.Error(w,"acesso negado",http.StatusForbidden);return}
+	if current.Status!="pending"&&current.Status!="in_progress"&&current.Status!="correction_requested"{http.Error(w,"documentos bloqueados após o envio do cadastro",http.StatusConflict);return}
 	r.Body=http.MaxBytesReader(w,r.Body,(15<<20)+1)
 	if err:=r.ParseMultipartForm(15<<20);err!=nil{http.Error(w,"arquivo excede o limite de 15 MB",http.StatusRequestEntityTooLarge);return}
 	file,header,err:=r.FormFile("document");if err!=nil{http.Error(w,"selecione a apólice",http.StatusBadRequest);return};defer file.Close()
@@ -88,22 +113,72 @@ func (a *App) uploadOnboardingDocument(w http.ResponseWriter,r *http.Request) {
 
 func (a *App) submitOnboarding(w http.ResponseWriter,r *http.Request) {
 	current,err:=a.currentOnboarding(r);if err!=nil{http.Error(w,"acesso negado",http.StatusForbidden);return}
+	if validationError:=validateOnboarding(current);validationError!=""{render(r.Context(),w,http.StatusBadRequest,templates.OnboardingPage(current,"",validationError));return}
 	if err:=a.onboardingStore.Submit(r.Context(),current.ID);err!=nil{render(r.Context(),w,http.StatusBadRequest,templates.OnboardingPage(current,"",err.Error()));return}
+
+	_,_ = a.pool.Exec(r.Context(),`
+		insert into audit_events(actor_type,event_type,resource_type,resource_id,ip_address,user_agent,metadata)
+		values('customer','onboarding.submitted','onboarding',$1,$2,$3,jsonb_build_object('review_required',$4))
+	`,current.ID,requestIP(r),r.UserAgent(),a.cfg.RequireOnboardingReview)
+	a.queueOnboardingSubmittedNotification(r,current.ID)
+
+	if a.cfg.RequireOnboardingReview{
+		http.Redirect(w,r,"/onboarding/"+current.ID+"?submitted=1",http.StatusSeeOther)
+		return
+	}
+
+	command,err:=a.pool.Exec(r.Context(),`
+		update onboardings
+		set status='approved',approved_at=coalesce(approved_at,now()),reviewed_at=now(),
+		    review_notes='Aprovação automática: revisão interna desativada.',updated_at=now()
+		where id=$1 and status='submitted'
+	`,current.ID)
+	if err!=nil||command.RowsAffected()!=1{
+		a.logger.Error("auto approve onboarding failed","error",err,"onboarding_id",current.ID)
+		http.Redirect(w,r,"/onboarding/"+current.ID+"?contract_pending=1",http.StatusSeeOther)
+		return
+	}
+	_,_ = a.pool.Exec(r.Context(),`insert into audit_events(actor_type,event_type,resource_type,resource_id,metadata) values('system','onboarding.auto_approved','onboarding',$1,'{}')`,current.ID)
 
 	access,_,err:=a.ensureContractDelivery(r.Context(),current.ID)
 	if err!=nil{
-		a.logger.Error("contract delivery failed","error",err,"onboarding_id",current.ID)
-		_,_ = a.pool.Exec(r.Context(),`insert into audit_events(actor_type,event_type,resource_type,resource_id,metadata) values('system','contract.generation_failed','onboarding',$1,jsonb_build_object('error',$2))`,current.ID,err.Error())
-		_,_ = a.pool.Exec(r.Context(),`
-			insert into notification_outbox(dedupe_key,recipient,recipient_name,subject,html_body,text_body)
-			select 'contract-generation-failed:'||o.id::text,u.email,u.name,'Falha na geração de contrato: '||p.title,
-			       '<p>O onboarding de <strong>'||c.legal_name||'</strong> foi enviado, mas o contrato precisa ser gerado novamente pelo painel.</p>',
-			       'O onboarding de '||c.legal_name||' foi enviado, mas a geração automática do contrato falhou.'
-			from onboardings o join proposal_acceptances pa on pa.id=o.proposal_acceptance_id join proposals p on p.id=pa.proposal_id join clients c on c.id=o.client_id join users u on u.id=p.created_by where o.id=$1
-			on conflict (dedupe_key) where dedupe_key is not null do nothing
-		`,current.ID)
-		http.Error(w,"Dados recebidos com sucesso. O comercial foi avisado para concluir a geração do contrato.",http.StatusAccepted);return
+		a.logger.Error("automatic contract delivery failed","error",err,"onboarding_id",current.ID)
+		a.queueContractGenerationFailure(r,current.ID,err)
+		http.Redirect(w,r,"/onboarding/"+current.ID+"?contract_pending=1",http.StatusSeeOther)
+		return
 	}
-	_,_ = a.pool.Exec(r.Context(),`insert into audit_events(actor_type,event_type,resource_type,resource_id,ip_address,user_agent,metadata) values('customer','onboarding.submitted','onboarding',$1,$2,$3,jsonb_build_object('contract_id',$4))`,current.ID,requestIP(r),r.UserAgent(),access.ContractID)
 	http.Redirect(w,r,"/sign/"+access.SignerToken,http.StatusSeeOther)
+}
+
+func (a *App) queueOnboardingSubmittedNotification(r *http.Request,onboardingID string) {
+	var name,emailAddress,proposalTitle,clientName string
+	err:=a.pool.QueryRow(r.Context(),`
+		select u.name,u.email::text,p.title,o.legal_name
+		from onboardings o
+		join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
+		join proposals p on p.id=pa.proposal_id
+		join users u on u.id=p.created_by
+		where o.id=$1
+	`,onboardingID).Scan(&name,&emailAddress,&proposalTitle,&clientName)
+	if err!=nil{a.logger.Error("resolve commercial for onboarding notification failed","error",err,"onboarding_id",onboardingID);return}
+	htmlBody:=fmt.Sprintf("<p>O cadastro de <strong>%s</strong> foi enviado para a contratação da proposta <strong>%s</strong>.</p><p>Acesse o painel para revisar os dados e documentos.</p>",clientName,proposalTitle)
+	if err:=notifications.EnqueueUnique(r.Context(),a.pool,"onboarding-submitted:"+onboardingID,name,emailAddress,"Cadastro recebido: "+clientName,htmlBody,"O cadastro de "+clientName+" foi enviado e está disponível para revisão.");err!=nil{
+		a.logger.Error("queue onboarding submitted notification failed","error",err,"onboarding_id",onboardingID)
+	}
+}
+
+func (a *App) queueContractGenerationFailure(r *http.Request,onboardingID string,generationErr error) {
+	_,err:=a.pool.Exec(r.Context(),`
+		insert into notification_outbox(dedupe_key,recipient,recipient_name,subject,html_body,text_body)
+		select 'contract-generation-failed:'||o.id::text,u.email,u.name,'Falha na geração de contrato: '||p.title,
+		       '<p>O cadastro de <strong>'||o.legal_name||'</strong> foi aprovado, mas a preparação do contrato precisa ser tentada novamente pelo painel.</p>',
+		       'O cadastro de '||o.legal_name||' foi aprovado, mas a geração do contrato falhou.'
+		from onboardings o
+		join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
+		join proposals p on p.id=pa.proposal_id
+		join users u on u.id=p.created_by
+		where o.id=$1
+		on conflict (dedupe_key) where dedupe_key is not null do nothing
+	`,onboardingID)
+	if err!=nil{a.logger.Error("queue contract generation failure notification failed","error",err,"onboarding_id",onboardingID,"generation_error",generationErr)}
 }
