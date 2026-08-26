@@ -34,19 +34,20 @@ async function loadPresentationMode(attempt = 0) {
     return;
   }
 
-  appendStylesheet('./presentation-story.css?v=20260825-6', 'data-presentation-story');
-  await appendScript('./presentation-story.js?v=20260825-6', 'data-presentation-story');
-  await appendScript('./presentation-contact.js?v=20260825-6', 'data-presentation-contact');
+  appendStylesheet('./presentation-story.css?v=20260825-7', 'data-presentation-story');
+  await appendScript('./presentation-story.js?v=20260825-7', 'data-presentation-story');
+  await appendScript('./presentation-contact.js?v=20260825-7', 'data-presentation-contact');
 
-  appendStylesheet('./presentation-mode.css?v=20260825-6', 'data-presentation-mode');
-  await appendScript('./presentation-mode.js?v=20260825-6', 'data-presentation-mode');
+  appendStylesheet('./presentation-mode.css?v=20260825-7', 'data-presentation-mode');
+  await appendScript('./presentation-mode.js?v=20260825-7', 'data-presentation-mode');
 
   if (typeof window.initializePresentationMode === 'function') {
     window.initializePresentationMode();
   }
 
-  await appendScript('./presentation-personalization.js?v=20260825-6', 'data-presentation-personalization');
-  await appendScript('./presentation-host-bridge.js?v=20260825-6', 'data-presentation-host-bridge');
+  await appendScript('./presentation-personalization.js?v=20260825-7', 'data-presentation-personalization');
+  await appendScript('./presentation-social-links.js?v=20260825-7', 'data-presentation-social-links');
+  await appendScript('./presentation-host-bridge.js?v=20260825-7', 'data-presentation-host-bridge');
 
   document.querySelector('.presentation-gate')?.remove();
   document.querySelector('.presentation-controls')?.remove();
