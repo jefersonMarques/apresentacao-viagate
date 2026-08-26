@@ -6,6 +6,8 @@ type User struct {
 	ID        string
 	Email     string
 	Name      string
+	Phone     string
+	JobTitle  string
 	Status    string
 	Roles     []string
 	CreatedAt time.Time
@@ -21,6 +23,7 @@ type Proposal struct {
 	PublicToken    string
 	ValidUntil     *time.Time
 	CreatedBy      string
+	CreatedByName  string
 	UpdatedAt      time.Time
 }
 
