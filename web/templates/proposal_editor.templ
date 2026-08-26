@@ -16,9 +16,9 @@ templ ProposalEditorPage(user domain.User, input proposals.EditorInput, draft pr
 			<section class="panel"><div class="panel-head"><h2>1. Cliente</h2></div><div class="panel-body grid">
 				<div class="field"><label>Razão social</label><input name="client_legal_name" value={ input.ClientLegalName } required/></div>
 				<div class="field"><label>Nome fantasia</label><input name="client_trade_name" value={ input.ClientTradeName }/></div>
-				<div class="field"><label>CNPJ</label><input name="client_cnpj" value={ input.ClientCNPJ }/></div>
+				<div class="field"><label>CNPJ</label><input name="client_cnpj" data-mask="cnpj" autocomplete="off" value={ input.ClientCNPJ }/></div>
 				<div class="field"><label>E-mail</label><input name="client_email" type="email" value={ input.ClientEmail }/></div>
-				<div class="field"><label>Telefone</label><input name="client_phone" value={ input.ClientPhone }/></div>
+				<div class="field"><label>Telefone</label><input name="client_phone" data-mask="phone" autocomplete="tel" value={ input.ClientPhone }/></div>
 				<div class="field"><label>Validade</label><input name="valid_until" type="date" value={ editorDate(input.ValidUntil) }/></div>
 				<div class="field full"><label>Título interno</label><input name="title" value={ proposalTitle(input.Title) } required/></div>
 			</div></section>
