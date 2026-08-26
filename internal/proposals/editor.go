@@ -64,9 +64,10 @@ func (s *Store) SaveDraft(ctx context.Context,userID string,allowAll bool,input 
 			values($1,$2,'draft',$3,$4) returning id::text
 		`,clientID,input.Title,input.ValidUntil,userID).Scan(&input.ProposalID);err!=nil{return SavedDraft{},fmt.Errorf("create proposal: %w",err)}
 	}else{
-		var owner string
-		if err:=tx.QueryRow(ctx,`select client_id::text,created_by::text from proposals where id=$1 for update`,input.ProposalID).Scan(&clientID,&owner);err!=nil{return SavedDraft{},err}
+		var owner,status string
+		if err:=tx.QueryRow(ctx,`select client_id::text,created_by::text,status::text from proposals where id=$1 for update`,input.ProposalID).Scan(&clientID,&owner,&status);err!=nil{return SavedDraft{},err}
 		if !allowAll&&owner!=userID{return SavedDraft{},fmt.Errorf("proposal access denied")}
+		if status=="accepted"||status=="cancelled"{return SavedDraft{},fmt.Errorf("accepted or cancelled proposals cannot be changed")}
 		if _,err:=tx.Exec(ctx,`update clients set legal_name=$2,trade_name=nullif($3,''),cnpj=nullif($4,''),email=nullif($5,'')::citext,phone=nullif($6,''),updated_at=now() where id=$1`,clientID,input.ClientLegalName,input.ClientTradeName,input.ClientCNPJ,input.ClientEmail,input.ClientPhone);err!=nil{return SavedDraft{},err}
 		if _,err:=tx.Exec(ctx,`update proposals set title=$2,valid_until=$3,updated_at=now() where id=$1`,input.ProposalID,input.Title,input.ValidUntil);err!=nil{return SavedDraft{},err}
 	}
@@ -111,14 +112,15 @@ func (s *Store) SaveDraft(ctx context.Context,userID string,allowAll bool,input 
 
 func (s *Store) Publish(ctx context.Context,userID string,allowAll bool,versionID string)(string,error){
 	tx,err:=s.pool.BeginTx(ctx,pgx.TxOptions{IsoLevel:pgx.Serializable});if err!=nil{return "",err};defer tx.Rollback(ctx)
-	var proposalID,owner,token string
+	var proposalID,owner,token,status string
 	var versionNumber int
 	err=tx.QueryRow(ctx,`
-		select v.proposal_id::text,p.created_by::text,v.version_number,v.public_token::text
+		select v.proposal_id::text,p.created_by::text,v.version_number,v.public_token::text,p.status::text
 		from proposal_versions v join proposals p on p.id=v.proposal_id
 		where v.id=$1 and v.published_at is null for update of v,p
-	`,versionID).Scan(&proposalID,&owner,&versionNumber,&token)
+	`,versionID).Scan(&proposalID,&owner,&versionNumber,&token,&status)
 	if err!=nil{return "",err};if !allowAll&&owner!=userID{return "",fmt.Errorf("proposal access denied")}
+	if status=="accepted"||status=="cancelled"{return "",fmt.Errorf("proposal cannot be published in its current state")}
 	if _,err:=tx.Exec(ctx,`update proposal_versions set published_at=now() where id=$1`,versionID);err!=nil{return "",err}
 	if _,err:=tx.Exec(ctx,`update proposals set status='published',current_version=$2,updated_at=now() where id=$1`,proposalID,versionNumber);err!=nil{return "",err}
 	if _,err:=tx.Exec(ctx,`insert into audit_events(actor_user_id,event_type,resource_type,resource_id,metadata) values($1,'proposal.published','proposal',$2,jsonb_build_object('version',$3,'version_id',$4))`,userID,proposalID,versionNumber,versionID);err!=nil{return "",err}
