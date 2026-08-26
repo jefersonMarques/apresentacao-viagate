@@ -8,118 +8,148 @@ import (
 
 templ ProposalEditorPage(user domain.User, input proposals.EditorInput, draft proposals.SavedDraft, message, errorMessage string) {
 	@AdminLayout("ViaGate — Editor de proposta", user) {
-		<header class="header">
-			<div>
-				<span class="step-title">GERADOR DE PROPOSTA</span>
-				if input.ProposalID == "" {
-					<h1>Nova proposta</h1>
-				} else {
-					<h1>Editar proposta</h1>
-				}
-				<p>Selecione o modelo, marque apenas o que será oferecido e informe os valores. Publicar congela esta versão; qualquer alteração posterior cria uma nova versão.</p>
-			</div>
-			<div class="actions"><a class="btn" href="/admin/proposals">Voltar</a></div>
-		</header>
-		if message != "" {
-			<div class="notice">{ message }</div>
-		}
-		if errorMessage != "" {
-			<div class="notice error">{ errorMessage }</div>
-		}
-		<form method="post" action="/admin/proposals/save" id="proposal-editor">
-			<input type="hidden" name="proposal_id" value={ input.ProposalID }/>
-			<section class="panel">
-				<div class="panel-head"><h2>1. Cliente</h2></div>
-				<div class="panel-body grid">
-					<div class="field"><label>Razão social</label><input name="client_legal_name" value={ input.ClientLegalName } required/></div>
-					<div class="field"><label>Nome fantasia</label><input name="client_trade_name" value={ input.ClientTradeName }/></div>
-					<div class="field"><label>CNPJ</label><input name="client_cnpj" data-mask="cnpj" autocomplete="off" value={ input.ClientCNPJ }/></div>
-					<div class="field"><label>E-mail</label><input name="client_email" type="email" value={ input.ClientEmail }/></div>
-					<div class="field"><label>Telefone</label><input name="client_phone" data-mask="phone" autocomplete="tel" value={ input.ClientPhone }/></div>
-					<div class="field"><label>Validade</label><input name="valid_until" type="date" value={ editorDate(input.ValidUntil) }/></div>
-					<div class="field full"><label>Título interno</label><input name="title" value={ proposalTitle(input.Title) } required/></div>
+		<link rel="stylesheet" href="/assets/v1-admin-forms.css"/>
+		<div class="v1-page">
+			<header class="v1-editor-header">
+				<div>
+					<span class="v1-eyebrow">EDITOR DE PROPOSTA</span>
+					if input.ProposalID == "" {
+						<h1>Nova proposta</h1>
+					} else {
+						<h1>Editar proposta</h1>
+					}
+					<p>Estrutura e linguagem visual da V1, agora com versionamento, PostgreSQL e publicação controlados pelo backend Go.</p>
 				</div>
-			</section>
-			<section class="panel">
-				<div class="panel-head"><h2>2. Modelo comercial</h2></div>
-				<div class="panel-body grid">
-					for _, model := range catalog.PricingModels {
-						<label class="panel" style="margin:0;padding:16px;cursor:pointer">
-							<input type="radio" name="pricing_model" value={ model.ID } checked?={ IsPricingModel(input, model.ID) }/>
-							<strong style="display:block;margin-top:8px">{ model.Title }</strong>
-							<small>{ model.Summary }</small>
-						</label>
+				<div class="v1-actions">
+					<a class="v1-button" href="/admin/proposals">Voltar</a>
+					if draft.PublicToken != "" {
+						<a class="v1-button dark" target="_blank" rel="noopener" href={ proposalPublicURL(draft.PublicToken) }>Abrir proposta</a>
 					}
 				</div>
-			</section>
-			<section class="panel">
-				<div class="panel-head"><h2>3. Produtos e valores</h2></div>
-				<div class="panel-body">
-					for _, group := range catalog.Groups {
-						<section class="panel" data-catalog-group={ group.ID }>
-							<div class="panel-head">
-								<div><strong>{ group.ShortTitle }</strong><small style="display:block;color:#6e7e89;margin-top:4px">{ group.Summary }</small></div>
-							</div>
-							<div class="table-wrap">
-								<table class="table">
-									<thead><tr><th>Item</th><th>Status</th><th>Valor</th></tr></thead>
-									<tbody>
-										for _, catalogItem := range group.Items {
-											{{ existing, found := ProposalEditorItem(input, catalogItem.ID) }}
-											<tr data-models={ joinModels(catalogItem.Models) }>
-												<td>
-													<strong>{ catalogItem.Label }</strong>
-													<small style="display:block;color:#6e7e89">{ catalogItem.Unit }</small>
-													<input type="hidden" name="catalog_id" value={ catalogItem.ID }/>
-												</td>
-												<td>
-													<select name="item_status">
-														<option value="off" selected?={ !found }>Não oferecer</option>
-														<option value="included" selected?={ found && !existing.IsOptional }>Incluído</option>
-														<option value="optional" selected?={ found && existing.IsOptional }>Opcional</option>
-													</select>
-												</td>
-												<td><input name="item_price" type="number" min="0" step="0.01" value={ editorPrice(existing.Price, found) } placeholder="0,00"/></td>
-											</tr>
-										}
-									</tbody>
-								</table>
-							</div>
-						</section>
-					}
-				</div>
-			</section>
-			<section class="panel">
-				<div class="panel-head"><h2>4. Resumo financeiro</h2></div>
-				<div class="panel-body grid">
-					<div class="field"><label>Fatura mínima mensal</label><input name="minimum_invoice" type="number" min="0" step="0.01" value={ editorFloat(input.MinimumInvoice) }/></div>
-					<div class="field"><label>Implantação</label><input name="setup_fee" type="number" min="0" step="0.01" value={ editorFloat(input.SetupFee) }/></div>
-				</div>
-			</section>
-			<section class="panel">
-				<div class="panel-head"><h2>5. Condições comerciais</h2></div>
-				<div class="panel-body">
-					<div class="grid">
-						for _, condition := range catalog.StandardConditions {
-							<label class="panel" style="margin:0;padding:14px">
-								<input type="checkbox" name="condition" value={ condition.Text } checked?={ conditionChecked(input.Conditions, condition.Text) }/>
-								<span>{ condition.Text }</span>
-							</label>
+			</header>
+			if message != "" {
+				<div class="v1-message">{ message }</div>
+			}
+			if errorMessage != "" {
+				<div class="v1-message error">{ errorMessage }</div>
+			}
+			<form method="post" action="/admin/proposals/save" id="proposal-editor">
+				<input type="hidden" name="proposal_id" value={ input.ProposalID }/>
+
+				<section class="v1-section">
+					<header class="v1-section-head"><div><h2>Cliente</h2><p>Dados usados na capa e na identificação da proposta.</p></div></header>
+					<div class="v1-section-body">
+						<div class="v1-form-grid">
+							<div class="v1-field"><label>Razão social</label><input name="client_legal_name" value={ input.ClientLegalName } required/></div>
+							<div class="v1-field"><label>Nome fantasia</label><input name="client_trade_name" value={ input.ClientTradeName }/></div>
+							<div class="v1-field"><label>CNPJ</label><input name="client_cnpj" data-mask="cnpj" autocomplete="off" value={ input.ClientCNPJ }/></div>
+							<div class="v1-field"><label>URL do logo</label><input name="client_logo_url" type="url" value={ input.ClientLogoURL } placeholder="https://..."/></div>
+							<div class="v1-field"><label>E-mail da empresa</label><input name="client_email" type="email" value={ input.ClientEmail }/></div>
+							<div class="v1-field"><label>Telefone da empresa</label><input name="client_phone" data-mask="phone" autocomplete="tel" value={ input.ClientPhone }/></div>
+							<div class="v1-field"><label>Contato</label><input name="contact_name" value={ input.ContactName }/></div>
+							<div class="v1-field"><label>Cargo do contato</label><input name="contact_role" value={ input.ContactRole }/></div>
+							<div class="v1-field"><label>E-mail do contato</label><input name="contact_email" type="email" value={ input.ContactEmail }/></div>
+							<div class="v1-field"><label>Telefone do contato</label><input name="contact_phone" data-mask="phone" autocomplete="tel" value={ input.ContactPhone }/></div>
+						</div>
+					</div>
+				</section>
+
+				<section class="v1-section">
+					<header class="v1-section-head"><div><h2>Contexto da negociação</h2><p>Informações que alimentam os slides de cenário e solução da V1.</p></div></header>
+					<div class="v1-section-body">
+						<div class="v1-form-grid">
+							<div class="v1-field"><label>Título</label><input name="title" value={ proposalTitle(input.Title) } required/></div>
+							<div class="v1-field"><label>Validade</label><input name="valid_until" type="date" value={ editorDate(input.ValidUntil) }/></div>
+							<div class="v1-field full"><label>Cenário considerado</label><textarea name="operation_context" placeholder="Ex.: Validação de motoristas antes do carregamento, com volume estimado de 1.500 análises por mês.">{ input.OperationContext }</textarea></div>
+							<div class="v1-field full"><label>Prioridades do cliente</label><textarea name="customer_priorities" placeholder="Uma prioridade por linha.">{ EditorLines(input.CustomerPriorities) }</textarea></div>
+							<div class="v1-field"><label>Solução proposta</label><input name="solution_title" value={ input.SolutionTitle } placeholder="Cargo Score + Biometria"/></div>
+							<div class="v1-field full"><label>Escopo da solução</label><textarea name="solution_scope" placeholder="Um item por linha: Biometria facial, CNH, ANTT/RNTRC...">{ EditorLines(input.SolutionScope) }</textarea></div>
+						</div>
+					</div>
+				</section>
+
+				<section class="v1-section">
+					<header class="v1-section-head"><div><h2>Modelo comercial</h2><p>Selecione a forma de composição dos valores desta versão.</p></div></header>
+					<div class="v1-section-body">
+						<div class="v1-model-grid">
+							for _, model := range catalog.PricingModels {
+								<label class="v1-model-card">
+									<input type="radio" name="pricing_model" value={ model.ID } checked?={ IsPricingModel(input, model.ID) }/>
+									<small>MODELO COMERCIAL</small>
+									<strong>{ model.Title }</strong>
+									<span>{ model.Summary }</span>
+								</label>
+							}
+						</div>
+					</div>
+				</section>
+
+				<section class="v1-section">
+					<header class="v1-section-head"><div><h2>Produtos e valores</h2><p>Marque Incluído, Opcional ou Não oferecer. O cliente verá apenas o que fizer parte da versão.</p></div></header>
+					<div class="v1-section-body">
+						for _, group := range catalog.Groups {
+							<section class="v1-product-group" data-catalog-group={ group.ID }>
+								<header class="v1-product-head"><strong>{ group.ShortTitle }</strong><span>{ group.Summary }</span></header>
+								<div class="v1-table-wrap">
+									<table class="v1-pricing-table">
+										<thead><tr><th>Item</th><th>Unidade</th><th>Status</th><th>Valor</th></tr></thead>
+										<tbody>
+											for _, catalogItem := range group.Items {
+												{{ existing, found := ProposalEditorItem(input, catalogItem.ID) }}
+												<tr data-models={ joinModels(catalogItem.Models) }>
+													<td><strong>{ catalogItem.Label }</strong><input type="hidden" name="catalog_id" value={ catalogItem.ID }/></td>
+													<td><small>{ catalogItem.Unit }</small></td>
+													<td>
+														<select name="item_status">
+															<option value="off" selected?={ !found }>Não oferecer</option>
+															<option value="included" selected?={ found && !existing.IsOptional }>Incluído</option>
+															<option value="optional" selected?={ found && existing.IsOptional }>Opcional</option>
+														</select>
+													</td>
+													<td><input name="item_price" type="number" min="0" step="0.01" value={ editorPrice(existing.Price, found) } placeholder="0,00"/></td>
+												</tr>
+											}
+										</tbody>
+									</table>
+								</div>
+							</section>
 						}
 					</div>
-					<div class="field" style="margin-top:16px"><label>Condição adicional</label><textarea name="custom_conditions" placeholder="Uma condição por linha"></textarea></div>
+				</section>
+
+				<section class="v1-section">
+					<header class="v1-section-head"><div><h2>Resumo financeiro</h2><p>Valores complementares destacados no slide de investimento.</p></div></header>
+					<div class="v1-section-body">
+						<div class="v1-form-grid">
+							<div class="v1-field"><label>Fatura mínima mensal</label><input name="minimum_invoice" type="number" min="0" step="0.01" value={ editorFloat(input.MinimumInvoice) }/></div>
+							<div class="v1-field"><label>Implantação</label><input name="setup_fee" type="number" min="0" step="0.01" value={ editorFloat(input.SetupFee) }/></div>
+						</div>
+					</div>
+				</section>
+
+				<section class="v1-section">
+					<header class="v1-section-head"><div><h2>Condições comerciais</h2><p>Escolha condições padrão e inclua observações específicas quando necessário.</p></div></header>
+					<div class="v1-section-body">
+						<div class="v1-condition-grid">
+							for _, condition := range catalog.StandardConditions {
+								<label class="v1-condition"><input type="checkbox" name="condition" value={ condition.Text } checked?={ conditionChecked(input.Conditions, condition.Text) }/><span>{ condition.Text }</span></label>
+							}
+						</div>
+						<div class="v1-field" style="margin-top:16px"><label>Condições adicionais</label><textarea name="custom_conditions" placeholder="Uma condição por linha">{ CustomConditions(input.Conditions) }</textarea></div>
+					</div>
+				</section>
+
+				<div class="v1-editor-footer">
+					<span class="v1-version-label">Publicar congela esta versão. Novas alterações geram uma nova versão.</span>
+					<div class="v1-actions">
+						<button class="v1-button dark" type="submit" name="action" value="draft">Salvar rascunho</button>
+						<button class="v1-button primary" type="submit" name="action" value="publish" data-processing="Publicando proposta...">Publicar versão</button>
+					</div>
 				</div>
-			</section>
-			<div class="actions">
-				<button class="btn dark" type="submit" name="action" value="draft">Salvar rascunho</button>
-				<button class="btn primary" type="submit" name="action" value="publish" data-processing="Publicando proposta...">Publicar versão</button>
-				if draft.PublicToken != "" {
-					<a class="btn" target="_blank" rel="noopener" href={ proposalPublicURL(draft.PublicToken) }>Abrir link público</a>
-				}
-			</div>
-		</form>
+			</form>
+		</div>
 		<script>
-		(function(){const form=document.getElementById('proposal-editor');function sync(){const model=form.querySelector('[name=pricing_model]:checked')?.value||'per_item';form.querySelectorAll('tr[data-models]').forEach(row=>{const models=(row.dataset.models||'').split(',').filter(Boolean);row.hidden=models.length>0&&!models.includes(model);if(row.hidden){row.querySelector('[name=item_status]').value='off';}});}form.querySelectorAll('[name=pricing_model]').forEach(r=>r.addEventListener('change',sync));sync();})();
+		(function(){const form=document.getElementById('proposal-editor');if(!form)return;function sync(){const model=form.querySelector('[name=pricing_model]:checked')?.value||'per_item';form.querySelectorAll('tr[data-models]').forEach(row=>{const models=(row.dataset.models||'').split(',').filter(Boolean);row.hidden=models.length>0&&!models.includes(model);if(row.hidden){const status=row.querySelector('[name=item_status]');if(status)status.value='off';}});}form.querySelectorAll('[name=pricing_model]').forEach(radio=>radio.addEventListener('change',sync));sync();})();
 		</script>
 	}
 }
