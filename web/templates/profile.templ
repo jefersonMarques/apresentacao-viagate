@@ -4,59 +4,69 @@ import "github.com/jefersonMarques/apresentacao-viagate/internal/domain"
 
 templ ProfilePage(current domain.User, profile domain.User, message, errorMessage string) {
 	@AdminLayout("ViaGate — Meu perfil", current) {
-		<header class="admin-page-header">
-			<div>
-				<span class="eyebrow">MINHA CONTA</span>
-				<h1>Perfil comercial</h1>
-				<p>Estes dados identificam você no painel e são usados nas novas propostas e apresentações.</p>
-			</div>
-		</header>
-		if message != "" {
-			<div class="notice">{ message }</div>
-		}
-		if errorMessage != "" {
-			<div class="notice error">{ errorMessage }</div>
-		}
-		<div class="profile-layout">
-			<aside class="profile-card">
-				<div class="profile-avatar large">{ UserInitials(profile.Name) }</div>
-				<h2>{ profile.Name }</h2>
-				if profile.JobTitle != "" {
-					<p>{ profile.JobTitle }</p>
-				}
-				<span>{ profile.Email }</span>
-				if profile.Phone != "" {
-					<span>{ Phone(profile.Phone) }</span>
-				}
-				<div class="profile-note">Alterações passam a valer em novas versões salvas. Versões já publicadas mantêm os dados que foram congelados nelas.</div>
-			</aside>
-			<section class="data-panel profile-form-panel">
-				<div class="data-panel-head">
-					<div><h2>Dados pessoais</h2><p>Informações de contato do responsável comercial.</p></div>
+		<link rel="stylesheet" href="/assets/v1-admin-forms.css"/>
+		<div class="v1-page">
+			<header class="v1-editor-header">
+				<div>
+					<span class="v1-eyebrow">MEU PERFIL COMERCIAL</span>
+					<h1>Dados que aparecem nos materiais</h1>
+					<p>Este perfil segue a estrutura da V1. Os dados são congelados em cada nova versão de proposta ou apresentação.</p>
 				</div>
-				<form method="post" action="/admin/profile" class="profile-form">
-					<div class="grid">
-						<div class="field full"><label>Nome completo</label><input name="name" value={ profile.Name } autocomplete="name" required/></div>
-						<div class="field"><label>E-mail</label><input name="email" type="email" value={ profile.Email } autocomplete="email" required/></div>
-						<div class="field"><label>Telefone / WhatsApp</label><input name="phone" data-mask="phone" value={ profile.Phone } autocomplete="tel"/></div>
-						<div class="field full"><label>Cargo / função comercial</label><input name="job_title" value={ profile.JobTitle } placeholder="Ex.: Consultor Comercial" autocomplete="organization-title"/></div>
+			</header>
+			if message != "" {
+				<div class="v1-message">{ message }</div>
+			}
+			if errorMessage != "" {
+				<div class="v1-message error">{ errorMessage }</div>
+			}
+			<div class="v1-profile-grid">
+				<aside class="v1-profile-card">
+					if profile.PhotoURL != "" {
+						<img class="v1-profile-photo" src={ templ.SafeURL(profile.PhotoURL) } alt={ profile.Name }/>
+					} else {
+						<div class="v1-profile-fallback">{ UserInitials(profile.Name) }</div>
+					}
+					<h2>{ profile.Name }</h2>
+					if profile.JobTitle != "" {
+						<p class="role">{ profile.JobTitle }</p>
+					}
+					<span class="detail">{ profile.Email }</span>
+					if profile.Phone != "" {
+						<span class="detail">{ Phone(profile.Phone) }</span>
+					}
+					if profile.LinkedInURL != "" || profile.InstagramURL != "" {
+						<div class="v1-profile-socials">
+							if profile.LinkedInURL != "" { <a href={ templ.SafeURL(profile.LinkedInURL) } target="_blank" rel="noopener">LinkedIn</a> }
+							if profile.InstagramURL != "" { <a href={ templ.SafeURL(profile.InstagramURL) } target="_blank" rel="noopener">Instagram</a> }
+						</div>
+					}
+					<div class="v1-profile-note">Alterar o perfil não modifica versões já publicadas. A próxima versão salva recebe uma cópia destes dados.</div>
+				</aside>
+				<section class="v1-section">
+					<header class="v1-section-head"><div><h2>Meu perfil comercial</h2><p>Mesmos dados previstos na V1, agora armazenados no PostgreSQL.</p></div></header>
+					<div class="v1-section-body">
+						<form method="post" action="/admin/profile">
+							<div class="v1-form-grid">
+								<div class="v1-field full"><label>Nome</label><input name="name" value={ profile.Name } autocomplete="name" required/></div>
+								<div class="v1-field full"><label>Cargo</label><input name="job_title" value={ profile.JobTitle } placeholder="Sócio-Diretor Comercial" autocomplete="organization-title"/></div>
+								<div class="v1-field"><label>E-mail comercial</label><input name="email" type="email" value={ profile.Email } autocomplete="email" required/></div>
+								<div class="v1-field"><label>Telefone / WhatsApp</label><input name="phone" data-mask="phone" value={ profile.Phone } autocomplete="tel"/></div>
+								<div class="v1-field full"><label>URL da foto</label><input name="photo_url" type="url" value={ profile.PhotoURL } placeholder="https://..." autocomplete="url"/></div>
+								<div class="v1-field"><label>LinkedIn</label><input name="linkedin_url" type="url" value={ profile.LinkedInURL } placeholder="https://www.linkedin.com/in/..." autocomplete="url"/></div>
+								<div class="v1-field"><label>Instagram</label><input name="instagram_url" type="url" value={ profile.InstagramURL } placeholder="https://www.instagram.com/..." autocomplete="url"/></div>
+							</div>
+							<div class="v1-preview-card">
+								<small>COMO SERÁ IDENTIFICADO</small>
+								<strong>{ profile.Name }</strong>
+								if profile.JobTitle != "" { <span>{ profile.JobTitle }</span> }
+								<span>{ profile.Email }</span>
+								if profile.Phone != "" { <span>{ Phone(profile.Phone) }</span> }
+							</div>
+							<div class="v1-actions" style="margin-top:18px"><button class="v1-button primary" type="submit" data-processing="Salvando perfil...">Salvar perfil</button></div>
+						</form>
 					</div>
-					<div class="profile-preview">
-						<span class="eyebrow">COMO APARECE NOS MATERIAIS</span>
-						<strong>{ profile.Name }</strong>
-						if profile.JobTitle != "" {
-							<span>{ profile.JobTitle }</span>
-						}
-						<span>
-							{ profile.Email }
-							if profile.Phone != "" {
-								<span> · { Phone(profile.Phone) }</span>
-							}
-						</span>
-					</div>
-					<div class="actions"><button class="btn primary" type="submit" data-processing="Salvando perfil...">Salvar alterações</button></div>
-				</form>
-			</section>
+				</section>
+			</div>
 		</div>
 	}
 }
