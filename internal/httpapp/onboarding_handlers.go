@@ -13,7 +13,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
-	"github.com/jefersonMarques/apresentacao-viagate/internal/notifications"
 	onboardingpkg "github.com/jefersonMarques/apresentacao-viagate/internal/onboarding"
 	"github.com/jefersonMarques/apresentacao-viagate/web/templates"
 )
@@ -90,23 +89,21 @@ func (a *App) uploadOnboardingDocument(w http.ResponseWriter,r *http.Request) {
 func (a *App) submitOnboarding(w http.ResponseWriter,r *http.Request) {
 	current,err:=a.currentOnboarding(r);if err!=nil{http.Error(w,"acesso negado",http.StatusForbidden);return}
 	if err:=a.onboardingStore.Submit(r.Context(),current.ID);err!=nil{render(r.Context(),w,http.StatusBadRequest,templates.OnboardingPage(current,"",err.Error()));return}
-	generated,err:=a.contractGenerator.GenerateForOnboarding(r.Context(),current.ID)
+
+	access,_,err:=a.ensureContractDelivery(r.Context(),current.ID)
 	if err!=nil{
-		a.logger.Error("generate contract failed","error",err,"onboarding_id",current.ID)
+		a.logger.Error("contract delivery failed","error",err,"onboarding_id",current.ID)
 		_,_ = a.pool.Exec(r.Context(),`insert into audit_events(actor_type,event_type,resource_type,resource_id,metadata) values('system','contract.generation_failed','onboarding',$1,jsonb_build_object('error',$2))`,current.ID,err.Error())
 		_,_ = a.pool.Exec(r.Context(),`
-			insert into notification_outbox(recipient,recipient_name,subject,html_body,text_body)
-			select u.email,u.name,'Falha na geração de contrato: '||p.title,
+			insert into notification_outbox(dedupe_key,recipient,recipient_name,subject,html_body,text_body)
+			select 'contract-generation-failed:'||o.id::text,u.email,u.name,'Falha na geração de contrato: '||p.title,
 			       '<p>O onboarding de <strong>'||c.legal_name||'</strong> foi enviado, mas o contrato precisa ser gerado novamente pelo painel.</p>',
 			       'O onboarding de '||c.legal_name||' foi enviado, mas a geração automática do contrato falhou.'
 			from onboardings o join proposal_acceptances pa on pa.id=o.proposal_acceptance_id join proposals p on p.id=pa.proposal_id join clients c on c.id=o.client_id join users u on u.id=p.created_by where o.id=$1
+			on conflict (dedupe_key) where dedupe_key is not null do nothing
 		`,current.ID)
 		http.Error(w,"Dados recebidos com sucesso. O comercial foi avisado para concluir a geração do contrato.",http.StatusAccepted);return
 	}
-	link:=strings.TrimRight(a.cfg.BaseURL,"/")+"/sign/"+generated.SignerToken
-	htmlBody:=fmt.Sprintf("<p>Olá, %s.</p><p>Os dados da operação foram recebidos e o contrato está pronto para assinatura.</p><p><a href=\"%s\">Revisar e assinar contrato</a></p>",generated.SignerName,link)
-	_ = notifications.Enqueue(r.Context(),a.pool,generated.SignerName,generated.SignerEmail,"Contrato ViaGate disponível para assinatura",htmlBody,"Contrato disponível em "+link)
-	_ = a.contractStore.MarkSent(r.Context(),generated.ContractID)
-	_,_ = a.pool.Exec(r.Context(),`insert into audit_events(actor_type,event_type,resource_type,resource_id,ip_address,user_agent,metadata) values('customer','onboarding.submitted','onboarding',$1,$2,$3,jsonb_build_object('contract_id',$4))`,current.ID,requestIP(r),r.UserAgent(),generated.ContractID)
-	http.Redirect(w,r,"/sign/"+generated.SignerToken,http.StatusSeeOther)
+	_,_ = a.pool.Exec(r.Context(),`insert into audit_events(actor_type,event_type,resource_type,resource_id,ip_address,user_agent,metadata) values('customer','onboarding.submitted','onboarding',$1,$2,$3,jsonb_build_object('contract_id',$4))`,current.ID,requestIP(r),r.UserAgent(),access.ContractID)
+	http.Redirect(w,r,"/sign/"+access.SignerToken,http.StatusSeeOther)
 }
