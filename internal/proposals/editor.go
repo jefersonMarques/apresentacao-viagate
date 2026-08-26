@@ -50,7 +50,7 @@ func (s *Store) SaveDraft(ctx context.Context,userID string,allowAll bool,input 
 	clientID:=""
 	if input.ProposalID==""{
 		if input.ClientCNPJ!=""{
-			_ = tx.QueryRow(ctx,`select id::text from clients where cnpj=$1`,input.ClientCNPJ).Scan(&clientID)
+			_ = tx.QueryRow(ctx,`select id::text from clients where cnpj=$1 and created_by=$2`,input.ClientCNPJ,userID).Scan(&clientID)
 		}
 		if clientID==""{
 			if err:=tx.QueryRow(ctx,`
@@ -58,6 +58,11 @@ func (s *Store) SaveDraft(ctx context.Context,userID string,allowAll bool,input 
 				values($1,nullif($2,''),nullif($3,''),nullif($4,'')::citext,nullif($5,''),$6)
 				returning id::text
 			`,input.ClientLegalName,input.ClientTradeName,input.ClientCNPJ,input.ClientEmail,input.ClientPhone,userID).Scan(&clientID);err!=nil{return SavedDraft{},fmt.Errorf("create client: %w",err)}
+		}else{
+			if _,err:=tx.Exec(ctx,`
+				update clients set legal_name=$2,trade_name=nullif($3,''),email=nullif($4,'')::citext,phone=nullif($5,''),updated_at=now()
+				where id=$1 and created_by=$6
+			`,clientID,input.ClientLegalName,input.ClientTradeName,input.ClientEmail,input.ClientPhone,userID);err!=nil{return SavedDraft{},fmt.Errorf("update client: %w",err)}
 		}
 		if err:=tx.QueryRow(ctx,`
 			insert into proposals(client_id,title,status,valid_until,created_by)
