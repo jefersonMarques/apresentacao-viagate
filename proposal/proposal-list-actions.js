@@ -178,7 +178,15 @@ async function openPublicProposal(proposalId) {
     return;
   }
 
-  window.open(buildPublicProposalUrl(version.public_token), '_blank', 'noopener,noreferrer');
+  const url = buildPublicProposalUrl(version.public_token);
+  const opened = window.open(url, '_blank');
+
+  if (opened) {
+    opened.opener = null;
+    return;
+  }
+
+  window.location.href = url;
 }
 
 async function deleteProposal(proposalId, row, button) {
