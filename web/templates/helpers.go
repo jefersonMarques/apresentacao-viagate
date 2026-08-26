@@ -18,6 +18,18 @@ func HasRole(user domain.User, role string) bool {
 
 func Join(values []string) string { return strings.Join(values, ", ") }
 
+func UserInitials(name string) string {
+	parts:=strings.Fields(strings.TrimSpace(name))
+	if len(parts)==0{return "VG"}
+	first:=[]rune(parts[0])
+	if len(parts)==1{
+		if len(first)>=2{return strings.ToUpper(string(first[:2]))}
+		return strings.ToUpper(string(first))
+	}
+	last:=[]rune(parts[len(parts)-1])
+	return strings.ToUpper(string(first[0])+string(last[0]))
+}
+
 func Money(value float64) string {
 	text := fmt.Sprintf("%.2f", value)
 	parts := strings.Split(text, ".")
