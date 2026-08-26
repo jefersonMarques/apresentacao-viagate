@@ -2,7 +2,9 @@ package httpapp
 
 import (
 	"fmt"
+	"html"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -87,10 +89,10 @@ func (a *App) adminOnboardingDocument(w http.ResponseWriter,r *http.Request){
 	id:=chi.URLParam(r,"id")
 	document,err:=a.onboardingStore.DocumentByID(r.Context(),id,chi.URLParam(r,"documentID"))
 	if err!=nil{http.Error(w,"documento não encontrado",http.StatusNotFound);return}
-	url,err:=a.storage.SignedDownloadURL(r.Context(),document.StorageKey,a.cfg.S3.DownloadTTL)
+	downloadURL,err:=a.storage.SignedDownloadURL(r.Context(),document.StorageKey,a.cfg.S3.DownloadTTL)
 	if err!=nil{a.logger.Error("presign onboarding document failed","error",err);http.Error(w,"não foi possível disponibilizar o documento",http.StatusInternalServerError);return}
 	w.Header().Set("Cache-Control","no-store")
-	http.Redirect(w,r,url.String(),http.StatusTemporaryRedirect)
+	http.Redirect(w,r,downloadURL.String(),http.StatusTemporaryRedirect)
 }
 
 func (a *App) sendOnboardingCorrection(r *http.Request,onboardingID,acceptanceID,name,emailAddress,notes string) error {
@@ -98,11 +100,8 @@ func (a *App) sendOnboardingCorrection(r *http.Request,onboardingID,acceptanceID
 	expires:=time.Now().Add(7*24*time.Hour)
 	if err:=a.proposalStore.CreateCustomerSession(r.Context(),acceptanceID,hash,requestIP(r),r.UserAgent(),expires);err!=nil{return err}
 	link:=strings.TrimRight(a.cfg.BaseURL,"/")+"/onboarding/resume/"+plain
-	htmlBody:=fmt.Sprintf("<p>Olá, %s.</p><p>Precisamos de um ajuste nas informações enviadas para a implantação ViaGate.</p><p><strong>Solicitação:</strong> %s</p><p><a href=\"%s\">Revisar e corrigir cadastro</a></p>",name,notes,link)
+	htmlBody:=fmt.Sprintf("<p>Olá, %s.</p><p>Precisamos de um ajuste nas informações enviadas para a implantação ViaGate.</p><p><strong>Solicitação:</strong> %s</p><p><a href=\"%s\">Revisar e corrigir cadastro</a></p>",html.EscapeString(name),html.EscapeString(notes),html.EscapeString(link))
 	return notifications.Enqueue(r.Context(),a.pool,name,emailAddress,"Ajuste necessário no cadastro ViaGate",htmlBody,"Ajuste solicitado: "+notes+"\nAcesse: "+link)
 }
 
-func queryEscape(value string) string {
-	replacer:=strings.NewReplacer("%","%25"," ","%20","?","%3F","&","%26","=","%3D","#","%23","\n","%0A")
-	return replacer.Replace(value)
-}
+func queryEscape(value string) string { return url.QueryEscape(value) }
