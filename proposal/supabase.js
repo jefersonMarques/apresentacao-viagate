@@ -99,4 +99,8 @@ if (document.getElementById('proposalPresentation')) {
   import('./analytics.js?v=20260825-8').catch((error) => {
     console.error('Não foi possível carregar as estatísticas da proposta.', error);
   });
+
+  import('./proposal-product-summary.js?v=20260825-1').catch((error) => {
+    console.error('Não foi possível carregar o resumo visual dos produtos.', error);
+  });
 }
