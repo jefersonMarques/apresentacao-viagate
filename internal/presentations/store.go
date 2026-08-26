@@ -21,6 +21,7 @@ type Presentation struct {
 	CurrentVersion int
 	PublicToken    string
 	CreatedBy      string
+	CreatedByName  string
 	UpdatedAt      time.Time
 }
 
@@ -38,6 +39,8 @@ type EditorInput struct {
 	SelectedModules    []string
 	SalespersonName    string
 	SalespersonEmail   string
+	SalespersonPhone   string
+	SalespersonJobTitle string
 	ContentHash        []byte
 }
 
@@ -49,22 +52,24 @@ type SavedDraft struct {
 }
 
 type PublicPresentation struct {
-	PresentationID     string
-	VersionID          string
-	VersionNumber      int
-	PublicToken        string
-	Title              string
-	ClientLegalName    string
-	ClientTradeName    string
-	ContactName        string
-	ContactRole        string
-	ContactEmail       string
-	SalespersonName    string
-	SalespersonEmail   string
-	ShowClientIdentity bool
-	ShowContactSlide   bool
-	SelectedModules    []string
-	ContentHash        []byte
+	PresentationID      string
+	VersionID           string
+	VersionNumber       int
+	PublicToken         string
+	Title               string
+	ClientLegalName     string
+	ClientTradeName     string
+	ContactName         string
+	ContactRole         string
+	ContactEmail        string
+	SalespersonName     string
+	SalespersonEmail    string
+	SalespersonPhone    string
+	SalespersonJobTitle string
+	ShowClientIdentity  bool
+	ShowContactSlide    bool
+	SelectedModules     []string
+	ContentHash         []byte
 }
 
 type presentationContent struct {
@@ -80,8 +85,10 @@ type presentationContent struct {
 		Email string `json:"email"`
 	} `json:"contact"`
 	Salesperson struct {
-		Name  string `json:"name"`
-		Email string `json:"email"`
+		Name     string `json:"name"`
+		Email    string `json:"email"`
+		Phone    string `json:"phone"`
+		JobTitle string `json:"job_title"`
 	} `json:"salesperson"`
 	Settings struct {
 		ShowClientIdentity bool     `json:"show_client_identity"`
@@ -95,8 +102,9 @@ func NewStore(pool *pgxpool.Pool)*Store{return &Store{pool:pool}}
 func (s *Store) List(ctx context.Context,userID string,all bool)([]Presentation,error){
 	query:=`
 		select p.id::text,coalesce(c.legal_name,''),p.title,p.status::text,p.current_version,
-		       coalesce(v.public_token::text,''),p.created_by::text,p.updated_at
+		       coalesce(v.public_token::text,''),p.created_by::text,u.name,p.updated_at
 		from presentations p
+		join users u on u.id=p.created_by
 		left join clients c on c.id=p.client_id
 		left join presentation_versions v on v.presentation_id=p.id and v.version_number=p.current_version and v.published_at is not null
 	`
@@ -105,7 +113,7 @@ func (s *Store) List(ctx context.Context,userID string,all bool)([]Presentation,
 	query+=` order by p.updated_at desc`
 	rows,err:=s.pool.Query(ctx,query,args...);if err!=nil{return nil,err};defer rows.Close()
 	var items []Presentation
-	for rows.Next(){var item Presentation;if err:=rows.Scan(&item.ID,&item.ClientName,&item.Title,&item.Status,&item.CurrentVersion,&item.PublicToken,&item.CreatedBy,&item.UpdatedAt);err!=nil{return nil,err};items=append(items,item)}
+	for rows.Next(){var item Presentation;if err:=rows.Scan(&item.ID,&item.ClientName,&item.Title,&item.Status,&item.CurrentVersion,&item.PublicToken,&item.CreatedBy,&item.CreatedByName,&item.UpdatedAt);err!=nil{return nil,err};items=append(items,item)}
 	return items,rows.Err()
 }
 
@@ -142,7 +150,7 @@ func (s *Store) SaveDraft(ctx context.Context,userID string,allowAll bool,input 
 	content:=presentationContent{Title:input.Title}
 	content.Client.LegalName=input.ClientLegalName;content.Client.TradeName=input.ClientTradeName;content.Client.CNPJ=input.ClientCNPJ
 	content.Contact.Name=input.ContactName;content.Contact.Role=input.ContactRole;content.Contact.Email=input.ContactEmail
-	content.Salesperson.Name=input.SalespersonName;content.Salesperson.Email=input.SalespersonEmail
+	content.Salesperson.Name=input.SalespersonName;content.Salesperson.Email=input.SalespersonEmail;content.Salesperson.Phone=input.SalespersonPhone;content.Salesperson.JobTitle=input.SalespersonJobTitle
 	content.Settings.ShowClientIdentity=input.ShowClientIdentity;content.Settings.ShowContactSlide=input.ShowContactSlide;content.Settings.SelectedModules=input.SelectedModules
 	contentJSON,err:=json.Marshal(content);if err!=nil{return SavedDraft{},err}
 
@@ -197,7 +205,7 @@ func (s *Store) EditorByID(ctx context.Context,userID,presentationID string,allo
 			if strings.TrimSpace(content.Title)!=""{input.Title=content.Title}
 			input.ContactName=content.Contact.Name;input.ContactRole=content.Contact.Role;input.ContactEmail=content.Contact.Email
 			input.ShowClientIdentity=content.Settings.ShowClientIdentity;input.ShowContactSlide=content.Settings.ShowContactSlide;input.SelectedModules=content.Settings.SelectedModules
-			input.SalespersonName=content.Salesperson.Name;input.SalespersonEmail=content.Salesperson.Email
+			input.SalespersonName=content.Salesperson.Name;input.SalespersonEmail=content.Salesperson.Email;input.SalespersonPhone=content.Salesperson.Phone;input.SalespersonJobTitle=content.Salesperson.JobTitle
 		}
 	}
 	return input,draft,nil
@@ -215,7 +223,7 @@ func (s *Store) PublicByToken(ctx context.Context,token string)(PublicPresentati
 	result.Title=currentTitle;if strings.TrimSpace(content.Title)!=""{result.Title=content.Title}
 	result.ClientLegalName=content.Client.LegalName;result.ClientTradeName=content.Client.TradeName
 	result.ContactName=content.Contact.Name;result.ContactRole=content.Contact.Role;result.ContactEmail=content.Contact.Email
-	result.SalespersonName=content.Salesperson.Name;result.SalespersonEmail=content.Salesperson.Email
+	result.SalespersonName=content.Salesperson.Name;result.SalespersonEmail=content.Salesperson.Email;result.SalespersonPhone=content.Salesperson.Phone;result.SalespersonJobTitle=content.Salesperson.JobTitle
 	result.ShowClientIdentity=content.Settings.ShowClientIdentity;result.ShowContactSlide=content.Settings.ShowContactSlide;result.SelectedModules=content.Settings.SelectedModules
 	return result,nil
 }
