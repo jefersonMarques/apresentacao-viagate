@@ -67,8 +67,19 @@ func (a *App) proposalInputFromForm(r *http.Request,salesperson domain.User)(pro
 	if value:=strings.TrimSpace(r.FormValue("client_cnpj"));value!=""{cnpj,err:=cleanCNPJ(value);if err!=nil{return input,err};input.ClientCNPJ=cnpj}
 	clientEmail,err:=cleanEmail(r.FormValue("client_email"),false);if err!=nil{return input,fmt.Errorf("E-mail do cliente inválido.")};input.ClientEmail=clientEmail
 	clientPhone,err:=cleanPhone(r.FormValue("client_phone"),false);if err!=nil{return input,fmt.Errorf("Telefone do cliente inválido.")};input.ClientPhone=clientPhone
+	if value:=strings.TrimSpace(r.FormValue("client_logo_url"));value!=""{logoURL,err:=cleanProfileURL(value);if err!=nil{return input,fmt.Errorf("URL do logo do cliente inválida.")};input.ClientLogoURL=logoURL}
+
+	input.ContactName=strings.TrimSpace(r.FormValue("contact_name"))
+	input.ContactRole=strings.TrimSpace(r.FormValue("contact_role"))
+	contactEmail,err:=cleanEmail(r.FormValue("contact_email"),false);if err!=nil{return input,fmt.Errorf("E-mail do contato inválido.")};input.ContactEmail=contactEmail
+	contactPhone,err:=cleanPhone(r.FormValue("contact_phone"),false);if err!=nil{return input,fmt.Errorf("Telefone do contato inválido.")};input.ContactPhone=contactPhone
+
 	input.Title=strings.TrimSpace(r.FormValue("title"));if input.Title==""{input.Title="Proposta Comercial ViaGate"}
 	if value:=strings.TrimSpace(r.FormValue("valid_until"));value!=""{date,err:=time.Parse("2006-01-02",value);if err!=nil{return input,fmt.Errorf("Validade inválida.")};input.ValidUntil=&date}
+	input.OperationContext=strings.TrimSpace(r.FormValue("operation_context"))
+	input.CustomerPriorities=multilineValues(r.FormValue("customer_priorities"))
+	input.SolutionTitle=strings.TrimSpace(r.FormValue("solution_title"))
+	input.SolutionScope=multilineValues(r.FormValue("solution_scope"))
 	input.PricingModel=strings.TrimSpace(r.FormValue("pricing_model"));if !validPricingModel(input.PricingModel){return input,fmt.Errorf("Modelo comercial inválido.")}
 
 	minimumInvoice,err:=parseMoney(r.FormValue("minimum_invoice"));if err!=nil{return input,fmt.Errorf("Fatura mínima inválida.")};input.MinimumInvoice=minimumInvoice
@@ -89,7 +100,15 @@ func (a *App) proposalInputFromForm(r *http.Request,salesperson domain.User)(pro
 	validUntil:="";if input.ValidUntil!=nil{validUntil=input.ValidUntil.Format("2006-01-02")}
 	input.Content=map[string]any{
 		"proposal":map[string]any{"title":input.Title,"valid_until":validUntil},
-		"client":map[string]any{"legal_name":input.ClientLegalName,"trade_name":input.ClientTradeName,"cnpj":input.ClientCNPJ,"email":input.ClientEmail,"phone":input.ClientPhone},
+		"client":map[string]any{
+			"legal_name":input.ClientLegalName,"trade_name":input.ClientTradeName,"company_name":input.ClientLegalName,
+			"cnpj":input.ClientCNPJ,"email":input.ClientEmail,"phone":input.ClientPhone,"logo_url":input.ClientLogoURL,
+		},
+		"contact":map[string]any{"name":input.ContactName,"role":input.ContactRole,"email":input.ContactEmail,"phone":input.ContactPhone},
+		"operation_context":input.OperationContext,
+		"customer_priorities":input.CustomerPriorities,
+		"solution_title":input.SolutionTitle,
+		"solution_scope":input.SolutionScope,
 		"salesperson":map[string]any{
 			"name":salesperson.Name,"email":salesperson.Email,"phone":salesperson.Phone,
 			"job_title":salesperson.JobTitle,"role":salesperson.JobTitle,"photo_url":salesperson.PhotoURL,
@@ -126,5 +145,14 @@ func normalizedConditions(standard []string,custom string)[]string{
 	}
 	for _,value:=range standard{appendValue(value)}
 	for _,line:=range strings.Split(custom,"\n"){appendValue(line)}
+	return result
+}
+
+func multilineValues(value string)[]string{
+	result:=[]string{}
+	for _,line:=range strings.Split(value,"\n"){
+		line=strings.TrimSpace(line)
+		if line!=""{result=append(result,line)}
+	}
 	return result
 }
