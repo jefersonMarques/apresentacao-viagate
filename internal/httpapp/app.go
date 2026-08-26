@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -164,8 +165,8 @@ func (a *App) Routes() http.Handler {
 
 func registerV1VisualAssets(router chi.Router){
 	router.Handle("/v1/assets/*",http.StripPrefix("/v1/assets/",http.FileServer(http.Dir("assets"))))
+	router.Get("/v1/presentation-content.html",serveV1PresentationContent)
 	files:=map[string]string{
-		"/v1/presentation-content.html":"presentation-content.html",
 		"/v1/styles.css":"styles.css",
 		"/v1/script.js":"script.js",
 		"/v1/enhancements.css":"enhancements.css",
@@ -193,6 +194,16 @@ func registerV1VisualAssets(router chi.Router){
 	for route,path:=range files{router.Get(route,serveProjectFile(path))}
 }
 
+func serveV1PresentationContent(w http.ResponseWriter,r *http.Request){
+	content,err:=os.ReadFile("presentation-content.html")
+	if err!=nil{http.Error(w,"apresentação indisponível",http.StatusInternalServerError);return}
+	html:=string(content)
+	html=strings.Replace(html,`<base href="/apresentacao/" />`,"",1)
+	html=strings.Replace(html,`<base href="/apresentacao/">`,"",1)
+	w.Header().Set("Content-Type","text/html; charset=utf-8")
+	_,_=w.Write([]byte(html))
+}
+
 func serveProjectFile(path string) http.HandlerFunc{
 	return func(w http.ResponseWriter,r *http.Request){http.ServeFile(w,r,path)}
 }
@@ -218,10 +229,15 @@ func (a *App) proxyClientIP(next http.Handler) http.Handler {
 func (a *App) securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
-		w.Header().Set("X-Frame-Options", "SAMEORIGIN")
 		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
 		w.Header().Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
-		w.Header().Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://unpkg.com; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'")
+		if strings.HasPrefix(r.URL.Path,"/v1/") {
+			w.Header().Set("X-Frame-Options", "SAMEORIGIN")
+			w.Header().Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://unpkg.com; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'")
+		} else {
+			w.Header().Set("X-Frame-Options", "DENY")
+			w.Header().Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
+		}
 		if a.cfg.Environment == "production" {
 			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 		}
@@ -248,7 +264,6 @@ func (a *App) sameOriginWrites(next http.Handler) http.Handler {
 				http.Error(w,"origem da requisição não permitida",http.StatusForbidden)
 				return
 			}
-		}
 		next.ServeHTTP(w,r)
 	})
 }
