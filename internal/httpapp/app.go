@@ -130,6 +130,8 @@ func (a *App) Routes() http.Handler {
 	router.Group(func(admin chi.Router) {
 		admin.Use(a.authenticated)
 		admin.Get("/admin", a.dashboard)
+		admin.Get("/admin/profile", a.profilePage)
+		admin.Post("/admin/profile", a.updateProfile)
 		admin.Get("/admin/pipeline", a.pipelinePage)
 		admin.Get("/admin/pipeline/{proposalID}", a.pipelineDetailPage)
 
