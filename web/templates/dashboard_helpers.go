@@ -1,6 +1,7 @@
 package templates
 
 import (
+	"fmt"
 	"sort"
 	"time"
 
@@ -45,6 +46,11 @@ func DashboardRecords(proposalItems []domain.Proposal,presentationItems []presen
 	}
 	sort.SliceStable(items,func(i,j int)bool{return items[i].UpdatedAt.After(items[j].UpdatedAt)})
 	return items
+}
+
+func DashboardVersionLabel(item DashboardRecord) string {
+	if item.Version<=0{return "Rascunho"}
+	return fmt.Sprintf("v%d",item.Version)
 }
 
 func DashboardCountByKind(items []DashboardRecord,kind string) int {
