@@ -81,6 +81,7 @@ func (s *Store) PublicByToken(ctx context.Context, token string) (PublicProposal
 		join proposals p on p.id=v.proposal_id
 		join clients c on c.id=p.client_id
 		where v.public_token=$1 and v.published_at is not null
+		  and v.version_number=p.current_version
 		  and p.status in ('published','accepted')
 	`, token).Scan(
 		&result.ProposalID,
@@ -159,12 +160,16 @@ func (s *Store) Accept(ctx context.Context, proposal PublicProposal, input Accep
 	defer tx.Rollback(ctx)
 
 	var currentStatus string
-	err = tx.QueryRow(ctx, `select status::text from proposals where id=$1 for update`, proposal.ProposalID).Scan(&currentStatus)
+	var currentVersion int
+	err = tx.QueryRow(ctx, `select status::text,current_version from proposals where id=$1 for update`, proposal.ProposalID).Scan(&currentStatus,&currentVersion)
 	if err != nil {
 		return AcceptanceResult{}, err
 	}
 	if currentStatus != "published" && currentStatus != "accepted" {
 		return AcceptanceResult{}, fmt.Errorf("proposal is not available for acceptance")
+	}
+	if currentVersion!=proposal.VersionNumber{
+		return AcceptanceResult{},fmt.Errorf("proposal version was superseded")
 	}
 
 	var existing AcceptanceResult
