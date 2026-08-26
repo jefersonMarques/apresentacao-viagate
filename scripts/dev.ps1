@@ -20,8 +20,8 @@ Get-Content ".env" | ForEach-Object {
     [Environment]::SetEnvironmentVariable($name, $value, "Process")
 }
 
-Write-Host "[1/4] Baixando dependências Go..."
-go mod download
+Write-Host "[1/4] Sincronizando dependências Go e go.sum..."
+go mod tidy
 
 Write-Host "[2/4] Gerando componentes templ..."
 go run github.com/a-h/templ/cmd/templ@v0.3.943 generate
