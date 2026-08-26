@@ -67,6 +67,7 @@
       if (typeof frame.contentWindow?.hostStartPresentation === 'function') {
         state.bridgeReady = true;
         startButton.disabled = false;
+        frame.hidden = false;
         loading?.setAttribute('hidden', '');
         syncNavigation();
         return;
@@ -130,7 +131,9 @@
   window.addEventListener('message', (event) => {
     if (event.source !== frame.contentWindow) return;
     const data = event.data || {};
-    if (data.type === 'viagate:presentation:state') updateNavigation(data.slideNumber, data.slideTotal);
+    if (data.source === 'viagate-presentation' && data.slideNumber && data.slideTotal) {
+      updateNavigation(data.slideNumber, data.slideTotal);
+    }
   });
 
   document.addEventListener('fullscreenchange', () => {
