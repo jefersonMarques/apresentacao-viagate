@@ -20,7 +20,8 @@ func (a *App) usersPage(w http.ResponseWriter,r *http.Request) {
 	if err!=nil { http.Error(w,"não foi possível carregar os usuários",http.StatusInternalServerError);return }
 	message:=""
 	if r.URL.Query().Get("invited")=="1" { message="Convite criado e colocado na fila de envio do Brevo." }
-	render(r.Context(),w,http.StatusOK,templates.UsersPage(user,items,message))
+	if r.URL.Query().Get("updated")=="1" { message="Acesso do usuário atualizado." }
+	render(r.Context(),w,http.StatusOK,templates.UsersManagementPage(user,items,message,r.URL.Query().Get("error")))
 }
 
 func (a *App) contractTemplatesPage(w http.ResponseWriter,r *http.Request) {
@@ -41,8 +42,6 @@ func (a *App) saveContractTemplate(w http.ResponseWriter,r *http.Request) {
 	markdown:=strings.TrimSpace(r.FormValue("markdown"))
 	if name==""||markdown=="" { http.Error(w,"nome e conteúdo são obrigatórios",http.StatusBadRequest);return }
 
-	// Valida as variáveis antes de criar uma versão permanente. Placeholders válidos
-	// podem continuar sem valor aqui; a validação final ocorre na geração do contrato.
 	hash:=sha256.Sum256([]byte(markdown))
 	version,err:=a.contractStore.SaveTemplateVersion(r.Context(),templateID,name,description,markdown,hash[:],user.ID)
 	if err!=nil { a.logger.Error("save contract template failed","error",err);http.Error(w,"não foi possível salvar o modelo",http.StatusBadRequest);return }
