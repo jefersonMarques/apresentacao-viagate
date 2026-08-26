@@ -28,6 +28,9 @@ func (a *App) newPresentationPage(w http.ResponseWriter,r *http.Request){
 		SalespersonEmail:profile.Email,
 		SalespersonPhone:profile.Phone,
 		SalespersonJobTitle:profile.JobTitle,
+		SalespersonPhotoURL:profile.PhotoURL,
+		SalespersonLinkedIn:profile.LinkedInURL,
+		SalespersonInstagram:profile.InstagramURL,
 	}
 	render(r.Context(),w,http.StatusOK,templates.PresentationEditorPage(user,input,presentations.SavedDraft{},"",""))
 }
@@ -91,6 +94,9 @@ func presentationInputFromForm(r *http.Request,salesperson domain.User)(presenta
 		SalespersonEmail:salesperson.Email,
 		SalespersonPhone:salesperson.Phone,
 		SalespersonJobTitle:salesperson.JobTitle,
+		SalespersonPhotoURL:salesperson.PhotoURL,
+		SalespersonLinkedIn:salesperson.LinkedInURL,
+		SalespersonInstagram:salesperson.InstagramURL,
 	}
 	if err!=nil{return input,fmt.Errorf("E-mail do contato inválido.")}
 	if input.Title==""{input.Title="Apresentação Institucional ViaGate"}
@@ -113,7 +119,10 @@ func presentationInputFromForm(r *http.Request,salesperson domain.User)(presenta
 		SalespersonEmail string `json:"salesperson_email"`
 		SalespersonPhone string `json:"salesperson_phone"`
 		SalespersonJobTitle string `json:"salesperson_job_title"`
-	}{input.ClientLegalName,input.ClientTradeName,input.ClientCNPJ,input.Title,input.ContactName,input.ContactRole,input.ContactEmail,input.ShowClientIdentity,input.ShowContactSlide,input.SelectedModules,input.SalespersonName,input.SalespersonEmail,input.SalespersonPhone,input.SalespersonJobTitle}
+		SalespersonPhotoURL string `json:"salesperson_photo_url"`
+		SalespersonLinkedIn string `json:"salesperson_linkedin"`
+		SalespersonInstagram string `json:"salesperson_instagram"`
+	}{input.ClientLegalName,input.ClientTradeName,input.ClientCNPJ,input.Title,input.ContactName,input.ContactRole,input.ContactEmail,input.ShowClientIdentity,input.ShowContactSlide,input.SelectedModules,input.SalespersonName,input.SalespersonEmail,input.SalespersonPhone,input.SalespersonJobTitle,input.SalespersonPhotoURL,input.SalespersonLinkedIn,input.SalespersonInstagram}
 	encoded,_:=json.Marshal(canonical);hash:=sha256.Sum256(encoded);input.ContentHash=hash[:]
 	return input,nil
 }
