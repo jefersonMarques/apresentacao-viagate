@@ -15,10 +15,10 @@ templ OnboardingFormPage(onboarding domain.Onboarding,message,errorMessage strin
 
 			<form method="post" action={ templ.SafeURL("/onboarding/"+onboarding.ID) }>
 				<section class="panel"><div class="panel-head"><h2>Contratante</h2><button class="btn" type="button" onclick="lookupCNPJ()">Preencher pelo CNPJ</button></div><div class="panel-body grid">
-					<div class="field"><label>CNPJ</label><input id="cnpj" name="cnpj" value={ onboarding.CNPJ } autocomplete="off" required/></div>
+					<div class="field"><label>CNPJ</label><input id="cnpj" name="cnpj" data-mask="cnpj" value={ onboarding.CNPJ } autocomplete="off" required/></div>
 					<div class="field"><label>Razão social</label><input id="legal_name" name="legal_name" value={ onboarding.LegalName } required/></div>
 					<div class="field"><label>Nome fantasia</label><input id="trade_name" name="trade_name" value={ onboarding.TradeName }/></div>
-					<div class="field"><label>CEP</label><input id="postal_code" name="postal_code" value={ onboarding.PostalCode }/></div>
+					<div class="field"><label>CEP</label><input id="postal_code" name="postal_code" data-mask="postal-code" autocomplete="postal-code" value={ onboarding.PostalCode }/></div>
 					<div class="field"><label>Logradouro</label><input id="street" name="street" value={ onboarding.Street }/></div>
 					<div class="field"><label>Número</label><input id="street_number" name="street_number" value={ onboarding.StreetNumber }/></div>
 					<div class="field"><label>Complemento</label><input id="complement" name="complement" value={ onboarding.Complement }/></div>
@@ -38,8 +38,8 @@ templ OnboardingFormPage(onboarding domain.Onboarding,message,errorMessage strin
 
 				<section class="panel"><div class="panel-head"><h2>Responsável pela empresa</h2></div><div class="panel-body grid">
 					<div class="field"><label>Nome completo</label><input name="responsible_name" value={ onboarding.CompanyResponsibleName } required/></div>
-					<div class="field"><label>CPF</label><input name="responsible_cpf" value={ onboarding.CompanyResponsibleCPF } inputmode="numeric" required/></div>
-					<div class="field"><label>Telefone</label><input name="responsible_phone" value={ onboarding.CompanyResponsiblePhone } required/></div>
+					<div class="field"><label>CPF</label><input name="responsible_cpf" data-mask="cpf" autocomplete="off" value={ onboarding.CompanyResponsibleCPF } required/></div>
+					<div class="field"><label>Telefone</label><input name="responsible_phone" data-mask="phone" autocomplete="tel" value={ onboarding.CompanyResponsiblePhone } required/></div>
 					<div class="field"><label>E-mail</label><input name="responsible_email" type="email" value={ onboarding.CompanyResponsibleEmail } required/></div>
 					<div class="field full"><label>Cargo / função</label><input name="responsible_role" value={ onboarding.CompanyResponsibleRole }/></div>
 					<div class="field full"><label><input type="checkbox" name="responsible_authority" value="1" checked?={ onboarding.AuthorityDeclared } required/> Declaro possuir poderes ou autorização para representar a empresa nesta contratação.</label></div>
@@ -47,7 +47,7 @@ templ OnboardingFormPage(onboarding domain.Onboarding,message,errorMessage strin
 
 				<section class="panel"><div class="panel-head"><h2>Responsável financeiro</h2></div><div class="panel-body grid">
 					<div class="field"><label>Nome</label><input name="finance_name" value={ onboarding.FinanceResponsibleName }/></div>
-					<div class="field"><label>Telefone</label><input name="finance_phone" value={ onboarding.FinanceResponsiblePhone }/></div>
+					<div class="field"><label>Telefone</label><input name="finance_phone" data-mask="phone" autocomplete="tel" value={ onboarding.FinanceResponsiblePhone }/></div>
 					<div class="field"><label>E-mail</label><input name="finance_email" type="email" value={ onboarding.FinanceResponsibleEmail }/></div>
 				</div></section>
 
@@ -58,8 +58,8 @@ templ OnboardingFormPage(onboarding domain.Onboarding,message,errorMessage strin
 				</div></section>
 
 				<section class="panel"><div class="panel-head"><h2>Usuários que utilizarão o sistema</h2></div><div class="panel-body" id="users-list">
-					for _,systemUser:=range onboarding.SystemUsers { <div class="repeat-row"><input name="system_user_name" placeholder="Nome" value={ systemUser.Name }/><input name="system_user_phone" placeholder="Telefone" value={ systemUser.Phone }/><input name="system_user_email" type="email" placeholder="E-mail" value={ systemUser.Email }/><button class="btn danger" type="button" onclick="this.parentElement.remove()">Remover</button></div> }
-					<div class="repeat-row"><input name="system_user_name" placeholder="Nome"/><input name="system_user_phone" placeholder="Telefone"/><input name="system_user_email" type="email" placeholder="E-mail"/><button class="btn danger" type="button" onclick="this.parentElement.remove()">Remover</button></div>
+					for _,systemUser:=range onboarding.SystemUsers { <div class="repeat-row"><input name="system_user_name" placeholder="Nome" value={ systemUser.Name }/><input name="system_user_phone" data-mask="phone" autocomplete="tel" placeholder="Telefone" value={ systemUser.Phone }/><input name="system_user_email" type="email" placeholder="E-mail" value={ systemUser.Email }/><button class="btn danger" type="button" onclick="this.parentElement.remove()">Remover</button></div> }
+					<div class="repeat-row"><input name="system_user_name" placeholder="Nome"/><input name="system_user_phone" data-mask="phone" autocomplete="tel" placeholder="Telefone"/><input name="system_user_email" type="email" placeholder="E-mail"/><button class="btn danger" type="button" onclick="this.parentElement.remove()">Remover</button></div>
 					<button class="btn" type="button" onclick="addSystemUser()">Adicionar usuário</button>
 				</div></section>
 
@@ -80,9 +80,9 @@ templ OnboardingFormPage(onboarding domain.Onboarding,message,errorMessage strin
 			</div></section>
 
 			<script>
-			async function lookupCNPJ(){const input=document.getElementById('cnpj');const cnpj=(input.value||'').toUpperCase().replace(/[^0-9A-Z]/g,'');if(!/^[0-9A-Z]{12}[0-9]{2}$/.test(cnpj)){alert('Informe um CNPJ válido, numérico ou alfanumérico.');return;}const r=await fetch('/api/cnpj/'+encodeURIComponent(cnpj));if(!r.ok){alert('Não foi possível consultar o CNPJ. Você pode preencher os dados manualmente.');return;}const d=await r.json();input.value=d.cnpj||cnpj;for(const [id,key] of Object.entries({legal_name:'legal_name',trade_name:'trade_name',postal_code:'postal_code',street:'street',street_number:'number',complement:'complement',district:'district',city:'city',state:'state'})){const e=document.getElementById(id);if(e&&d[key])e.value=d[key];}}
+			async function lookupCNPJ(){const input=document.getElementById('cnpj');const cnpj=(input.value||'').toUpperCase().replace(/[^0-9A-Z]/g,'');if(!/^[0-9A-Z]{12}[0-9]{2}$/.test(cnpj)){alert('Informe um CNPJ válido, numérico ou alfanumérico.');return;}const r=await fetch('/api/cnpj/'+encodeURIComponent(cnpj));if(!r.ok){alert('Não foi possível consultar o CNPJ. Você pode preencher os dados manualmente.');return;}const d=await r.json();input.value=d.cnpj||cnpj;input.dispatchEvent(new Event('input',{bubbles:true}));for(const [id,key] of Object.entries({legal_name:'legal_name',trade_name:'trade_name',postal_code:'postal_code',street:'street',street_number:'number',complement:'complement',district:'district',city:'city',state:'state'})){const e=document.getElementById(id);if(e&&d[key]){e.value=d[key];e.dispatchEvent(new Event('input',{bubbles:true}));}}}
 			function addGood(){const root=document.getElementById('goods-list');const wrapper=document.createElement('div');wrapper.className='field';wrapper.style.marginBottom='8px';wrapper.innerHTML='<input name="goods" placeholder="Mercadoria"/>';root.insertBefore(wrapper,root.lastElementChild);}
-			function addSystemUser(){const root=document.getElementById('users-list');const row=document.createElement('div');row.className='repeat-row';row.innerHTML='<input name="system_user_name" placeholder="Nome"/><input name="system_user_phone" placeholder="Telefone"/><input name="system_user_email" type="email" placeholder="E-mail"/><button class="btn danger" type="button" onclick="this.parentElement.remove()">Remover</button>';root.insertBefore(row,root.lastElementChild);}
+			function addSystemUser(){const root=document.getElementById('users-list');const row=document.createElement('div');row.className='repeat-row';row.innerHTML='<input name="system_user_name" placeholder="Nome"/><input name="system_user_phone" data-mask="phone" autocomplete="tel" placeholder="Telefone"/><input name="system_user_email" type="email" placeholder="E-mail"/><button class="btn danger" type="button" onclick="this.parentElement.remove()">Remover</button>';root.insertBefore(row,root.lastElementChild);}
 			</script>
 		</main>
 	}
