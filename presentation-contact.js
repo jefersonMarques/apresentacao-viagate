@@ -5,6 +5,8 @@ if (!window.presentationContact) {
     email: 'antonio.santos@viagate.com.br',
     phone: '(41) 99962-3600',
     whatsapp: '5541999623600',
+    linkedin: '',
+    instagram: '',
     photoUrl: './assets/antonio-photo.svg',
   });
 }
