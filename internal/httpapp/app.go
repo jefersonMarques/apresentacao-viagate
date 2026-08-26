@@ -3,6 +3,7 @@ package httpapp
 import (
 	"context"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -87,6 +88,7 @@ func (a *App) Routes() http.Handler {
 	router := chi.NewRouter()
 	router.Use(middleware.RequestID)
 	router.Use(middleware.Recoverer)
+	router.Use(a.proxyClientIP)
 	router.Use(a.securityHeaders)
 	router.Use(a.sameOriginWrites)
 
@@ -152,6 +154,24 @@ func (a *App) Routes() http.Handler {
 	return router
 }
 
+func (a *App) proxyClientIP(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter,r *http.Request){
+		if !a.cfg.TrustProxyHeaders {
+			next.ServeHTTP(w,r)
+			return
+		}
+		candidate:=""
+		if forwarded:=r.Header.Get("X-Forwarded-For");forwarded!=""{
+			candidate=strings.TrimSpace(strings.Split(forwarded,",")[0])
+		}
+		if candidate==""{candidate=strings.TrimSpace(r.Header.Get("X-Real-IP"))}
+		if ip:=net.ParseIP(candidate);ip!=nil{
+			r.RemoteAddr=net.JoinHostPort(ip.String(),"0")
+		}
+		next.ServeHTTP(w,r)
+	})
+}
+
 func (a *App) securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
@@ -185,7 +205,6 @@ func (a *App) sameOriginWrites(next http.Handler) http.Handler {
 				http.Error(w,"origem da requisição não permitida",http.StatusForbidden)
 				return
 			}
-		}
 		next.ServeHTTP(w,r)
 	})
 }
@@ -209,7 +228,7 @@ func (a *App) permission(code string) func(http.Handler) http.Handler {
 			allowed,err:=a.authStore.HasPermission(r.Context(),user.ID,code)
 			if err!=nil || !allowed { http.Error(w,"acesso negado",http.StatusForbidden); return }
 			next.ServeHTTP(w,r)
-		})
+	})
 	}
 }
 
