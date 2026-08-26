@@ -39,6 +39,7 @@ async function loadPresentationMode(attempt = 0) {
   await appendScript('./presentation-contact.js?v=20260825-7', 'data-presentation-contact');
 
   appendStylesheet('./presentation-mode.css?v=20260825-7', 'data-presentation-mode');
+  appendStylesheet('./viewer-active.css?v=20260825-1', 'data-viewer-active');
   await appendScript('./presentation-mode.js?v=20260825-7', 'data-presentation-mode');
 
   if (typeof window.initializePresentationMode === 'function') {
