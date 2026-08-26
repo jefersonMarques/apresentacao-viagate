@@ -91,8 +91,4 @@ if (document.getElementById('proposalPresentation')) {
   import('./analytics.js?v=20260825-8').catch((error) => {
     console.error('Não foi possível carregar as estatísticas da proposta.', error);
   });
-
-  import('./social-links.js?v=20260825-7').catch((error) => {
-    console.error('Não foi possível carregar as redes sociais do comercial.', error);
-  });
 }
