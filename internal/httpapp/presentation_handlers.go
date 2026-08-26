@@ -69,6 +69,7 @@ func (a *App) publicPresentationPage(w http.ResponseWriter,r *http.Request){
 }
 
 func presentationInputFromForm(r *http.Request,salespersonName,salespersonEmail string)(presentations.EditorInput,error){
+	contactEmail,err:=cleanEmail(r.FormValue("contact_email"),false)
 	input:=presentations.EditorInput{
 		PresentationID:strings.TrimSpace(r.FormValue("presentation_id")),
 		ClientLegalName:strings.TrimSpace(r.FormValue("client_legal_name")),
@@ -76,12 +77,13 @@ func presentationInputFromForm(r *http.Request,salespersonName,salespersonEmail 
 		Title:strings.TrimSpace(r.FormValue("title")),
 		ContactName:strings.TrimSpace(r.FormValue("contact_name")),
 		ContactRole:strings.TrimSpace(r.FormValue("contact_role")),
-		ContactEmail:strings.TrimSpace(strings.ToLower(r.FormValue("contact_email"))),
+		ContactEmail:contactEmail,
 		ShowClientIdentity:r.FormValue("show_client_identity")=="1",
 		ShowContactSlide:r.FormValue("show_contact_slide")=="1",
 		SalespersonName:salespersonName,
 		SalespersonEmail:salespersonEmail,
 	}
+	if err!=nil{return input,fmt.Errorf("E-mail do contato inválido.")}
 	if input.Title==""{input.Title="Apresentação Institucional ViaGate"}
 	if value:=strings.TrimSpace(r.FormValue("client_cnpj"));value!=""{cnpj,err:=cleanCNPJ(value);if err!=nil{return input,err};input.ClientCNPJ=cnpj}
 	allowed:=map[string]bool{};for _,group:=range catalog.Groups{allowed[group.ID]=true}
