@@ -1,0 +1,24 @@
+package templates
+
+import (
+	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/presentations"
+)
+
+templ ProposalListPage(user domain.User, items []domain.Proposal) {
+	@AdminLayout("ViaGate — Propostas", user) {
+		<header class="header"><div><span class="step-title">PROPOSTAS</span><h1>Propostas comerciais</h1><p>Versões publicadas e aceitas permanecem imutáveis. O editor Go substituirá o gerador do protótipo nesta branch.</p></div><div class="actions"><a class="btn primary" href="/admin/proposals/new">Nova proposta</a></div></header>
+		<section class="panel"><div class="table-wrap"><table class="table"><thead><tr><th>Cliente</th><th>Proposta</th><th>Status</th><th>Versão</th><th>Validade</th><th>Atualizada</th></tr></thead><tbody>
+			for _, item := range items { <tr><td><strong>{ item.ClientName }</strong></td><td>{ item.Title }</td><td><span class="badge">{ item.Status }</span></td><td>v{ item.CurrentVersion }</td><td>{ Date(item.ValidUntil) }</td><td>{ item.UpdatedAt.Format("02/01/2006 15:04") }</td></tr> }
+		</tbody></table></div></section>
+	}
+}
+
+templ PresentationListPage(user domain.User, items []presentations.Presentation) {
+	@AdminLayout("ViaGate — Apresentações", user) {
+		<header class="header"><div><span class="step-title">APRESENTAÇÕES</span><h1>Materiais institucionais</h1><p>Super Admin visualiza todos os materiais; o comercial visualiza apenas os próprios.</p></div><div class="actions"><a class="btn primary" href="/admin/presentations/new">Nova apresentação</a></div></header>
+		<section class="panel"><div class="table-wrap"><table class="table"><thead><tr><th>Cliente</th><th>Título</th><th>Status</th><th>Versão</th><th>Atualizada</th></tr></thead><tbody>
+			for _, item := range items { <tr><td>{ item.ClientName }</td><td><strong>{ item.Title }</strong></td><td><span class="badge">{ item.Status }</span></td><td>v{ item.CurrentVersion }</td><td>{ item.UpdatedAt.Format("02/01/2006 15:04") }</td></tr> }
+		</tbody></table></div></section>
+	}
+}
