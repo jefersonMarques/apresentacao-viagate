@@ -8,9 +8,9 @@ import (
 )
 
 type ProposalSolution struct {
-	Title       string
-	Summary     string
-	Status      string
+	Title  string
+	Summary string
+	Status string
 }
 
 func ProposalSolutions(proposal proposals.PublicProposal) []ProposalSolution {
@@ -18,8 +18,7 @@ func ProposalSolutions(proposal proposals.PublicProposal) []ProposalSolution {
 	order:=[]string{}
 	for _,item:=range proposal.Items{
 		key:=item.GroupName
-		status:="Incluído"
-		if item.IsOptional{status="Opcional"}
+		status:=ProposalItemStatus(item)
 		if current,ok:=seen[key];ok{
 			if current.Status!=status{current.Status="Incluído + opcional"}
 			continue
@@ -29,6 +28,11 @@ func ProposalSolutions(proposal proposals.PublicProposal) []ProposalSolution {
 		seen[key]=&ProposalSolution{Title:title,Summary:summary,Status:status};order=append(order,key)
 	}
 	result:=make([]ProposalSolution,0,len(order));for _,key:=range order{result=append(result,*seen[key])};return result
+}
+
+func ProposalItemStatus(item proposals.Item) string {
+	if item.IsOptional{return "Opcional"}
+	return "Incluído"
 }
 
 func ProposalModelLabel(value string) string {
