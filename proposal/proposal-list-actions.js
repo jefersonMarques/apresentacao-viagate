@@ -255,11 +255,7 @@ function enhanceProposalRow(row) {
     return;
   }
 
-  const editHandler = () => originalEditButton.dispatchEvent(new MouseEvent('click', {
-    bubbles: true,
-    cancelable: true,
-    view: window,
-  }));
+  const editHandler = () => originalEditButton.click();
 
   row.dataset.actionsEnhanced = 'true';
   host.innerHTML = '';
