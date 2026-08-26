@@ -26,7 +26,10 @@ import (
 
 type contextKey string
 
-const userContextKey contextKey = "authenticated_user"
+const (
+	userContextKey      contextKey = "authenticated_user"
+	maxRequestBodyBytes int64      = 20 << 20
+)
 
 type App struct {
 	cfg               config.Config
@@ -91,6 +94,7 @@ func (a *App) Routes() http.Handler {
 	router.Use(a.proxyClientIP)
 	router.Use(a.securityHeaders)
 	router.Use(a.sameOriginWrites)
+	router.Use(a.requestBodyLimit)
 
 	router.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServer(http.Dir("web/assets"))))
 	router.Get("/healthz", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) })
@@ -206,6 +210,15 @@ func (a *App) sameOriginWrites(next http.Handler) http.Handler {
 				http.Error(w,"origem da requisição não permitida",http.StatusForbidden)
 				return
 			}
+		}
+		next.ServeHTTP(w,r)
+	})
+}
+
+func (a *App) requestBodyLimit(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter,r *http.Request){
+		if r.Body!=nil&&r.Method!=http.MethodGet&&r.Method!=http.MethodHead&&r.Method!=http.MethodOptions{
+			r.Body=http.MaxBytesReader(w,r.Body,maxRequestBodyBytes)
 		}
 		next.ServeHTTP(w,r)
 	})
