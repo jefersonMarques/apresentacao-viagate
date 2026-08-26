@@ -13,6 +13,7 @@ const iconMarkup = {
 
 const state = {
   processingDelete: new Set(),
+  observedTargets: new WeakSet(),
 };
 
 function appendStyles() {
@@ -431,6 +432,26 @@ function enhanceAllLists() {
   enhancePresentationList();
 }
 
+function observeAvailableTargets() {
+  const targets = [
+    document.getElementById('proposalList'),
+    document.getElementById('hubTrackingTable'),
+    document.getElementById('presentationList'),
+  ].filter(Boolean);
+
+  targets.forEach((target) => {
+    if (state.observedTargets.has(target)) {
+      return;
+    }
+
+    state.observedTargets.add(target);
+    const observer = new MutationObserver(() => window.setTimeout(enhanceAllLists, 0));
+    observer.observe(target, { childList: true, subtree: true });
+  });
+
+  return targets.length;
+}
+
 function interceptLegacyCopy(event) {
   const button = event.target.closest(
     '[data-copy-tracking-token], [data-copy-presentation], [data-copy-proposal-tracking]',
@@ -468,18 +489,23 @@ function interceptLegacyCopy(event) {
 function initialize() {
   appendStyles();
   enhanceAllLists();
+  observeAvailableTargets();
   document.addEventListener('click', interceptLegacyCopy, true);
 
-  const targets = [
-    document.getElementById('proposalList'),
-    document.getElementById('hubTrackingTable'),
-    document.getElementById('presentationList'),
-  ].filter(Boolean);
-
-  targets.forEach((target) => {
-    const observer = new MutationObserver(() => window.setTimeout(enhanceAllLists, 0));
-    observer.observe(target, { childList: true, subtree: true });
+  document.querySelectorAll('[data-hub-tab]').forEach((button) => {
+    button.addEventListener('click', () => window.setTimeout(() => {
+      observeAvailableTargets();
+      enhanceAllLists();
+    }, 0));
   });
+
+  const bootstrapObserver = new MutationObserver(() => {
+    observeAvailableTargets();
+    enhanceAllLists();
+  });
+
+  bootstrapObserver.observe(document.body, { childList: true, subtree: true });
+  window.setTimeout(() => bootstrapObserver.disconnect(), 10000);
 }
 
 initialize();
