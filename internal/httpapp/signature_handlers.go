@@ -22,7 +22,7 @@ func (a *App) signaturePage(w http.ResponseWriter,r *http.Request) {
 		if err:=a.contractFinalizer.Finalize(r.Context(),access.Contract.ID);err!=nil{a.logger.Error("contract evidence finalization failed","error",err,"contract_id",access.Contract.ID)}else{access,_=a.contractStore.SignerByPublicToken(r.Context(),token)}
 	}
 	_,_ = a.pool.Exec(r.Context(),`insert into signature_events(contract_id,contract_signer_id,event_type,document_hash,ip_address,user_agent,metadata) values($1,$2,'contract.viewed',$3,$4,$5,'{}')`,access.Contract.ID,access.Signer.ID,access.Contract.DocumentSHA256,requestIP(r),r.UserAgent())
-	render(r.Context(),w,http.StatusOK,templates.SignaturePage(access,token,message,""))
+	render(r.Context(),w,http.StatusOK,templates.SignatureContractPage(access,token,message,""))
 }
 
 func (a *App) sendSignatureOTP(w http.ResponseWriter,r *http.Request) {
@@ -31,7 +31,7 @@ func (a *App) sendSignatureOTP(w http.ResponseWriter,r *http.Request) {
 	if access.Signer.Status=="signed"{http.Redirect(w,r,"/sign/"+token+"?signed=1",http.StatusSeeOther);return}
 	var recent int
 	_ = a.pool.QueryRow(r.Context(),`select count(*) from signature_challenges where contract_signer_id=$1 and created_at>now()-interval '10 minutes'`,access.Signer.ID).Scan(&recent)
-	if recent>=3{render(r.Context(),w,http.StatusTooManyRequests,templates.SignaturePage(access,token,"","Aguarde alguns minutos antes de solicitar outro código."));return}
+	if recent>=3{render(r.Context(),w,http.StatusTooManyRequests,templates.SignatureContractPage(access,token,"","Aguarde alguns minutos antes de solicitar outro código."));return}
 	otp,hash,err:=security.RandomOTP();if err!=nil{http.Error(w,"erro interno",http.StatusInternalServerError);return}
 	if err:=a.contractStore.CreateChallenge(r.Context(),access.Signer.ID,hash,time.Now().Add(a.cfg.Session.SignatureOTPTTL));err!=nil{http.Error(w,"não foi possível gerar o código",http.StatusInternalServerError);return}
 	_,_ = a.pool.Exec(r.Context(),`insert into identity_verifications(contract_signer_id,mode,status,provider) values($1,'email_otp','pending','brevo')`,access.Signer.ID)
@@ -46,14 +46,14 @@ func (a *App) confirmSignature(w http.ResponseWriter,r *http.Request) {
 	access,err:=a.contractStore.SignerByPublicToken(r.Context(),token);if err!=nil{http.Error(w,"Link inválido",http.StatusNotFound);return}
 	if access.Signer.Status=="signed"{http.Redirect(w,r,"/sign/"+token+"?signed=1",http.StatusSeeOther);return}
 	if err:=r.ParseForm();err!=nil{http.Error(w,"dados inválidos",http.StatusBadRequest);return}
-	if r.FormValue("consent")!="1"{render(r.Context(),w,http.StatusBadRequest,templates.SignaturePage(access,token,"","Confirme que leu e concorda em assinar o contrato."));return}
-	otp:=digits(r.FormValue("otp"));if len(otp)!=6{render(r.Context(),w,http.StatusBadRequest,templates.SignaturePage(access,token,"","Informe o código de 6 dígitos."));return}
-	if err:=a.contractStore.VerifyChallenge(r.Context(),access.Signer.ID,security.HashToken(otp));err!=nil{render(r.Context(),w,http.StatusUnauthorized,templates.SignaturePage(access,token,"","Código inválido ou expirado."));return}
+	if r.FormValue("consent")!="1"{render(r.Context(),w,http.StatusBadRequest,templates.SignatureContractPage(access,token,"","Confirme que leu e concorda em assinar o contrato."));return}
+	otp:=digits(r.FormValue("otp"));if len(otp)!=6{render(r.Context(),w,http.StatusBadRequest,templates.SignatureContractPage(access,token,"","Informe o código de 6 dígitos."));return}
+	if err:=a.contractStore.VerifyChallenge(r.Context(),access.Signer.ID,security.HashToken(otp));err!=nil{render(r.Context(),w,http.StatusUnauthorized,templates.SignatureContractPage(access,token,"","Código inválido ou expirado."));return}
 	sessionID,err:=newUUID();if err!=nil{http.Error(w,"erro interno",http.StatusInternalServerError);return}
 	_,_ = a.pool.Exec(r.Context(),`update identity_verifications set status='verified',verified_at=now(),evidence=evidence||jsonb_build_object('session_id',$2,'ip',$3,'user_agent',$4) where contract_signer_id=$1 and mode='email_otp' and status='pending'`,access.Signer.ID,sessionID,requestIP(r),r.UserAgent())
 	_,_ = a.pool.Exec(r.Context(),`insert into signature_events(contract_id,contract_signer_id,event_type,document_hash,ip_address,user_agent,session_id,metadata) values($1,$2,'otp.verified',$3,$4,$5,$6,jsonb_build_object('channel','email'))`,access.Contract.ID,access.Signer.ID,access.Contract.DocumentSHA256,requestIP(r),r.UserAgent(),sessionID)
 	contractID,fullySigned,err:=a.contractStore.Sign(r.Context(),access.Signer.ID,access.Contract.DocumentSHA256,sessionID,requestIP(r),r.UserAgent())
-	if err!=nil{a.logger.Error("contract sign failed","error",err);render(r.Context(),w,http.StatusConflict,templates.SignaturePage(access,token,"","Não foi possível concluir a assinatura. O documento pode ter sido alterado ou a validação expirou."));return}
+	if err!=nil{a.logger.Error("contract sign failed","error",err);render(r.Context(),w,http.StatusConflict,templates.SignatureContractPage(access,token,"","Não foi possível concluir a assinatura. O documento pode ter sido alterado ou a validação expirou."));return}
 	if fullySigned{
 		if err:=a.contractFinalizer.Finalize(r.Context(),contractID);err!=nil{a.logger.Error("contract evidence finalization failed","error",err,"contract_id",contractID)}
 		_,_ = a.pool.Exec(r.Context(),`
