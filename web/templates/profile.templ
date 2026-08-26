@@ -36,8 +36,12 @@ templ ProfilePage(current domain.User, profile domain.User, message, errorMessag
 					}
 					if profile.LinkedInURL != "" || profile.InstagramURL != "" {
 						<div class="v1-profile-socials">
-							if profile.LinkedInURL != "" { <a href={ templ.SafeURL(profile.LinkedInURL) } target="_blank" rel="noopener">LinkedIn</a> }
-							if profile.InstagramURL != "" { <a href={ templ.SafeURL(profile.InstagramURL) } target="_blank" rel="noopener">Instagram</a> }
+							if profile.LinkedInURL != "" {
+								<a href={ templ.SafeURL(profile.LinkedInURL) } target="_blank" rel="noopener">LinkedIn</a>
+							}
+							if profile.InstagramURL != "" {
+								<a href={ templ.SafeURL(profile.InstagramURL) } target="_blank" rel="noopener">Instagram</a>
+							}
 						</div>
 					}
 					<div class="v1-profile-note">Alterar o perfil não modifica versões já publicadas. A próxima versão salva recebe uma cópia destes dados.</div>
@@ -58,9 +62,13 @@ templ ProfilePage(current domain.User, profile domain.User, message, errorMessag
 							<div class="v1-preview-card">
 								<small>COMO SERÁ IDENTIFICADO</small>
 								<strong>{ profile.Name }</strong>
-								if profile.JobTitle != "" { <span>{ profile.JobTitle }</span> }
+								if profile.JobTitle != "" {
+									<span>{ profile.JobTitle }</span>
+								}
 								<span>{ profile.Email }</span>
-								if profile.Phone != "" { <span>{ Phone(profile.Phone) }</span> }
+								if profile.Phone != "" {
+									<span>{ Phone(profile.Phone) }</span>
+								}
 							</div>
 							<div class="v1-actions" style="margin-top:18px"><button class="v1-button primary" type="submit" data-processing="Salvando perfil...">Salvar perfil</button></div>
 						</form>
