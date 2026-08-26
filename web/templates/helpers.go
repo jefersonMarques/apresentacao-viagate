@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/brfields"
 )
 
 func HasRole(user domain.User, role string) bool {
@@ -31,3 +32,8 @@ func Date(value *time.Time) string {
 	if value == nil { return "—" }
 	return value.Format("02/01/2006")
 }
+
+func CPF(value string) string { return brfields.FormatCPF(value) }
+func CNPJ(value string) string { return brfields.FormatCNPJ(value) }
+func Phone(value string) string { return brfields.FormatPhone(value) }
+func PostalCode(value string) string { return brfields.FormatPostalCode(value) }
