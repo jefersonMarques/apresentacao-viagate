@@ -114,11 +114,14 @@ func Load() (Config, error) {
 	if cfg.S3.Bucket == "" {
 		return Config{}, fmt.Errorf("S3_BUCKET is required")
 	}
-	if cfg.S3.ServerSideEncryption != "AES256" && cfg.S3.ServerSideEncryption != "aws:kms" {
-		return Config{}, fmt.Errorf("S3_SERVER_SIDE_ENCRYPTION must be AES256 or aws:kms")
+	if cfg.S3.ServerSideEncryption != "none" && cfg.S3.ServerSideEncryption != "AES256" && cfg.S3.ServerSideEncryption != "aws:kms" {
+		return Config{}, fmt.Errorf("S3_SERVER_SIDE_ENCRYPTION must be none, AES256 or aws:kms")
 	}
 	if cfg.S3.ServerSideEncryption == "aws:kms" && cfg.S3.KMSKeyID == "" {
 		return Config{}, fmt.Errorf("S3_KMS_KEY_ID is required when using aws:kms")
+	}
+	if cfg.Environment == "production" && cfg.S3.ServerSideEncryption == "none" {
+		return Config{}, fmt.Errorf("S3 server-side encryption is required in production")
 	}
 	if cfg.Environment == "production" && (cfg.Company.LegalName == "" || cfg.Company.CNPJ == "") {
 		return Config{}, fmt.Errorf("VIAGATE_LEGAL_NAME and VIAGATE_CNPJ are required in production")
