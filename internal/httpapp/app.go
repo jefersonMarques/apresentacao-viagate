@@ -94,6 +94,7 @@ func (a *App) Routes() http.Handler {
 
 	router.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServer(http.Dir("web/assets"))))
 	router.Get("/healthz", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) })
+	router.Get("/readyz",a.ready)
 
 	router.Get("/login", a.loginPage)
 	router.Post("/login", a.login)
@@ -205,6 +206,7 @@ func (a *App) sameOriginWrites(next http.Handler) http.Handler {
 				http.Error(w,"origem da requisição não permitida",http.StatusForbidden)
 				return
 			}
+		}
 		next.ServeHTTP(w,r)
 	})
 }
