@@ -46,6 +46,11 @@ func newUUID() (string,error) {
 		value[0:4],value[4:6],value[6:8],value[8:10],value[10:16]),nil
 }
 
+func nullableUUID(value string) any {
+	if strings.TrimSpace(value)==""{return nil}
+	return value
+}
+
 var nonDigits=regexp.MustCompile(`\D`)
 
 func digits(value string) string { return nonDigits.ReplaceAllString(value,"") }
