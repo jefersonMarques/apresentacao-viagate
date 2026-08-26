@@ -3,11 +3,11 @@ package domain
 import "time"
 
 type User struct {
-	ID       string
-	Email    string
-	Name     string
-	Status   string
-	Roles    []string
+	ID        string
+	Email     string
+	Name      string
+	Status    string
+	Roles     []string
 	CreatedAt time.Time
 }
 
@@ -107,18 +107,23 @@ type ContractTemplateVersion struct {
 }
 
 type Contract struct {
-	ID                string
-	OnboardingID      string
-	ProposalVersionID string
-	TemplateVersionID string
-	Status            string
-	RenderedMarkdown  string
-	RenderedHTML      string
-	PDFStorageKey     string
-	DocumentSHA256    []byte
-	GeneratedAt       *time.Time
-	SentAt            *time.Time
-	FullySignedAt     *time.Time
+	ID                       string
+	OnboardingID             string
+	ProposalVersionID        string
+	TemplateVersionID        string
+	Status                   string
+	RenderedMarkdown         string
+	RenderedHTML             string
+	PDFStorageKey            string
+	DocumentSHA256           []byte
+	EvidenceReportStorageKey string
+	EvidenceReportSHA256     []byte
+	FinalPackageStorageKey   string
+	FinalPackageSHA256       []byte
+	GeneratedAt              *time.Time
+	SentAt                   *time.Time
+	FullySignedAt            *time.Time
+	FinalizedAt              *time.Time
 }
 
 type ContractSigner struct {
@@ -142,6 +147,30 @@ type AuditEvent struct {
 	EventType    string
 	ResourceType string
 	ResourceID   *string
+	MetadataJSON []byte
+	CreatedAt    time.Time
+}
+
+type PipelineItem struct {
+	ProposalID        string
+	ProposalTitle     string
+	ClientName        string
+	CommercialName    string
+	ProposalStatus    string
+	OnboardingID      string
+	OnboardingStatus  string
+	ContractID        string
+	ContractStatus    string
+	AcceptedAt        *time.Time
+	SubmittedAt       *time.Time
+	FullySignedAt     *time.Time
+	UpdatedAt         time.Time
+}
+
+type PipelineEvent struct {
+	EventType    string
+	ActorType    string
+	ActorName    string
 	MetadataJSON []byte
 	CreatedAt    time.Time
 }
