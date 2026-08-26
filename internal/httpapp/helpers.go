@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/a-h/templ"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/brtaxid"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/security"
 )
 
@@ -73,22 +74,9 @@ func cpfDigit(value string,startWeight int)int{
 }
 
 func cleanCNPJ(value string) (string,error) {
-	value=digits(value)
-	if len(value)!=14 { return "",fmt.Errorf("CNPJ deve possuir 14 dígitos") }
-	firstWeights:=[]int{5,4,3,2,9,8,7,6,5,4,3,2}
-	secondWeights:=[]int{6,5,4,3,2,9,8,7,6,5,4,3,2}
-	if repeatedDigits(value)||cnpjDigit(value[:12],firstWeights)!=int(value[12]-'0')||cnpjDigit(value[:13],secondWeights)!=int(value[13]-'0'){
-		return "",fmt.Errorf("CNPJ inválido")
-	}
-	return value,nil
-}
-
-func cnpjDigit(value string,weights []int)int{
-	sum:=0
-	for index:=0;index<len(value);index++{sum+=int(value[index]-'0')*weights[index]}
-	remainder:=sum%11
-	if remainder<2{return 0}
-	return 11-remainder
+	normalized,err:=brtaxid.CleanCNPJ(value)
+	if err!=nil{return "",fmt.Errorf("CNPJ inválido")}
+	return normalized,nil
 }
 
 func repeatedDigits(value string)bool{
