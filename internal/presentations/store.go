@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -24,20 +25,20 @@ type Presentation struct {
 }
 
 type EditorInput struct {
-	PresentationID    string
-	ClientLegalName   string
-	ClientTradeName   string
-	ClientCNPJ        string
-	Title             string
-	ContactName       string
-	ContactRole       string
-	ContactEmail      string
+	PresentationID     string
+	ClientLegalName    string
+	ClientTradeName    string
+	ClientCNPJ         string
+	Title              string
+	ContactName        string
+	ContactRole        string
+	ContactEmail       string
 	ShowClientIdentity bool
-	ShowContactSlide  bool
-	SelectedModules   []string
-	SalespersonName   string
-	SalespersonEmail  string
-	ContentHash       []byte
+	ShowContactSlide   bool
+	SelectedModules    []string
+	SalespersonName    string
+	SalespersonEmail   string
+	ContentHash        []byte
 }
 
 type SavedDraft struct {
@@ -48,25 +49,26 @@ type SavedDraft struct {
 }
 
 type PublicPresentation struct {
-	PresentationID    string
-	VersionID         string
-	VersionNumber     int
-	PublicToken       string
-	Title             string
-	ClientLegalName   string
-	ClientTradeName   string
-	ContactName       string
-	ContactRole       string
-	ContactEmail      string
-	SalespersonName   string
-	SalespersonEmail  string
+	PresentationID     string
+	VersionID          string
+	VersionNumber      int
+	PublicToken        string
+	Title              string
+	ClientLegalName    string
+	ClientTradeName    string
+	ContactName        string
+	ContactRole        string
+	ContactEmail       string
+	SalespersonName    string
+	SalespersonEmail   string
 	ShowClientIdentity bool
-	ShowContactSlide  bool
-	SelectedModules   []string
-	ContentHash       []byte
+	ShowContactSlide   bool
+	SelectedModules    []string
+	ContentHash        []byte
 }
 
 type presentationContent struct {
+	Title string `json:"title"`
 	Client struct {
 		LegalName string `json:"legal_name"`
 		TradeName string `json:"trade_name"`
@@ -132,7 +134,7 @@ func (s *Store) SaveDraft(ctx context.Context,userID string,allowAll bool,input 
 		if _,err:=tx.Exec(ctx,`update presentations set title=$2,updated_at=now() where id=$1`,input.PresentationID,input.Title);err!=nil{return SavedDraft{},err}
 	}
 
-	content:=presentationContent{}
+	content:=presentationContent{Title:input.Title}
 	content.Client.LegalName=input.ClientLegalName;content.Client.TradeName=input.ClientTradeName;content.Client.CNPJ=input.ClientCNPJ
 	content.Contact.Name=input.ContactName;content.Contact.Role=input.ContactRole;content.Contact.Email=input.ContactEmail
 	content.Salesperson.Name=input.SalespersonName;content.Salesperson.Email=input.SalespersonEmail
@@ -184,19 +186,28 @@ func (s *Store) EditorByID(ctx context.Context,userID,presentationID string,allo
 	err:=s.pool.QueryRow(ctx,`select id::text,version_number,public_token::text,content,content_hash from presentation_versions where presentation_id=$1 order by version_number desc limit 1`,presentationID).Scan(&draft.VersionID,&draft.VersionNumber,&draft.PublicToken,&contentJSON,&input.ContentHash)
 	if err!=nil&&err!=pgx.ErrNoRows{return EditorInput{},SavedDraft{},err}
 	draft.PresentationID=presentationID
-	if len(contentJSON)>0{var content presentationContent;if json.Unmarshal(contentJSON,&content)==nil{input.ContactName=content.Contact.Name;input.ContactRole=content.Contact.Role;input.ContactEmail=content.Contact.Email;input.ShowClientIdentity=content.Settings.ShowClientIdentity;input.ShowContactSlide=content.Settings.ShowContactSlide;input.SelectedModules=content.Settings.SelectedModules;input.SalespersonName=content.Salesperson.Name;input.SalespersonEmail=content.Salesperson.Email}}
+	if len(contentJSON)>0{
+		var content presentationContent
+		if json.Unmarshal(contentJSON,&content)==nil{
+			if strings.TrimSpace(content.Title)!=""{input.Title=content.Title}
+			input.ContactName=content.Contact.Name;input.ContactRole=content.Contact.Role;input.ContactEmail=content.Contact.Email
+			input.ShowClientIdentity=content.Settings.ShowClientIdentity;input.ShowContactSlide=content.Settings.ShowContactSlide;input.SelectedModules=content.Settings.SelectedModules
+			input.SalespersonName=content.Salesperson.Name;input.SalespersonEmail=content.Salesperson.Email
+		}
+	}
 	return input,draft,nil
 }
 
 func (s *Store) PublicByToken(ctx context.Context,token string)(PublicPresentation,error){
-	var result PublicPresentation;var contentJSON []byte
+	var result PublicPresentation;var contentJSON []byte;var currentTitle string
 	err:=s.pool.QueryRow(ctx,`
 		select p.id::text,v.id::text,v.version_number,v.public_token::text,p.title,v.content,v.content_hash
 		from presentation_versions v join presentations p on p.id=v.presentation_id
 		where v.public_token=$1 and v.published_at is not null and p.status='published'
-	`,token).Scan(&result.PresentationID,&result.VersionID,&result.VersionNumber,&result.PublicToken,&result.Title,&contentJSON,&result.ContentHash)
+	`,token).Scan(&result.PresentationID,&result.VersionID,&result.VersionNumber,&result.PublicToken,&currentTitle,&contentJSON,&result.ContentHash)
 	if err!=nil{return PublicPresentation{},err}
 	var content presentationContent;if err:=json.Unmarshal(contentJSON,&content);err!=nil{return PublicPresentation{},err}
+	result.Title=currentTitle;if strings.TrimSpace(content.Title)!=""{result.Title=content.Title}
 	result.ClientLegalName=content.Client.LegalName;result.ClientTradeName=content.Client.TradeName
 	result.ContactName=content.Contact.Name;result.ContactRole=content.Contact.Role;result.ContactEmail=content.Contact.Email
 	result.SalespersonName=content.Salesperson.Name;result.SalespersonEmail=content.Salesperson.Email
