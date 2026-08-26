@@ -63,7 +63,7 @@ func (a *App) proposalInputFromForm(r *http.Request,salespersonName,salespersonE
 	input.ClientTradeName=strings.TrimSpace(r.FormValue("client_trade_name"))
 	if value:=strings.TrimSpace(r.FormValue("client_cnpj"));value!=""{cnpj,err:=cleanCNPJ(value);if err!=nil{return input,err};input.ClientCNPJ=cnpj}
 	clientEmail,err:=cleanEmail(r.FormValue("client_email"),false);if err!=nil{return input,fmt.Errorf("E-mail do cliente inválido.")};input.ClientEmail=clientEmail
-	input.ClientPhone=strings.TrimSpace(r.FormValue("client_phone"))
+	clientPhone,err:=cleanPhone(r.FormValue("client_phone"),false);if err!=nil{return input,fmt.Errorf("Telefone do cliente inválido.")};input.ClientPhone=clientPhone
 	input.Title=strings.TrimSpace(r.FormValue("title"));if input.Title==""{input.Title="Proposta Comercial ViaGate"}
 	if value:=strings.TrimSpace(r.FormValue("valid_until"));value!=""{date,err:=time.Parse("2006-01-02",value);if err!=nil{return input,fmt.Errorf("Validade inválida.")};input.ValidUntil=&date}
 	input.PricingModel=strings.TrimSpace(r.FormValue("pricing_model"));if !validPricingModel(input.PricingModel){return input,fmt.Errorf("Modelo comercial inválido.")}
