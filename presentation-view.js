@@ -94,7 +94,7 @@ function installPresentation(frameDocument, frameWindow) {
   });
 
   const bootstrapScript = frameDocument.createElement('script');
-  bootstrapScript.src = './presentation-bootstrap.js?v=20260825-8';
+  bootstrapScript.src = './presentation-bootstrap.js?v=20260825-9';
   bootstrapScript.dataset.presentationBootstrap = 'true';
   frameDocument.body.appendChild(bootstrapScript);
 }
@@ -136,6 +136,8 @@ function showGate(mode) {
 
 function revealPresentation() {
   document.body.classList.remove('is-paused');
+  frame.style.removeProperty('filter');
+  frame.style.removeProperty('transform');
   navigation.hidden = false;
   restartButton.hidden = true;
   syncNavigationFromFrame();
@@ -202,7 +204,7 @@ function normalizePresentationDocument(html) {
 }
 
 async function loadPresentationDocument() {
-  const response = await fetch('./presentation-content.html?v=20260825-8', {
+  const response = await fetch('./presentation-content.html?v=20260825-9', {
     cache: 'no-store',
   });
 
@@ -279,7 +281,7 @@ document.addEventListener('fullscreenchange', () => {
 });
 
 window.addEventListener('message', (event) => {
-  if (event.origin !== window.location.origin || event.data?.source !== 'viagate-presentation') {
+  if (event.source !== frame.contentWindow || event.data?.source !== 'viagate-presentation') {
     return;
   }
 
