@@ -1,0 +1,26 @@
+.proposal-social-links {
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:18px;
+}
+
+.proposal-social-links a {
+  min-height:32px;
+  padding:0 10px;
+  display:inline-flex;
+  align-items:center;
+  border:1px solid rgba(255,255,255,.2);
+  color:rgba(255,255,255,.84);
+  text-decoration:none;
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  transition:border-color 160ms ease, background 160ms ease;
+}
+
+.proposal-social-links a:hover {
+  border-color:#ff6b18;
+  background:rgba(255,107,24,.1);
+}
