@@ -104,7 +104,9 @@ const state = {
   priceDefaults: {},
   observer: null,
   conditionSelection: new Set(),
+  conditionExclusions: new Set(),
   customConditions: [],
+  autoConditions: true,
 };
 
 function getPriceStorageKey() {
@@ -288,13 +290,22 @@ function initializeConditionState() {
   const existingLines = splitConditionLines(textarea.value);
   const standardTexts = new Set(standardConditions.map((condition) => condition.text));
 
+  state.conditionSelection.clear();
+  state.conditionExclusions.clear();
   state.customConditions = existingLines.filter((line) => !standardTexts.has(line));
+  state.autoConditions = existingLines.length === 0;
+
   existingLines.forEach((line) => {
     const condition = standardConditions.find((candidate) => candidate.text === line);
     if (condition) {
       state.conditionSelection.add(condition.id);
     }
   });
+
+  const customInput = document.getElementById('proposalCustomConditions');
+  if (customInput) {
+    customInput.value = state.customConditions.join('\n');
+  }
 }
 
 function syncConditionTextarea() {
@@ -323,7 +334,7 @@ function renderConditionLibrary() {
   standardConditions.forEach((condition) => {
     if (!applicableIds.has(condition.id)) {
       state.conditionSelection.delete(condition.id);
-    } else if (!state.conditionSelection.has(condition.id)) {
+    } else if (state.autoConditions && !state.conditionSelection.has(condition.id) && !state.conditionExclusions.has(condition.id)) {
       state.conditionSelection.add(condition.id);
     }
   });
@@ -339,8 +350,10 @@ function renderConditionLibrary() {
     input.addEventListener('change', () => {
       if (input.checked) {
         state.conditionSelection.add(input.value);
+        state.conditionExclusions.delete(input.value);
       } else {
         state.conditionSelection.delete(input.value);
+        state.conditionExclusions.add(input.value);
       }
       syncConditionTextarea();
     });
@@ -501,6 +514,26 @@ function refreshEnhancements() {
   renderConditionLibrary();
 }
 
+function bindEditorResets() {
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('[data-open-proposal], #newProposalButton')) {
+      return;
+    }
+
+    window.setTimeout(() => {
+      initializeConditionState();
+      renderConditionLibrary();
+      refreshEnhancements();
+    }, 260);
+
+    window.setTimeout(() => {
+      initializeConditionState();
+      renderConditionLibrary();
+      refreshEnhancements();
+    }, 760);
+  }, true);
+}
+
 function bindCatalogObserver() {
   const catalog = document.getElementById('proposalProductCatalog');
   if (!catalog || state.observer) {
@@ -580,6 +613,7 @@ async function initialize() {
   createTemplateSelector();
   enhanceConditionsSection();
   bindCatalogObserver();
+  bindEditorResets();
   refreshEnhancements();
 }
 
