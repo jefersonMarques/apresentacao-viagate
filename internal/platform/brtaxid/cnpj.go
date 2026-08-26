@@ -44,10 +44,21 @@ func ValidCNPJ(value string)bool{
 	if len(value)!=14{return false}
 	for index:=0;index<12;index++{if !isCNPJBaseCharacter(value[index]){return false}}
 	if value[12]<'0'||value[12]>'9'||value[13]<'0'||value[13]>'9'{return false}
+	if repeatedNumericCNPJBase(value[:12]){return false}
 	first:=cnpjCheckDigit(value[:12],cnpjFirstWeights)
 	if first!=int(value[12]-'0'){return false}
 	second:=cnpjCheckDigit(value[:13],cnpjSecondWeights)
 	return second==int(value[13]-'0')
+}
+
+func repeatedNumericCNPJBase(base string)bool{
+	if len(base)!=12{return false}
+	first:=base[0]
+	if first<'0'||first>'9'{return false}
+	for index:=1;index<len(base);index++{
+		if base[index]<'0'||base[index]>'9'||base[index]!=first{return false}
+	}
+	return true
 }
 
 func cnpjCheckDigit(value string,weights []int)int{
