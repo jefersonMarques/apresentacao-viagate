@@ -1,6 +1,9 @@
 APP=viagate-commercial
 
-.PHONY: dev generate build test migrate-up migrate-down
+.PHONY: deps dev generate build test check migrate-up migrate-down
+
+deps:
+	go mod download
 
 generate:
 	go run github.com/a-h/templ/cmd/templ@v0.3.943 generate
@@ -11,11 +14,17 @@ dev: generate
 build: generate
 	go build -o bin/$(APP) ./cmd/server
 
-test:
+test: generate
 	go test ./...
 
+check: generate
+	go vet ./...
+	go test ./...
+	go build ./cmd/server
+	go build ./cmd/migrate
+
 migrate-up:
-	@echo "Apply SQL files from migrations/ in order using your PostgreSQL migration runner."
+	go run ./cmd/migrate up
 
 migrate-down:
-	@echo "Down migrations are intentionally not automatic for immutable commercial records."
+	@echo "Down migrations are intentionally disabled for immutable commercial/legal records. Restore from backup or add a reviewed forward migration."
