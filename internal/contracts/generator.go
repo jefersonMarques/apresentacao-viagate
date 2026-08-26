@@ -65,12 +65,12 @@ func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID stri
 		join proposal_acceptances a on a.id=o.proposal_acceptance_id
 		join proposal_versions pv on pv.id=a.proposal_version_id
 		join proposals p on p.id=pv.proposal_id
-		where o.id=$1 and o.status in ('submitted','approved')
+		where o.id=$1 and o.status='approved'
 	`,onboardingID).Scan(
 		&proposalVersionID,&createdBy,&legalName,&tradeName,&cnpj,&street,&number,&complement,&district,&city,&state,&postalCode,
 		&repName,&repCPF,&repEmail,&repPhone,&repRole,&minimumInvoice,&setupFee,&acceptedAt,&validUntilSnapshot,
 	)
-	if err != nil { return Generated{},fmt.Errorf("load contract data: %w",err) }
+	if err != nil { return Generated{},fmt.Errorf("load approved contract data: %w",err) }
 
 	products := map[string]any{
 		"cargo_score": false,
@@ -94,6 +94,7 @@ func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID stri
 			products["monitoring"]=true
 		}
 	}
+	if err:=rows.Err();err!=nil{rows.Close();return Generated{},err}
 	rows.Close()
 
 	address := strings.TrimSpace(strings.Join(nonEmpty(street,number,complement,district,city,state,postalCode),", "))
