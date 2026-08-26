@@ -22,8 +22,24 @@ func (a *App) login(w http.ResponseWriter,r *http.Request) {
 	if err:=r.ParseForm();err!=nil { render(r.Context(),w,http.StatusBadRequest,templates.Login("Dados inválidos.")); return }
 	email:=strings.TrimSpace(strings.ToLower(r.FormValue("email")))
 	password:=r.FormValue("password")
+	ip:=requestIP(r)
+
+	allowed,err:=a.authStore.LoginAllowed(r.Context(),email,ip)
+	if err!=nil{
+		a.logger.Error("login rate limit check failed","error",err)
+		render(r.Context(),w,http.StatusServiceUnavailable,templates.Login("Não foi possível validar o acesso agora. Tente novamente em instantes."))
+		return
+	}
+	if !allowed{
+		time.Sleep(250*time.Millisecond)
+		w.Header().Set("Retry-After","900")
+		render(r.Context(),w,http.StatusTooManyRequests,templates.Login("Muitas tentativas de acesso. Aguarde alguns minutos e tente novamente."))
+		return
+	}
+
 	credentials,err:=a.authStore.FindCredentials(r.Context(),email)
 	if err!=nil || credentials.User.Status!="active" || !security.VerifyPassword(credentials.PasswordHash,password) {
+		if recordErr:=a.authStore.RecordLoginFailure(r.Context(),email,ip);recordErr!=nil{a.logger.Error("record login failure failed","error",recordErr)}
 		time.Sleep(250*time.Millisecond)
 		render(r.Context(),w,http.StatusUnauthorized,templates.Login("E-mail ou senha inválidos."))
 		return
@@ -32,11 +48,12 @@ func (a *App) login(w http.ResponseWriter,r *http.Request) {
 	token,hash,err:=security.RandomToken(32)
 	if err!=nil { http.Error(w,"não foi possível iniciar a sessão",http.StatusInternalServerError);return }
 	expires:=time.Now().Add(a.cfg.Session.TTL)
-	if err:=a.authStore.CreateSession(r.Context(),credentials.User.ID,hash,requestIP(r),r.UserAgent(),expires);err!=nil {
+	if err:=a.authStore.CreateSession(r.Context(),credentials.User.ID,hash,ip,r.UserAgent(),expires);err!=nil {
 		a.logger.Error("create session failed","error",err)
 		http.Error(w,"não foi possível iniciar a sessão",http.StatusInternalServerError)
 		return
 	}
+	if err:=a.authStore.ClearLoginFailures(r.Context(),email,ip);err!=nil{a.logger.Warn("clear login failures failed","error",err,"user_id",credentials.User.ID)}
 	setSecureCookie(w,a.cfg.Session.CookieName,token,expires,a.cfg.Environment=="production")
 	_,_ = a.pool.Exec(r.Context(),`update users set last_login_at=now() where id=$1`,credentials.User.ID)
 	http.Redirect(w,r,"/admin",http.StatusSeeOther)
