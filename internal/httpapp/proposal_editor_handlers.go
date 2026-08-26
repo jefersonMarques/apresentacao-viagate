@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/catalog"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/proposals"
 	"github.com/jefersonMarques/apresentacao-viagate/web/templates"
 )
@@ -39,7 +40,9 @@ func (a *App) saveProposal(w http.ResponseWriter,r *http.Request){
 	allowAll,_:=a.authStore.HasPermission(r.Context(),user.ID,"proposal.read_all")
 	if err:=r.ParseForm();err!=nil{http.Error(w,"dados inválidos",http.StatusBadRequest);return}
 
-	input,err:=a.proposalInputFromForm(r,user.Name,user.Email)
+	salesperson,profileErr:=a.authStore.Profile(r.Context(),user.ID)
+	if profileErr!=nil{a.logger.Error("load commercial profile failed","user_id",user.ID,"error",profileErr);salesperson=user}
+	input,err:=a.proposalInputFromForm(r,salesperson)
 	if err!=nil{
 		render(r.Context(),w,http.StatusBadRequest,templates.ProposalEditorPage(user,input,proposals.SavedDraft{},"",err.Error()))
 		return
@@ -56,7 +59,7 @@ func (a *App) saveProposal(w http.ResponseWriter,r *http.Request){
 	http.Redirect(w,r,"/admin/proposals/"+draft.ProposalID+"/edit?saved=1",http.StatusSeeOther)
 }
 
-func (a *App) proposalInputFromForm(r *http.Request,salespersonName,salespersonEmail string)(proposals.EditorInput,error){
+func (a *App) proposalInputFromForm(r *http.Request,salesperson domain.User)(proposals.EditorInput,error){
 	var input proposals.EditorInput
 	input.ProposalID=strings.TrimSpace(r.FormValue("proposal_id"))
 	input.ClientLegalName=strings.TrimSpace(r.FormValue("client_legal_name"));if input.ClientLegalName==""{return input,fmt.Errorf("Informe a razão social do cliente.")}
@@ -87,7 +90,7 @@ func (a *App) proposalInputFromForm(r *http.Request,salespersonName,salespersonE
 	input.Content=map[string]any{
 		"proposal":map[string]any{"title":input.Title,"valid_until":validUntil},
 		"client":map[string]any{"legal_name":input.ClientLegalName,"trade_name":input.ClientTradeName,"cnpj":input.ClientCNPJ,"email":input.ClientEmail,"phone":input.ClientPhone},
-		"salesperson":map[string]any{"name":salespersonName,"email":salespersonEmail},
+		"salesperson":map[string]any{"name":salesperson.Name,"email":salesperson.Email,"phone":salesperson.Phone,"job_title":salesperson.JobTitle},
 	}
 	canonical:=struct{Content map[string]any `json:"content"`;PricingModel string `json:"pricing_model"`;MinimumInvoice float64 `json:"minimum_invoice"`;SetupFee float64 `json:"setup_fee"`;Conditions []string `json:"conditions"`;Items []proposals.EditorItem `json:"items"`}{input.Content,input.PricingModel,input.MinimumInvoice,input.SetupFee,input.Conditions,input.Items}
 	encoded,_:=json.Marshal(canonical);hash:=sha256.Sum256(encoded);input.ContentHash=hash[:]
