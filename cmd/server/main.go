@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/auth"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/config"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/contracts"
@@ -67,15 +68,16 @@ func main(){
 	if err:=server.Shutdown(shutdownCtx);err!=nil{logger.Error("graceful shutdown failed","error",err)}
 }
 
-func bootstrapAdmin(ctx context.Context,cfg config.Config,store *auth.Store,pool interface{Exec(context.Context,string,...any)(any,error)},logger *slog.Logger) error {
+func bootstrapAdmin(ctx context.Context,cfg config.Config,store *auth.Store,pool *pgxpool.Pool,logger *slog.Logger) error {
 	if cfg.Bootstrap.AdminEmail==""{return nil}
 	name:=strings.TrimSpace(cfg.Bootstrap.AdminName);if name==""{name="Super Admin"}
+	emailAddress:=strings.ToLower(strings.TrimSpace(cfg.Bootstrap.AdminEmail))
 	token,hash,err:=security.RandomToken(32);if err!=nil{return err}
-	created,err:=store.BootstrapAdmin(ctx,strings.ToLower(strings.TrimSpace(cfg.Bootstrap.AdminEmail)),name,hash,time.Now().Add(cfg.Session.InviteTTL));if err!=nil{return err}
+	created,err:=store.BootstrapAdmin(ctx,emailAddress,name,hash,time.Now().Add(cfg.Session.InviteTTL));if err!=nil{return err}
 	if !created{return nil}
 	link:=strings.TrimRight(cfg.BaseURL,"/")+"/invite/"+token
-	logger.Warn("bootstrap super admin invitation created","email",cfg.Bootstrap.AdminEmail,"activation_url",link)
-	// O primeiro link também é registrado no log para recuperação operacional caso o Brevo ainda não esteja configurado.
-	_ = fmt.Sprintf("%v",pool)
+	htmlBody:=fmt.Sprintf("<p>Olá, %s.</p><p>Seu acesso inicial de Super Admin à plataforma ViaGate foi criado.</p><p><a href=\"%s\">Ativar acesso</a></p>",name,link)
+	if err:=notifications.Enqueue(ctx,pool,name,emailAddress,"Ativação do Super Admin ViaGate",htmlBody,"Ative o acesso em "+link);err!=nil{return err}
+	logger.Warn("bootstrap super admin invitation created","email",emailAddress,"activation_url",link)
 	return nil
 }
