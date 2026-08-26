@@ -8,16 +8,22 @@ import (
 )
 
 type Config struct {
-	Environment string
-	Address     string
-	BaseURL     string
-	DatabaseURL string
+	Environment  string
+	Address      string
+	BaseURL      string
+	DatabaseURL  string
 	ChromiumPath string
-	Session     SessionConfig
-	S3          S3Config
-	Brevo       BrevoConfig
-	Registry    RegistryConfig
-	Bootstrap   BootstrapConfig
+	Company      CompanyConfig
+	Session      SessionConfig
+	S3           S3Config
+	Brevo        BrevoConfig
+	Registry     RegistryConfig
+	Bootstrap    BootstrapConfig
+}
+
+type CompanyConfig struct {
+	LegalName string
+	CNPJ      string
 }
 
 type SessionConfig struct {
@@ -59,6 +65,10 @@ func Load() (Config, error) {
 		BaseURL:      env("APP_BASE_URL", "http://localhost:8080"),
 		DatabaseURL:  os.Getenv("DATABASE_URL"),
 		ChromiumPath: env("CHROMIUM_PATH", "chromium"),
+		Company: CompanyConfig{
+			LegalName: os.Getenv("VIAGATE_LEGAL_NAME"),
+			CNPJ:      os.Getenv("VIAGATE_CNPJ"),
+		},
 		Session: SessionConfig{
 			CookieName:      env("SESSION_COOKIE_NAME", "viagate_session"),
 			TTL:             hours("SESSION_TTL_HOURS", 12),
@@ -93,6 +103,9 @@ func Load() (Config, error) {
 	}
 	if cfg.S3.Bucket == "" {
 		return Config{}, fmt.Errorf("S3_BUCKET is required")
+	}
+	if cfg.Environment == "production" && (cfg.Company.LegalName == "" || cfg.Company.CNPJ == "") {
+		return Config{}, fmt.Errorf("VIAGATE_LEGAL_NAME and VIAGATE_CNPJ are required in production")
 	}
 
 	return cfg, nil
