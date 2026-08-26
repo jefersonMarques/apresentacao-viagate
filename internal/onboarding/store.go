@@ -28,7 +28,7 @@ func NewStore(pool *pgxpool.Pool) *Store { return &Store{pool: pool} }
 func (s *Store) ByAcceptance(ctx context.Context, acceptanceID string) (domain.Onboarding, error) {
 	var o domain.Onboarding
 	err := s.pool.QueryRow(ctx, `
-		select id::text,proposal_acceptance_id::text,client_id::text,status::text,
+		select id::text,proposal_acceptance_id::text,client_id::text,status::text,coalesce(review_notes,''),
 		       cnpj,legal_name,coalesce(trade_name,''),coalesce(street,''),coalesce(street_number,''),
 		       coalesce(complement,''),coalesce(district,''),coalesce(city,''),coalesce(state,''),coalesce(postal_code,''),
 		       coalesce(operation_type,''),coalesce(insurer,''),
@@ -39,7 +39,7 @@ func (s *Store) ByAcceptance(ctx context.Context, acceptanceID string) (domain.O
 		       coalesce(finance_responsible_name,''),coalesce(finance_responsible_phone,''),coalesce(finance_responsible_email::text,'')
 		from onboardings where proposal_acceptance_id=$1
 	`, acceptanceID).Scan(
-		&o.ID,&o.ProposalAcceptanceID,&o.ClientID,&o.Status,
+		&o.ID,&o.ProposalAcceptanceID,&o.ClientID,&o.Status,&o.ReviewNotes,
 		&o.CNPJ,&o.LegalName,&o.TradeName,&o.Street,&o.StreetNumber,&o.Complement,&o.District,&o.City,&o.State,&o.PostalCode,
 		&o.OperationType,&o.Insurer,&o.PolicyStartDate,&o.PolicyEndDate,&o.BrokerCompany,&o.BrokerProducer,
 		&o.CompanyResponsibleName,&o.CompanyResponsibleCPF,&o.CompanyResponsiblePhone,&o.CompanyResponsibleEmail,&o.CompanyResponsibleRole,&o.AuthorityDeclared,
@@ -55,6 +55,7 @@ func (s *Store) ByAcceptance(ctx context.Context, acceptanceID string) (domain.O
 		o.Goods = append(o.Goods,value)
 	}
 	goods.Close()
+	if err := goods.Err(); err != nil { return domain.Onboarding{}, err }
 
 	users, err := s.pool.Query(ctx, `select name,coalesce(phone,''),email::text from onboarding_system_users where onboarding_id=$1 order by sort_order,id`, o.ID)
 	if err != nil { return domain.Onboarding{}, err }
@@ -75,7 +76,7 @@ func (s *Store) Save(ctx context.Context, o domain.Onboarding) error {
 	if err != nil { return err }
 	defer tx.Rollback(ctx)
 
-	_, err = tx.Exec(ctx, `
+	command, err := tx.Exec(ctx, `
 		update onboardings set
 		  status=case when status='pending' then 'in_progress' else status end,
 		  cnpj=$2,legal_name=$3,trade_name=nullif($4,''),street=nullif($5,''),street_number=nullif($6,''),
@@ -92,6 +93,9 @@ func (s *Store) Save(ctx context.Context, o domain.Onboarding) error {
 		o.CompanyResponsibleName,o.CompanyResponsibleCPF,o.CompanyResponsiblePhone,o.CompanyResponsibleEmail,o.CompanyResponsibleRole,o.AuthorityDeclared,
 		o.FinanceResponsibleName,o.FinanceResponsiblePhone,o.FinanceResponsibleEmail)
 	if err != nil { return err }
+	if command.RowsAffected() != 1 {
+		return fmt.Errorf("onboarding is not editable in its current state")
+	}
 
 	if _, err := tx.Exec(ctx, `delete from onboarding_goods where onboarding_id=$1`,o.ID); err != nil { return err }
 	for index, description := range o.Goods {
@@ -109,11 +113,32 @@ func (s *Store) Save(ctx context.Context, o domain.Onboarding) error {
 }
 
 func (s *Store) AddDocument(ctx context.Context, onboardingID string, document Document) error {
-	_, err := s.pool.Exec(ctx, `
+	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.Serializable})
+	if err != nil { return err }
+	defer tx.Rollback(ctx)
+
+	var status string
+	if err := tx.QueryRow(ctx, `select status::text from onboardings where id=$1 for update`, onboardingID).Scan(&status); err != nil {
+		return err
+	}
+	if status != "pending" && status != "in_progress" && status != "correction_requested" {
+		return fmt.Errorf("onboarding documents are locked in status %s", status)
+	}
+
+	if document.DocumentType == "insurance_policy" {
+		if _, err := tx.Exec(ctx, `
+			update uploaded_documents set status='superseded'
+			where onboarding_id=$1 and document_type='insurance_policy' and status='uploaded'
+		`, onboardingID); err != nil { return err }
+	}
+
+	if _, err := tx.Exec(ctx, `
 		insert into uploaded_documents(onboarding_id,document_type,storage_key,original_filename,mime_type,size_bytes,sha256)
 		values ($1,$2,$3,$4,$5,$6,$7)
-	`,onboardingID,document.DocumentType,document.StorageKey,document.OriginalFilename,document.MIMEType,document.SizeBytes,document.SHA256)
-	return err
+	`,onboardingID,document.DocumentType,document.StorageKey,document.OriginalFilename,document.MIMEType,document.SizeBytes,document.SHA256); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
 }
 
 func (s *Store) HasPolicy(ctx context.Context, onboardingID string) (bool,error) {
@@ -128,10 +153,22 @@ func (s *Store) Submit(ctx context.Context, onboardingID string) error {
 	if !policy { return fmt.Errorf("insurance policy is required") }
 
 	command, err := s.pool.Exec(ctx, `
-		update onboardings set status='submitted',submitted_at=now(),updated_at=now()
-		where id=$1 and status in ('pending','in_progress','correction_requested')
+		update onboardings set status='submitted',submitted_at=now(),review_notes=null,reviewed_by=null,reviewed_at=null,updated_at=now()
+		where id=$1
+		  and status in ('pending','in_progress','correction_requested')
+		  and length(cnpj)=14
+		  and btrim(legal_name)<>''
+		  and operation_type in ('normal','avulsa')
+		  and insurer is not null and btrim(insurer)<>''
+		  and policy_start_date is not null and policy_end_date is not null
+		  and policy_end_date >= policy_start_date
+		  and btrim(company_responsible_name)<>''
+		  and length(company_responsible_cpf)=11
+		  and btrim(company_responsible_phone)<>''
+		  and company_responsible_email is not null
+		  and company_responsible_authority_declared=true
 	`,onboardingID)
 	if err != nil { return err }
-	if command.RowsAffected() != 1 { return fmt.Errorf("onboarding cannot be submitted in its current state") }
+	if command.RowsAffected() != 1 { return fmt.Errorf("onboarding is incomplete or cannot be submitted in its current state") }
 	return nil
 }
