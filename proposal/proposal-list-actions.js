@@ -132,6 +132,10 @@ function buildPublicUrl(kind, token) {
     : buildPublicProposalUrl(token);
 }
 
+function getPublishedTokenFromRow(row) {
+  return row.querySelector('[data-copy-proposal-tracking]')?.dataset.copyProposalTracking ?? '';
+}
+
 async function getLatestPublishedVersion(proposalId) {
   const { data, error } = await supabase
     .from('proposal_versions')
@@ -219,7 +223,13 @@ function openPublicUrl(kind, token) {
   window.location.href = url;
 }
 
-async function copyProposalLink(proposalId, button) {
+async function copyProposalLink(row, proposalId, button) {
+  const existingToken = getPublishedTokenFromRow(row);
+  if (existingToken) {
+    await copyPublicUrl('proposal', existingToken, button);
+    return;
+  }
+
   const version = await getLatestPublishedVersion(proposalId);
   if (!version?.public_token) {
     window.alert('Esta proposta ainda não possui uma versão publicada.');
@@ -229,7 +239,13 @@ async function copyProposalLink(proposalId, button) {
   await copyPublicUrl('proposal', version.public_token, button);
 }
 
-async function openPublicProposal(proposalId) {
+async function openPublicProposal(row, proposalId) {
+  const existingToken = getPublishedTokenFromRow(row);
+  if (existingToken) {
+    openPublicUrl('proposal', existingToken);
+    return;
+  }
+
   const version = await getLatestPublishedVersion(proposalId);
   if (!version?.public_token) {
     window.alert('Esta proposta ainda não possui uma versão publicada.');
@@ -333,13 +349,13 @@ function enhanceProposalRow(row) {
       icon: 'external',
       label: 'Abrir',
       title: 'Abrir proposta publicada',
-      handler: () => openPublicProposal(proposalId),
+      handler: () => openPublicProposal(row, proposalId),
     }),
     createActionButton({
       icon: 'copy',
       label: 'Copiar link',
       title: 'Copiar link público',
-      handler: (button) => copyProposalLink(proposalId, button),
+      handler: (button) => copyProposalLink(row, proposalId, button),
     }),
     createActionButton({
       icon: 'trash',
