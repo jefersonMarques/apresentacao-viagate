@@ -28,7 +28,7 @@ func (a *App) publicProposalPage(w http.ResponseWriter,r *http.Request) {
 		insert into document_events(document_kind,document_version_id,event_type,viewer_session,ip_address,user_agent)
 		values('proposal',$1,'open',$2,$3,$4)
 	`,proposal.VersionID,nullableUUID(sessionID),requestIP(r),r.UserAgent())
-	render(r.Context(),w,http.StatusOK,templates.PublicProposalPage(proposal,""))
+	render(r.Context(),w,http.StatusOK,templates.PublicProposalViewerPage(proposal,""))
 }
 
 func (a *App) acceptProposal(w http.ResponseWriter,r *http.Request) {
@@ -37,8 +37,8 @@ func (a *App) acceptProposal(w http.ResponseWriter,r *http.Request) {
 	if err!=nil { http.Error(w,"Proposta não disponível.",http.StatusGone);return }
 	if err:=r.ParseForm();err!=nil { http.Error(w,"dados inválidos",http.StatusBadRequest);return }
 	cpf,err:=cleanCPF(r.FormValue("cpf"))
-	if err!=nil { render(r.Context(),w,http.StatusBadRequest,templates.PublicProposalPage(proposal,err.Error()));return }
-	if r.FormValue("authority")!="1" { render(r.Context(),w,http.StatusBadRequest,templates.PublicProposalPage(proposal,"É necessário confirmar a autorização para representar a empresa."));return }
+	if err!=nil { render(r.Context(),w,http.StatusBadRequest,templates.PublicProposalViewerPage(proposal,err.Error()));return }
+	if r.FormValue("authority")!="1" { render(r.Context(),w,http.StatusBadRequest,templates.PublicProposalViewerPage(proposal,"É necessário confirmar a autorização para representar a empresa."));return }
 	sessionID,err:=newUUID();if err!=nil{http.Error(w,"erro interno",http.StatusInternalServerError);return}
 	input:=proposals.AcceptanceInput{
 		Name:strings.TrimSpace(r.FormValue("name")),
@@ -49,9 +49,9 @@ func (a *App) acceptProposal(w http.ResponseWriter,r *http.Request) {
 		AuthorityDeclared:true,
 		IPAddress:requestIP(r),UserAgent:r.UserAgent(),SessionID:sessionID,
 	}
-	if input.Name==""||input.Email==""||input.Phone=="" { render(r.Context(),w,http.StatusBadRequest,templates.PublicProposalPage(proposal,"Preencha todos os dados do responsável."));return }
+	if input.Name==""||input.Email==""||input.Phone=="" { render(r.Context(),w,http.StatusBadRequest,templates.PublicProposalViewerPage(proposal,"Preencha todos os dados do responsável."));return }
 	result,err:=a.proposalStore.Accept(r.Context(),proposal,input)
-	if err!=nil { a.logger.Error("proposal acceptance failed","error",err);render(r.Context(),w,http.StatusBadRequest,templates.PublicProposalPage(proposal,"Não foi possível registrar o aceite."));return }
+	if err!=nil { a.logger.Error("proposal acceptance failed","error",err);render(r.Context(),w,http.StatusBadRequest,templates.PublicProposalViewerPage(proposal,"Não foi possível registrar o aceite. Se esta proposta já foi aceita, utilize os mesmos dados do responsável para retomar o cadastro."));return }
 
 	plain,hash,err:=security.RandomToken(32);if err!=nil{http.Error(w,"erro interno",http.StatusInternalServerError);return}
 	expires:=time.Now().Add(7*24*time.Hour)
