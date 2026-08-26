@@ -51,6 +51,25 @@ function goToHostSlide(index) {
   window.setTimeout(() => reportCurrentSlide(true), 120);
 }
 
+function setEmbeddedBlurOverride(active) {
+  const targets = [
+    document.querySelector('.presentation'),
+    document.querySelector('.presentation-header'),
+    document.querySelector('.presentation-progress'),
+  ].filter(Boolean);
+
+  targets.forEach((element) => {
+    if (active) {
+      element.style.setProperty('filter', 'none', 'important');
+      element.style.setProperty('transform', 'none', 'important');
+      return;
+    }
+
+    element.style.removeProperty('filter');
+    element.style.removeProperty('transform');
+  });
+}
+
 function clearEmbeddedPauseState() {
   if (!hostPresentationActive) {
     return;
@@ -64,6 +83,7 @@ function clearEmbeddedPauseState() {
     'presentation-controls-visible',
     'presentation-cursor-hidden',
   );
+  setEmbeddedBlurOverride(true);
 }
 
 const pauseStateObserver = new MutationObserver(() => {
@@ -109,6 +129,7 @@ window.hostStartPresentation = function hostStartPresentation(firstStart = false
 window.hostPausePresentation = function hostPausePresentation() {
   hostPresentationActive = false;
   presentationState.paused = true;
+  setEmbeddedBlurOverride(false);
   document.body.classList.remove('presentation-host-active');
   document.body.classList.add('presentation-paused');
   document.body.classList.remove('presentation-controls-visible', 'presentation-cursor-hidden');
@@ -119,6 +140,7 @@ window.hostRestartPresentation = function hostRestartPresentation() {
   presentationState.started = false;
   presentationState.paused = true;
   lastReportedSlide = 0;
+  setEmbeddedBlurOverride(false);
 
   goToPresentationSlide(0, 'auto');
   document.body.classList.remove(
