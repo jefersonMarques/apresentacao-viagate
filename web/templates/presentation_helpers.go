@@ -25,3 +25,8 @@ func PresentationClientName(value presentations.PublicPresentation) string {
 	if strings.TrimSpace(value.ClientLegalName)!=""{return value.ClientLegalName}
 	return "sua operação"
 }
+
+func BoolString(value bool) string {
+	if value{return "true"}
+	return "false"
+}
