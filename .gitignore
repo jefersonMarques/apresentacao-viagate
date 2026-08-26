@@ -1,0 +1,5 @@
+.env
+.task/
+bin/
+*.exe
+web/templates/*_templ.go
