@@ -2,8 +2,8 @@ package templates
 
 import (
 	"github.com/a-h/templ"
-	onboardingpkg "github.com/jefersonMarques/apresentacao-viagate/internal/onboarding"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
+	onboardingpkg "github.com/jefersonMarques/apresentacao-viagate/internal/onboarding"
 )
 
 templ OnboardingAdminListPage(user domain.User, items []onboardingpkg.AdminItem) {
@@ -39,18 +39,32 @@ templ OnboardingAdminDetailPage(user domain.User, detail onboardingpkg.AdminDeta
 			<div><span class="step-title">USUÁRIOS DO SISTEMA</span><ul>for _,item := range detail.Onboarding.SystemUsers { <li><strong>{ item.Name }</strong> · { item.Email } · { item.Phone }</li> }if len(detail.Onboarding.SystemUsers)==0 { <li>Nenhum usuário informado</li> }</ul></div>
 		</div></section>
 		<section class="panel"><div class="panel-head"><h2>Documentos</h2></div><div class="panel-body">
-			<div class="actions">for _,document := range detail.Documents { <a class="btn" target="_blank" href={ templ.SafeURL("/admin/onboardings/"+detail.Onboarding.ID+"/documents/"+document.ID) }>{ document.OriginalFilename }</a> }if len(detail.Documents)==0 { <span>Nenhum documento enviado.</span> }</div>
+			<div class="actions">for _,document := range detail.Documents { <a class="btn" target="_blank" rel="noopener" href={ templ.SafeURL("/admin/onboardings/"+detail.Onboarding.ID+"/documents/"+document.ID) }>{ document.OriginalFilename }</a> }if len(detail.Documents)==0 { <span>Nenhum documento enviado.</span> }</div>
 		</div></section>
 		<section class="panel"><div class="panel-head"><h2>Revisão e contrato</h2></div><div class="panel-body">
 			if detail.ReviewNotes!="" { <div class="notice"><strong>Última observação:</strong> { detail.ReviewNotes }</div> }
-			<form method="post" action={ templ.SafeURL("/admin/onboardings/"+detail.Onboarding.ID+"/review") }>
-				<div class="field"><label>Observação / solicitação de correção</label><textarea name="notes" placeholder="Explique objetivamente o que precisa ser ajustado.">{ detail.ReviewNotes }</textarea></div>
-				<div class="actions" style="margin-top:14px">
-					if detail.ContractID=="" && (detail.Onboarding.Status=="submitted" || detail.Onboarding.Status=="under_review") { <button class="btn" type="submit" name="status" value="under_review">Marcar em revisão</button><button class="btn danger" type="submit" name="status" value="correction_requested">Solicitar correção</button> }
-					if detail.Onboarding.Status=="submitted" || detail.Onboarding.Status=="under_review" || detail.Onboarding.Status=="approved" { <button class="btn primary" type="submit" name="status" value="approved">Aprovar cadastro</button> }
+			if detail.ContractID=="" && (detail.Onboarding.Status=="submitted" || detail.Onboarding.Status=="under_review") {
+				<form method="post" action={ templ.SafeURL("/admin/onboardings/"+detail.Onboarding.ID+"/review") }>
+					<div class="field"><label>Observação / solicitação de correção</label><textarea name="notes" placeholder="Explique objetivamente o que precisa ser ajustado.">{ detail.ReviewNotes }</textarea></div>
+					<div class="actions" style="margin-top:14px">
+						<button class="btn" type="submit" name="status" value="under_review" data-processing="Atualizando...">Marcar em revisão</button>
+						<button class="btn danger" type="submit" name="status" value="correction_requested" data-processing="Enviando solicitação...">Solicitar correção</button>
+						<button class="btn primary" type="submit" name="status" value="approved" data-processing="Aprovando e preparando contrato...">Aprovar cadastro</button>
+					</div>
+				</form>
+			} else if detail.Onboarding.Status=="correction_requested" {
+				<div class="notice">Aguardando o cliente corrigir e reenviar o cadastro. Um novo contrato não pode ser gerado enquanto houver correção pendente.</div>
+			} else if detail.Onboarding.Status=="approved" {
+				<div class="notice">Cadastro aprovado. Os dados utilizados na geração do contrato estão bloqueados para edição pelo cliente.</div>
+			}
+
+			if detail.Onboarding.Status=="approved" && detail.ContractStatus!="signed" {
+				<div style="margin-top:18px;border-top:1px solid var(--line);padding-top:18px">
+					<span class="step-title">RECUPERAÇÃO</span>
+					<p>Use se a geração do contrato ou a preparação do e-mail de assinatura falhar. A operação é idempotente e não cria um segundo contrato ativo.</p>
+					<form method="post" action={ templ.SafeURL("/admin/onboardings/"+detail.Onboarding.ID+"/contract/retry") }><button class="btn dark" type="submit" data-processing="Preparando contrato...">Gerar / reenviar contrato</button></form>
 				</div>
-			</form>
-			<div style="margin-top:18px;border-top:1px solid var(--line);padding-top:18px"><span class="step-title">RECUPERAÇÃO</span><p>Use somente se a geração do contrato ou a preparação do e-mail de assinatura falhar. A operação é idempotente e não cria um segundo contrato ativo.</p><form method="post" action={ templ.SafeURL("/admin/onboardings/"+detail.Onboarding.ID+"/contract/retry") }><button class="btn dark" type="submit">Gerar / reenviar contrato</button></form></div>
+			}
 		</div></section>
 	}
 }
