@@ -112,6 +112,9 @@ func (a *App) Routes() http.Handler {
 		admin.Use(a.authenticated)
 		admin.Get("/admin", a.dashboard)
 		admin.Get("/admin/proposals", a.adminProposals)
+		admin.With(a.permission("proposal.create")).Get("/admin/proposals/new", a.newProposalPage)
+		admin.With(a.permission("proposal.create")).Get("/admin/proposals/{id}/edit", a.editProposalPage)
+		admin.With(a.permission("proposal.create")).Post("/admin/proposals/save", a.saveProposal)
 		admin.Get("/admin/presentations", a.adminPresentations)
 
 		admin.With(a.permission("user.manage")).Get("/admin/users", a.usersPage)
