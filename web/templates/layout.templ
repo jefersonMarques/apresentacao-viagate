@@ -1,0 +1,42 @@
+package templates
+
+import "github.com/jefersonMarques/apresentacao-viagate/internal/domain"
+
+templ Base(title string) {
+	<!doctype html>
+	<html lang="pt-BR">
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width,initial-scale=1"/>
+			<meta name="robots" content="noindex,nofollow,noarchive"/>
+			<title>{ title }</title>
+			<link rel="preconnect" href="https://fonts.googleapis.com"/>
+			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+			<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+			<link rel="stylesheet" href="/assets/app.css"/>
+		</head>
+		<body>
+			{ children... }
+		</body>
+	</html>
+}
+
+templ AdminLayout(title string, user domain.User) {
+	@Base(title) {
+		<header class="topbar">
+			<a class="brand" href="/admin">VIAGATE · COMERCIAL</a>
+			<nav class="actions">
+				<a class="btn dark" href="/admin/proposals">Propostas</a>
+				<a class="btn dark" href="/admin/presentations">Apresentações</a>
+				if HasRole(user, "super_admin") {
+					<a class="btn dark" href="/admin/contracts/templates">Contratos</a>
+					<a class="btn dark" href="/admin/users">Usuários</a>
+				}
+				<form method="post" action="/logout"><button class="btn dark" type="submit">Sair</button></form>
+			</nav>
+		</header>
+		<main class="shell">
+			{ children... }
+		</main>
+	}
+}
