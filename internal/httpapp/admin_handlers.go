@@ -11,7 +11,16 @@ import (
 
 func (a *App) dashboard(w http.ResponseWriter,r *http.Request) {
 	user,_:=currentUser(r.Context())
-	render(r.Context(),w,http.StatusOK,templates.Dashboard(user))
+	proposalAll:=false
+	if allowed,err:=a.authStore.HasPermission(r.Context(),user.ID,"proposal.read_all");err==nil{proposalAll=allowed}
+	presentationAll:=false
+	if allowed,err:=a.authStore.HasPermission(r.Context(),user.ID,"presentation.read_all");err==nil{presentationAll=allowed}
+	proposalItems,err:=a.proposalStore.List(r.Context(),user.ID,proposalAll)
+	if err!=nil{http.Error(w,"não foi possível carregar os registros",http.StatusInternalServerError);return}
+	presentationItems,err:=a.presentationStore.List(r.Context(),user.ID,presentationAll)
+	if err!=nil{http.Error(w,"não foi possível carregar os registros",http.StatusInternalServerError);return}
+	records:=templates.DashboardRecords(proposalItems,presentationItems)
+	render(r.Context(),w,http.StatusOK,templates.AdminDashboardPage(user,records))
 }
 
 func (a *App) usersPage(w http.ResponseWriter,r *http.Request) {
