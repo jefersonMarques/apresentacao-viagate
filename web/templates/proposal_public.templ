@@ -139,7 +139,18 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 						<div class="field full"><button class="btn primary" type="submit" data-processing="Registrando aceite...">Aceitar proposta e continuar</button></div>
 					</form>
 					if ProposalSalesperson(proposal, "name") != "" {
-						<p>Responsável comercial: <strong>{ ProposalSalesperson(proposal, "name") }</strong> · { ProposalSalesperson(proposal, "email") }</p>
+						<div class="viewer-card-grid" style="grid-template-columns:minmax(280px,520px)">
+							<article class="viewer-card">
+								<strong>{ ProposalSalesperson(proposal,"name") }</strong>
+								if ProposalSalesperson(proposal,"job_title") != "" {
+									<span>{ ProposalSalesperson(proposal,"job_title") }</span>
+								}
+								<span>{ ProposalSalesperson(proposal,"email") }</span>
+								if ProposalSalesperson(proposal,"phone") != "" {
+									<span>{ Phone(ProposalSalesperson(proposal,"phone")) }</span>
+								}
+							</article>
+						</div>
 					}
 				</div>
 				<div class="viewer-footer"><span>Aceite</span><span></span></div>
