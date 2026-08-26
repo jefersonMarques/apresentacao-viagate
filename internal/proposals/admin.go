@@ -1,0 +1,27 @@
+package proposals
+
+import (
+	"context"
+
+	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
+)
+
+func (s *Store) List(ctx context.Context,userID string,all bool) ([]domain.Proposal,error) {
+	query:=`
+		select p.id::text,p.client_id::text,c.legal_name,p.title,p.status::text,p.current_version,p.valid_until,p.created_by::text,p.updated_at
+		from proposals p join clients c on c.id=p.client_id
+	`
+	args:=[]any{}
+	if !all { query += ` where p.created_by=$1`; args=append(args,userID) }
+	query += ` order by p.updated_at desc`
+	rows,err:=s.pool.Query(ctx,query,args...)
+	if err!=nil{return nil,err}
+	defer rows.Close()
+	var items []domain.Proposal
+	for rows.Next(){
+		var item domain.Proposal
+		if err:=rows.Scan(&item.ID,&item.ClientID,&item.ClientName,&item.Title,&item.Status,&item.CurrentVersion,&item.ValidUntil,&item.CreatedBy,&item.UpdatedAt);err!=nil{return nil,err}
+		items=append(items,item)
+	}
+	return items,rows.Err()
+}
