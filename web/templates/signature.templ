@@ -1,0 +1,36 @@
+package templates
+
+import (
+	"github.com/a-h/templ"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/contracts"
+)
+
+templ SignatureContractPage(access contracts.SignerAccess, token string, message, errorMessage string) {
+	@Base("ViaGate — Assinatura do contrato") {
+		<div class="public"><main class="proposal-page">
+			<header style="margin-bottom:20px"><span class="step-title">ASSINATURA ELETRÔNICA</span><h1>Contrato para assinatura</h1><p>Responsável: { access.Signer.Name } · { access.Signer.Email }</p></header>
+			if message != "" { <div class="notice">{ message }</div> }
+			if errorMessage != "" { <div class="notice error">{ errorMessage }</div> }
+			<article class="document-view">@templ.Raw(access.HTML)</article>
+			if access.Signer.Status != "signed" {
+				<section class="accept-box">
+					<span class="step-title">CONFIRMAÇÃO DE IDENTIDADE</span><h2>Assinar este documento</h2>
+					<p>O código é enviado para o e-mail informado pelo responsável durante o aceite da proposta. O documento acima é identificado por hash SHA-256 e não pode ser substituído após a assinatura.</p>
+					<div class="actions" style="margin-bottom:18px"><form method="post" action={ templ.SafeURL("/sign/" + token + "/otp") }><button class="btn dark" type="submit">Enviar código por e-mail</button></form></div>
+					<form method="post" action={ templ.SafeURL("/sign/" + token + "/confirm") } class="grid">
+						<div class="field"><label>Código de 6 dígitos</label><input name="otp" inputmode="numeric" maxlength="6" autocomplete="one-time-code" required/></div>
+						<div class="field full"><label><input type="checkbox" name="consent" value="1" required/> Declaro que li o contrato apresentado acima e manifesto minha vontade de assiná-lo eletronicamente.</label></div>
+						<div class="field full"><button class="btn primary" type="submit">Assinar contrato</button></div>
+					</form>
+				</section>
+			} else {
+				<section class="accept-box"><span class="step-title">CONTRATO ASSINADO</span><h2>Assinatura registrada.</h2><p>A versão assinada permanece vinculada ao mesmo hash do documento visualizado. Os registros de OTP, sessão, IP, dispositivo e eventos fazem parte da trilha de evidências.</p>
+					<div class="actions"><a class="btn dark" href={ templ.SafeURL("/sign/" + token + "/contract") }>Baixar contrato</a>
+						if access.Contract.FinalizedAt != nil { <a class="btn" href={ templ.SafeURL("/sign/" + token + "/evidence") }>Relatório de evidências</a><a class="btn primary" href={ templ.SafeURL("/sign/" + token + "/package") }>Baixar pacote completo</a> }
+					</div>
+					if access.Contract.FinalizedAt == nil { <div class="notice" style="margin-top:16px">O pacote final de evidências está sendo gerado. Recarregue esta página em instantes.</div> }
+				</section>
+			}
+		</main></div>
+	}
+}
