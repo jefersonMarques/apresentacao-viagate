@@ -89,7 +89,7 @@ func (a *App) adminOnboardingDocument(w http.ResponseWriter,r *http.Request){
 	id:=chi.URLParam(r,"id")
 	document,err:=a.onboardingStore.DocumentByID(r.Context(),id,chi.URLParam(r,"documentID"))
 	if err!=nil{http.Error(w,"documento não encontrado",http.StatusNotFound);return}
-	downloadURL,err:=a.storage.SignedDownloadURL(r.Context(),document.StorageKey,a.cfg.S3.DownloadTTL)
+	downloadURL,err:=a.storage.SignedAttachmentURL(r.Context(),document.StorageKey,document.OriginalFilename,a.cfg.S3.DownloadTTL)
 	if err!=nil{a.logger.Error("presign onboarding document failed","error",err);http.Error(w,"não foi possível disponibilizar o documento",http.StatusInternalServerError);return}
 	w.Header().Set("Cache-Control","no-store")
 	http.Redirect(w,r,downloadURL.String(),http.StatusTemporaryRedirect)
