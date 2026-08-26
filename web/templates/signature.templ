@@ -3,6 +3,7 @@ package templates
 import (
 	"github.com/a-h/templ"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/contracts"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/legaltext"
 )
 
 templ SignatureContractPage(access contracts.SignerAccess, token string, message, errorMessage string) {
@@ -16,11 +17,11 @@ templ SignatureContractPage(access contracts.SignerAccess, token string, message
 				<section class="accept-box">
 					<span class="step-title">CONFIRMAÇÃO DE IDENTIDADE</span><h2>Assinar este documento</h2>
 					<p>O código é enviado para o e-mail informado pelo responsável durante o aceite da proposta. O documento acima é identificado por hash SHA-256 e não pode ser substituído após a assinatura.</p>
-					<div class="actions" style="margin-bottom:18px"><form method="post" action={ templ.SafeURL("/sign/" + token + "/otp") }><button class="btn dark" type="submit">Enviar código por e-mail</button></form></div>
+					<div class="actions" style="margin-bottom:18px"><form method="post" action={ templ.SafeURL("/sign/" + token + "/otp") }><button class="btn dark" type="submit" data-processing="Enviando código...">Enviar código por e-mail</button></form></div>
 					<form method="post" action={ templ.SafeURL("/sign/" + token + "/confirm") } class="grid">
 						<div class="field"><label>Código de 6 dígitos</label><input name="otp" inputmode="numeric" maxlength="6" autocomplete="one-time-code" required/></div>
-						<div class="field full"><label><input type="checkbox" name="consent" value="1" required/> Declaro que li o contrato apresentado acima e manifesto minha vontade de assiná-lo eletronicamente.</label></div>
-						<div class="field full"><button class="btn primary" type="submit">Assinar contrato</button></div>
+						<div class="field full"><label><input type="checkbox" name="consent" value="1" required/> { legaltext.SignatureConsentText }</label></div>
+						<div class="field full"><button class="btn primary" type="submit" data-processing="Registrando assinatura...">Assinar contrato</button></div>
 					</form>
 				</section>
 			} else {
