@@ -35,7 +35,8 @@ export function formatDate(value) {
 }
 
 function buildPublicUrl(baseUrl, token) {
-  const url = new URL(baseUrl, window.location.href);
+  const moduleUrl = new URL(import.meta.url);
+  const url = new URL(baseUrl, moduleUrl);
   url.searchParams.set('token', token);
   return url.toString();
 }
@@ -61,7 +62,7 @@ if (document.getElementById('adminView')) {
   if (brandCopy) brandCopy.textContent = 'Gere materiais personalizados, publique links individuais e acompanhe abertura e leitura.';
   if (brandFooter) brandFooter.textContent = 'ViaGate · Hub Comercial · 2026';
 
-  import('./commercial-hub.js?v=20260825-7').catch((error) => {
+  import('./commercial-hub.js?v=20260825-8').catch((error) => {
     console.error('Não foi possível carregar o hub comercial.', error);
   });
 
@@ -76,10 +77,18 @@ if (document.getElementById('adminView')) {
   import('./duplicate-proposal.js?v=20260825-7').catch((error) => {
     console.error('Não foi possível carregar a duplicação de propostas.', error);
   });
+
+  import('./proposal-access-admin.js?v=20260825-1').catch((error) => {
+    console.error('Não foi possível carregar o controle de acesso das propostas.', error);
+  });
+
+  import('./hub-overview-enhancements.js?v=20260825-1').catch((error) => {
+    console.error('Não foi possível identificar os tipos de materiais no painel.', error);
+  });
 }
 
 if (document.getElementById('proposalPresentation')) {
-  import('./analytics.js?v=20260825-7').catch((error) => {
+  import('./analytics.js?v=20260825-8').catch((error) => {
     console.error('Não foi possível carregar as estatísticas da proposta.', error);
   });
 
