@@ -18,6 +18,7 @@ import (
 	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/companyregistry"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/email"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/storage"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/presentations"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/proposals"
 )
 
@@ -26,18 +27,19 @@ type contextKey string
 const userContextKey contextKey = "authenticated_user"
 
 type App struct {
-	cfg              config.Config
-	pool             *pgxpool.Pool
-	logger           *slog.Logger
-	authStore        *auth.Store
-	proposalStore    *proposals.Store
-	onboardingStore  *onboarding.Store
-	contractStore    *contracts.Store
-	contractRenderer *contracts.Renderer
+	cfg               config.Config
+	pool              *pgxpool.Pool
+	logger            *slog.Logger
+	authStore         *auth.Store
+	proposalStore     *proposals.Store
+	presentationStore *presentations.Store
+	onboardingStore   *onboarding.Store
+	contractStore     *contracts.Store
+	contractRenderer  *contracts.Renderer
 	contractGenerator *contracts.Generator
-	storage          *storage.S3
-	mailer           *email.Brevo
-	registry         companyregistry.Provider
+	storage           *storage.S3
+	mailer            *email.Brevo
+	registry          companyregistry.Provider
 }
 
 type Dependencies struct {
@@ -46,6 +48,7 @@ type Dependencies struct {
 	Logger            *slog.Logger
 	AuthStore         *auth.Store
 	ProposalStore     *proposals.Store
+	PresentationStore *presentations.Store
 	OnboardingStore   *onboarding.Store
 	ContractStore     *contracts.Store
 	ContractRenderer  *contracts.Renderer
@@ -62,6 +65,7 @@ func New(deps Dependencies) *App {
 		logger: deps.Logger,
 		authStore: deps.AuthStore,
 		proposalStore: deps.ProposalStore,
+		presentationStore: deps.PresentationStore,
 		onboardingStore: deps.OnboardingStore,
 		contractStore: deps.ContractStore,
 		contractRenderer: deps.ContractRenderer,
@@ -75,7 +79,6 @@ func New(deps Dependencies) *App {
 func (a *App) Routes() http.Handler {
 	router := chi.NewRouter()
 	router.Use(middleware.RequestID)
-	router.Use(middleware.RealIP)
 	router.Use(middleware.Recoverer)
 	router.Use(a.securityHeaders)
 	router.Use(a.sameOriginWrites)
