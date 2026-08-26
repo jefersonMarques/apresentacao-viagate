@@ -14,8 +14,8 @@ set -a
 source ./.env
 set +a
 
-echo "[1/4] Baixando dependências Go..."
-go mod download
+echo "[1/4] Sincronizando dependências Go e go.sum..."
+go mod tidy
 
 echo "[2/4] Gerando componentes templ..."
 go run github.com/a-h/templ/cmd/templ@v0.3.943 generate
