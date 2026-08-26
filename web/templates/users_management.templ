@@ -1,0 +1,52 @@
+package templates
+
+import (
+	"github.com/a-h/templ"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
+)
+
+templ UsersManagementPage(current domain.User, users []domain.User, message, errorMessage string) {
+	@AdminLayout("ViaGate — Usuários", current) {
+		<header class="header"><div><span class="step-title">SUPER ADMIN</span><h1>Usuários e acessos</h1><p>Convide novos usuários, altere o perfil e desative acessos sem apagar o histórico comercial.</p></div></header>
+		if message != "" { <div class="notice">{ message }</div> }
+		if errorMessage != "" { <div class="notice error">{ errorMessage }</div> }
+		<section class="panel"><div class="panel-head"><h2>Convidar usuário</h2></div><div class="panel-body">
+			<form method="post" action="/admin/users/invite" class="grid">
+				<div class="field"><label>Nome</label><input name="name" required/></div>
+				<div class="field"><label>E-mail</label><input name="email" type="email" required/></div>
+				<div class="field"><label>Perfil</label><select name="role"><option value="commercial">Comercial</option><option value="operations">Operações</option><option value="legal">Jurídico</option><option value="super_admin">Super Admin</option></select></div>
+				<div class="field" style="align-content:end"><button class="btn primary" type="submit">Enviar convite</button></div>
+			</form>
+		</div></section>
+		<section class="panel"><div class="panel-head"><h2>Lista de usuários</h2></div><div class="table-wrap"><table class="table"><thead><tr><th>Usuário</th><th>Status</th><th>Perfil</th><th>Criado</th><th>Ações</th></tr></thead><tbody>
+			for _, item := range users {
+				<tr>
+					<td><strong>{ item.Name }</strong><br/><small>{ item.Email }</small></td>
+					<td><span class="badge">{ humanStatus(item.Status) }</span></td>
+					<td>{ PrimaryRole(item) }</td>
+					<td>{ item.CreatedAt.Format("02/01/2006 15:04") }</td>
+					<td>
+						if item.ID == current.ID {
+							<span class="badge success">Seu acesso</span>
+						} else {
+							<form method="post" action={ templ.SafeURL("/admin/users/" + item.ID + "/access") } class="actions">
+								<select name="role" aria-label="Perfil">
+									<option value="commercial" selected?={ PrimaryRole(item)=="commercial" }>Comercial</option>
+									<option value="operations" selected?={ PrimaryRole(item)=="operations" }>Operações</option>
+									<option value="legal" selected?={ PrimaryRole(item)=="legal" }>Jurídico</option>
+									<option value="super_admin" selected?={ PrimaryRole(item)=="super_admin" }>Super Admin</option>
+								</select>
+								<select name="status" aria-label="Status">
+									if item.Status == "invited" { <option value="invited" selected>Convidado</option> }
+									if item.Status != "invited" { <option value="active" selected?={ item.Status=="active" }>Ativo</option> }
+									<option value="disabled" selected?={ item.Status=="disabled" }>Desativado</option>
+								</select>
+								<button class="btn" type="submit">Salvar</button>
+							</form>
+						}
+					</td>
+				</tr>
+			}
+		</tbody></table></div></section>
+	}
+}
