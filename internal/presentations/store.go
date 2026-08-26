@@ -26,22 +26,25 @@ type Presentation struct {
 }
 
 type EditorInput struct {
-	PresentationID     string
-	ClientLegalName    string
-	ClientTradeName    string
-	ClientCNPJ         string
-	Title              string
-	ContactName        string
-	ContactRole        string
-	ContactEmail       string
-	ShowClientIdentity bool
-	ShowContactSlide   bool
-	SelectedModules    []string
-	SalespersonName    string
-	SalespersonEmail   string
-	SalespersonPhone   string
-	SalespersonJobTitle string
-	ContentHash        []byte
+	PresentationID       string
+	ClientLegalName      string
+	ClientTradeName      string
+	ClientCNPJ           string
+	Title                string
+	ContactName          string
+	ContactRole          string
+	ContactEmail         string
+	ShowClientIdentity   bool
+	ShowContactSlide     bool
+	SelectedModules      []string
+	SalespersonName      string
+	SalespersonEmail     string
+	SalespersonPhone     string
+	SalespersonJobTitle  string
+	SalespersonPhotoURL  string
+	SalespersonLinkedIn  string
+	SalespersonInstagram string
+	ContentHash          []byte
 }
 
 type SavedDraft struct {
@@ -52,24 +55,27 @@ type SavedDraft struct {
 }
 
 type PublicPresentation struct {
-	PresentationID      string
-	VersionID           string
-	VersionNumber       int
-	PublicToken         string
-	Title               string
-	ClientLegalName     string
-	ClientTradeName     string
-	ContactName         string
-	ContactRole         string
-	ContactEmail        string
-	SalespersonName     string
-	SalespersonEmail    string
-	SalespersonPhone    string
-	SalespersonJobTitle string
-	ShowClientIdentity  bool
-	ShowContactSlide    bool
-	SelectedModules     []string
-	ContentHash         []byte
+	PresentationID       string
+	VersionID            string
+	VersionNumber        int
+	PublicToken          string
+	Title                string
+	ClientLegalName      string
+	ClientTradeName      string
+	ContactName          string
+	ContactRole          string
+	ContactEmail         string
+	SalespersonName      string
+	SalespersonEmail     string
+	SalespersonPhone     string
+	SalespersonJobTitle  string
+	SalespersonPhotoURL  string
+	SalespersonLinkedIn  string
+	SalespersonInstagram string
+	ShowClientIdentity   bool
+	ShowContactSlide     bool
+	SelectedModules      []string
+	ContentHash          []byte
 }
 
 type presentationContent struct {
@@ -85,10 +91,13 @@ type presentationContent struct {
 		Email string `json:"email"`
 	} `json:"contact"`
 	Salesperson struct {
-		Name     string `json:"name"`
-		Email    string `json:"email"`
-		Phone    string `json:"phone"`
-		JobTitle string `json:"job_title"`
+		Name      string `json:"name"`
+		Email     string `json:"email"`
+		Phone     string `json:"phone"`
+		JobTitle  string `json:"job_title"`
+		PhotoURL  string `json:"photo_url"`
+		LinkedIn  string `json:"linkedin"`
+		Instagram string `json:"instagram"`
 	} `json:"salesperson"`
 	Settings struct {
 		ShowClientIdentity bool     `json:"show_client_identity"`
@@ -151,6 +160,7 @@ func (s *Store) SaveDraft(ctx context.Context,userID string,allowAll bool,input 
 	content.Client.LegalName=input.ClientLegalName;content.Client.TradeName=input.ClientTradeName;content.Client.CNPJ=input.ClientCNPJ
 	content.Contact.Name=input.ContactName;content.Contact.Role=input.ContactRole;content.Contact.Email=input.ContactEmail
 	content.Salesperson.Name=input.SalespersonName;content.Salesperson.Email=input.SalespersonEmail;content.Salesperson.Phone=input.SalespersonPhone;content.Salesperson.JobTitle=input.SalespersonJobTitle
+	content.Salesperson.PhotoURL=input.SalespersonPhotoURL;content.Salesperson.LinkedIn=input.SalespersonLinkedIn;content.Salesperson.Instagram=input.SalespersonInstagram
 	content.Settings.ShowClientIdentity=input.ShowClientIdentity;content.Settings.ShowContactSlide=input.ShowContactSlide;content.Settings.SelectedModules=input.SelectedModules
 	contentJSON,err:=json.Marshal(content);if err!=nil{return SavedDraft{},err}
 
@@ -206,6 +216,7 @@ func (s *Store) EditorByID(ctx context.Context,userID,presentationID string,allo
 			input.ContactName=content.Contact.Name;input.ContactRole=content.Contact.Role;input.ContactEmail=content.Contact.Email
 			input.ShowClientIdentity=content.Settings.ShowClientIdentity;input.ShowContactSlide=content.Settings.ShowContactSlide;input.SelectedModules=content.Settings.SelectedModules
 			input.SalespersonName=content.Salesperson.Name;input.SalespersonEmail=content.Salesperson.Email;input.SalespersonPhone=content.Salesperson.Phone;input.SalespersonJobTitle=content.Salesperson.JobTitle
+			input.SalespersonPhotoURL=content.Salesperson.PhotoURL;input.SalespersonLinkedIn=content.Salesperson.LinkedIn;input.SalespersonInstagram=content.Salesperson.Instagram
 		}
 	}
 	return input,draft,nil
@@ -224,6 +235,7 @@ func (s *Store) PublicByToken(ctx context.Context,token string)(PublicPresentati
 	result.ClientLegalName=content.Client.LegalName;result.ClientTradeName=content.Client.TradeName
 	result.ContactName=content.Contact.Name;result.ContactRole=content.Contact.Role;result.ContactEmail=content.Contact.Email
 	result.SalespersonName=content.Salesperson.Name;result.SalespersonEmail=content.Salesperson.Email;result.SalespersonPhone=content.Salesperson.Phone;result.SalespersonJobTitle=content.Salesperson.JobTitle
+	result.SalespersonPhotoURL=content.Salesperson.PhotoURL;result.SalespersonLinkedIn=content.Salesperson.LinkedIn;result.SalespersonInstagram=content.Salesperson.Instagram
 	result.ShowClientIdentity=content.Settings.ShowClientIdentity;result.ShowContactSlide=content.Settings.ShowContactSlide;result.SelectedModules=content.Settings.SelectedModules
 	return result,nil
 }
