@@ -100,8 +100,8 @@ func (f *Finalizer) Finalize(ctx context.Context, contractID string) error {
 	}
 
 	manifest := map[string]string{
-		"contract.pdf": sha256Hex(contractPDF),
-		"evidence.pdf": sha256Hex(evidencePDF),
+		"contract.pdf":  sha256Hex(contractPDF),
+		"evidence.pdf":  sha256Hex(evidencePDF),
 		"evidence.json": sha256Hex(evidenceJSON),
 	}
 	manifestJSON, err := json.MarshalIndent(manifest, "", "  ")
@@ -137,7 +137,6 @@ func (f *Finalizer) Finalize(ctx context.Context, contractID string) error {
 		return fmt.Errorf("persist evidence artifacts: %w", err)
 	}
 	if command.RowsAffected() == 0 {
-		// Idempotência: se outro processo já finalizou, não substituímos os artefatos gravados.
 		_ = f.storage.Delete(ctx, evidenceKey)
 		_ = f.storage.Delete(ctx, packageKey)
 		return nil
@@ -165,8 +164,8 @@ func (f *Finalizer) loadReport(ctx context.Context, contractID string) (Evidence
 		join contract_template_versions tv on tv.id=c.template_version_id
 		where c.id=$1 and c.status='signed' and c.fully_signed_at is not null
 	`, contractID).Scan(
-		&report.ContractID,&report.ClientLegalName,&report.ClientCNPJ,&report.ProposalVersion,&report.TemplateVersion,
-		&documentHash,&contractKey,&report.GeneratedAt,&report.FullySignedAt,
+		&report.ContractID, &report.ClientLegalName, &report.ClientCNPJ, &report.ProposalVersion, &report.TemplateVersion,
+		&documentHash, &contractKey, &report.GeneratedAt, &report.FullySignedAt,
 	)
 	if err != nil {
 		return EvidenceReport{}, "", fmt.Errorf("load signed contract: %w", err)
@@ -190,15 +189,17 @@ func (f *Finalizer) loadReport(ctx context.Context, contractID string) (Evidence
 	}
 	for rows.Next() {
 		var signer EvidenceSigner
-		if err := rows.Scan(&signer.ID,&signer.Type,&signer.Name,&signer.Email,&signer.CPF,&signer.Role,&signer.Status,&signer.SignedAt,&signer.SessionID,&signer.OTP,&signer.Face,&signer.Liveness); err != nil {
+		if err := rows.Scan(&signer.ID, &signer.Type, &signer.Name, &signer.Email, &signer.CPF, &signer.Role, &signer.Status, &signer.SignedAt, &signer.SessionID, &signer.OTP, &signer.Face, &signer.Liveness); err != nil {
 			rows.Close()
 			return EvidenceReport{}, "", err
 		}
 		report.Signers = append(report.Signers, signer)
 	}
-	if err := rows.Close(); err != nil {
+	if err := rows.Err(); err != nil {
+		rows.Close()
 		return EvidenceReport{}, "", err
 	}
+	rows.Close()
 
 	events, err := f.pool.Query(ctx, `
 		select e.event_type,coalesce(e.contract_signer_id::text,''),coalesce(e.ip_address::text,''),
@@ -212,7 +213,7 @@ func (f *Finalizer) loadReport(ctx context.Context, contractID string) (Evidence
 	for events.Next() {
 		var event EvidenceEvent
 		var metadataJSON []byte
-		if err := events.Scan(&event.Type,&event.SignerID,&event.IPAddress,&event.UserAgent,&event.SessionID,&event.OccurredAt,&metadataJSON); err != nil {
+		if err := events.Scan(&event.Type, &event.SignerID, &event.IPAddress, &event.UserAgent, &event.SessionID, &event.OccurredAt, &metadataJSON); err != nil {
 			return EvidenceReport{}, "", err
 		}
 		_ = json.Unmarshal(metadataJSON, &event.Metadata)
@@ -242,7 +243,9 @@ func renderEvidenceHTML(report EvidenceReport) (string, error) {
 	functions := template.FuncMap{
 		"time": func(value time.Time) string { return value.UTC().Format("02/01/2006 15:04:05 MST") },
 		"timePtr": func(value *time.Time) string {
-			if value == nil { return "—" }
+			if value == nil {
+				return "—"
+			}
 			return value.UTC().Format("02/01/2006 15:04:05 MST")
 		},
 	}
