@@ -16,6 +16,7 @@ import (
 	"github.com/jefersonMarques/apresentacao-viagate/internal/config"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/contracts"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/httpapp"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/maintenance"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/notifications"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/onboarding"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/pipeline"
@@ -51,8 +52,10 @@ func main(){
 
 	if err:=bootstrapAdmin(ctx,cfg,authStore,pool,logger);err!=nil{logger.Error("bootstrap admin failed","error",err);os.Exit(1)}
 
-	worker:=notifications.NewWorker(pool,mailer,logger)
-	go worker.Run(ctx)
+	notificationWorker:=notifications.NewWorker(pool,mailer,logger)
+	go notificationWorker.Run(ctx)
+	maintenanceWorker:=maintenance.NewWorker(pool,logger)
+	go maintenanceWorker.Run(ctx)
 
 	app:=httpapp.New(httpapp.Dependencies{
 		Config:cfg,Pool:pool,Logger:logger,AuthStore:authStore,ProposalStore:proposalStore,PresentationStore:presentationStore,
