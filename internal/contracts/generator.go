@@ -54,13 +54,13 @@ func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID stri
 	var repName,repCPF,repEmail,repPhone,repRole string
 	var minimumInvoice,setupFee float64
 	var acceptedAt time.Time
-	var validUntil *time.Time
+	var validUntilSnapshot string
 	err = g.pool.QueryRow(ctx, `
 		select pv.id::text,p.created_by::text,
 		       o.legal_name,coalesce(o.trade_name,''),o.cnpj,coalesce(o.street,''),coalesce(o.street_number,''),
 		       coalesce(o.complement,''),coalesce(o.district,''),coalesce(o.city,''),coalesce(o.state,''),coalesce(o.postal_code,''),
 		       o.company_responsible_name,o.company_responsible_cpf,o.company_responsible_email::text,o.company_responsible_phone,coalesce(o.company_responsible_role,''),
-		       pv.minimum_invoice,pv.setup_fee,a.accepted_at,p.valid_until
+		       pv.minimum_invoice,pv.setup_fee,a.accepted_at,coalesce(pv.content #>> '{proposal,valid_until}','')
 		from onboardings o
 		join proposal_acceptances a on a.id=o.proposal_acceptance_id
 		join proposal_versions pv on pv.id=a.proposal_version_id
@@ -68,7 +68,7 @@ func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID stri
 		where o.id=$1 and o.status in ('submitted','approved')
 	`,onboardingID).Scan(
 		&proposalVersionID,&createdBy,&legalName,&tradeName,&cnpj,&street,&number,&complement,&district,&city,&state,&postalCode,
-		&repName,&repCPF,&repEmail,&repPhone,&repRole,&minimumInvoice,&setupFee,&acceptedAt,&validUntil,
+		&repName,&repCPF,&repEmail,&repPhone,&repRole,&minimumInvoice,&setupFee,&acceptedAt,&validUntilSnapshot,
 	)
 	if err != nil { return Generated{},fmt.Errorf("load contract data: %w",err) }
 
@@ -97,6 +97,8 @@ func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID stri
 	rows.Close()
 
 	address := strings.TrimSpace(strings.Join(nonEmpty(street,number,complement,district,city,state,postalCode),", "))
+	validUntilDisplay:=""
+	if validUntilSnapshot!=""{if parsed,parseErr:=time.Parse("2006-01-02",validUntilSnapshot);parseErr==nil{validUntilDisplay=parsed.Format("02/01/2006")}}
 	data := Data{
 		"client":map[string]any{
 			"legal_name":legalName,"trade_name":tradeName,"cnpj":cnpj,"address":address,"city":city,"state":state,
@@ -108,7 +110,7 @@ func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID stri
 			"minimum_invoice":fmt.Sprintf("R$ %.2f",minimumInvoice),
 			"setup_fee":fmt.Sprintf("R$ %.2f",setupFee),
 			"accepted_at":acceptedAt.Format("02/01/2006 15:04"),
-			"valid_until":formatDate(validUntil),
+			"valid_until":validUntilDisplay,
 		},
 		"viagate":map[string]any{
 			"legal_name":g.company.LegalName,
@@ -144,5 +146,3 @@ func nonEmpty(values ...string) []string {
 	for _,value:=range values { if strings.TrimSpace(value)!=""{result=append(result,strings.TrimSpace(value))} }
 	return result
 }
-
-func formatDate(value *time.Time) string { if value==nil{return ""}; return value.Format("02/01/2006") }
