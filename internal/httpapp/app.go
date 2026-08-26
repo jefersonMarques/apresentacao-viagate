@@ -102,6 +102,7 @@ func (a *App) Routes() http.Handler {
 	router.Get("/p/{token}", a.publicProposalPage)
 	router.Post("/p/{token}/accept", a.acceptProposal)
 	router.Get("/a/{token}", a.publicPresentationPage)
+	router.Get("/onboarding/resume/{token}",a.resumeOnboarding)
 
 	router.Group(func(customer chi.Router) {
 		customer.Use(a.customerSessionRequired)
@@ -135,8 +136,15 @@ func (a *App) Routes() http.Handler {
 		admin.With(a.permission("presentation.create")).Get("/admin/presentations/{id}/edit", a.editPresentationPage)
 		admin.With(a.permission("presentation.create")).Post("/admin/presentations/save", a.savePresentation)
 
+		admin.With(a.permission("onboarding.review")).Get("/admin/onboardings",a.adminOnboardings)
+		admin.With(a.permission("onboarding.review")).Get("/admin/onboardings/{id}",a.adminOnboardingDetail)
+		admin.With(a.permission("onboarding.review")).Post("/admin/onboardings/{id}/review",a.reviewOnboarding)
+		admin.With(a.permission("onboarding.review")).Post("/admin/onboardings/{id}/contract/retry",a.retryOnboardingContract)
+		admin.With(a.permission("onboarding.review")).Get("/admin/onboardings/{id}/documents/{documentID}",a.adminOnboardingDocument)
+
 		admin.With(a.permission("user.manage")).Get("/admin/users", a.usersPage)
 		admin.With(a.permission("user.manage")).Post("/admin/users/invite", a.inviteUser)
+		admin.With(a.permission("user.manage")).Post("/admin/users/{id}/access",a.updateUserAccess)
 		admin.With(a.permission("contract.template.manage")).Get("/admin/contracts/templates", a.contractTemplatesPage)
 		admin.With(a.permission("contract.template.manage")).Post("/admin/contracts/templates", a.saveContractTemplate)
 	})
