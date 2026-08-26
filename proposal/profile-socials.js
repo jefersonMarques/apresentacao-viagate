@@ -4,13 +4,11 @@ const SOCIAL_FIELDS = [
   {
     id: 'salesLinkedIn',
     label: 'LinkedIn',
-    column: 'linkedin_url',
     placeholder: 'https://www.linkedin.com/in/...',
   },
   {
     id: 'salesInstagram',
     label: 'Instagram',
-    column: 'instagram_url',
     placeholder: 'https://www.instagram.com/...',
   },
 ];
