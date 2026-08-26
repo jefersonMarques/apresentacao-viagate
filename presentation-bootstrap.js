@@ -47,7 +47,7 @@ async function loadPresentationMode(attempt = 0) {
 
   await appendScript('./presentation-personalization.js?v=20260825-7', 'data-presentation-personalization');
   await appendScript('./presentation-social-links.js?v=20260825-7', 'data-presentation-social-links');
-  await appendScript('./presentation-host-bridge.js?v=20260825-7', 'data-presentation-host-bridge');
+  await appendScript('./presentation-host-bridge.js?v=20260825-8', 'data-presentation-host-bridge');
 
   document.querySelector('.presentation-gate')?.remove();
   document.querySelector('.presentation-controls')?.remove();
