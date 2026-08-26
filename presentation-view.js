@@ -94,7 +94,7 @@ function installPresentation(frameDocument, frameWindow) {
   });
 
   const bootstrapScript = frameDocument.createElement('script');
-  bootstrapScript.src = './presentation-bootstrap.js?v=20260825-7';
+  bootstrapScript.src = './presentation-bootstrap.js?v=20260825-8';
   bootstrapScript.dataset.presentationBootstrap = 'true';
   frameDocument.body.appendChild(bootstrapScript);
 }
@@ -197,6 +197,23 @@ function navigatePresentation(direction) {
   window.setTimeout(syncNavigationFromFrame, 80);
 }
 
+function normalizePresentationDocument(html) {
+  return html.replace(/\s*<base\s+[^>]*href=["'][^"']*["'][^>]*>/i, '');
+}
+
+async function loadPresentationDocument() {
+  const response = await fetch('./presentation-content.html?v=20260825-8', {
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+
+  const html = await response.text();
+  frame.srcdoc = normalizePresentationDocument(html);
+}
+
 async function initializeViewer() {
   if (!hasSupabaseConfiguration() || !supabase) {
     showError('Apresentação indisponível: Supabase não configurado.');
@@ -229,8 +246,16 @@ async function initializeViewer() {
     await preparePresentationStart();
   }, { once: true });
 
-  frame.src = './presentation-content.html?v=20260825-7';
   frame.hidden = false;
+
+  try {
+    await loadPresentationDocument();
+  } catch (loadError) {
+    console.error('Não foi possível carregar o conteúdo da apresentação.', loadError);
+    showError('Não foi possível carregar o conteúdo da apresentação.');
+    return;
+  }
+
   await track('open');
 }
 
