@@ -18,6 +18,7 @@ type Presentation struct {
 	Title          string
 	Status         string
 	CurrentVersion int
+	PublicToken    string
 	CreatedBy      string
 	UpdatedAt      time.Time
 }
@@ -91,15 +92,18 @@ func NewStore(pool *pgxpool.Pool)*Store{return &Store{pool:pool}}
 
 func (s *Store) List(ctx context.Context,userID string,all bool)([]Presentation,error){
 	query:=`
-		select p.id::text,coalesce(c.legal_name,''),p.title,p.status::text,p.current_version,p.created_by::text,p.updated_at
-		from presentations p left join clients c on c.id=p.client_id
+		select p.id::text,coalesce(c.legal_name,''),p.title,p.status::text,p.current_version,
+		       coalesce(v.public_token::text,''),p.created_by::text,p.updated_at
+		from presentations p
+		left join clients c on c.id=p.client_id
+		left join presentation_versions v on v.presentation_id=p.id and v.version_number=p.current_version and v.published_at is not null
 	`
 	args:=[]any{}
 	if !all {query+=` where p.created_by=$1`;args=append(args,userID)}
 	query+=` order by p.updated_at desc`
 	rows,err:=s.pool.Query(ctx,query,args...);if err!=nil{return nil,err};defer rows.Close()
 	var items []Presentation
-	for rows.Next(){var item Presentation;if err:=rows.Scan(&item.ID,&item.ClientName,&item.Title,&item.Status,&item.CurrentVersion,&item.CreatedBy,&item.UpdatedAt);err!=nil{return nil,err};items=append(items,item)}
+	for rows.Next(){var item Presentation;if err:=rows.Scan(&item.ID,&item.ClientName,&item.Title,&item.Status,&item.CurrentVersion,&item.PublicToken,&item.CreatedBy,&item.UpdatedAt);err!=nil{return nil,err};items=append(items,item)}
 	return items,rows.Err()
 }
 
