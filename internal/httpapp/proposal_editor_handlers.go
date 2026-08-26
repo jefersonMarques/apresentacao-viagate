@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -65,19 +66,22 @@ func (a *App) proposalInputFromForm(r *http.Request,salespersonName,salespersonE
 	input.Title=strings.TrimSpace(r.FormValue("title"));if input.Title==""{input.Title="Proposta Comercial ViaGate"}
 	if value:=strings.TrimSpace(r.FormValue("valid_until"));value!=""{date,err:=time.Parse("2006-01-02",value);if err!=nil{return input,fmt.Errorf("Validade inválida.")};input.ValidUntil=&date}
 	input.PricingModel=strings.TrimSpace(r.FormValue("pricing_model"));if !validPricingModel(input.PricingModel){return input,fmt.Errorf("Modelo comercial inválido.")}
-	input.MinimumInvoice=parseMoney(r.FormValue("minimum_invoice"));input.SetupFee=parseMoney(r.FormValue("setup_fee"))
+
+	minimumInvoice,err:=parseMoney(r.FormValue("minimum_invoice"));if err!=nil{return input,fmt.Errorf("Fatura mínima inválida.")};input.MinimumInvoice=minimumInvoice
+	setupFee,err:=parseMoney(r.FormValue("setup_fee"));if err!=nil{return input,fmt.Errorf("Valor de implantação inválido.")};input.SetupFee=setupFee
 
 	ids:=r.Form["catalog_id"];statuses:=r.Form["item_status"];prices:=r.Form["item_price"]
 	for index,id:=range ids{
 		status:="off";if index<len(statuses){status=statuses[index]}
+		if status!="off"&&status!="included"&&status!="optional"{return input,fmt.Errorf("Status de item inválido.")}
 		if status=="off"{continue}
 		group,item,ok:=catalog.ItemByID(id);if !ok{return input,fmt.Errorf("Item comercial inválido: %s",id)}
 		if !catalog.ModelAllows(item,input.PricingModel){continue}
-		price:=0.0;if index<len(prices){price=parseMoney(prices[index])}
+		price:=0.0
+		if index<len(prices){price,err=parseMoney(prices[index]);if err!=nil{return input,fmt.Errorf("Valor inválido para %s.",item.Label)}}
 		input.Items=append(input.Items,proposals.EditorItem{CatalogID:item.ID,GroupName:group.Title,Label:item.Label,Unit:item.Unit,Price:price,IsOptional:status=="optional",SortOrder:index})
 	}
-	input.Conditions=append(input.Conditions,r.Form["condition"]...)
-	for _,line:=range strings.Split(r.FormValue("custom_conditions"),"\n"){if value:=strings.TrimSpace(line);value!=""{input.Conditions=append(input.Conditions,value)}}
+	input.Conditions=normalizedConditions(r.Form["condition"],r.FormValue("custom_conditions"))
 	validUntil:="";if input.ValidUntil!=nil{validUntil=input.ValidUntil.Format("2006-01-02")}
 	input.Content=map[string]any{
 		"proposal":map[string]any{"title":input.Title,"valid_until":validUntil},
@@ -90,4 +94,29 @@ func (a *App) proposalInputFromForm(r *http.Request,salespersonName,salespersonE
 }
 
 func validPricingModel(value string)bool{for _,model:=range catalog.PricingModels{if model.ID==value{return true}};return false}
-func parseMoney(value string)float64{value=strings.TrimSpace(strings.ReplaceAll(value,",","."));number,_:=strconv.ParseFloat(value,64);if number<0{return 0};return number}
+
+func parseMoney(value string)(float64,error){
+	value=strings.TrimSpace(value)
+	if value==""{return 0,nil}
+	if strings.Contains(value,","){
+		if strings.Contains(value,"."){value=strings.ReplaceAll(value,".","")}
+		value=strings.ReplaceAll(value,",",".")
+	}
+	number,err:=strconv.ParseFloat(value,64)
+	if err!=nil||math.IsNaN(number)||math.IsInf(number,0)||number<0{return 0,fmt.Errorf("invalid money")}
+	return number,nil
+}
+
+func normalizedConditions(standard []string,custom string)[]string{
+	seen:=map[string]bool{}
+	result:=[]string{}
+	appendValue:=func(value string){
+		value=strings.TrimSpace(value)
+		if value==""||seen[value]{return}
+		seen[value]=true
+		result=append(result,value)
+	}
+	for _,value:=range standard{appendValue(value)}
+	for _,line:=range strings.Split(custom,"\n"){appendValue(line)}
+	return result
+}
