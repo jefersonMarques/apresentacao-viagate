@@ -1,213 +1,107 @@
-body.proposal-reading {
-  overflow-y: auto;
+html:not(:fullscreen) body.public-proposal #proposalPresentation,
+body.proposal-locked #proposalPresentation {
+  opacity: .025;
+  filter: blur(24px) brightness(.35);
+  pointer-events: none;
+  user-select: none;
 }
 
-body.proposal-reading.proposal-locked {
-  overflow-y: auto;
+html:fullscreen body.public-proposal:not(.proposal-locked) #proposalPresentation {
+  opacity: 1;
+  filter: none;
 }
 
-body.proposal-reading #proposalGate,
-body.proposal-reading .proposal-view-gate {
-  display: none !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
+.proposal-slide.dark .proposal-price-group {
+  border-color: rgba(255, 255, 255, .18);
+  background: rgba(5, 18, 29, .62);
 }
 
-.proposal-view-action-row {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+.proposal-slide.dark .proposal-price-group-header {
+  border-bottom-color: rgba(255, 255, 255, .14);
+  background: rgba(255, 255, 255, .045);
+  color: #fff;
+}
+
+.proposal-slide.dark .proposal-price-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #0b2030 !important;
+  color: #f7fafc !important;
+}
+
+.proposal-slide.dark .proposal-price-table thead,
+.proposal-slide.dark .proposal-price-table tr,
+.proposal-slide.dark .proposal-price-table th,
+.proposal-slide.dark .proposal-price-table td {
+  background: transparent !important;
+}
+
+.proposal-slide.dark .proposal-price-table th {
+  border-bottom: 1px solid rgba(255, 255, 255, .14) !important;
+  color: #aebdca !important;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.proposal-slide.dark .proposal-price-table td {
+  border-bottom: 1px solid rgba(255, 255, 255, .09) !important;
+  color: #fff !important;
+}
+
+.proposal-slide.dark .proposal-price-table tbody tr:last-child td {
+  border-bottom: 0 !important;
+}
+
+.proposal-company-integrated {
+  color: #071827;
+}
+
+.proposal-company-integrated-inner {
+  display: grid;
+  gap: 34px;
+}
+
+.proposal-company-integrated-intro {
+  display: grid;
+  grid-template-columns: minmax(0, .95fr) minmax(440px, 1.05fr);
+  gap: 46px;
+  align-items: start;
+}
+
+.proposal-company-integrated-intro .proposal-lead {
+  max-width: 720px;
+  color: #657782;
+}
+
+.proposal-company-proof-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 
-.proposal-about-button {
-  background: transparent;
-}
-
-.proposal-reading-actions {
-  position: fixed;
-  right: 18px;
-  bottom: 18px;
-  z-index: 90;
-  display: none;
-  gap: 8px;
-}
-
-body.proposal-reading .proposal-reading-actions {
-  display: flex;
-}
-
-.proposal-reading-actions button {
-  min-height: 40px;
-  padding: 0 12px;
-  border: 1px solid rgba(7, 24, 39, .15);
-  background: rgba(255, 255, 255, .94);
-  color: #071827;
-  font: inherit;
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: .05em;
-  cursor: pointer;
-  backdrop-filter: blur(8px);
-}
-
-.proposal-reading-actions button:hover {
-  border-color: #ff6b18;
-  color: #d85000;
-}
-
-.proposal-company-open {
-  overflow: hidden !important;
-}
-
-.proposal-company-layer {
-  position: fixed;
-  inset: 0;
-  z-index: 300;
-  overflow-y: auto;
-  background: #f4f7f8;
-  color: #071827;
-}
-
-.proposal-company-layer[hidden] {
-  display: none !important;
-}
-
-.proposal-company-header {
-  min-height: 70px;
-  padding: 0 22px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  background: #071827;
-}
-
-.proposal-company-header img {
-  width: 122px;
-  height: auto;
-}
-
-.proposal-company-header button,
-.proposal-company-footer button {
-  min-height: 40px;
-  padding: 0 14px;
-  border: 1px solid rgba(255, 255, 255, .18);
-  background: transparent;
-  color: #fff;
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: .05em;
-  cursor: pointer;
-}
-
-.proposal-company-content {
-  width: min(1120px, calc(100% - 32px));
-  margin: 0 auto;
-  padding: 52px 0 70px;
-}
-
-.proposal-company-hero {
-  max-width: 780px;
-  padding: 46px;
-  background: #071827;
-  color: #fff;
-}
-
-.proposal-company-hero small,
-.proposal-company-section-title small,
-.proposal-company-footer small {
-  color: #ff6b18;
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: .14em;
-}
-
-.proposal-company-hero h1 {
-  max-width: 700px;
-  margin: 12px 0 0;
-  font-size: clamp(30px, 5vw, 60px);
-  line-height: .98;
-  letter-spacing: -.05em;
-}
-
-.proposal-company-hero p {
-  max-width: 660px;
-  margin: 22px 0 0;
-  color: #b9c8d1;
-  font-size: 14px;
-  line-height: 1.65;
-}
-
-.proposal-company-proof {
-  margin-top: 18px;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1px;
-  background: #dfe6ea;
-}
-
-.proposal-company-proof article {
-  min-height: 150px;
-  padding: 24px;
-  background: #fff;
-}
-
-.proposal-company-proof strong,
-.proposal-company-proof span {
-  display: block;
-}
-
-.proposal-company-proof strong {
-  font-size: 14px;
-}
-
-.proposal-company-proof span {
-  margin-top: 10px;
-  color: #6e7d87;
-  font-size: 11px;
-  line-height: 1.55;
-}
-
-.proposal-company-related {
-  margin-top: 46px;
-}
-
-.proposal-company-section-title h2 {
-  margin: 8px 0 0;
-  font-size: clamp(25px, 4vw, 42px);
-  letter-spacing: -.04em;
-}
-
-.proposal-company-modules {
-  margin-top: 18px;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.proposal-company-module {
-  min-height: 150px;
-  padding: 20px;
-  display: grid;
-  grid-template-columns: 48px minmax(0, 1fr);
-  gap: 14px;
+.proposal-company-proof-grid article {
+  min-height: 210px;
+  padding: 22px;
   border: 1px solid #dfe6ea;
   background: #fff;
 }
 
-.proposal-company-module > span {
-  width: 48px;
-  height: 48px;
+.proposal-company-proof-grid article > span,
+.proposal-company-selected-grid article > span {
+  width: 44px;
+  height: 44px;
   display: grid;
   place-items: center;
   background: #071827;
   color: #ff6b18;
 }
 
-.proposal-company-module svg {
-  width: 22px;
-  height: 22px;
+.proposal-company-proof-grid svg,
+.proposal-company-selected-grid svg {
+  width: 20px;
+  height: 20px;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.7;
@@ -215,84 +109,85 @@ body.proposal-reading .proposal-reading-actions {
   stroke-linejoin: round;
 }
 
-.proposal-company-module strong {
+.proposal-company-proof-grid strong,
+.proposal-company-proof-grid p,
+.proposal-company-selected-grid strong,
+.proposal-company-selected-grid p {
   display: block;
-  margin-top: 3px;
+}
+
+.proposal-company-proof-grid strong {
+  margin-top: 28px;
   font-size: 14px;
 }
 
-.proposal-company-module p {
+.proposal-company-proof-grid p,
+.proposal-company-selected-grid p {
   margin: 8px 0 0;
-  color: #6c7b85;
+  color: #6b7d88;
   font-size: 11px;
   line-height: 1.55;
 }
 
-.proposal-company-footer {
-  margin-top: 46px;
-  padding: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  background: #071827;
-  color: #fff;
+.proposal-company-selected {
+  padding-top: 26px;
+  border-top: 1px solid #dfe6ea;
 }
 
-.proposal-company-footer strong {
+.proposal-company-selected-title small,
+.proposal-company-selected-title strong {
   display: block;
+}
+
+.proposal-company-selected-title small {
+  color: #ff6b18;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.proposal-company-selected-title strong {
   margin-top: 6px;
-  font-size: 16px;
+  font-size: 17px;
+}
+
+.proposal-company-selected-grid {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.proposal-company-selected-grid article {
+  min-height: 126px;
+  padding: 18px;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 14px;
+  border: 1px solid #dfe6ea;
+  background: #f9fbfc;
+}
+
+.proposal-company-selected-grid strong {
+  margin-top: 2px;
+  color: #071827;
+  font-size: 13px;
+}
+
+@media (max-width: 1100px) {
+  .proposal-company-integrated-intro {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
 }
 
 @media (max-width: 760px) {
-  .proposal-reading-actions {
-    right: 10px;
-    bottom: 10px;
-    left: 10px;
-    display: none;
-    grid-template-columns: 1fr 1fr;
-  }
-
-  body.proposal-reading .proposal-reading-actions {
-    display: grid;
-  }
-
-  .proposal-reading-actions button {
-    min-width: 0;
-    padding: 0 8px;
-    font-size: 8px;
-  }
-
-  .proposal-company-content {
-    width: min(100% - 20px, 1120px);
-    padding-top: 24px;
-  }
-
-  .proposal-company-header {
-    padding: 0 14px;
-  }
-
-  .proposal-company-header img {
-    width: 105px;
-  }
-
-  .proposal-company-header button {
-    padding: 0 10px;
-    font-size: 8px;
-  }
-
-  .proposal-company-hero {
-    padding: 26px 20px;
-  }
-
-  .proposal-company-proof,
-  .proposal-company-modules {
+  .proposal-company-proof-grid,
+  .proposal-company-selected-grid {
     grid-template-columns: 1fr;
   }
 
-  .proposal-company-footer {
-    align-items: stretch;
-    flex-direction: column;
+  .proposal-company-proof-grid article {
+    min-height: 0;
   }
 }
