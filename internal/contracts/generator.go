@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	appconfig "github.com/jefersonMarques/apresentacao-viagate/internal/config"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/storage"
 )
 
@@ -18,6 +19,7 @@ type Generator struct {
 	renderer *Renderer
 	pdf      *PDFRenderer
 	storage  *storage.S3
+	company  appconfig.CompanyConfig
 }
 
 type Generated struct {
@@ -29,8 +31,8 @@ type Generated struct {
 	DocumentSHA256 []byte
 }
 
-func NewGenerator(pool *pgxpool.Pool, store *Store, renderer *Renderer, pdf *PDFRenderer, storageClient *storage.S3) *Generator {
-	return &Generator{pool: pool, store: store, renderer: renderer, pdf: pdf, storage: storageClient}
+func NewGenerator(pool *pgxpool.Pool, store *Store, renderer *Renderer, pdf *PDFRenderer, storageClient *storage.S3, company appconfig.CompanyConfig) *Generator {
+	return &Generator{pool: pool, store: store, renderer: renderer, pdf: pdf, storage: storageClient, company: company}
 }
 
 func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID string) (Generated, error) {
@@ -109,8 +111,8 @@ func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID stri
 			"valid_until":formatDate(validUntil),
 		},
 		"viagate":map[string]any{
-			"legal_name":"ViaGate Tecnologia e Gestão de Risco",
-			"cnpj":"CONFIGURAR_CNPJ_VIAGATE",
+			"legal_name":g.company.LegalName,
+			"cnpj":g.company.CNPJ,
 		},
 		"products":products,
 	}
