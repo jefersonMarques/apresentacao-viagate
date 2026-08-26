@@ -56,6 +56,7 @@ type Onboarding struct {
 	ProposalAcceptanceID       string
 	ClientID                   string
 	Status                     string
+	ReviewNotes                string
 	CNPJ                       string
 	LegalName                  string
 	TradeName                  string
