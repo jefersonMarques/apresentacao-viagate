@@ -17,6 +17,8 @@ func TestCleanCNPJSupportsLegacyAndAlphanumericFormats(t *testing.T){
 
 func TestCleanCNPJRejectsInvalidValues(t *testing.T){
 	values:=[]string{
+		"00.000.000/0000-00",
+		"11.111.111/1111-11",
 		"00.000.000/E08G-13",
 		"12.ABC.345/01DE-34",
 		"00.000.000/E08G-AA",
