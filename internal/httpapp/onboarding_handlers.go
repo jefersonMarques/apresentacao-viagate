@@ -40,14 +40,14 @@ func (a *App) onboardingPage(w http.ResponseWriter,r *http.Request) {
 		render(r.Context(),w,http.StatusOK,templates.OnboardingStatusPage(onboarding,message))
 		return
 	}
-	render(r.Context(),w,http.StatusOK,templates.OnboardingPage(onboarding,message,""))
+	render(r.Context(),w,http.StatusOK,templates.OnboardingFormPage(onboarding,message,"",a.cfg.RequireOnboardingReview))
 }
 
 func (a *App) saveOnboarding(w http.ResponseWriter,r *http.Request) {
 	current,err:=a.currentOnboarding(r);if err!=nil{http.Error(w,"acesso negado",http.StatusForbidden);return}
 	if err:=r.ParseForm();err!=nil{http.Error(w,"dados inválidos",http.StatusBadRequest);return}
-	cnpj,err:=cleanCNPJ(r.FormValue("cnpj"));if err!=nil{render(r.Context(),w,http.StatusBadRequest,templates.OnboardingPage(current,"",err.Error()));return}
-	cpf,err:=cleanCPF(r.FormValue("responsible_cpf"));if err!=nil{render(r.Context(),w,http.StatusBadRequest,templates.OnboardingPage(current,"",err.Error()));return}
+	cnpj,err:=cleanCNPJ(r.FormValue("cnpj"));if err!=nil{render(r.Context(),w,http.StatusBadRequest,templates.OnboardingFormPage(current,"",err.Error(),a.cfg.RequireOnboardingReview));return}
+	cpf,err:=cleanCPF(r.FormValue("responsible_cpf"));if err!=nil{render(r.Context(),w,http.StatusBadRequest,templates.OnboardingFormPage(current,"",err.Error(),a.cfg.RequireOnboardingReview));return}
 
 	current.CNPJ=cnpj
 	current.LegalName=strings.TrimSpace(r.FormValue("legal_name"));current.TradeName=strings.TrimSpace(r.FormValue("trade_name"))
@@ -60,8 +60,8 @@ func (a *App) saveOnboarding(w http.ResponseWriter,r *http.Request) {
 	current.SystemUsers=nil
 	for _,row:=range formValuesAligned(r.Form["system_user_name"],r.Form["system_user_phone"],r.Form["system_user_email"]){if row[0]!=""&&row[2]!=""{current.SystemUsers=append(current.SystemUsers,domain.OnboardingSystemUser{Name:row[0],Phone:row[1],Email:strings.ToLower(row[2])})}}
 
-	if validationError:=validateOnboarding(current);validationError!=""{render(r.Context(),w,http.StatusBadRequest,templates.OnboardingPage(current,"",validationError));return}
-	if err:=a.onboardingStore.Save(r.Context(),current);err!=nil{a.logger.Error("save onboarding failed","error",err);render(r.Context(),w,http.StatusBadRequest,templates.OnboardingPage(current,"","Não foi possível salvar os dados. O cadastro pode já ter sido enviado para revisão."));return}
+	if validationError:=validateOnboarding(current);validationError!=""{render(r.Context(),w,http.StatusBadRequest,templates.OnboardingFormPage(current,"",validationError,a.cfg.RequireOnboardingReview));return}
+	if err:=a.onboardingStore.Save(r.Context(),current);err!=nil{a.logger.Error("save onboarding failed","error",err);render(r.Context(),w,http.StatusBadRequest,templates.OnboardingFormPage(current,"","Não foi possível salvar os dados. O cadastro pode já ter sido enviado para revisão.",a.cfg.RequireOnboardingReview));return}
 	http.Redirect(w,r,"/onboarding/"+current.ID+"?saved=1",http.StatusSeeOther)
 }
 
@@ -83,7 +83,8 @@ func (a *App) lookupCNPJ(w http.ResponseWriter,r *http.Request) {
 	current,err:=a.currentOnboarding(r)
 	if err!=nil{http.Error(w,"acesso negado",http.StatusForbidden);return}
 	if current.Status!="pending"&&current.Status!="in_progress"&&current.Status!="correction_requested"{http.Error(w,"cadastro não está disponível para edição",http.StatusConflict);return}
-	company,err:=a.registry.Lookup(r.Context(),chi.URLParam(r,"cnpj"));if err!=nil{http.Error(w,"CNPJ não encontrado",http.StatusNotFound);return}
+	cnpj,err:=cleanCNPJ(chi.URLParam(r,"cnpj"));if err!=nil{http.Error(w,"CNPJ inválido",http.StatusBadRequest);return}
+	company,err:=a.registry.Lookup(r.Context(),cnpj);if err!=nil{http.Error(w,"CNPJ não encontrado",http.StatusNotFound);return}
 	w.Header().Set("Content-Type","application/json")
 	w.Header().Set("Cache-Control","private, max-age=300")
 	_ = json.NewEncoder(w).Encode(map[string]string{
@@ -113,8 +114,8 @@ func (a *App) uploadOnboardingDocument(w http.ResponseWriter,r *http.Request) {
 
 func (a *App) submitOnboarding(w http.ResponseWriter,r *http.Request) {
 	current,err:=a.currentOnboarding(r);if err!=nil{http.Error(w,"acesso negado",http.StatusForbidden);return}
-	if validationError:=validateOnboarding(current);validationError!=""{render(r.Context(),w,http.StatusBadRequest,templates.OnboardingPage(current,"",validationError));return}
-	if err:=a.onboardingStore.Submit(r.Context(),current.ID);err!=nil{render(r.Context(),w,http.StatusBadRequest,templates.OnboardingPage(current,"",err.Error()));return}
+	if validationError:=validateOnboarding(current);validationError!=""{render(r.Context(),w,http.StatusBadRequest,templates.OnboardingFormPage(current,"",validationError,a.cfg.RequireOnboardingReview));return}
+	if err:=a.onboardingStore.Submit(r.Context(),current.ID);err!=nil{render(r.Context(),w,http.StatusBadRequest,templates.OnboardingFormPage(current,"",err.Error(),a.cfg.RequireOnboardingReview));return}
 
 	_,_ = a.pool.Exec(r.Context(),`
 		insert into audit_events(actor_type,event_type,resource_type,resource_id,ip_address,user_agent,metadata)
