@@ -90,7 +90,10 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 								if len(priorities) > 0 {
 									<div class="proposal-content-grid">
 										for index, priority := range priorities {
-											<article class="proposal-content-card"><small>{ index + 1 }</small><h3>{ priority }</h3></article>
+											<article class="proposal-content-card">
+												<small>{ index + 1 }</small>
+												<h3>{ priority }</h3>
+											</article>
 										}
 									</div>
 								}
@@ -114,7 +117,10 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 								if len(solutionScope) > 0 {
 									<div class="proposal-content-grid">
 										for index, scope := range solutionScope {
-											<article class="proposal-content-card"><small>{ index + 1 }</small><h3>{ scope }</h3></article>
+											<article class="proposal-content-card">
+												<small>{ index + 1 }</small>
+												<h3>{ scope }</h3>
+											</article>
 										}
 									</div>
 								}
@@ -137,7 +143,11 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 								}
 								<div class="proposal-model-grid">
 									for index, model := range modelCards {
-										<article class="proposal-model-card"><small>MODELO { index + 1 }</small><strong>{ model.Title }</strong><span>{ model.Summary }</span></article>
+										<article class="proposal-model-card">
+											<small>MODELO { index + 1 }</small>
+											<strong>{ model.Title }</strong>
+											<span>{ model.Summary }</span>
+										</article>
 									}
 								</div>
 							</div>
@@ -157,7 +167,12 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 									<div class="proposal-price-groups">
 										for _, group := range ProposalPriceGroups(proposal) {
 											<section class="proposal-price-group">
-												<header class="proposal-price-group-header"><strong>{ group.Name }</strong>if group.AllOptional { <span class="proposal-optional-label">Opcional</span> }</header>
+												<header class="proposal-price-group-header">
+													<strong>{ group.Name }</strong>
+													if group.AllOptional {
+														<span class="proposal-optional-label">Opcional</span>
+													}
+												</header>
 												<table class="proposal-price-table">
 													<thead><tr><th>Item</th><th>Unidade</th><th>Status</th><th>Valor</th></tr></thead>
 													<tbody>
@@ -195,7 +210,10 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 								if len(proposal.Conditions) > 0 {
 									<div class="proposal-content-grid">
 										for index, condition := range proposal.Conditions {
-											<article class="proposal-content-card"><small>{ index + 1 }</small><h3>{ condition }</h3></article>
+											<article class="proposal-content-card">
+												<small>{ index + 1 }</small>
+												<h3>{ condition }</h3>
+											</article>
 										}
 									</div>
 								}
@@ -226,13 +244,23 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 								<img src={ templ.SafeURL(ProposalSalesperson(proposal,"photo_url")) } alt={ ProposalSalesperson(proposal,"name") }/>
 							}
 							<small>CONTATO RESPONSÁVEL</small>
-							if ProposalSalesperson(proposal,"name") != "" { <strong>{ ProposalSalesperson(proposal,"name") }</strong> }
-							if ProposalSalesperson(proposal,"phone") != "" { <span>{ Phone(ProposalSalesperson(proposal,"phone")) }</span> }
-							if ProposalSalesperson(proposal,"email") != "" { <span>{ ProposalSalesperson(proposal,"email") }</span> }
+							if ProposalSalesperson(proposal,"name") != "" {
+								<strong>{ ProposalSalesperson(proposal,"name") }</strong>
+							}
+							if ProposalSalesperson(proposal,"phone") != "" {
+								<span>{ Phone(ProposalSalesperson(proposal,"phone")) }</span>
+							}
+							if ProposalSalesperson(proposal,"email") != "" {
+								<span>{ ProposalSalesperson(proposal,"email") }</span>
+							}
 							if ProposalSalesperson(proposal,"linkedin") != "" || ProposalSalesperson(proposal,"instagram") != "" {
 								<div class="proposal-social-links">
-									if ProposalSalesperson(proposal,"linkedin") != "" { <a href={ templ.SafeURL(ProposalSalesperson(proposal,"linkedin")) } target="_blank" rel="noopener">LinkedIn</a> }
-									if ProposalSalesperson(proposal,"instagram") != "" { <a href={ templ.SafeURL(ProposalSalesperson(proposal,"instagram")) } target="_blank" rel="noopener">Instagram</a> }
+									if ProposalSalesperson(proposal,"linkedin") != "" {
+										<a href={ templ.SafeURL(ProposalSalesperson(proposal,"linkedin")) } target="_blank" rel="noopener">LinkedIn</a>
+									}
+									if ProposalSalesperson(proposal,"instagram") != "" {
+										<a href={ templ.SafeURL(ProposalSalesperson(proposal,"instagram")) } target="_blank" rel="noopener">Instagram</a>
+									}
 								</div>
 							}
 						</aside>
