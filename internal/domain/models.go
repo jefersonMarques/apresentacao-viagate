@@ -18,6 +18,7 @@ type Proposal struct {
 	Title          string
 	Status         string
 	CurrentVersion int
+	PublicToken    string
 	ValidUntil     *time.Time
 	CreatedBy      string
 	UpdatedAt      time.Time
