@@ -11,7 +11,7 @@ templ OnboardingAdminListPage(user domain.User, items []onboardingpkg.AdminItem)
 		<header class="header"><div><span class="step-title">ONBOARDING</span><h1>Cadastros de contratação</h1><p>Revise documentos e dados enviados, acompanhe falhas de geração de contrato e solicite correções quando necessário.</p></div></header>
 		<section class="panel"><div class="table-wrap"><table class="table"><thead><tr><th>Cliente</th><th>Comercial</th><th>Status</th><th>Contrato</th><th>Enviado</th><th></th></tr></thead><tbody>
 			for _,item := range items {
-				<tr><td><strong>{ item.LegalName }</strong><br/><small>{ item.CNPJ }</small></td><td>{ item.CommercialName }</td><td><span class="badge">{ humanStatus(item.Status) }</span></td><td>if item.ContractStatus!="" { <span class="badge">{ humanStatus(item.ContractStatus) }</span> } else { <span>—</span> }</td><td>if item.SubmittedAt!=nil { { item.SubmittedAt.Format("02/01/2006 15:04") } } else { { item.UpdatedAt.Format("02/01/2006 15:04") } }</td><td><a class="btn" href={ templ.SafeURL("/admin/onboardings/"+item.ID) }>Revisar</a></td></tr>
+				<tr><td><strong>{ item.LegalName }</strong><br/><small>{ CNPJ(item.CNPJ) }</small></td><td>{ item.CommercialName }</td><td><span class="badge">{ humanStatus(item.Status) }</span></td><td>if item.ContractStatus!="" { <span class="badge">{ humanStatus(item.ContractStatus) }</span> } else { <span>—</span> }</td><td>if item.SubmittedAt!=nil { { item.SubmittedAt.Format("02/01/2006 15:04") } } else { { item.UpdatedAt.Format("02/01/2006 15:04") } }</td><td><a class="btn" href={ templ.SafeURL("/admin/onboardings/"+item.ID) }>Revisar</a></td></tr>
 			}
 			if len(items)==0 { <tr><td colspan="6">Nenhum cadastro encontrado.</td></tr> }
 		</tbody></table></div></section>
@@ -24,19 +24,19 @@ templ OnboardingAdminDetailPage(user domain.User, detail onboardingpkg.AdminDeta
 		if message!="" { <div class="notice">{ message }</div> }
 		if errorMessage!="" { <div class="notice error">{ errorMessage }</div> }
 		<section class="panel"><div class="panel-head"><h2>Situação</h2><div class="actions"><span class="badge">Cadastro · { humanStatus(detail.Onboarding.Status) }</span>if detail.ContractStatus!="" { <span class="badge success">Contrato · { humanStatus(detail.ContractStatus) }</span> }</div></div><div class="panel-body grid">
-			<div><small>CNPJ</small><strong style="display:block;margin-top:4px">{ detail.Onboarding.CNPJ }</strong></div>
+			<div><small>CNPJ</small><strong style="display:block;margin-top:4px">{ CNPJ(detail.Onboarding.CNPJ) }</strong></div>
 			<div><small>Operação</small><strong style="display:block;margin-top:4px">{ detail.Onboarding.OperationType }</strong></div>
 			<div><small>Seguradora</small><strong style="display:block;margin-top:4px">{ detail.Onboarding.Insurer }</strong></div>
 			<div><small>Vigência</small><strong style="display:block;margin-top:4px">{ detail.Onboarding.PolicyStartDate } — { detail.Onboarding.PolicyEndDate }</strong></div>
 		</div></section>
 		<section class="panel"><div class="panel-head"><h2>Responsáveis</h2></div><div class="panel-body grid">
-			<div><small>Responsável pela empresa</small><strong style="display:block;margin-top:4px">{ detail.Onboarding.CompanyResponsibleName }</strong><span>{ detail.Onboarding.CompanyResponsibleEmail } · { detail.Onboarding.CompanyResponsiblePhone }</span><br/><small>CPF { detail.Onboarding.CompanyResponsibleCPF } · { detail.Onboarding.CompanyResponsibleRole }</small></div>
-			<div><small>Financeiro</small><strong style="display:block;margin-top:4px">{ detail.Onboarding.FinanceResponsibleName }</strong><span>{ detail.Onboarding.FinanceResponsibleEmail } · { detail.Onboarding.FinanceResponsiblePhone }</span></div>
-			<div class="field full"><small>Endereço</small><strong>{ detail.Onboarding.Street }, { detail.Onboarding.StreetNumber } · { detail.Onboarding.District } · { detail.Onboarding.City }/{ detail.Onboarding.State } · CEP { detail.Onboarding.PostalCode }</strong></div>
+			<div><small>Responsável pela empresa</small><strong style="display:block;margin-top:4px">{ detail.Onboarding.CompanyResponsibleName }</strong><span>{ detail.Onboarding.CompanyResponsibleEmail } · { Phone(detail.Onboarding.CompanyResponsiblePhone) }</span><br/><small>CPF { CPF(detail.Onboarding.CompanyResponsibleCPF) } · { detail.Onboarding.CompanyResponsibleRole }</small></div>
+			<div><small>Financeiro</small><strong style="display:block;margin-top:4px">{ detail.Onboarding.FinanceResponsibleName }</strong><span>{ detail.Onboarding.FinanceResponsibleEmail } · { Phone(detail.Onboarding.FinanceResponsiblePhone) }</span></div>
+			<div class="field full"><small>Endereço</small><strong>{ detail.Onboarding.Street }, { detail.Onboarding.StreetNumber } · { detail.Onboarding.District } · { detail.Onboarding.City }/{ detail.Onboarding.State } · CEP { PostalCode(detail.Onboarding.PostalCode) }</strong></div>
 		</div></section>
 		<section class="panel"><div class="panel-head"><h2>Mercadorias e usuários</h2></div><div class="panel-body grid">
 			<div><span class="step-title">MERCADORIAS</span><ul>for _,item := range detail.Onboarding.Goods { <li>{ item }</li> }if len(detail.Onboarding.Goods)==0 { <li>Não informado</li> }</ul></div>
-			<div><span class="step-title">USUÁRIOS DO SISTEMA</span><ul>for _,item := range detail.Onboarding.SystemUsers { <li><strong>{ item.Name }</strong> · { item.Email } · { item.Phone }</li> }if len(detail.Onboarding.SystemUsers)==0 { <li>Nenhum usuário informado</li> }</ul></div>
+			<div><span class="step-title">USUÁRIOS DO SISTEMA</span><ul>for _,item := range detail.Onboarding.SystemUsers { <li><strong>{ item.Name }</strong> · { item.Email } · { Phone(item.Phone) }</li> }if len(detail.Onboarding.SystemUsers)==0 { <li>Nenhum usuário informado</li> }</ul></div>
 		</div></section>
 		<section class="panel"><div class="panel-head"><h2>Documentos</h2></div><div class="panel-body">
 			<div class="actions">for _,document := range detail.Documents { <a class="btn" target="_blank" rel="noopener" href={ templ.SafeURL("/admin/onboardings/"+detail.Onboarding.ID+"/documents/"+document.ID) }>{ document.OriginalFilename }</a> }if len(detail.Documents)==0 { <span>Nenhum documento enviado.</span> }</div>
