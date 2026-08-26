@@ -65,6 +65,8 @@ func (s *S3) Put(ctx context.Context, key, contentType string, body io.Reader, s
 	}
 
 	switch s.encryption {
+	case "none":
+		// Permitido apenas fora de produção pela validação de configuração.
 	case "aws:kms":
 		input.ServerSideEncryption = types.ServerSideEncryptionAwsKms
 		input.SSEKMSKeyId = aws.String(s.kmsKeyID)
