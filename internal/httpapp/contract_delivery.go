@@ -3,6 +3,7 @@ package httpapp
 import (
 	"context"
 	"fmt"
+	"html"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -31,7 +32,7 @@ func (a *App) ensureContractDelivery(ctx context.Context,onboardingID string)(co
 	}
 
 	link:=strings.TrimRight(a.cfg.BaseURL,"/")+"/sign/"+access.SignerToken
-	htmlBody:=fmt.Sprintf("<p>Olá, %s.</p><p>Os dados da operação foram recebidos e o contrato está pronto para assinatura.</p><p><a href=\"%s\">Revisar e assinar contrato</a></p>",access.SignerName,link)
+	htmlBody:=fmt.Sprintf("<p>Olá, %s.</p><p>Os dados da operação foram recebidos e o contrato está pronto para assinatura.</p><p><a href=\"%s\">Revisar e assinar contrato</a></p>",html.EscapeString(access.SignerName),html.EscapeString(link))
 	if err:=notifications.EnqueueUnique(ctx,a.pool,"contract-signature:"+access.ContractID+":"+access.SignerID,access.SignerName,access.SignerEmail,"Contrato ViaGate disponível para assinatura",htmlBody,"Contrato disponível em "+link);err!=nil{return access,created,err}
 	if err:=a.contractStore.MarkSent(ctx,access.ContractID);err!=nil{return access,created,err}
 	access.ContractStatus="sent"
