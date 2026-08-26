@@ -1,4 +1,5 @@
 import {
+  buildPublicPresentationUrl,
   buildPublicProposalUrl,
   supabase,
 } from './supabase.js';
@@ -22,14 +23,18 @@ function appendStyles() {
   const style = document.createElement('style');
   style.dataset.proposalListActions = 'true';
   style.textContent = `
-    .proposal-list-actions {
+    .proposal-list-actions,
+    .hub-row-actions.proposal-actions-enhanced,
+    .hub-tracking-actions {
       display: flex;
       flex-wrap: wrap;
       justify-content: flex-end;
       gap: 6px;
     }
 
-    .proposal-list-action {
+    .proposal-list-action,
+    .hub-row-actions.proposal-actions-enhanced > button,
+    .hub-tracking-actions > button {
       min-width: 36px;
       min-height: 34px;
       padding: 0 9px;
@@ -46,9 +51,12 @@ function appendStyles() {
       font-weight: 800;
       line-height: 1;
       white-space: nowrap;
+      text-decoration: none;
     }
 
-    .proposal-list-action:hover {
+    .proposal-list-action:hover,
+    .hub-row-actions.proposal-actions-enhanced > button:hover,
+    .hub-tracking-actions > button:hover {
       border-color: #ff6b18;
       color: #d85000;
       background: #fff8f3;
@@ -65,7 +73,9 @@ function appendStyles() {
       opacity: .55;
     }
 
-    .proposal-list-action svg {
+    .proposal-list-action svg,
+    .hub-row-actions.proposal-actions-enhanced svg,
+    .hub-tracking-actions svg {
       width: 15px;
       height: 15px;
       flex: 0 0 15px;
@@ -76,22 +86,33 @@ function appendStyles() {
       stroke-linejoin: round;
     }
 
-    .proposal-list-action.copy-success {
-      border-color: #14804a;
-      color: #14804a;
-      background: #f3fbf6;
+    .proposal-list-action.copy-success,
+    .copy-success {
+      border-color: #14804a !important;
+      color: #14804a !important;
+      background: #f3fbf6 !important;
+    }
+
+    .proposal-original-edit {
+      display: none !important;
     }
 
     @media (max-width: 720px) {
-      .proposal-list-actions {
+      .proposal-list-actions,
+      .hub-row-actions.proposal-actions-enhanced,
+      .hub-tracking-actions {
         justify-content: flex-start;
       }
 
-      .proposal-list-action {
+      .proposal-list-action,
+      .hub-row-actions.proposal-actions-enhanced > button,
+      .hub-tracking-actions > button {
         min-height: 38px;
       }
 
-      .proposal-list-action span {
+      .proposal-list-action span,
+      .hub-row-actions.proposal-actions-enhanced > button span,
+      .hub-tracking-actions > button span {
         display: none;
       }
     }
@@ -99,8 +120,14 @@ function appendStyles() {
   document.head.appendChild(style);
 }
 
-function getProposalId(row) {
-  return row.querySelector('[data-open-proposal]')?.dataset.openProposal ?? '';
+function buildPublicUrl(kind, token) {
+  if (!token) {
+    return '';
+  }
+
+  return kind === 'presentation'
+    ? buildPublicPresentationUrl(token)
+    : buildPublicProposalUrl(token);
 }
 
 async function getLatestPublishedVersion(proposalId) {
@@ -121,17 +148,24 @@ async function getLatestPublishedVersion(proposalId) {
 }
 
 async function copyText(value) {
-  if (navigator.clipboard?.writeText && window.isSecureContext) {
-    await navigator.clipboard.writeText(value);
-    return;
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(value);
+      return;
+    } catch {
+      // Usa o fallback abaixo quando a permissão do Clipboard API for bloqueada.
+    }
   }
 
   const textarea = document.createElement('textarea');
   textarea.value = value;
   textarea.setAttribute('readonly', '');
   textarea.style.position = 'fixed';
+  textarea.style.top = '0';
+  textarea.style.left = '-9999px';
   textarea.style.opacity = '0';
   document.body.appendChild(textarea);
+  textarea.focus();
   textarea.select();
   textarea.setSelectionRange(0, textarea.value.length);
 
@@ -143,15 +177,44 @@ async function copyText(value) {
   }
 }
 
-function flashButton(button, label = 'Copiado') {
+function flashCopyButton(button) {
   const original = button.innerHTML;
   button.classList.add('copy-success');
-  button.innerHTML = `${iconMarkup.copy}<span>${label}</span>`;
+  button.innerHTML = `${iconMarkup.copy}<span>Copiado</span>`;
 
   window.setTimeout(() => {
     button.classList.remove('copy-success');
     button.innerHTML = original;
   }, 1400);
+}
+
+async function copyPublicUrl(kind, token, button) {
+  const url = buildPublicUrl(kind, token);
+  if (!url) {
+    return;
+  }
+
+  try {
+    await copyText(url);
+    flashCopyButton(button);
+  } catch {
+    window.prompt('Copie o link:', url);
+  }
+}
+
+function openPublicUrl(kind, token) {
+  const url = buildPublicUrl(kind, token);
+  if (!url) {
+    return;
+  }
+
+  const opened = window.open(url, '_blank');
+  if (opened) {
+    opened.opener = null;
+    return;
+  }
+
+  window.location.href = url;
 }
 
 async function copyProposalLink(proposalId, button) {
@@ -161,14 +224,7 @@ async function copyProposalLink(proposalId, button) {
     return;
   }
 
-  const url = buildPublicProposalUrl(version.public_token);
-
-  try {
-    await copyText(url);
-    flashButton(button);
-  } catch {
-    window.prompt('Copie o link da proposta:', url);
-  }
+  await copyPublicUrl('proposal', version.public_token, button);
 }
 
 async function openPublicProposal(proposalId) {
@@ -178,15 +234,7 @@ async function openPublicProposal(proposalId) {
     return;
   }
 
-  const url = buildPublicProposalUrl(version.public_token);
-  const opened = window.open(url, '_blank');
-
-  if (opened) {
-    opened.opener = null;
-    return;
-  }
-
-  window.location.href = url;
+  openPublicUrl('proposal', version.public_token);
 }
 
 async function deleteProposal(proposalId, row, button) {
@@ -248,12 +296,8 @@ function createActionButton({ icon, label, title, className = '', handler }) {
 }
 
 function enhanceProposalRow(row) {
-  if (row.dataset.actionsEnhanced === 'true') {
-    return;
-  }
-
   const originalEditButton = row.querySelector('[data-open-proposal]');
-  const proposalId = getProposalId(row);
+  const proposalId = originalEditButton?.dataset.openProposal ?? '';
   if (!originalEditButton || !proposalId) {
     return;
   }
@@ -263,20 +307,26 @@ function enhanceProposalRow(row) {
     return;
   }
 
-  const editHandler = () => originalEditButton.click();
+  originalEditButton.classList.add('proposal-original-edit');
 
-  row.dataset.actionsEnhanced = 'true';
-  host.innerHTML = '';
+  let actions = host.querySelector('.proposal-list-actions');
+  if (!actions) {
+    actions = document.createElement('div');
+    actions.className = 'proposal-list-actions';
+    host.appendChild(actions);
+  }
 
-  const actions = document.createElement('div');
-  actions.className = 'proposal-list-actions';
+  if (actions.dataset.ready === 'true') {
+    return;
+  }
 
+  actions.dataset.ready = 'true';
   actions.append(
     createActionButton({
       icon: 'edit',
       label: 'Editar',
       title: 'Editar proposta',
-      handler: editHandler,
+      handler: () => originalEditButton.click(),
     }),
     createActionButton({
       icon: 'external',
@@ -298,25 +348,138 @@ function enhanceProposalRow(row) {
       handler: (button) => deleteProposal(proposalId, row, button),
     }),
   );
-
-  host.appendChild(actions);
 }
 
-function enhanceProposalList() {
+function enhanceTrackingTable() {
+  document.querySelectorAll('#hubTrackingTable [data-copy-tracking-token]').forEach((copyButton) => {
+    const token = copyButton.dataset.copyTrackingToken ?? '';
+    const kind = copyButton.dataset.copyTrackingKind ?? 'proposal';
+    const host = copyButton.parentElement;
+
+    if (!host || !token) {
+      return;
+    }
+
+    let actions = host.querySelector('.hub-tracking-actions');
+    if (!actions) {
+      actions = document.createElement('div');
+      actions.className = 'hub-tracking-actions';
+      host.appendChild(actions);
+    }
+
+    copyButton.remove();
+
+    if (actions.dataset.ready === 'true') {
+      return;
+    }
+
+    actions.dataset.ready = 'true';
+    actions.append(
+      createActionButton({
+        icon: 'external',
+        label: 'Abrir',
+        title: kind === 'presentation' ? 'Abrir apresentação' : 'Abrir proposta',
+        handler: () => openPublicUrl(kind, token),
+      }),
+      createActionButton({
+        icon: 'copy',
+        label: 'Copiar link',
+        title: 'Copiar link público',
+        handler: (button) => copyPublicUrl(kind, token, button),
+      }),
+    );
+  });
+}
+
+function enhancePresentationList() {
+  document.querySelectorAll('#presentationList .hub-row-actions').forEach((host) => {
+    const copyButton = host.querySelector('[data-copy-presentation]');
+    const editButton = host.querySelector('[data-open-presentation]');
+    const token = copyButton?.dataset.copyPresentation ?? '';
+
+    host.classList.add('proposal-actions-enhanced');
+
+    if (editButton && !editButton.dataset.iconEnhanced) {
+      editButton.dataset.iconEnhanced = 'true';
+      editButton.innerHTML = `${iconMarkup.edit}<span>Editar</span>`;
+      editButton.title = 'Editar apresentação';
+    }
+
+    if (!token || host.querySelector('[data-open-published-presentation]')) {
+      return;
+    }
+
+    if (copyButton) {
+      copyButton.innerHTML = `${iconMarkup.copy}<span>Copiar link</span>`;
+      copyButton.title = 'Copiar link público';
+    }
+
+    const openButton = createActionButton({
+      icon: 'external',
+      label: 'Abrir',
+      title: 'Abrir apresentação publicada',
+      handler: () => openPublicUrl('presentation', token),
+    });
+    openButton.dataset.openPublishedPresentation = 'true';
+    host.insertBefore(openButton, copyButton ?? editButton ?? null);
+  });
+}
+
+function enhanceAllLists() {
   document.querySelectorAll('#proposalList .proposal-row').forEach(enhanceProposalRow);
+  enhanceTrackingTable();
+  enhancePresentationList();
+}
+
+function interceptLegacyCopy(event) {
+  const button = event.target.closest(
+    '[data-copy-tracking-token], [data-copy-presentation], [data-copy-proposal-tracking]',
+  );
+
+  if (!button) {
+    return;
+  }
+
+  let kind = 'proposal';
+  let token = '';
+
+  if (button.dataset.copyTrackingToken) {
+    kind = button.dataset.copyTrackingKind || 'proposal';
+    token = button.dataset.copyTrackingToken;
+  } else if (button.dataset.copyPresentation) {
+    kind = 'presentation';
+    token = button.dataset.copyPresentation;
+  } else if (button.dataset.copyProposalTracking) {
+    kind = 'proposal';
+    token = button.dataset.copyProposalTracking;
+  }
+
+  if (!token) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  copyPublicUrl(kind, token, button).catch((error) => {
+    console.error(error);
+  });
 }
 
 function initialize() {
   appendStyles();
-  enhanceProposalList();
+  enhanceAllLists();
+  document.addEventListener('click', interceptLegacyCopy, true);
 
-  const list = document.getElementById('proposalList');
-  if (!list) {
-    return;
-  }
+  const targets = [
+    document.getElementById('proposalList'),
+    document.getElementById('hubTrackingTable'),
+    document.getElementById('presentationList'),
+  ].filter(Boolean);
 
-  const observer = new MutationObserver(enhanceProposalList);
-  observer.observe(list, { childList: true });
+  targets.forEach((target) => {
+    const observer = new MutationObserver(() => window.setTimeout(enhanceAllLists, 0));
+    observer.observe(target, { childList: true, subtree: true });
+  });
 }
 
 initialize();
