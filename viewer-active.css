@@ -1,0 +1,16 @@
+body.presentation-host-active .presentation,
+body.presentation-host-active .presentation-header,
+body.presentation-host-active .presentation-progress {
+  filter: none !important;
+}
+
+body.presentation-host-active .presentation {
+  transform: none !important;
+}
+
+body.public-proposal:not(.proposal-locked) #proposalPresentation {
+  filter: none !important;
+  transform: none !important;
+  pointer-events: auto !important;
+  user-select: auto !important;
+}
