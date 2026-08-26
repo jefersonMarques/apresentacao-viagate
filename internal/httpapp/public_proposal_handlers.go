@@ -38,18 +38,20 @@ func (a *App) acceptProposal(w http.ResponseWriter,r *http.Request) {
 	if err:=r.ParseForm();err!=nil { http.Error(w,"dados inválidos",http.StatusBadRequest);return }
 	cpf,err:=cleanCPF(r.FormValue("cpf"))
 	if err!=nil { render(r.Context(),w,http.StatusBadRequest,templates.PublicProposalViewerPage(proposal,err.Error()));return }
+	emailAddress,err:=cleanEmail(r.FormValue("email"),true)
+	if err!=nil{render(r.Context(),w,http.StatusBadRequest,templates.PublicProposalViewerPage(proposal,"Informe um e-mail válido para o responsável."));return}
 	if r.FormValue("authority")!="1" { render(r.Context(),w,http.StatusBadRequest,templates.PublicProposalViewerPage(proposal,"É necessário confirmar a autorização para representar a empresa."));return }
 	sessionID,err:=newUUID();if err!=nil{http.Error(w,"erro interno",http.StatusInternalServerError);return}
 	input:=proposals.AcceptanceInput{
 		Name:strings.TrimSpace(r.FormValue("name")),
-		Email:strings.TrimSpace(strings.ToLower(r.FormValue("email"))),
+		Email:emailAddress,
 		CPF:cpf,
 		Phone:strings.TrimSpace(r.FormValue("phone")),
 		Role:strings.TrimSpace(r.FormValue("role")),
 		AuthorityDeclared:true,
 		IPAddress:requestIP(r),UserAgent:r.UserAgent(),SessionID:sessionID,
 	}
-	if input.Name==""||input.Email==""||input.Phone=="" { render(r.Context(),w,http.StatusBadRequest,templates.PublicProposalViewerPage(proposal,"Preencha todos os dados do responsável."));return }
+	if input.Name==""||input.Phone=="" { render(r.Context(),w,http.StatusBadRequest,templates.PublicProposalViewerPage(proposal,"Preencha todos os dados do responsável."));return }
 	result,err:=a.proposalStore.Accept(r.Context(),proposal,input)
 	if err!=nil { a.logger.Error("proposal acceptance failed","error",err);render(r.Context(),w,http.StatusBadRequest,templates.PublicProposalViewerPage(proposal,"Não foi possível registrar o aceite. Se esta proposta já foi aceita, utilize os mesmos dados do responsável para retomar o cadastro."));return }
 
