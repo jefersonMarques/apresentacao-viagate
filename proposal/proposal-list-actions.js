@@ -93,7 +93,8 @@ function appendStyles() {
       background: #f3fbf6 !important;
     }
 
-    .proposal-original-edit {
+    .proposal-original-edit,
+    .proposal-row [data-copy-proposal-tracking] {
       display: none !important;
     }
 
@@ -253,19 +254,18 @@ async function deleteProposal(proposalId, row, button) {
   button.disabled = true;
 
   try {
-    const { error } = await supabase
-      .from('proposals')
-      .delete()
-      .eq('id', proposalId);
+    const { data, error } = await supabase.rpc('delete_proposal', {
+      target_proposal_id: proposalId,
+    });
 
-    if (error) {
-      throw error;
+    if (error || data !== true) {
+      throw error ?? new Error('Proposal was not deleted');
     }
 
     row.remove();
   } catch (error) {
     console.error(error);
-    window.alert('Não foi possível excluir a proposta. Verifique as permissões e vínculos existentes.');
+    window.alert('Não foi possível excluir a proposta. Verifique se a migration de exclusão foi aplicada no Supabase.');
     button.disabled = false;
   } finally {
     state.processingDelete.delete(proposalId);
