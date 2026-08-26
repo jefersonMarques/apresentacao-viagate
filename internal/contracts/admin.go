@@ -7,6 +7,16 @@ import (
 	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
 )
 
+type DeliveryAccess struct {
+	ContractID   string
+	ContractStatus string
+	SignerID     string
+	SignerToken  string
+	SignerName   string
+	SignerEmail  string
+	SignerStatus string
+}
+
 func (s *Store) SetDefaultTemplate(ctx context.Context, templateID string) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil { return err }
@@ -47,4 +57,17 @@ func (s *Store) HasActiveForOnboarding(ctx context.Context,onboardingID string)(
 	if err==pgx.ErrNoRows{return false,nil}
 	if err!=nil{return false,err}
 	return true,nil
+}
+
+func (s *Store) DeliveryByOnboarding(ctx context.Context,onboardingID string)(DeliveryAccess,error){
+	var access DeliveryAccess
+	err:=s.pool.QueryRow(ctx,`
+		select c.id::text,c.status::text,s.id::text,s.public_token::text,s.name,s.email::text,s.status::text
+		from contracts c
+		join contract_signers s on s.contract_id=c.id and s.signer_type='client'
+		where c.onboarding_id=$1 and c.status<>'cancelled'
+		order by c.created_at desc,s.sign_order,s.id
+		limit 1
+	`,onboardingID).Scan(&access.ContractID,&access.ContractStatus,&access.SignerID,&access.SignerToken,&access.SignerName,&access.SignerEmail,&access.SignerStatus)
+	return access,err
 }
