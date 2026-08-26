@@ -1,14 +1,17 @@
 package database
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -52,11 +55,11 @@ func MigrateUp(ctx context.Context,pool *pgxpool.Pool,directory string)(Migratio
 		var storedHash []byte
 		err=conn.QueryRow(ctx,`select sha256 from schema_migrations where filename=$1`,name).Scan(&storedHash)
 		if err==nil{
-			if string(storedHash)!=string(hash[:]){return result,fmt.Errorf("applied migration %s was modified",name)}
+			if !bytes.Equal(storedHash,hash[:]){return result,fmt.Errorf("applied migration %s was modified",name)}
 			result.Skipped=append(result.Skipped,name)
 			continue
 		}
-		if !isNoRows(err){return result,fmt.Errorf("check migration %s: %w",name,err)}
+		if !errors.Is(err,pgx.ErrNoRows){return result,fmt.Errorf("check migration %s: %w",name,err)}
 
 		tx,err:=conn.Begin(ctx)
 		if err!=nil{return result,fmt.Errorf("begin migration %s: %w",name,err)}
