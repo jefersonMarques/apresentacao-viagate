@@ -9,6 +9,8 @@
   const next = document.querySelector('[data-viewer-next]');
   const counter = document.querySelector('[data-viewer-counter]');
   const slides = () => Array.from(root.querySelectorAll('[data-viewer-slide]'));
+  const startLabel = start?.getAttribute('data-viewer-start-label') || 'INICIAR';
+  const continueLabel = start?.getAttribute('data-viewer-continue-label') || 'CONTINUAR';
   let started = false;
   let locked = false;
 
@@ -36,24 +38,33 @@
 
   function updateControls() {
     const items = slides();
-    if (!items.length || !counter) return;
+    if (!items.length) return;
     const index = currentIndex();
-    counter.textContent = `${String(index + 1).padStart(2, '0')} / ${String(items.length).padStart(2, '0')}`;
+    if (counter) counter.textContent = `${String(index + 1).padStart(2, '0')} / ${String(items.length).padStart(2, '0')}`;
+    items.forEach((slide, slideIndex) => {
+      const number = slide.querySelector('[data-slide-number]');
+      if (number) number.textContent = `${String(slideIndex + 1).padStart(2, '0')} / ${String(items.length).padStart(2, '0')}`;
+    });
     if (previous) previous.disabled = index <= 0;
     if (next) next.disabled = index >= items.length - 1;
   }
 
   function showGate(continuing) {
     document.body.classList.add('viewer-locked');
+    if (document.body.classList.contains('public-proposal')) document.body.classList.add('proposal-locked');
     if (gate) gate.hidden = false;
-    if (start) start.textContent = continuing ? 'CONTINUAR' : 'INICIAR';
+    if (start) start.textContent = continuing ? continueLabel : startLabel;
     if (restart) restart.hidden = !continuing;
+    const controls = counter?.closest('[data-viewer-controls]') || counter?.parentElement;
+    if (controls instanceof HTMLElement) controls.hidden = true;
   }
 
   function reveal() {
-    document.body.classList.remove('viewer-locked');
+    document.body.classList.remove('viewer-locked', 'proposal-locked');
     if (gate) gate.hidden = true;
     if (restart) restart.hidden = true;
+    const controls = counter?.closest('[data-viewer-controls]') || counter?.parentElement;
+    if (controls instanceof HTMLElement) controls.hidden = false;
     updateControls();
   }
 
@@ -96,7 +107,7 @@
 
   function keyboard(event) {
     if (!started || !document.fullscreenElement) return;
-    const directions = { ArrowDown: 1, PageDown: 1, ArrowUp: -1, PageUp: -1 };
+    const directions = { ArrowDown: 1, PageDown: 1, ArrowRight: 1, ArrowUp: -1, PageUp: -1, ArrowLeft: -1 };
     const direction = directions[event.key];
     if (!direction) return;
     const slide = currentSlide();
