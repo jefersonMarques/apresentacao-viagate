@@ -1,9 +1,6 @@
 package templates
 
-import (
-	"github.com/a-h/templ"
-	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
-)
+import "github.com/jefersonMarques/apresentacao-viagate/internal/domain"
 
 templ PipelinePage(user domain.User, items []domain.PipelineItem, all bool) {
 	@AdminLayout("ViaGate — Pipeline comercial",user) {
