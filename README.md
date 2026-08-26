@@ -1,244 +1,302 @@
-# ViaGate — Hub Comercial
+# ViaGate — Plataforma Comercial
 
-Área comercial para gerar, publicar e acompanhar apresentações institucionais e propostas comerciais.
+Sistema comercial da ViaGate para apresentação institucional, proposta, aceite, onboarding do cliente, geração de contrato e assinatura eletrônica.
 
-## Estrutura
+Esta branch substitui a arquitetura do protótipo estático/Supabase por um backend próprio em Go.
 
-- `/apresentacao/` — redireciona para o Hub Comercial autenticado.
-- `/apresentacao/proposta/` — Hub Comercial protegido por Supabase Auth.
-- `/apresentacao/view.html?token=...` — apresentação institucional publicada.
-- `/apresentacao/proposta/view.html?token=...` — proposta comercial publicada.
-- `presentation-content.html` — conteúdo institucional reutilizado pelas apresentações geradas.
-- `supabase/migrations/` — banco, RLS, versionamento, publicação, analytics e Storage.
+## Arquitetura
 
-Os links públicos são montados de forma relativa ao Hub Comercial, permitindo executar o projeto com ou sem o prefixo `/apresentacao/`.
+- **Backend:** Go 1.24+
+- **UI:** templ, HTML server-side e JavaScript progressivo
+- **Banco:** PostgreSQL
+- **Arquivos privados:** S3 ou serviço S3-compatible
+- **E-mail transacional:** Brevo
+- **PDF:** Chromium headless
+- **Consulta CNPJ:** provider desacoplado; BrasilAPI é a implementação inicial
 
-## Hub Comercial
+O navegador nunca possui credenciais do banco ou do S3. Toda autorização e regra de negócio passa pelo backend Go.
 
-A gestão autenticada é separada em:
-
-- **Visão geral** — materiais publicados e acompanhamento de leitura;
-- **Apresentações** — criação, publicação e edição das apresentações institucionais;
-- **Propostas** — criação, duplicação, versionamento, publicação e acompanhamento das propostas;
-- **Meu perfil** — foto, contatos e redes sociais do comercial usados nos materiais publicados.
-
-### Apresentação institucional
-
-Cada publicação possui token próprio e pode configurar:
-
-- vendedor responsável;
-- foto, cargo, telefone, WhatsApp e e-mail;
-- LinkedIn e Instagram do comercial;
-- slide final de contato ativado ou desativado;
-- empresa do cliente;
-- contato do cliente;
-- logo do cliente;
-- identificação do cliente ativada ou desativada.
-
-O conteúdo somente é liberado após entrada em tela cheia. Ao sair do fullscreen, a apresentação volta para o estado bloqueado e oferece **Continuar apresentação** ou **Voltar ao início**.
-
-A navegação fica centralizada no rodapé com:
+## Fluxo comercial
 
 ```text
-↑   05 / 18   ↓
+Comercial
+  ↓
+Apresentação / Proposta versionada
+  ↓
+Cliente abre a proposta
+  ↓
+Aceite da versão exata
+  ↓
+Dados pessoais do responsável
+  ↓
+Onboarding + CNPJ + apólice
+  ↓
+Revisão interna
+  ├─ correção solicitada → cliente retoma o cadastro
+  └─ aprovado
+       ↓
+Contrato gerado a partir de Markdown versionado
+       ↓
+PDF + SHA-256
+       ↓
+OTP por e-mail / Brevo
+       ↓
+Assinatura eletrônica
+       ↓
+Relatório de evidências + pacote final no S3
 ```
 
-### Proposta comercial
+A biometria facial e a prova de vida já existem como modos previstos no domínio de verificação de identidade, mas não estão habilitadas nesta versão.
 
-A proposta utiliza o mesmo comportamento de tela cheia da apresentação. O conteúdo permanece bloqueado até o visitante iniciar a apresentação em fullscreen.
+## Segurança e imutabilidade
 
-Cada proposta possui:
+O sistema mantém separadas as versões de proposta, aceite, onboarding, template de contrato, contrato e assinatura.
 
-- cliente e contato;
-- vendedor responsável;
-- logo do cliente;
-- cenário operacional considerado;
-- solução e escopo;
-- modelo de análise cadastral;
-- itens de investimento e opcionais;
-- fatura mínima;
-- implantação;
-- condições comerciais;
-- validade;
-- versões imutáveis após publicação;
-- token público aleatório por versão.
+Uma proposta publicada não é alterada retroativamente. O aceite registra a versão e o SHA-256 do conteúdo aceito. O contrato é gerado a partir dos dados aprovados e de uma versão específica do template. Após geração, seu conteúdo e hash ficam protegidos contra alteração. Eventos de auditoria e assinatura são append-only.
 
-Modelos comerciais suportados:
-
-- análise por item;
-- análise por conjunto;
-- análise por item + conjunto;
-- condições específicas.
-
-O viewer comercial usa como referência a estrutura já utilizada pela ViaGate: Score, consultas e autenticação, prevenção, aplicativo/logística, monitoramento de veículos e fatura mínima.
-
-### Duplicação de propostas
-
-Cada proposta pode ser duplicada para servir como base de um novo envio ou como modelo comercial reutilizável.
-
-A duplicação:
-
-- cria novo cliente e novo contato independentes;
-- copia a versão mais recente da proposta;
-- copia modelo comercial, condições, fatura mínima, implantação e itens de preço;
-- cria a nova proposta como rascunho;
-- redefine a validade para 15 dias a partir da duplicação;
-- não copia token público;
-- não copia estatísticas de leitura;
-- não altera a proposta original.
-
-## Imagens comerciais
-
-Fotos de vendedores e logos de clientes são enviados diretamente para o Supabase Storage.
-
-Bucket:
+Ao final da assinatura são produzidos:
 
 ```text
-commercial-assets
+contract.pdf
+evidence.pdf
+evidence.json
+manifest.json
+signed-package.zip
 ```
 
-Estrutura:
+O relatório registra, entre outros dados, identidade declarada do responsável, CPF, e-mail, OTP, texto de consentimento, data/hora, IP, user-agent, sessão e SHA-256 do documento.
 
-```text
-commercial-assets/
-├── salespeople/{auth_user_id}/{uuid}.{ext}
-└── clients/{auth_user_id}/{uuid}.{ext}
+## Perfis iniciais
+
+- `commercial` — cria e acompanha os próprios materiais comerciais;
+- `operations` — revisa onboarding e documentos;
+- `legal` — administra modelos de contrato;
+- `super_admin` — visão global e gestão de usuários/permissões.
+
+Novos usuários são criados por convite individual e expirável. Não existe cadastro público.
+
+## Pré-requisitos locais
+
+Instale localmente:
+
+- Go 1.24 ou superior;
+- PostgreSQL;
+- Chromium/Chrome compatível com execução headless;
+- um serviço S3-compatible, como MinIO, ou um bucket S3 real.
+
+O Brevo é necessário para testar entrega real de convites, OTPs e notificações. Sem chave do Brevo o servidor pode ser iniciado em desenvolvimento, mas os e-mails permanecerão na outbox com retry.
+
+## Configuração
+
+Copie `.env.example` para `.env` e ajuste os valores. A aplicação lê variáveis de ambiente; o arquivo `.env` serve como referência e pode ser carregado pelos scripts de desenvolvimento.
+
+Exemplo local com PostgreSQL e MinIO:
+
+```env
+APP_ENV=development
+APP_ADDR=:8080
+APP_BASE_URL=http://localhost:8080
+DATABASE_URL=postgres://viagate:viagate@localhost:5432/viagate?sslmode=disable
+CHROMIUM_PATH=chromium
+TRUST_PROXY_HEADERS=false
+REQUIRE_ONBOARDING_REVIEW=true
+
+S3_REGION=us-east-1
+S3_BUCKET=viagate-commercial
+S3_ENDPOINT=http://localhost:9000
+S3_ACCESS_KEY_ID=minioadmin
+S3_SECRET_ACCESS_KEY=minioadmin
+S3_USE_PATH_STYLE=true
+S3_SERVER_SIDE_ENCRYPTION=none
+
+BREVO_API_KEY=
+BREVO_SENDER_EMAIL=naoresponda@viagate.com.br
+BREVO_SENDER_NAME=ViaGate
+
+BOOTSTRAP_ADMIN_EMAIL=seu-email@viagate.com.br
+BOOTSTRAP_ADMIN_NAME=Super Admin
 ```
 
-Regras:
+`S3_SERVER_SIDE_ENCRYPTION=none` é aceito somente para desenvolvimento/teste. Produção exige `AES256` ou `aws:kms`.
 
-- leitura pública dos arquivos usados nos materiais publicados;
-- upload, alteração e exclusão somente por usuário autenticado dentro da própria pasta;
-- PNG, JPG, WEBP e SVG;
-- limite de 2 MB;
-- nome físico gerado com UUID;
-- arquivos substituídos não são apagados automaticamente, preservando versões já publicadas.
+Quando o Go estiver atrás de Nginx ou outro proxy reverso confiável que sobrescreva `X-Forwarded-For`/`X-Real-IP`, configure:
 
-## Estatísticas de leitura
-
-Apresentações e propostas registram:
-
-- `open` — link válido aberto;
-- `start` — visitante iniciou o material em tela cheia;
-- `slide_view` — primeiro acesso da sessão a cada slide;
-- `complete` — sessão chegou ao último slide.
-
-O Hub classifica cada link como:
-
-- **Não aberta** — nenhuma abertura;
-- **Aberta** — link aberto, mas apresentação não iniciada;
-- **Em leitura** — material iniciado ou parcialmente percorrido;
-- **Lida** — pelo menos uma sessão chegou ao último slide.
-
-Também são exibidos:
-
-- número de aberturas;
-- progresso máximo;
-- primeira e última abertura disponíveis na RPC;
-- última inicialização;
-- última conclusão;
-- quantidade geral de materiais publicados e lidos.
-
-A sessão utiliza um UUID aleatório em `sessionStorage`. Não é utilizado fingerprinting.
-
-## Supabase
-
-### Banco e Storage
-
-Execute as migrations na ordem:
-
-```text
-20260825_proposals.sql
-20260825_proposals_grants.sql
-20260825_proposals_immutability_fix.sql
-20260825_commercial_hub_analytics.sql
-20260825_commercial_hub_access_control.sql
-20260825_commercial_assets_storage.sql
-20260825_proposal_pricing_models.sql
-20260825_commercial_hub_read_status.sql
-20260825_profile_socials_and_proposal_duplication.sql
+```env
+TRUST_PROXY_HEADERS=true
 ```
 
-As migrations adicionam:
+Não habilite essa opção se o backend puder ser acessado diretamente por clientes externos.
 
-- propostas e versões;
-- apresentações e versões;
-- eventos de leitura;
-- RLS e isolamento por usuário;
-- publicação por token;
-- estatísticas de abertura e conclusão;
-- suporte aos modelos por item, conjunto e item + conjunto;
-- bucket `commercial-assets` e políticas de upload;
-- LinkedIn e Instagram no perfil comercial;
-- duplicação transacional de propostas.
+## PostgreSQL
 
-O papel Postgres `anon` não possui `SELECT` direto nas tabelas comerciais ou de analytics. Os viewers públicos acessam somente RPCs limitadas por token publicado.
+Crie um banco limpo para a nova plataforma. Exemplo:
 
-### Autenticação
-
-Os usuários são criados diretamente no Supabase Authentication. Não existe cadastro público.
-
-Redirect de produção:
-
-```text
-https://viagate.com.br/apresentacao/proposta/
+```sql
+create user viagate with password 'viagate';
+create database viagate owner viagate;
 ```
 
-Para desenvolvimento local com `/apresentacao/`:
-
-```text
-http://localhost:8080/apresentacao/proposta/
-```
-
-### Frontend
-
-A configuração fica em `proposal/config.js`:
-
-```javascript
-export const proposalConfig = Object.freeze({
-  supabaseUrl: 'https://SEU-PROJETO.supabase.co',
-  supabasePublishableKey: 'sb_publishable_...',
-  publicProposalUrl: './view.html',
-  publicPresentationUrl: '../view.html',
-  loginUrl: './',
-  assetBucket: 'commercial-assets',
-});
-```
-
-Nunca coloque `sb_secret_...` no repositório ou no navegador.
-
-## Servidor
-
-Não é necessário backend próprio nesta versão. Supabase Auth, PostgREST, Storage e RPCs atendem o fluxo atual.
-
-Se futuramente houver necessidade de backend próprio, ele deverá ser implementado em Go.
-
-## Executar localmente
-
-### Com junction `/apresentacao/`
-
-Sirva o diretório pai que contém o junction:
+Depois carregue `DATABASE_URL` no ambiente e execute:
 
 ```bash
-python -m http.server 8080
+go run ./cmd/migrate up
+```
+
+O runner aplica os arquivos de `migrations/` em ordem, cada migration dentro de uma transação, e registra o SHA-256 em `schema_migrations`.
+
+Se uma migration já aplicada for modificada posteriormente, o runner interrompe a execução. Mudanças de schema devem ser feitas por uma nova migration, nunca editando migrations já utilizadas em um ambiente persistente.
+
+Não existe `down` automático para migrations que envolvem documentos comerciais/jurídicos imutáveis.
+
+## S3 / MinIO
+
+O bucket configurado em `S3_BUCKET` deve existir antes de iniciar a aplicação.
+
+Para MinIO local, um exemplo usando o cliente `mc` é:
+
+```bash
+mc alias set local http://localhost:9000 minioadmin minioadmin
+mc mb --ignore-existing local/viagate-commercial
+```
+
+O bucket deve permanecer privado. O sistema grava apenas as chaves no PostgreSQL e gera URLs temporárias para downloads autorizados.
+
+Principais prefixos:
+
+```text
+onboarding/{onboarding_id}/insurance_policy/...
+contracts/{onboarding_id}/...
+contracts/{contract_id}/final/evidence.pdf
+contracts/{contract_id}/final/signed-package.zip
+```
+
+## Primeiro Super Admin
+
+Na primeira execução configure:
+
+```env
+BOOTSTRAP_ADMIN_EMAIL=seu-email@viagate.com.br
+BOOTSTRAP_ADMIN_NAME=Seu Nome
+```
+
+Se ainda não houver Super Admin, o sistema cria um convite de ativação. Em desenvolvimento a URL inicial também é registrada no log do servidor; com Brevo configurado, ela é enviada por e-mail.
+
+Depois de ativar o primeiro acesso, remova `BOOTSTRAP_ADMIN_EMAIL` da configuração permanente.
+
+## Modelo de contrato
+
+Antes de testar um onboarding completo, entre como Super Admin/Jurídico e crie pelo menos um modelo de contrato, marcando-o como padrão.
+
+Os modelos são Markdown versionado e aceitam variáveis controladas, por exemplo:
+
+```text
+{client.legal_name}
+{client.cnpj}
+{client.address}
+{representative.name}
+{representative.cpf}
+{proposal.minimum_invoice}
+{viagate.legal_name}
+{viagate.cnpj}
+```
+
+Cada salvamento gera uma nova versão. Contratos já gerados continuam ligados à versão antiga.
+
+## Revisão do onboarding
+
+O padrão é:
+
+```env
+REQUIRE_ONBOARDING_REVIEW=true
+```
+
+Nesse modo, depois que o cliente envia o cadastro e a apólice, os dados ficam bloqueados e entram na fila de revisão. Operações/Super Admin pode:
+
+- marcar em revisão;
+- solicitar correção, enviando ao cliente um novo link seguro;
+- aprovar o cadastro.
+
+Somente a aprovação permite gerar e enviar o contrato.
+
+Para ambientes de demonstração pode ser usado `REQUIRE_ONBOARDING_REVIEW=false`; o sistema então aprova o cadastro automaticamente antes de gerar o contrato.
+
+## Desenvolvimento
+
+Baixe as dependências e gere os componentes templ:
+
+```bash
+go mod download
+go run github.com/a-h/templ/cmd/templ@v0.3.943 generate
+```
+
+Aplique as migrations:
+
+```bash
+go run ./cmd/migrate up
+```
+
+Inicie:
+
+```bash
+go run ./cmd/server
 ```
 
 Acesse:
 
 ```text
-http://localhost:8080/apresentacao/
+http://localhost:8080/login
 ```
 
-### Servindo o repositório diretamente
-
-Dentro da pasta do projeto:
-
-```bash
-python -m http.server 8080
-```
-
-Acesse:
+Endpoints operacionais:
 
 ```text
-http://localhost:8080/
+GET /healthz   # processo HTTP vivo
+GET /readyz    # PostgreSQL e bucket S3 acessíveis
 ```
+
+## Makefile
+
+Em ambientes com `make`:
+
+```bash
+make deps
+make migrate-up
+make dev
+make test
+make check
+```
+
+`make check` gera os templates, executa `go vet`, testes e build dos comandos principais.
+
+## Ordem recomendada para o primeiro teste
+
+1. iniciar PostgreSQL;
+2. iniciar/configurar S3 ou MinIO e criar o bucket privado;
+3. carregar as variáveis de ambiente;
+4. executar `go run ./cmd/migrate up`;
+5. configurar e ativar o primeiro Super Admin;
+6. criar um modelo de contrato padrão;
+7. criar/publicar uma proposta;
+8. aceitar a proposta como cliente;
+9. preencher onboarding e enviar a apólice;
+10. revisar e aprovar no painel administrativo;
+11. abrir o link recebido via Brevo e assinar com OTP;
+12. validar `contract.pdf`, `evidence.pdf` e `signed-package.zip`.
+
+## Produção
+
+Antes de produção, no mínimo:
+
+- HTTPS obrigatório;
+- PostgreSQL não exposto publicamente;
+- bucket privado com criptografia server-side;
+- `APP_ENV=production`;
+- credenciais e segredos fora do repositório;
+- backups testados do PostgreSQL e política de retenção/versionamento do S3;
+- `TRUST_PROXY_HEADERS=true` somente se o backend estiver isolado atrás de proxy confiável;
+- razão social e CNPJ oficiais da ViaGate configurados;
+- sender do Brevo validado;
+- revisão jurídica do texto de aceite, consentimento e fluxo de assinatura;
+- testes de restauração e uma rodada de segurança antes de habilitar clientes reais.
+
+A branch `feature/go-commercial-platform` ainda está em estabilização e não deve ser tratada como release de produção até passar por `templ generate`, `go test ./...`, testes integrados com PostgreSQL/S3/Brevo e validação funcional do fluxo completo.
