@@ -20,21 +20,30 @@ type EditorItem struct {
 }
 
 type EditorInput struct {
-	ProposalID       string
-	ClientLegalName  string
-	ClientTradeName  string
-	ClientCNPJ       string
-	ClientEmail      string
-	ClientPhone      string
-	Title            string
-	ValidUntil       *time.Time
-	PricingModel     string
-	MinimumInvoice   float64
-	SetupFee         float64
-	Conditions       []string
-	Items            []EditorItem
-	Content          map[string]any
-	ContentHash      []byte
+	ProposalID         string
+	ClientLegalName    string
+	ClientTradeName    string
+	ClientCNPJ         string
+	ClientEmail        string
+	ClientPhone        string
+	ClientLogoURL      string
+	ContactName        string
+	ContactRole        string
+	ContactEmail       string
+	ContactPhone       string
+	Title              string
+	ValidUntil         *time.Time
+	OperationContext   string
+	CustomerPriorities []string
+	SolutionTitle      string
+	SolutionScope      []string
+	PricingModel       string
+	MinimumInvoice     float64
+	SetupFee           float64
+	Conditions         []string
+	Items              []EditorItem
+	Content            map[string]any
+	ContentHash        []byte
 }
 
 type SavedDraft struct {
@@ -148,10 +157,36 @@ func (s *Store) EditorByID(ctx context.Context,userID,proposalID string,allowAll
 	`,proposalID).Scan(&draft.VersionID,&draft.VersionNumber,&draft.PublicToken,&input.PricingModel,&input.MinimumInvoice,&input.SetupFee,&contentJSON,&conditionsJSON,&input.ContentHash)
 	if err!=nil&&err!=pgx.ErrNoRows{return EditorInput{},SavedDraft{},err}
 	draft.ProposalID=proposalID
-	if len(contentJSON)>0{_ = json.Unmarshal(contentJSON,&input.Content)};if len(conditionsJSON)>0{_ = json.Unmarshal(conditionsJSON,&input.Conditions)}
+	if len(contentJSON)>0{
+		_ = json.Unmarshal(contentJSON,&input.Content)
+		input.ClientLogoURL=contentString(input.Content,"client","logo_url")
+		input.ContactName=contentString(input.Content,"contact","name")
+		input.ContactRole=contentString(input.Content,"contact","role")
+		input.ContactEmail=contentString(input.Content,"contact","email")
+		input.ContactPhone=contentString(input.Content,"contact","phone")
+		input.OperationContext=contentRootString(input.Content,"operation_context")
+		input.CustomerPriorities=contentRootStrings(input.Content,"customer_priorities")
+		input.SolutionTitle=contentRootString(input.Content,"solution_title")
+		input.SolutionScope=contentRootStrings(input.Content,"solution_scope")
+	}
+	if len(conditionsJSON)>0{_ = json.Unmarshal(conditionsJSON,&input.Conditions)}
 	if draft.VersionID!=""{
 		rows,err:=s.pool.Query(ctx,`select coalesce(metadata->>'catalog_id',''),group_name,label,coalesce(unit,''),price,is_optional,sort_order from proposal_items where proposal_version_id=$1 order by sort_order,id`,draft.VersionID);if err!=nil{return EditorInput{},SavedDraft{},err};defer rows.Close()
 		for rows.Next(){var item EditorItem;if err:=rows.Scan(&item.CatalogID,&item.GroupName,&item.Label,&item.Unit,&item.Price,&item.IsOptional,&item.SortOrder);err!=nil{return EditorInput{},SavedDraft{},err};input.Items=append(input.Items,item)}
 	}
 	return input,draft,nil
+}
+
+func contentString(content map[string]any,section,key string)string{
+	group,ok:=content[section].(map[string]any);if !ok{return ""}
+	value,_:=group[key].(string);return value
+}
+
+func contentRootString(content map[string]any,key string)string{value,_:=content[key].(string);return value}
+
+func contentRootStrings(content map[string]any,key string)[]string{
+	values,ok:=content[key].([]any);if !ok{return nil}
+	result:=make([]string,0,len(values))
+	for _,value:=range values{if text,ok:=value.(string);ok&&text!=""{result=append(result,text)}}
+	return result
 }
