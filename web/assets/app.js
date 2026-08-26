@@ -1,5 +1,6 @@
 (() => {
   const maskTypes = new Set(['cpf', 'cnpj', 'phone', 'postal-code']);
+  const sidebarStorageKey = 'viagate.admin.sidebar.collapsed';
 
   function fallbackCopy(value) {
     const textarea = document.createElement('textarea');
@@ -146,7 +147,86 @@
     });
   }
 
-  document.addEventListener('DOMContentLoaded', () => configureMaskedInputs());
+  function normalizedSearch(value) {
+    return String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  function initAdminSidebar() {
+    const shell = document.querySelector('[data-admin-shell]');
+    if (!shell) return;
+
+    try {
+      if (localStorage.getItem(sidebarStorageKey) === '1') shell.classList.add('sidebar-collapsed');
+    } catch (_) {}
+
+    document.querySelectorAll('[data-sidebar-toggle]').forEach((button) => {
+      button.addEventListener('click', () => {
+        shell.classList.toggle('sidebar-collapsed');
+        try {
+          localStorage.setItem(sidebarStorageKey, shell.classList.contains('sidebar-collapsed') ? '1' : '0');
+        } catch (_) {}
+      });
+    });
+
+    const closeMobile = () => shell.classList.remove('sidebar-mobile-open');
+    document.querySelectorAll('[data-sidebar-mobile-toggle]').forEach((button) => {
+      button.addEventListener('click', () => shell.classList.add('sidebar-mobile-open'));
+    });
+    document.querySelectorAll('[data-sidebar-backdrop]').forEach((button) => button.addEventListener('click', closeMobile));
+    document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeMobile(); });
+
+    const path = window.location.pathname.replace(/\/$/, '') || '/';
+    document.querySelectorAll('[data-admin-nav]').forEach((link) => {
+      const href = new URL(link.href, window.location.origin).pathname.replace(/\/$/, '') || '/';
+      const active = href === '/admin' ? path === href : path === href || path.startsWith(`${href}/`);
+      link.classList.toggle('is-active', active);
+    });
+  }
+
+  function initDashboardFilters() {
+    document.querySelectorAll('[data-dashboard]').forEach((dashboard) => {
+      const rows = Array.from(dashboard.querySelectorAll('[data-dashboard-row]'));
+      const search = dashboard.querySelector('[data-dashboard-search]');
+      const type = dashboard.querySelector('[data-dashboard-type]');
+      const status = dashboard.querySelector('[data-dashboard-status]');
+      const count = dashboard.querySelector('[data-dashboard-count]');
+      const empty = dashboard.querySelector('[data-dashboard-empty]');
+
+      const apply = () => {
+        const searchValue = normalizedSearch(search?.value);
+        const typeValue = type?.value || '';
+        const statusValue = status?.value || '';
+        let visible = 0;
+
+        rows.forEach((row) => {
+          const matchesSearch = !searchValue || normalizedSearch(row.dataset.search).includes(searchValue);
+          const matchesType = !typeValue || row.dataset.kind === typeValue;
+          const matchesStatus = !statusValue || row.dataset.status === statusValue;
+          const show = matchesSearch && matchesType && matchesStatus;
+          row.hidden = !show;
+          if (show) visible += 1;
+        });
+
+        if (count) count.textContent = String(visible);
+        if (empty) empty.hidden = visible !== 0 || rows.length === 0;
+      };
+
+      search?.addEventListener('input', apply);
+      type?.addEventListener('change', apply);
+      status?.addEventListener('change', apply);
+      apply();
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    configureMaskedInputs();
+    initAdminSidebar();
+    initDashboardFilters();
+  });
 
   document.addEventListener('input', (event) => {
     const input = event.target;
@@ -185,12 +265,16 @@
     if (!(submitter instanceof HTMLButtonElement)) return;
     const label = submitter.getAttribute('data-processing');
     if (!label) return;
-    form.querySelectorAll('button[type="submit"]').forEach((button) => {
-      button.disabled = true;
-      button.setAttribute('aria-disabled', 'true');
-    });
-    submitter.dataset.originalText = submitter.textContent || '';
-    submitter.textContent = label;
-    submitter.classList.add('is-processing');
+
+    window.setTimeout(() => {
+      if (!document.contains(form)) return;
+      submitter.dataset.originalText = submitter.textContent || '';
+      submitter.textContent = label;
+      submitter.classList.add('is-processing');
+      form.querySelectorAll('button[type="submit"]').forEach((button) => {
+        button.disabled = true;
+        button.setAttribute('aria-disabled', 'true');
+      });
+    }, 0);
   });
 })();
