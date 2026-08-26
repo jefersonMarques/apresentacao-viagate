@@ -78,7 +78,7 @@ if (document.getElementById('adminView')) {
     console.error('Não foi possível carregar o gerador simplificado de propostas.', error);
   });
 
-  import('./proposal-list-actions.js?v=20260826-3').catch((error) => {
+  import('./proposal-list-actions.js?v=20260826-4').catch((error) => {
     console.error('Não foi possível carregar as ações da lista de propostas.', error);
   });
 
