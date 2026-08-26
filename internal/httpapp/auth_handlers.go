@@ -101,9 +101,10 @@ func (a *App) inviteUser(w http.ResponseWriter,r *http.Request) {
 	admin,_:=currentUser(r.Context())
 	if err:=r.ParseForm();err!=nil { http.Error(w,"dados inválidos",http.StatusBadRequest);return }
 	name:=strings.TrimSpace(r.FormValue("name"))
-	emailAddress:=strings.TrimSpace(strings.ToLower(r.FormValue("email")))
+	emailAddress,err:=cleanEmail(r.FormValue("email"),true)
+	if err!=nil{http.Redirect(w,r,"/admin/users?error="+queryEscape("Informe um e-mail válido."),http.StatusSeeOther);return}
 	role:=strings.TrimSpace(r.FormValue("role"))
-	if name==""||emailAddress=="" { http.Error(w,"nome e e-mail são obrigatórios",http.StatusBadRequest);return }
+	if name=="" { http.Error(w,"nome é obrigatório",http.StatusBadRequest);return }
 
 	token,hash,err:=security.RandomToken(32)
 	if err!=nil { http.Error(w,"erro ao criar convite",http.StatusInternalServerError);return }
