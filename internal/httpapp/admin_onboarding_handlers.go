@@ -98,7 +98,7 @@ func (a *App) adminOnboardingDocument(w http.ResponseWriter,r *http.Request){
 func (a *App) sendOnboardingCorrection(r *http.Request,onboardingID,acceptanceID,name,emailAddress,notes string) error {
 	plain,hash,err:=security.RandomToken(32);if err!=nil{return err}
 	expires:=time.Now().Add(7*24*time.Hour)
-	if err:=a.proposalStore.CreateCustomerSession(r.Context(),acceptanceID,hash,requestIP(r),r.UserAgent(),expires);err!=nil{return err}
+	if err:=a.proposalStore.CreateCustomerResumeToken(r.Context(),acceptanceID,hash,expires);err!=nil{return err}
 	link:=strings.TrimRight(a.cfg.BaseURL,"/")+"/onboarding/resume/"+plain
 	htmlBody:=fmt.Sprintf("<p>Olá, %s.</p><p>Precisamos de um ajuste nas informações enviadas para a implantação ViaGate.</p><p><strong>Solicitação:</strong> %s</p><p><a href=\"%s\">Revisar e corrigir cadastro</a></p>",html.EscapeString(name),html.EscapeString(notes),html.EscapeString(link))
 	return notifications.Enqueue(r.Context(),a.pool,name,emailAddress,"Ajuste necessário no cadastro ViaGate",htmlBody,"Ajuste solicitado: "+notes+"\nAcesse: "+link)
