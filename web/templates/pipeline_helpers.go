@@ -49,3 +49,9 @@ func EventLabel(value string) string {
 	if label,ok:=labels[value];ok{return label}
 	return strings.ReplaceAll(value,"."," · ")
 }
+
+func EventActor(event domain.PipelineEvent) string {
+	if strings.TrimSpace(event.ActorName)!=""{return event.ActorName}
+	if strings.TrimSpace(event.ActorType)!=""{return event.ActorType}
+	return "sistema"
+}
