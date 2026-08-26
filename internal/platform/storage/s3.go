@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"mime"
 	"net/url"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -97,14 +99,42 @@ func (s *S3) Get(ctx context.Context, key string) (io.ReadCloser, int64, string,
 }
 
 func (s *S3) SignedDownloadURL(ctx context.Context, key string, ttl time.Duration) (*url.URL, error) {
-	result, err := s.presigner.PresignGetObject(ctx, &s3.GetObjectInput{
+	return s.signedGetURL(ctx, key, "", ttl)
+}
+
+func (s *S3) SignedAttachmentURL(ctx context.Context, key, filename string, ttl time.Duration) (*url.URL, error) {
+	filename = cleanDownloadFilename(filename)
+	disposition := mime.FormatMediaType("attachment", map[string]string{"filename": filename})
+	return s.signedGetURL(ctx, key, disposition, ttl)
+}
+
+func (s *S3) signedGetURL(ctx context.Context, key, contentDisposition string, ttl time.Duration) (*url.URL, error) {
+	input := &s3.GetObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(key),
-	}, s3.WithPresignExpires(ttl))
+	}
+	if contentDisposition != "" {
+		input.ResponseContentDisposition = aws.String(contentDisposition)
+	}
+	result, err := s.presigner.PresignGetObject(ctx, input, s3.WithPresignExpires(ttl))
 	if err != nil {
 		return nil, fmt.Errorf("presign s3 object: %w", err)
 	}
 	return url.Parse(result.URL)
+}
+
+func cleanDownloadFilename(value string) string {
+	value = filepath.Base(strings.TrimSpace(value))
+	value = strings.Map(func(r rune) rune {
+		if r < 32 || r == 127 {
+			return -1
+		}
+		return r
+	}, value)
+	if value == "" || value == "." {
+		return "download"
+	}
+	return value
 }
 
 func (s *S3) Delete(ctx context.Context, key string) error {
