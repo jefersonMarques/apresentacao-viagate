@@ -51,7 +51,7 @@ templ ProposalEditorPage(user domain.User, input proposals.EditorInput, draft pr
 				<div class="field" style="margin-top:16px"><label>Condição adicional</label><textarea name="custom_conditions" placeholder="Uma condição por linha"></textarea></div>
 			</div></section>
 
-			<div class="actions"><button class="btn dark" type="submit" name="action" value="draft">Salvar rascunho</button><button class="btn primary" type="submit" name="action" value="publish">Publicar versão</button>if draft.PublicToken != "" { <a class="btn" target="_blank" rel="noopener" href={ proposalPublicURL(draft.PublicToken) }>Abrir link público</a> }</div>
+			<div class="actions"><button class="btn dark" type="submit" name="action" value="draft">Salvar rascunho</button><button class="btn primary" type="submit" name="action" value="publish" data-processing="Publicando proposta...">Publicar versão</button>if draft.PublicToken != "" { <a class="btn" target="_blank" rel="noopener" href={ proposalPublicURL(draft.PublicToken) }>Abrir link público</a> }</div>
 		</form>
 		<script>
 		(function(){const form=document.getElementById('proposal-editor');function sync(){const model=form.querySelector('[name=pricing_model]:checked')?.value||'per_item';form.querySelectorAll('tr[data-models]').forEach(row=>{const models=(row.dataset.models||'').split(',').filter(Boolean);row.hidden=models.length>0&&!models.includes(model);if(row.hidden){row.querySelector('[name=item_status]').value='off';}});}form.querySelectorAll('[name=pricing_model]').forEach(r=>r.addEventListener('change',sync));sync();})();
