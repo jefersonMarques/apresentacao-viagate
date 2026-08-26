@@ -70,6 +70,10 @@ if (document.getElementById('adminView')) {
     console.error('Não foi possível carregar a camada responsiva do Hub.', error);
   });
 
+  import('./proposal-configurator.js?v=20260825-1').catch((error) => {
+    console.error('Não foi possível carregar o configurador guiado da proposta.', error);
+  });
+
   import('./storage-ui.js?v=20260825-7').catch((error) => {
     console.error('Não foi possível carregar os uploads do Storage.', error);
   });
