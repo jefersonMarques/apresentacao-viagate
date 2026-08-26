@@ -24,7 +24,7 @@ templ PresentationEditorPage(user domain.User,input presentations.EditorInput,dr
 				<div class="field full"><label>Título interno</label><input name="title" value={ input.Title } required/></div>
 				<div class="field"><label>Razão social</label><input name="client_legal_name" value={ input.ClientLegalName }/></div>
 				<div class="field"><label>Nome fantasia</label><input name="client_trade_name" value={ input.ClientTradeName }/></div>
-				<div class="field"><label>CNPJ</label><input name="client_cnpj" value={ input.ClientCNPJ } inputmode="numeric"/></div>
+				<div class="field"><label>CNPJ</label><input name="client_cnpj" data-mask="cnpj" autocomplete="off" value={ input.ClientCNPJ }/></div>
 				<div class="field"><label><input type="checkbox" name="show_client_identity" value="1" checked?={ input.ShowClientIdentity }/> Personalizar capa com o cliente</label></div>
 			</div></section>
 			<section class="panel"><div class="panel-head"><h2>2. Contato do cliente</h2></div><div class="panel-body grid">
