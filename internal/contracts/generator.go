@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	appconfig "github.com/jefersonMarques/apresentacao-viagate/internal/config"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/brfields"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/storage"
 )
 
@@ -97,15 +98,16 @@ func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID stri
 	if err:=rows.Err();err!=nil{rows.Close();return Generated{},err}
 	rows.Close()
 
-	address := strings.TrimSpace(strings.Join(nonEmpty(street,number,complement,district,city,state,postalCode),", "))
+	formattedPostalCode:=brfields.FormatPostalCode(postalCode)
+	address := strings.TrimSpace(strings.Join(nonEmpty(street,number,complement,district,city,state,formattedPostalCode),", "))
 	validUntilDisplay:=""
 	if validUntilSnapshot!=""{if parsed,parseErr:=time.Parse("2006-01-02",validUntilSnapshot);parseErr==nil{validUntilDisplay=parsed.Format("02/01/2006")}}
 	data := Data{
 		"client":map[string]any{
-			"legal_name":legalName,"trade_name":tradeName,"cnpj":cnpj,"address":address,"city":city,"state":state,
+			"legal_name":legalName,"trade_name":tradeName,"cnpj":brfields.FormatCNPJ(cnpj),"address":address,"city":city,"state":state,
 		},
 		"representative":map[string]any{
-			"name":repName,"cpf":repCPF,"email":repEmail,"phone":repPhone,"role":repRole,
+			"name":repName,"cpf":brfields.FormatCPF(repCPF),"email":repEmail,"phone":brfields.FormatPhone(repPhone),"role":repRole,
 		},
 		"proposal":map[string]any{
 			"minimum_invoice":fmt.Sprintf("R$ %.2f",minimumInvoice),
@@ -115,7 +117,7 @@ func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID stri
 		},
 		"viagate":map[string]any{
 			"legal_name":g.company.LegalName,
-			"cnpj":g.company.CNPJ,
+			"cnpj":brfields.FormatCNPJ(g.company.CNPJ),
 		},
 		"products":products,
 	}
