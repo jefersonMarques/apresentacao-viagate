@@ -19,8 +19,8 @@ A gestão autenticada é separada em:
 
 - **Visão geral** — materiais publicados e acompanhamento de leitura;
 - **Apresentações** — criação, publicação e edição das apresentações institucionais;
-- **Propostas** — criação, versionamento, publicação e acompanhamento das propostas;
-- **Meu perfil** — foto e dados do comercial usados nos materiais publicados.
+- **Propostas** — criação, duplicação, versionamento, publicação e acompanhamento das propostas;
+- **Meu perfil** — foto, contatos e redes sociais do comercial usados nos materiais publicados.
 
 ### Apresentação institucional
 
@@ -28,6 +28,7 @@ Cada publicação possui token próprio e pode configurar:
 
 - vendedor responsável;
 - foto, cargo, telefone, WhatsApp e e-mail;
+- LinkedIn e Instagram do comercial;
 - slide final de contato ativado ou desativado;
 - empresa do cliente;
 - contato do cliente;
@@ -70,6 +71,21 @@ Modelos comerciais suportados:
 - condições específicas.
 
 O viewer comercial usa como referência a estrutura já utilizada pela ViaGate: Score, consultas e autenticação, prevenção, aplicativo/logística, monitoramento de veículos e fatura mínima.
+
+### Duplicação de propostas
+
+Cada proposta pode ser duplicada para servir como base de um novo envio ou como modelo comercial reutilizável.
+
+A duplicação:
+
+- cria novo cliente e novo contato independentes;
+- copia a versão mais recente da proposta;
+- copia modelo comercial, condições, fatura mínima, implantação e itens de preço;
+- cria a nova proposta como rascunho;
+- redefine a validade para 15 dias a partir da duplicação;
+- não copia token público;
+- não copia estatísticas de leitura;
+- não altera a proposta original.
 
 ## Imagens comerciais
 
@@ -140,6 +156,7 @@ Execute as migrations na ordem:
 20260825_commercial_assets_storage.sql
 20260825_proposal_pricing_models.sql
 20260825_commercial_hub_read_status.sql
+20260825_profile_socials_and_proposal_duplication.sql
 ```
 
 As migrations adicionam:
@@ -151,7 +168,9 @@ As migrations adicionam:
 - publicação por token;
 - estatísticas de abertura e conclusão;
 - suporte aos modelos por item, conjunto e item + conjunto;
-- bucket `commercial-assets` e políticas de upload.
+- bucket `commercial-assets` e políticas de upload;
+- LinkedIn e Instagram no perfil comercial;
+- duplicação transacional de propostas.
 
 O papel Postgres `anon` não possui `SELECT` direto nas tabelas comerciais ou de analytics. Os viewers públicos acessam somente RPCs limitadas por token publicado.
 
