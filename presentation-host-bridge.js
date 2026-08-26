@@ -1,4 +1,5 @@
 let lastReportedSlide = 0;
+let hostPresentationActive = false;
 
 function getPresentationHostState() {
   const slides = getPresentationSlides();
@@ -46,12 +47,45 @@ function goToHostSlide(index) {
   window.setTimeout(() => reportCurrentSlide(true), 120);
 }
 
+function clearEmbeddedPauseState() {
+  if (!hostPresentationActive) {
+    return;
+  }
+
+  presentationState.paused = false;
+  document.body.classList.remove(
+    'presentation-paused',
+    'presentation-gate-visible',
+    'presentation-controls-visible',
+    'presentation-cursor-hidden',
+  );
+}
+
+const pauseStateObserver = new MutationObserver(() => {
+  if (!hostPresentationActive) {
+    return;
+  }
+
+  if (
+    document.body.classList.contains('presentation-paused')
+    || document.body.classList.contains('presentation-gate-visible')
+  ) {
+    clearEmbeddedPauseState();
+  }
+});
+
+pauseStateObserver.observe(document.body, {
+  attributes: true,
+  attributeFilter: ['class'],
+});
+
 window.hostStartPresentation = function hostStartPresentation(firstStart = false) {
+  hostPresentationActive = true;
   presentationState.started = true;
   presentationState.paused = false;
 
   document.body.classList.add('presentation-started');
-  document.body.classList.remove('presentation-paused', 'presentation-gate-visible');
+  clearEmbeddedPauseState();
   document.querySelector('.presentation-gate')?.remove();
   document.querySelector('.presentation-controls')?.remove();
 
@@ -60,16 +94,20 @@ window.hostStartPresentation = function hostStartPresentation(firstStart = false
     lastReportedSlide = 0;
   }
 
+  window.requestAnimationFrame(clearEmbeddedPauseState);
+  window.setTimeout(clearEmbeddedPauseState, 80);
   reportCurrentSlide(true);
 };
 
 window.hostPausePresentation = function hostPausePresentation() {
+  hostPresentationActive = false;
   presentationState.paused = true;
   document.body.classList.add('presentation-paused');
   document.body.classList.remove('presentation-controls-visible', 'presentation-cursor-hidden');
 };
 
 window.hostRestartPresentation = function hostRestartPresentation() {
+  hostPresentationActive = false;
   presentationState.started = false;
   presentationState.paused = true;
   lastReportedSlide = 0;
