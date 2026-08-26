@@ -82,7 +82,7 @@ if (document.getElementById('adminView')) {
     console.error('Não foi possível carregar o controle de acesso das propostas.', error);
   });
 
-  import('./hub-overview-enhancements.js?v=20260825-1').catch((error) => {
+  import('./hub-overview-enhancements.js?v=20260825-2').catch((error) => {
     console.error('Não foi possível identificar os tipos de materiais no painel.', error);
   });
 }
