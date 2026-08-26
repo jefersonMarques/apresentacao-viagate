@@ -34,12 +34,15 @@ type SessionConfig struct {
 }
 
 type S3Config struct {
-	Region          string
-	Bucket          string
-	Endpoint        string
-	AccessKeyID     string
-	SecretAccessKey string
-	UsePathStyle    bool
+	Region               string
+	Bucket               string
+	Endpoint             string
+	AccessKeyID          string
+	SecretAccessKey      string
+	UsePathStyle         bool
+	ServerSideEncryption string
+	KMSKeyID             string
+	DownloadTTL          time.Duration
 }
 
 type BrevoConfig struct {
@@ -76,12 +79,15 @@ func Load() (Config, error) {
 			SignatureOTPTTL: minutes("SIGNATURE_OTP_TTL_MINUTES", 10),
 		},
 		S3: S3Config{
-			Region:          env("S3_REGION", "us-east-1"),
-			Bucket:          os.Getenv("S3_BUCKET"),
-			Endpoint:        os.Getenv("S3_ENDPOINT"),
-			AccessKeyID:     os.Getenv("S3_ACCESS_KEY_ID"),
-			SecretAccessKey: os.Getenv("S3_SECRET_ACCESS_KEY"),
-			UsePathStyle:    boolean("S3_USE_PATH_STYLE", false),
+			Region:               env("S3_REGION", "us-east-1"),
+			Bucket:               os.Getenv("S3_BUCKET"),
+			Endpoint:             os.Getenv("S3_ENDPOINT"),
+			AccessKeyID:          os.Getenv("S3_ACCESS_KEY_ID"),
+			SecretAccessKey:      os.Getenv("S3_SECRET_ACCESS_KEY"),
+			UsePathStyle:         boolean("S3_USE_PATH_STYLE", false),
+			ServerSideEncryption: env("S3_SERVER_SIDE_ENCRYPTION", "AES256"),
+			KMSKeyID:             os.Getenv("S3_KMS_KEY_ID"),
+			DownloadTTL:          minutes("S3_DOWNLOAD_TTL_MINUTES", 5),
 		},
 		Brevo: BrevoConfig{
 			APIKey:      os.Getenv("BREVO_API_KEY"),
@@ -104,8 +110,17 @@ func Load() (Config, error) {
 	if cfg.S3.Bucket == "" {
 		return Config{}, fmt.Errorf("S3_BUCKET is required")
 	}
+	if cfg.S3.ServerSideEncryption != "AES256" && cfg.S3.ServerSideEncryption != "aws:kms" {
+		return Config{}, fmt.Errorf("S3_SERVER_SIDE_ENCRYPTION must be AES256 or aws:kms")
+	}
+	if cfg.S3.ServerSideEncryption == "aws:kms" && cfg.S3.KMSKeyID == "" {
+		return Config{}, fmt.Errorf("S3_KMS_KEY_ID is required when using aws:kms")
+	}
 	if cfg.Environment == "production" && (cfg.Company.LegalName == "" || cfg.Company.CNPJ == "") {
 		return Config{}, fmt.Errorf("VIAGATE_LEGAL_NAME and VIAGATE_CNPJ are required in production")
+	}
+	if cfg.Environment == "production" && cfg.Brevo.APIKey == "" {
+		return Config{}, fmt.Errorf("BREVO_API_KEY is required in production")
 	}
 
 	return cfg, nil
