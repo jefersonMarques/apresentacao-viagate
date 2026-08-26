@@ -70,26 +70,26 @@ func (a *App) confirmSignature(w http.ResponseWriter,r *http.Request) {
 func (a *App) downloadSignedContract(w http.ResponseWriter,r *http.Request) {
 	token:=chi.URLParam(r,"token")
 	access,err:=a.contractStore.SignerByPublicToken(r.Context(),token);if err!=nil{http.Error(w,"Link inválido",http.StatusNotFound);return}
-	a.redirectPrivateArtifact(w,r,access.Contract.PDFStorageKey)
+	a.redirectPrivateArtifact(w,r,access.Contract.PDFStorageKey,"contrato-viagate.pdf")
 }
 
 func (a *App) downloadSignatureEvidence(w http.ResponseWriter,r *http.Request) {
 	token:=chi.URLParam(r,"token")
 	keys,err:=a.contractStore.ArtifactKeysBySignerToken(r.Context(),token);if err!=nil{http.Error(w,"Evidências indisponíveis",http.StatusNotFound);return}
 	if !keys.Finalized||keys.EvidenceKey==""{http.Error(w,"O relatório de evidências ainda está sendo finalizado.",http.StatusConflict);return}
-	a.redirectPrivateArtifact(w,r,keys.EvidenceKey)
+	a.redirectPrivateArtifact(w,r,keys.EvidenceKey,"evidencias-assinatura-viagate.pdf")
 }
 
 func (a *App) downloadSignaturePackage(w http.ResponseWriter,r *http.Request) {
 	token:=chi.URLParam(r,"token")
 	keys,err:=a.contractStore.ArtifactKeysBySignerToken(r.Context(),token);if err!=nil{http.Error(w,"Pacote indisponível",http.StatusNotFound);return}
 	if !keys.Finalized||keys.PackageKey==""{http.Error(w,"O pacote final ainda está sendo finalizado.",http.StatusConflict);return}
-	a.redirectPrivateArtifact(w,r,keys.PackageKey)
+	a.redirectPrivateArtifact(w,r,keys.PackageKey,"pacote-assinatura-viagate.zip")
 }
 
-func (a *App) redirectPrivateArtifact(w http.ResponseWriter,r *http.Request,key string) {
+func (a *App) redirectPrivateArtifact(w http.ResponseWriter,r *http.Request,key,filename string) {
 	if strings.TrimSpace(key)==""{http.Error(w,"Arquivo indisponível",http.StatusNotFound);return}
-	url,err:=a.storage.SignedDownloadURL(r.Context(),key,a.cfg.S3.DownloadTTL);if err!=nil{a.logger.Error("presign private artifact failed","error",err);http.Error(w,"Não foi possível disponibilizar o arquivo.",http.StatusInternalServerError);return}
+	downloadURL,err:=a.storage.SignedAttachmentURL(r.Context(),key,filename,a.cfg.S3.DownloadTTL);if err!=nil{a.logger.Error("presign private artifact failed","error",err);http.Error(w,"Não foi possível disponibilizar o arquivo.",http.StatusInternalServerError);return}
 	w.Header().Set("Cache-Control","no-store")
-	http.Redirect(w,r,url.String(),http.StatusTemporaryRedirect)
+	http.Redirect(w,r,downloadURL.String(),http.StatusTemporaryRedirect)
 }
