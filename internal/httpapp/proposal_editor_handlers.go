@@ -44,7 +44,7 @@ func (a *App) saveProposal(w http.ResponseWriter,r *http.Request){
 		return
 	}
 	draft,err:=a.proposalStore.SaveDraft(r.Context(),user.ID,allowAll,input)
-	if err!=nil{a.logger.Error("save proposal failed","error",err);render(r.Context(),w,http.StatusBadRequest,templates.ProposalEditorPage(user,input,proposals.SavedDraft{},"","Não foi possível salvar a proposta."));return}
+	if err!=nil{a.logger.Error("save proposal failed","error",err);render(r.Context(),w,http.StatusBadRequest,templates.ProposalEditorPage(user,input,proposals.SavedDraft{},"","Não foi possível salvar a proposta. Ela pode já ter sido aceita ou estar bloqueada."));return}
 
 	if r.FormValue("action")=="publish"{
 		if len(input.Items)==0{render(r.Context(),w,http.StatusBadRequest,templates.ProposalEditorPage(user,input,draft,"","Selecione ao menos um item para publicar."));return}
@@ -78,7 +78,9 @@ func (a *App) proposalInputFromForm(r *http.Request,salespersonName,salespersonE
 	}
 	input.Conditions=append(input.Conditions,r.Form["condition"]...)
 	for _,line:=range strings.Split(r.FormValue("custom_conditions"),"\n"){if value:=strings.TrimSpace(line);value!=""{input.Conditions=append(input.Conditions,value)}}
+	validUntil:="";if input.ValidUntil!=nil{validUntil=input.ValidUntil.Format("2006-01-02")}
 	input.Content=map[string]any{
+		"proposal":map[string]any{"title":input.Title,"valid_until":validUntil},
 		"client":map[string]any{"legal_name":input.ClientLegalName,"trade_name":input.ClientTradeName,"cnpj":input.ClientCNPJ,"email":input.ClientEmail,"phone":input.ClientPhone},
 		"salesperson":map[string]any{"name":salespersonName,"email":salespersonEmail},
 	}
