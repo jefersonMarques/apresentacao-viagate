@@ -62,7 +62,8 @@ func (a *App) proposalInputFromForm(r *http.Request,salespersonName,salespersonE
 	input.ClientLegalName=strings.TrimSpace(r.FormValue("client_legal_name"));if input.ClientLegalName==""{return input,fmt.Errorf("Informe a razão social do cliente.")}
 	input.ClientTradeName=strings.TrimSpace(r.FormValue("client_trade_name"))
 	if value:=strings.TrimSpace(r.FormValue("client_cnpj"));value!=""{cnpj,err:=cleanCNPJ(value);if err!=nil{return input,err};input.ClientCNPJ=cnpj}
-	input.ClientEmail=strings.TrimSpace(strings.ToLower(r.FormValue("client_email")));input.ClientPhone=strings.TrimSpace(r.FormValue("client_phone"))
+	clientEmail,err:=cleanEmail(r.FormValue("client_email"),false);if err!=nil{return input,fmt.Errorf("E-mail do cliente inválido.")};input.ClientEmail=clientEmail
+	input.ClientPhone=strings.TrimSpace(r.FormValue("client_phone"))
 	input.Title=strings.TrimSpace(r.FormValue("title"));if input.Title==""{input.Title="Proposta Comercial ViaGate"}
 	if value:=strings.TrimSpace(r.FormValue("valid_until"));value!=""{date,err:=time.Parse("2006-01-02",value);if err!=nil{return input,fmt.Errorf("Validade inválida.")};input.ValidUntil=&date}
 	input.PricingModel=strings.TrimSpace(r.FormValue("pricing_model"));if !validPricingModel(input.PricingModel){return input,fmt.Errorf("Modelo comercial inválido.")}
