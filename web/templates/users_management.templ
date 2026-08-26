@@ -1,9 +1,6 @@
 package templates
 
-import (
-	"github.com/a-h/templ"
-	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
-)
+import "github.com/jefersonMarques/apresentacao-viagate/internal/domain"
 
 templ UsersManagementPage(current domain.User, users []domain.User, message, errorMessage string) {
 	@AdminLayout("ViaGate — Usuários", current) {
