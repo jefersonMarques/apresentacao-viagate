@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"time"
@@ -126,43 +127,41 @@ func (s *Store) ListUsers(ctx context.Context) ([]domain.User, error) {
 }
 
 func (s *Store) CreateInvitation(ctx context.Context, email, name, roleCode string, tokenHash []byte, expiresAt time.Time, createdBy string) (string, error) {
-	tx, err := s.pool.Begin(ctx)
+	tx, err := s.pool.BeginTx(ctx,pgx.TxOptions{IsoLevel:pgx.Serializable})
 	if err != nil {
 		return "", err
 	}
 	defer tx.Rollback(ctx)
 
-	var userID string
-	err = tx.QueryRow(ctx, `
-		insert into users(email,name,status)
-		values ($1,$2,'invited')
-		on conflict (email) do update set name = excluded.name
-		returning id::text
-	`, email, name).Scan(&userID)
-	if err != nil {
-		return "", fmt.Errorf("upsert invited user: %w", err)
+	var roleID string
+	if err:=tx.QueryRow(ctx,`select id::text from roles where code=$1`,roleCode).Scan(&roleID);err!=nil{
+		if errors.Is(err,pgx.ErrNoRows){return "",fmt.Errorf("invalid role %q",roleCode)}
+		return "",err
 	}
 
-	commandTag, err := tx.Exec(ctx, `
-		insert into user_roles(user_id, role_id)
-		select $1, id from roles where code = $2
-		on conflict do nothing
-	`, userID, roleCode)
-	if err != nil {
-		return "", fmt.Errorf("assign invited role: %w", err)
-	}
-	if commandTag.RowsAffected() == 0 {
-		var roleExists bool
-		if err := tx.QueryRow(ctx, `select exists(select 1 from roles where code=$1)`, roleCode).Scan(&roleExists); err != nil || !roleExists {
-			return "", fmt.Errorf("invalid role %q", roleCode)
+	var userID,status string
+	err=tx.QueryRow(ctx,`select id::text,status::text from users where email=$1 for update`,email).Scan(&userID,&status)
+	switch {
+	case errors.Is(err,pgx.ErrNoRows):
+		if err:=tx.QueryRow(ctx,`insert into users(email,name,status) values($1,$2,'invited') returning id::text`,email,name).Scan(&userID);err!=nil{
+			return "",fmt.Errorf("create invited user: %w",err)
 		}
+	case err!=nil:
+		return "",err
+	case status!="invited":
+		return "",fmt.Errorf("user already exists; update the existing account instead of sending a new invitation")
+	default:
+		if _,err:=tx.Exec(ctx,`update users set name=$2,updated_at=now() where id=$1 and status='invited'`,userID,name);err!=nil{return "",err}
 	}
 
-	_, err = tx.Exec(ctx, `
+	if _,err:=tx.Exec(ctx,`delete from user_roles where user_id=$1`,userID);err!=nil{return "",fmt.Errorf("reset invited role: %w",err)}
+	if _,err:=tx.Exec(ctx,`insert into user_roles(user_id,role_id) values($1,$2)`,userID,roleID);err!=nil{return "",fmt.Errorf("assign invited role: %w",err)}
+	if _,err:=tx.Exec(ctx,`update user_invitations set expires_at=now() where user_id=$1 and accepted_at is null and expires_at>now()`,userID);err!=nil{return "",fmt.Errorf("expire prior invitations: %w",err)}
+
+	if _,err=tx.Exec(ctx,`
 		insert into user_invitations(user_id, token_hash, expires_at, created_by)
 		values ($1,$2,$3,$4)
-	`, userID, tokenHash, expiresAt, createdBy)
-	if err != nil {
+	`, userID, tokenHash, expiresAt, createdBy);err!=nil{
 		return "", fmt.Errorf("create invitation: %w", err)
 	}
 
@@ -179,7 +178,7 @@ func (s *Store) Invitation(ctx context.Context, tokenHash []byte) (domain.User, 
 		select u.id::text, u.email::text, u.name, u.status::text, i.expires_at
 		from user_invitations i
 		join users u on u.id = i.user_id
-		where i.token_hash=$1 and i.accepted_at is null and i.expires_at > now()
+		where i.token_hash=$1 and i.accepted_at is null and i.expires_at > now() and u.status='invited'
 	`, tokenHash).Scan(&user.ID, &user.Email, &user.Name, &user.Status, &expiresAt)
 	return user, expiresAt, err
 }
@@ -196,19 +195,18 @@ func (s *Store) AcceptInvitation(ctx context.Context, tokenHash []byte, password
 		select u.id::text, u.email::text, u.name
 		from user_invitations i
 		join users u on u.id=i.user_id
-		where i.token_hash=$1 and i.accepted_at is null and i.expires_at > now()
-		for update of i
+		where i.token_hash=$1 and i.accepted_at is null and i.expires_at > now() and u.status='invited'
+		for update of i,u
 	`, tokenHash).Scan(&user.ID, &user.Email, &user.Name)
 	if err != nil {
 		return domain.User{}, err
 	}
 
-	if _, err := tx.Exec(ctx, `update users set password_hash=$2,status='active',updated_at=now() where id=$1`, user.ID, passwordHash); err != nil {
-		return domain.User{}, err
-	}
-	if _, err := tx.Exec(ctx, `update user_invitations set accepted_at=now() where token_hash=$1`, tokenHash); err != nil {
-		return domain.User{}, err
-	}
+	command,err:=tx.Exec(ctx,`update users set password_hash=$2,status='active',updated_at=now() where id=$1 and status='invited'`,user.ID,passwordHash)
+	if err!=nil{return domain.User{},err}
+	if command.RowsAffected()!=1{return domain.User{},fmt.Errorf("invited account is no longer available")}
+	if _,err:=tx.Exec(ctx,`update user_invitations set accepted_at=now() where token_hash=$1`,tokenHash);err!=nil{return domain.User{},err}
+	if _,err:=tx.Exec(ctx,`update user_invitations set expires_at=now() where user_id=$1 and token_hash<>$2 and accepted_at is null and expires_at>now()`,user.ID,tokenHash);err!=nil{return domain.User{},err}
 
 	if err := tx.Commit(ctx); err != nil {
 		return domain.User{}, err
