@@ -1,0 +1,55 @@
+package templates
+
+import "github.com/jefersonMarques/apresentacao-viagate/internal/domain"
+
+templ ProfilePage(current domain.User, profile domain.User, message, errorMessage string) {
+	@AdminLayout("ViaGate — Meu perfil", current) {
+		<header class="admin-page-header">
+			<div>
+				<span class="eyebrow">MINHA CONTA</span>
+				<h1>Perfil comercial</h1>
+				<p>Estes dados identificam você no painel e são usados nas novas propostas e apresentações.</p>
+			</div>
+		</header>
+		if message != "" {
+			<div class="notice">{ message }</div>
+		}
+		if errorMessage != "" {
+			<div class="notice error">{ errorMessage }</div>
+		}
+		<div class="profile-layout">
+			<aside class="profile-card">
+				<div class="profile-avatar large">{ UserInitials(profile.Name) }</div>
+				<h2>{ profile.Name }</h2>
+				if profile.JobTitle != "" {
+					<p>{ profile.JobTitle }</p>
+				}
+				<span>{ profile.Email }</span>
+				if profile.Phone != "" {
+					<span>{ Phone(profile.Phone) }</span>
+				}
+				<div class="profile-note">Alterações passam a valer em novas versões salvas. Versões já publicadas mantêm os dados que foram congelados nelas.</div>
+			</aside>
+			<section class="data-panel profile-form-panel">
+				<div class="data-panel-head">
+					<div><h2>Dados pessoais</h2><p>Informações de contato do responsável comercial.</p></div>
+				</div>
+				<form method="post" action="/admin/profile" class="profile-form">
+					<div class="grid">
+						<div class="field full"><label>Nome completo</label><input name="name" value={ profile.Name } autocomplete="name" required/></div>
+						<div class="field"><label>E-mail</label><input name="email" type="email" value={ profile.Email } autocomplete="email" required/></div>
+						<div class="field"><label>Telefone / WhatsApp</label><input name="phone" data-mask="phone" value={ profile.Phone } autocomplete="tel"/></div>
+						<div class="field full"><label>Cargo / função comercial</label><input name="job_title" value={ profile.JobTitle } placeholder="Ex.: Consultor Comercial" autocomplete="organization-title"/></div>
+					</div>
+					<div class="profile-preview">
+						<span class="eyebrow">COMO APARECE NOS MATERIAIS</span>
+						<strong>{ profile.Name }</strong>
+						if profile.JobTitle != "" { <span>{ profile.JobTitle }</span> }
+						<span>{ profile.Email }if profile.Phone != "" { · { Phone(profile.Phone) } }</span>
+					</div>
+					<div class="actions"><button class="btn primary" type="submit" data-processing="Salvando perfil...">Salvar alterações</button></div>
+				</form>
+			</section>
+		</div>
+	}
+}
