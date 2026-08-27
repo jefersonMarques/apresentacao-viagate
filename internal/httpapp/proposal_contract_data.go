@@ -9,6 +9,37 @@ import (
 )
 
 func (a *App) writeProposalContractData(w http.ResponseWriter, r *http.Request, proposal proposals.PublicProposal) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+
+	if lookupValue := r.URL.Query().Get("cnpj"); lookupValue != "" {
+		cnpj, err := cleanCNPJ(lookupValue)
+		if err != nil {
+			http.Error(w, `{"error":"CNPJ inválido."}`, http.StatusBadRequest)
+			return
+		}
+		company, err := a.registry.Lookup(r.Context(), cnpj)
+		if err != nil {
+			http.Error(w, `{"error":"CNPJ não encontrado."}`, http.StatusNotFound)
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"cnpj": company.CNPJ,
+			"legal_name": company.LegalName,
+			"trade_name": company.TradeName,
+			"email": company.Email,
+			"phone": company.Phone,
+			"postal_code": company.PostalCode,
+			"street": company.Street,
+			"street_number": company.Number,
+			"complement": company.Complement,
+			"district": company.District,
+			"city": company.City,
+			"state": company.State,
+		})
+		return
+	}
+
 	templateVersionID := proposalSnapshotString(proposal.Content, "proposal", "contract_template_version_id")
 	contractLabel := ""
 	if templateVersionID != "" {
@@ -50,8 +81,6 @@ func (a *App) writeProposalContractData(w http.ResponseWriter, r *http.Request, 
 			"phone": proposalSnapshotString(proposal.Content, "contact", "phone"),
 		},
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Cache-Control", "no-store")
 	_ = json.NewEncoder(w).Encode(payload)
 }
 
