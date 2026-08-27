@@ -39,6 +39,7 @@ func NewGenerator(pool *pgxpool.Pool, store *Store, renderer *Renderer, pdf *PDF
 func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID string) (Generated, error) {
 	var proposalVersionID, createdBy, assignedTemplateVersionID string
 	var legalName, tradeName, cnpj, street, number, complement, district, city, state, postalCode string
+	var operationType, insurer, policyStartDate, policyEndDate, brokerCompany, brokerProducer string
 	var repName, repCPF, repEmail, repPhone, repRole string
 	var minimumInvoice, setupFee float64
 	var acceptedAt time.Time
@@ -48,6 +49,8 @@ func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID stri
 		       coalesce(pv.content #>> '{proposal,contract_template_version_id}',''),
 		       o.legal_name,coalesce(o.trade_name,''),o.cnpj,coalesce(o.street,''),coalesce(o.street_number,''),
 		       coalesce(o.complement,''),coalesce(o.district,''),coalesce(o.city,''),coalesce(o.state,''),coalesce(o.postal_code,''),
+		       coalesce(o.operation_type,''),coalesce(o.insurer,''),coalesce(o.policy_start_date::text,''),coalesce(o.policy_end_date::text,''),
+		       coalesce(o.broker_company,''),coalesce(o.broker_producer,''),
 		       o.company_responsible_name,o.company_responsible_cpf,o.company_responsible_email::text,o.company_responsible_phone,coalesce(o.company_responsible_role,''),
 		       pv.minimum_invoice,pv.setup_fee,a.accepted_at,coalesce(pv.content #>> '{proposal,valid_until}','')
 		from onboardings o
@@ -58,6 +61,7 @@ func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID stri
 	`, onboardingID).Scan(
 		&proposalVersionID,&createdBy,&assignedTemplateVersionID,
 		&legalName,&tradeName,&cnpj,&street,&number,&complement,&district,&city,&state,&postalCode,
+		&operationType,&insurer,&policyStartDate,&policyEndDate,&brokerCompany,&brokerProducer,
 		&repName,&repCPF,&repEmail,&repPhone,&repRole,&minimumInvoice,&setupFee,&acceptedAt,&validUntilSnapshot,
 	)
 	if err != nil {
@@ -115,8 +119,7 @@ func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID stri
 
 	formattedPostalCode:=brfields.FormatPostalCode(postalCode)
 	address := strings.TrimSpace(strings.Join(nonEmpty(street,number,complement,district,city,state,formattedPostalCode),", "))
-	validUntilDisplay:=""
-	if validUntilSnapshot!=""{if parsed,parseErr:=time.Parse("2006-01-02",validUntilSnapshot);parseErr==nil{validUntilDisplay=parsed.Format("02/01/2006")}}
+	validUntilDisplay:=contractDate(validUntilSnapshot)
 	data := Data{
 		"client":map[string]any{
 			"legal_name":legalName,"trade_name":tradeName,"cnpj":brfields.FormatCNPJ(cnpj),"address":address,"city":city,"state":state,
@@ -129,6 +132,16 @@ func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID stri
 			"setup_fee":fmt.Sprintf("R$ %.2f",setupFee),
 			"accepted_at":acceptedAt.Format("02/01/2006 15:04"),
 			"valid_until":validUntilDisplay,
+		},
+		"operation":map[string]any{
+			"type":operationType,
+		},
+		"insurance":map[string]any{
+			"insurer":insurer,
+			"policy_start_date":contractDate(policyStartDate),
+			"policy_end_date":contractDate(policyEndDate),
+			"broker_company":brokerCompany,
+			"broker_producer":brokerProducer,
 		},
 		"viagate":map[string]any{
 			"legal_name":g.company.LegalName,
@@ -157,6 +170,13 @@ func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID stri
 	return Generated{
 		ContractID:contract.ID,SignerID:signer.ID,SignerToken:token,SignerName:repName,SignerEmail:repEmail,DocumentSHA256:documentHash[:],
 	},nil
+}
+
+func contractDate(value string) string {
+	if value=="" { return "" }
+	parsed,err:=time.Parse("2006-01-02",value)
+	if err!=nil { return value }
+	return parsed.Format("02/01/2006")
 }
 
 func nonEmpty(values ...string) []string {
