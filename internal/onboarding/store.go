@@ -29,7 +29,7 @@ func (s *Store) ByAcceptance(ctx context.Context, acceptanceID string) (domain.O
 	var o domain.Onboarding
 	err := s.pool.QueryRow(ctx, `
 		select id::text,proposal_acceptance_id::text,client_id::text,status::text,coalesce(review_notes,''),
-		       cnpj,legal_name,coalesce(trade_name,''),coalesce(street,''),coalesce(street_number,''),
+		       coalesce(cnpj,''),coalesce(legal_name,''),coalesce(trade_name,''),coalesce(street,''),coalesce(street_number,''),
 		       coalesce(complement,''),coalesce(district,''),coalesce(city,''),coalesce(state,''),coalesce(postal_code,''),
 		       coalesce(operation_type,''),coalesce(insurer,''),
 		       coalesce(policy_start_date::text,''),coalesce(policy_end_date::text,''),
