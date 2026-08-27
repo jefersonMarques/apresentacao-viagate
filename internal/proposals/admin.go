@@ -8,7 +8,7 @@ import (
 
 func (s *Store) List(ctx context.Context,userID string,all bool) ([]domain.Proposal,error) {
 	query:=`
-		select p.id::text,p.client_id::text,c.legal_name,p.title,p.status::text,p.current_version,
+		select p.id::text,p.client_id::text,coalesce(nullif(c.trade_name,''),nullif(c.legal_name,''),'Cliente não identificado'),p.title,p.status::text,p.current_version,
 		       coalesce(v.public_token::text,''),p.valid_until,p.created_by::text,u.name,p.updated_at
 		from proposals p
 		join clients c on c.id=p.client_id
