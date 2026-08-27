@@ -16,7 +16,7 @@ func NewStore(pool *pgxpool.Pool) *Store { return &Store{pool: pool} }
 
 func (s *Store) List(ctx context.Context, userID string, all bool) ([]domain.PipelineItem, error) {
 	query := `
-		select p.id::text,p.title,cl.legal_name,u.name,p.status::text,
+		select p.id::text,p.title,coalesce(nullif(cl.trade_name,''),nullif(cl.legal_name,''),'Cliente não identificado'),u.name,p.status::text,
 		       coalesce(o.id::text,''),coalesce(o.status::text,''),
 		       coalesce(ct.id::text,''),coalesce(ct.status::text,''),
 		       a.accepted_at,o.submitted_at,ct.fully_signed_at,
