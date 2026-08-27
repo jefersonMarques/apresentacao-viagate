@@ -75,7 +75,7 @@ func (s *Store) PublicByToken(ctx context.Context, token string) (PublicProposal
 	var currentValidUntil *time.Time
 	err := s.pool.QueryRow(ctx, `
 		select p.id::text, v.id::text, v.version_number, v.public_token::text, p.title,
-		       c.id::text, c.legal_name, coalesce(c.cnpj,''), v.pricing_model,
+		       c.id::text, coalesce(c.legal_name,''), coalesce(c.cnpj,''), v.pricing_model,
 		       v.content, v.conditions, v.minimum_invoice, v.setup_fee, v.content_hash, p.valid_until
 		from proposal_versions v
 		join proposals p on p.id=v.proposal_id
@@ -223,7 +223,7 @@ func (s *Store) Accept(ctx context.Context, proposal PublicProposal, input Accep
 			proposal_acceptance_id,client_id,status,cnpj,legal_name,trade_name,
 			company_responsible_name,company_responsible_cpf,company_responsible_phone,
 			company_responsible_email,company_responsible_role,company_responsible_authority_declared
-		) values($1,$2,'pending',$3,$4,nullif($5,''),$6,$7,$8,$9,$10,true)
+		) values($1,$2,'pending',nullif($3,''),nullif($4,''),nullif($5,''),$6,$7,$8,$9,$10,true)
 		returning id::text
 	`,result.AcceptanceID,proposal.ClientID,proposal.ClientCNPJ,proposal.ClientName,proposal.ClientTradeName,input.Name,input.CPF,input.Phone,input.Email,input.Role).Scan(&result.OnboardingID)
 	if err != nil {
