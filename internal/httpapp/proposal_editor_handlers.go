@@ -17,142 +17,291 @@ import (
 	"github.com/jefersonMarques/apresentacao-viagate/web/templates"
 )
 
-func (a *App) newProposalPage(w http.ResponseWriter,r *http.Request){
-	user,_:=currentUser(r.Context())
-	validUntil:=time.Now().AddDate(0,0,15)
-	input:=proposals.EditorInput{Title:"Proposta Comercial ViaGate",PricingModel:"per_item",ValidUntil:&validUntil}
-	render(r.Context(),w,http.StatusOK,templates.ProposalEditorPage(user,input,proposals.SavedDraft{},"",""))
+func (a *App) newProposalPage(w http.ResponseWriter, r *http.Request) {
+	user, _ := currentUser(r.Context())
+	validUntil := time.Now().AddDate(0, 0, 15)
+	input := proposals.EditorInput{Title: "Proposta Comercial ViaGate", PricingModel: "per_item", ValidUntil: &validUntil}
+	render(r.Context(), w, http.StatusOK, templates.ProposalEditorPage(user, input, proposals.SavedDraft{}, "", ""))
 }
 
-func (a *App) editProposalPage(w http.ResponseWriter,r *http.Request){
-	user,_:=currentUser(r.Context())
-	allowAll,_:=a.authStore.HasPermission(r.Context(),user.ID,"proposal.read_all")
-	input,draft,err:=a.proposalStore.EditorByID(r.Context(),user.ID,chi.URLParam(r,"id"),allowAll)
-	if err!=nil{http.Error(w,"proposta não encontrada ou acesso negado",http.StatusNotFound);return}
-	message:=""
-	if r.URL.Query().Get("saved")=="1"{message="Rascunho salvo."}
-	if r.URL.Query().Get("published")=="1"{message="Versão publicada. Novas alterações criarão uma nova versão."}
-	render(r.Context(),w,http.StatusOK,templates.ProposalEditorPage(user,input,draft,message,""))
-}
-
-func (a *App) saveProposal(w http.ResponseWriter,r *http.Request){
-	user,_:=currentUser(r.Context())
-	allowAll,_:=a.authStore.HasPermission(r.Context(),user.ID,"proposal.read_all")
-	if err:=r.ParseForm();err!=nil{http.Error(w,"dados inválidos",http.StatusBadRequest);return}
-
-	salesperson,profileErr:=a.authStore.Profile(r.Context(),user.ID)
-	if profileErr!=nil{a.logger.Error("load commercial profile failed","user_id",user.ID,"error",profileErr);salesperson=user}
-	input,err:=a.proposalInputFromForm(r,salesperson)
-	if err!=nil{
-		render(r.Context(),w,http.StatusBadRequest,templates.ProposalEditorPage(user,input,proposals.SavedDraft{},"",err.Error()))
+func (a *App) editProposalPage(w http.ResponseWriter, r *http.Request) {
+	user, _ := currentUser(r.Context())
+	allowAll, _ := a.authStore.HasPermission(r.Context(), user.ID, "proposal.read_all")
+	input, draft, err := a.proposalStore.EditorByID(r.Context(), user.ID, chi.URLParam(r, "id"), allowAll)
+	if err != nil {
+		http.Error(w, "proposta não encontrada ou acesso negado", http.StatusNotFound)
 		return
 	}
-	draft,err:=a.proposalStore.SaveDraft(r.Context(),user.ID,allowAll,input)
-	if err!=nil{a.logger.Error("save proposal failed","error",err);render(r.Context(),w,http.StatusBadRequest,templates.ProposalEditorPage(user,input,proposals.SavedDraft{},"","Não foi possível salvar a proposta. Ela pode já ter sido aceita ou estar bloqueada."));return}
-
-	if r.FormValue("action")=="publish"{
-		if len(input.Items)==0{render(r.Context(),w,http.StatusBadRequest,templates.ProposalEditorPage(user,input,draft,"","Selecione ao menos um item para publicar."));return}
-		if _,err:=a.proposalStore.Publish(r.Context(),user.ID,allowAll,draft.VersionID);err!=nil{a.logger.Error("publish proposal failed","error",err);render(r.Context(),w,http.StatusBadRequest,templates.ProposalEditorPage(user,input,draft,"","Não foi possível publicar a proposta."));return}
-		http.Redirect(w,r,"/admin/proposals/"+draft.ProposalID+"/edit?published=1",http.StatusSeeOther)
-		return
+	message := ""
+	if r.URL.Query().Get("saved") == "1" {
+		message = "Rascunho salvo."
 	}
-	http.Redirect(w,r,"/admin/proposals/"+draft.ProposalID+"/edit?saved=1",http.StatusSeeOther)
+	if r.URL.Query().Get("published") == "1" {
+		message = "Versão publicada. Novas alterações criarão uma nova versão."
+	}
+	render(r.Context(), w, http.StatusOK, templates.ProposalEditorPage(user, input, draft, message, ""))
 }
 
-func (a *App) proposalInputFromForm(r *http.Request,salesperson domain.User)(proposals.EditorInput,error){
+func (a *App) saveProposal(w http.ResponseWriter, r *http.Request) {
+	user, _ := currentUser(r.Context())
+	allowAll, _ := a.authStore.HasPermission(r.Context(), user.ID, "proposal.read_all")
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "dados inválidos", http.StatusBadRequest)
+		return
+	}
+
+	action := strings.TrimSpace(r.URL.Query().Get("action"))
+	if action == "" {
+		action = strings.TrimSpace(r.FormValue("action"))
+	}
+	if action == "" {
+		action = "draft"
+	}
+	if action != "draft" && action != "publish" {
+		http.Error(w, "ação inválida", http.StatusBadRequest)
+		return
+	}
+
+	salesperson, profileErr := a.authStore.Profile(r.Context(), user.ID)
+	if profileErr != nil {
+		a.logger.Error("load commercial profile failed", "user_id", user.ID, "error", profileErr)
+		salesperson = user
+	}
+	input, err := a.proposalInputFromForm(r, salesperson)
+	if err != nil {
+		render(r.Context(), w, http.StatusBadRequest, templates.ProposalEditorPage(user, input, proposals.SavedDraft{}, "", err.Error()))
+		return
+	}
+	draft, err := a.proposalStore.SaveDraft(r.Context(), user.ID, allowAll, input)
+	if err != nil {
+		a.logger.Error("save proposal failed", "user_id", user.ID, "proposal_id", input.ProposalID, "action", action, "error", err)
+		message := "Não foi possível salvar a proposta. Ela pode já ter sido aceita ou estar bloqueada."
+		if a.cfg.Environment != "production" {
+			message += " Detalhe: " + err.Error()
+		}
+		render(r.Context(), w, http.StatusBadRequest, templates.ProposalEditorPage(user, input, proposals.SavedDraft{}, "", message))
+		return
+	}
+
+	if action == "publish" {
+		if len(input.Items) == 0 {
+			render(r.Context(), w, http.StatusBadRequest, templates.ProposalEditorPage(user, input, draft, "", "Informe o valor de ao menos um produto para publicar."))
+			return
+		}
+		if _, err := a.proposalStore.Publish(r.Context(), user.ID, allowAll, draft.VersionID); err != nil {
+			a.logger.Error("publish proposal failed", "user_id", user.ID, "proposal_id", draft.ProposalID, "version_id", draft.VersionID, "error", err)
+			message := "Não foi possível publicar a proposta."
+			if a.cfg.Environment != "production" {
+				message += " Detalhe: " + err.Error()
+			}
+			render(r.Context(), w, http.StatusBadRequest, templates.ProposalEditorPage(user, input, draft, "", message))
+			return
+		}
+		http.Redirect(w, r, "/admin/proposals/"+draft.ProposalID+"/edit?published=1", http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, "/admin/proposals/"+draft.ProposalID+"/edit?saved=1", http.StatusSeeOther)
+}
+
+func (a *App) proposalInputFromForm(r *http.Request, salesperson domain.User) (proposals.EditorInput, error) {
 	var input proposals.EditorInput
-	input.ProposalID=strings.TrimSpace(r.FormValue("proposal_id"))
-	input.ClientLegalName=strings.TrimSpace(r.FormValue("client_legal_name"));if input.ClientLegalName==""{return input,fmt.Errorf("Informe a razão social do cliente.")}
-	input.ClientTradeName=strings.TrimSpace(r.FormValue("client_trade_name"))
-	if value:=strings.TrimSpace(r.FormValue("client_cnpj"));value!=""{cnpj,err:=cleanCNPJ(value);if err!=nil{return input,err};input.ClientCNPJ=cnpj}
-	clientEmail,err:=cleanEmail(r.FormValue("client_email"),false);if err!=nil{return input,fmt.Errorf("E-mail do cliente inválido.")};input.ClientEmail=clientEmail
-	clientPhone,err:=cleanPhone(r.FormValue("client_phone"),false);if err!=nil{return input,fmt.Errorf("Telefone do cliente inválido.")};input.ClientPhone=clientPhone
-	if value:=strings.TrimSpace(r.FormValue("client_logo_url"));value!=""{logoURL,err:=cleanProfileURL(value);if err!=nil{return input,fmt.Errorf("URL do logo do cliente inválida.")};input.ClientLogoURL=logoURL}
-
-	input.ContactName=strings.TrimSpace(r.FormValue("contact_name"))
-	input.ContactRole=strings.TrimSpace(r.FormValue("contact_role"))
-	contactEmail,err:=cleanEmail(r.FormValue("contact_email"),false);if err!=nil{return input,fmt.Errorf("E-mail do contato inválido.")};input.ContactEmail=contactEmail
-	contactPhone,err:=cleanPhone(r.FormValue("contact_phone"),false);if err!=nil{return input,fmt.Errorf("Telefone do contato inválido.")};input.ContactPhone=contactPhone
-
-	input.Title=strings.TrimSpace(r.FormValue("title"));if input.Title==""{input.Title="Proposta Comercial ViaGate"}
-	if value:=strings.TrimSpace(r.FormValue("valid_until"));value!=""{date,err:=time.Parse("2006-01-02",value);if err!=nil{return input,fmt.Errorf("Validade inválida.")};input.ValidUntil=&date}
-	input.OperationContext=strings.TrimSpace(r.FormValue("operation_context"))
-	input.CustomerPriorities=multilineValues(r.FormValue("customer_priorities"))
-	input.SolutionTitle=strings.TrimSpace(r.FormValue("solution_title"))
-	input.SolutionScope=multilineValues(r.FormValue("solution_scope"))
-	input.PricingModel=strings.TrimSpace(r.FormValue("pricing_model"));if !validPricingModel(input.PricingModel){return input,fmt.Errorf("Modelo comercial inválido.")}
-
-	minimumInvoice,err:=parseMoney(r.FormValue("minimum_invoice"));if err!=nil{return input,fmt.Errorf("Fatura mínima inválida.")};input.MinimumInvoice=minimumInvoice
-	setupFee,err:=parseMoney(r.FormValue("setup_fee"));if err!=nil{return input,fmt.Errorf("Valor de implantação inválido.")};input.SetupFee=setupFee
-
-	ids:=r.Form["catalog_id"];statuses:=r.Form["item_status"];prices:=r.Form["item_price"]
-	for index,id:=range ids{
-		status:="off";if index<len(statuses){status=statuses[index]}
-		if status!="off"&&status!="included"&&status!="optional"{return input,fmt.Errorf("Status de item inválido.")}
-		if status=="off"{continue}
-		group,item,ok:=catalog.ItemByID(id);if !ok{return input,fmt.Errorf("Item comercial inválido: %s",id)}
-		if !catalog.ModelAllows(item,input.PricingModel){continue}
-		price:=0.0
-		if index<len(prices){price,err=parseMoney(prices[index]);if err!=nil{return input,fmt.Errorf("Valor inválido para %s.",item.Label)}}
-		input.Items=append(input.Items,proposals.EditorItem{CatalogID:item.ID,GroupName:group.Title,Label:item.Label,Unit:item.Unit,Price:price,IsOptional:status=="optional",SortOrder:index})
+	input.ProposalID = strings.TrimSpace(r.FormValue("proposal_id"))
+	input.ClientLegalName = strings.TrimSpace(r.FormValue("client_legal_name"))
+	if input.ClientLegalName == "" {
+		return input, fmt.Errorf("Informe a razão social do cliente.")
 	}
-	input.Conditions=normalizedConditions(r.Form["condition"],r.FormValue("custom_conditions"))
-	validUntil:="";if input.ValidUntil!=nil{validUntil=input.ValidUntil.Format("2006-01-02")}
-	input.Content=map[string]any{
-		"proposal":map[string]any{"title":input.Title,"valid_until":validUntil},
-		"client":map[string]any{
-			"legal_name":input.ClientLegalName,"trade_name":input.ClientTradeName,"company_name":input.ClientLegalName,
-			"cnpj":input.ClientCNPJ,"email":input.ClientEmail,"phone":input.ClientPhone,"logo_url":input.ClientLogoURL,
+	input.ClientTradeName = strings.TrimSpace(r.FormValue("client_trade_name"))
+	if value := strings.TrimSpace(r.FormValue("client_cnpj")); value != "" {
+		cnpj, err := cleanCNPJ(value)
+		if err != nil {
+			return input, err
+		}
+		input.ClientCNPJ = cnpj
+	}
+	clientEmail, err := cleanEmail(r.FormValue("client_email"), false)
+	if err != nil {
+		return input, fmt.Errorf("E-mail do cliente inválido.")
+	}
+	input.ClientEmail = clientEmail
+	clientPhone, err := cleanPhone(r.FormValue("client_phone"), false)
+	if err != nil {
+		return input, fmt.Errorf("Telefone do cliente inválido.")
+	}
+	input.ClientPhone = clientPhone
+	if value := strings.TrimSpace(r.FormValue("client_logo_url")); value != "" {
+		logoURL, err := cleanCommercialImageURL(value)
+		if err != nil {
+			return input, fmt.Errorf("Logo do cliente inválido. Envie a imagem novamente.")
+		}
+		input.ClientLogoURL = logoURL
+	}
+
+	input.ContactName = strings.TrimSpace(r.FormValue("contact_name"))
+	input.ContactRole = strings.TrimSpace(r.FormValue("contact_role"))
+	contactEmail, err := cleanEmail(r.FormValue("contact_email"), false)
+	if err != nil {
+		return input, fmt.Errorf("E-mail do contato inválido.")
+	}
+	input.ContactEmail = contactEmail
+	contactPhone, err := cleanPhone(r.FormValue("contact_phone"), false)
+	if err != nil {
+		return input, fmt.Errorf("Telefone do contato inválido.")
+	}
+	input.ContactPhone = contactPhone
+
+	input.Title = strings.TrimSpace(r.FormValue("title"))
+	if input.Title == "" {
+		input.Title = "Proposta Comercial ViaGate"
+	}
+	if value := strings.TrimSpace(r.FormValue("valid_until")); value != "" {
+		date, err := time.Parse("2006-01-02", value)
+		if err != nil {
+			return input, fmt.Errorf("Validade inválida.")
+		}
+		input.ValidUntil = &date
+	}
+	input.OperationContext = strings.TrimSpace(r.FormValue("operation_context"))
+	input.CustomerPriorities = multilineValues(r.FormValue("customer_priorities"))
+	input.SolutionTitle = strings.TrimSpace(r.FormValue("solution_title"))
+	input.SolutionScope = multilineValues(r.FormValue("solution_scope"))
+	input.PricingModel = strings.TrimSpace(r.FormValue("pricing_model"))
+	if !validPricingModel(input.PricingModel) {
+		return input, fmt.Errorf("Modelo comercial inválido.")
+	}
+
+	minimumInvoice, err := parseMoney(r.FormValue("minimum_invoice"))
+	if err != nil {
+		return input, fmt.Errorf("Fatura mínima inválida.")
+	}
+	input.MinimumInvoice = minimumInvoice
+	setupFee, err := parseMoney(r.FormValue("setup_fee"))
+	if err != nil {
+		return input, fmt.Errorf("Valor de implantação inválido.")
+	}
+	input.SetupFee = setupFee
+
+	ids := r.Form["catalog_id"]
+	statuses := r.Form["item_status"]
+	prices := r.Form["item_price"]
+	for index, id := range ids {
+		status := "off"
+		if index < len(statuses) {
+			status = strings.TrimSpace(statuses[index])
+		}
+		if status != "off" && status != "included" && status != "optional" {
+			return input, fmt.Errorf("Status de item inválido.")
+		}
+		priceValue := ""
+		if index < len(prices) {
+			priceValue = strings.TrimSpace(prices[index])
+		}
+		// Valor vazio sempre prevalece como "Não oferecer", mesmo se o cliente desabilitar o JavaScript.
+		if status == "off" || priceValue == "" {
+			continue
+		}
+		group, item, ok := catalog.ItemByID(id)
+		if !ok {
+			return input, fmt.Errorf("Item comercial inválido: %s", id)
+		}
+		if !catalog.ModelAllows(item, input.PricingModel) {
+			continue
+		}
+		price, err := parseMoney(priceValue)
+		if err != nil {
+			return input, fmt.Errorf("Valor inválido para %s.", item.Label)
+		}
+		input.Items = append(input.Items, proposals.EditorItem{CatalogID: item.ID, GroupName: group.Title, Label: item.Label, Unit: item.Unit, Price: price, IsOptional: status == "optional", SortOrder: index})
+	}
+	input.Conditions = normalizedConditions(r.Form["condition"], r.FormValue("custom_conditions"))
+	validUntil := ""
+	if input.ValidUntil != nil {
+		validUntil = input.ValidUntil.Format("2006-01-02")
+	}
+	input.Content = map[string]any{
+		"proposal": map[string]any{"title": input.Title, "valid_until": validUntil},
+		"client": map[string]any{
+			"legal_name": input.ClientLegalName, "trade_name": input.ClientTradeName, "company_name": input.ClientLegalName,
+			"cnpj": input.ClientCNPJ, "email": input.ClientEmail, "phone": input.ClientPhone, "logo_url": input.ClientLogoURL,
 		},
-		"contact":map[string]any{"name":input.ContactName,"role":input.ContactRole,"email":input.ContactEmail,"phone":input.ContactPhone},
-		"operation_context":input.OperationContext,
-		"customer_priorities":input.CustomerPriorities,
-		"solution_title":input.SolutionTitle,
-		"solution_scope":input.SolutionScope,
-		"salesperson":map[string]any{
-			"name":salesperson.Name,"email":salesperson.Email,"phone":salesperson.Phone,
-			"job_title":salesperson.JobTitle,"role":salesperson.JobTitle,"photo_url":salesperson.PhotoURL,
-			"linkedin":salesperson.LinkedInURL,"instagram":salesperson.InstagramURL,
+		"contact":             map[string]any{"name": input.ContactName, "role": input.ContactRole, "email": input.ContactEmail, "phone": input.ContactPhone},
+		"operation_context":   input.OperationContext,
+		"customer_priorities": input.CustomerPriorities,
+		"solution_title":      input.SolutionTitle,
+		"solution_scope":      input.SolutionScope,
+		"salesperson": map[string]any{
+			"name": salesperson.Name, "email": salesperson.Email, "phone": salesperson.Phone,
+			"job_title": salesperson.JobTitle, "role": salesperson.JobTitle, "photo_url": salesperson.PhotoURL,
+			"linkedin": salesperson.LinkedInURL, "instagram": salesperson.InstagramURL,
 		},
 	}
-	canonical:=struct{Content map[string]any `json:"content"`;PricingModel string `json:"pricing_model"`;MinimumInvoice float64 `json:"minimum_invoice"`;SetupFee float64 `json:"setup_fee"`;Conditions []string `json:"conditions"`;Items []proposals.EditorItem `json:"items"`}{input.Content,input.PricingModel,input.MinimumInvoice,input.SetupFee,input.Conditions,input.Items}
-	encoded,_:=json.Marshal(canonical);hash:=sha256.Sum256(encoded);input.ContentHash=hash[:]
-	return input,nil
+	canonical := struct {
+		Content        map[string]any         `json:"content"`
+		PricingModel   string                 `json:"pricing_model"`
+		MinimumInvoice float64                `json:"minimum_invoice"`
+		SetupFee       float64                `json:"setup_fee"`
+		Conditions     []string               `json:"conditions"`
+		Items          []proposals.EditorItem `json:"items"`
+	}{input.Content, input.PricingModel, input.MinimumInvoice, input.SetupFee, input.Conditions, input.Items}
+	encoded, _ := json.Marshal(canonical)
+	hash := sha256.Sum256(encoded)
+	input.ContentHash = hash[:]
+	return input, nil
 }
 
-func validPricingModel(value string)bool{for _,model:=range catalog.PricingModels{if model.ID==value{return true}};return false}
-
-func parseMoney(value string)(float64,error){
-	value=strings.TrimSpace(value)
-	if value==""{return 0,nil}
-	if strings.Contains(value,","){
-		if strings.Contains(value,"."){value=strings.ReplaceAll(value,".","")}
-		value=strings.ReplaceAll(value,",",".")
+func validPricingModel(value string) bool {
+	for _, model := range catalog.PricingModels {
+		if model.ID == value {
+			return true
+		}
 	}
-	number,err:=strconv.ParseFloat(value,64)
-	if err!=nil||math.IsNaN(number)||math.IsInf(number,0)||number<0{return 0,fmt.Errorf("invalid money")}
-	return number,nil
+	return false
 }
 
-func normalizedConditions(standard []string,custom string)[]string{
-	seen:=map[string]bool{}
-	result:=[]string{}
-	appendValue:=func(value string){
-		value=strings.TrimSpace(value)
-		if value==""||seen[value]{return}
-		seen[value]=true
-		result=append(result,value)
+func parseMoney(value string) (float64, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return 0, nil
 	}
-	for _,value:=range standard{appendValue(value)}
-	for _,line:=range strings.Split(custom,"\n"){appendValue(line)}
+	if strings.Contains(value, ",") {
+		if strings.Contains(value, ".") {
+			value = strings.ReplaceAll(value, ".", "")
+		}
+		value = strings.ReplaceAll(value, ",", ".")
+	}
+	number, err := strconv.ParseFloat(value, 64)
+	if err != nil || math.IsNaN(number) || math.IsInf(number, 0) || number < 0 {
+		return 0, fmt.Errorf("invalid money")
+	}
+	return number, nil
+}
+
+func normalizedConditions(standard []string, custom string) []string {
+	seen := map[string]bool{}
+	result := []string{}
+	appendValue := func(value string) {
+		value = strings.TrimSpace(value)
+		if value == "" || seen[value] {
+			return
+		}
+		seen[value] = true
+		result = append(result, value)
+	}
+	for _, value := range standard {
+		appendValue(value)
+	}
+	for _, line := range strings.Split(custom, "\n") {
+		appendValue(line)
+	}
 	return result
 }
 
-func multilineValues(value string)[]string{
-	result:=[]string{}
-	for _,line:=range strings.Split(value,"\n"){
-		line=strings.TrimSpace(line)
-		if line!=""{result=append(result,line)}
+func multilineValues(value string) []string {
+	result := []string{}
+	for _, line := range strings.Split(value, "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			result = append(result, line)
+		}
 	}
 	return result
 }
