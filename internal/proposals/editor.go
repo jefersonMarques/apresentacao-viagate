@@ -77,7 +77,7 @@ func (s *Store) SaveDraft(ctx context.Context, userID string, allowAll bool, inp
 				insert into clients(
 					legal_name,trade_name,cnpj,email,phone,street,street_number,complement,district,city,state,postal_code,created_by
 				) values(
-					$1,nullif($2,''),nullif($3,''),nullif($4,'')::citext,nullif($5,''),nullif($6,''),nullif($7,''),nullif($8,''),nullif($9,''),nullif($10,''),nullif($11,''),nullif($12,''),$13
+					nullif($1,''),nullif($2,''),nullif($3,''),nullif($4,'')::citext,nullif($5,''),nullif($6,''),nullif($7,''),nullif($8,''),nullif($9,''),nullif($10,''),nullif($11,''),nullif($12,''),$13
 				) returning id::text
 			`,
 				input.ClientLegalName,
@@ -99,7 +99,7 @@ func (s *Store) SaveDraft(ctx context.Context, userID string, allowAll bool, inp
 		} else {
 			if _, err := tx.Exec(ctx, `
 				update clients set
-					legal_name=$2,trade_name=nullif($3,''),email=nullif($4,'')::citext,phone=nullif($5,''),
+					legal_name=nullif($2,''),trade_name=nullif($3,''),email=nullif($4,'')::citext,phone=nullif($5,''),
 					street=nullif($6,''),street_number=nullif($7,''),complement=nullif($8,''),district=nullif($9,''),
 					city=nullif($10,''),state=nullif($11,''),postal_code=nullif($12,''),updated_at=now()
 				where id=$1 and created_by=$13
@@ -140,7 +140,7 @@ func (s *Store) SaveDraft(ctx context.Context, userID string, allowAll bool, inp
 		}
 		if _, err := tx.Exec(ctx, `
 			update clients set
-				legal_name=$2,trade_name=nullif($3,''),cnpj=nullif($4,''),email=nullif($5,'')::citext,phone=nullif($6,''),
+				legal_name=nullif($2,''),trade_name=nullif($3,''),cnpj=nullif($4,''),email=nullif($5,'')::citext,phone=nullif($6,''),
 				street=nullif($7,''),street_number=nullif($8,''),complement=nullif($9,''),district=nullif($10,''),
 				city=nullif($11,''),state=nullif($12,''),postal_code=nullif($13,''),updated_at=now()
 			where id=$1
@@ -268,7 +268,7 @@ func (s *Store) EditorByID(ctx context.Context, userID, proposalID string, allow
 	var owner string
 	err := s.pool.QueryRow(ctx, `
 		select p.id::text,p.title,p.valid_until,p.created_by::text,
-		       c.legal_name,coalesce(c.trade_name,''),coalesce(c.cnpj,''),coalesce(c.email::text,''),coalesce(c.phone,''),
+		       coalesce(c.legal_name,''),coalesce(c.trade_name,''),coalesce(c.cnpj,''),coalesce(c.email::text,''),coalesce(c.phone,''),
 		       coalesce(c.street,''),coalesce(c.street_number,''),coalesce(c.complement,''),coalesce(c.district,''),
 		       coalesce(c.city,''),coalesce(c.state,''),coalesce(c.postal_code,'')
 		from proposals p join clients c on c.id=p.client_id where p.id=$1
