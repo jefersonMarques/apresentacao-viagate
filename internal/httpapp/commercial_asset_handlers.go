@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -142,21 +141,19 @@ func (a *App) adminLookupCNPJ(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("Cache-Control", "private, max-age=300")
 	_ = json.NewEncoder(w).Encode(map[string]string{
-		"cnpj":        company.CNPJ,
-		"legal_name":  company.LegalName,
-		"trade_name":  company.TradeName,
-		"email":       company.Email,
-		"phone":       company.Phone,
-		"street":      company.Street,
-		"number":      company.Number,
-		"complement":  company.Complement,
-		"district":    company.District,
-		"city":        company.City,
-		"state":       company.State,
-		"postal_code": company.PostalCode,
-		"status":      company.Status,
+		"cnpj":         company.CNPJ,
+		"legal_name":   company.LegalName,
+		"trade_name":   company.TradeName,
+		"email":        company.Email,
+		"phone":        company.Phone,
+		"street":       company.Street,
+		"number":       company.Number,
+		"complement":   company.Complement,
+		"district":     company.District,
+		"city":         company.City,
+		"state":        company.State,
+		"postal_code":  company.PostalCode,
+		"status":       company.Status,
 		"primary_cnae": company.PrimaryCNAE,
 	})
 }
-
-var _ = time.Second
