@@ -87,6 +87,16 @@ func (a *App) saveProposal(w http.ResponseWriter, r *http.Request) {
 		render(r.Context(), w, http.StatusBadRequest, templates.ProposalEditorPage(user, input, proposals.SavedDraft{}, "", message))
 		return
 	}
+	if err := a.persistProposalContractAssignment(r.Context(), draft, input); err != nil {
+		a.logger.Error("persist proposal contract assignment failed", "proposal_id", draft.ProposalID, "version_id", draft.VersionID, "error", err)
+		message := "O rascunho foi salvo, mas não foi possível vincular o modelo de contrato."
+		if a.cfg.Environment != "production" {
+			message += " Detalhe: " + err.Error()
+		}
+		input = a.decorateProposalContractOptions(r.Context(), input)
+		render(r.Context(), w, http.StatusBadRequest, templates.ProposalEditorPage(user, input, draft, "Rascunho salvo.", message))
+		return
+	}
 
 	if action == "publish" {
 		if err := validateProposalForPublish(input); err != nil {
@@ -124,6 +134,7 @@ func validateProposalForPublish(input proposals.EditorInput) error {
 }
 
 func (a *App) proposalInputFromForm(r *http.Request, salesperson domain.User) (proposals.EditorInput, error) {
+	contractTemplateID := strings.TrimSpace(r.FormValue("contract_template_id"))
 	input := proposals.EditorInput{
 		ProposalID:         strings.TrimSpace(r.FormValue("proposal_id")),
 		ClientLegalName:    strings.TrimSpace(r.FormValue("client_legal_name")),
@@ -149,6 +160,9 @@ func (a *App) proposalInputFromForm(r *http.Request, salesperson domain.User) (p
 		SolutionTitle:      strings.TrimSpace(r.FormValue("solution_title")),
 		SolutionScope:      multilineValues(r.FormValue("solution_scope")),
 		PricingModel:       strings.TrimSpace(r.FormValue("pricing_model")),
+		Content: map[string]any{
+			"proposal": map[string]any{"contract_template_id": contractTemplateID},
+		},
 	}
 
 	if input.Title == "" {
@@ -221,7 +235,6 @@ func (a *App) proposalInputFromForm(r *http.Request, salesperson domain.User) (p
 		return input, fmt.Errorf("Modelo comercial inválido.")
 	}
 
-	contractTemplateID := strings.TrimSpace(r.FormValue("contract_template_id"))
 	contractTemplateVersionID, err := a.resolveProposalContractTemplateVersion(r.Context(), contractTemplateID)
 	if err != nil {
 		return input, err
