@@ -11,6 +11,19 @@
 
   const state = { started: false, bridgeReady: false, slideNumber: 1, slideTotal: 1 };
 
+  // Os slides institucionais permanecem sempre. Estes blocos são os que representam
+  // diretamente os módulos comerciais selecionáveis no gerador.
+  const slideModules = Object.freeze({
+    'slide-03': ['score'],
+    'slide-04': ['score'],
+    'slide-05': ['score'],
+    'slide-06': ['score'],
+    'slide-07': ['authentication', 'prevention'],
+    'slide-08': ['authentication'],
+    'slide-10': ['logistics', 'monitoring'],
+    'slide-11': ['logistics', 'monitoring'],
+  });
+
   function updateNavigation(slideNumber = state.slideNumber, slideTotal = state.slideTotal) {
     state.slideNumber = Math.max(1, Number(slideNumber) || 1);
     state.slideTotal = Math.max(1, Number(slideTotal) || 1);
@@ -22,6 +35,19 @@
   function syncNavigation() {
     const current = frame.contentWindow?.hostGetPresentationState?.();
     if (current) updateNavigation(current.slideNumber, current.slideTotal);
+  }
+
+  function selectedModules() {
+    return new Set((frame.dataset.modules || '').split(',').map((value) => value.trim()).filter(Boolean));
+  }
+
+  function filterModuleSlides(doc) {
+    const selected = selectedModules();
+    if (selected.size === 0) return;
+    Object.entries(slideModules).forEach(([slideID, modules]) => {
+      const shouldKeep = modules.some((module) => selected.has(module));
+      if (!shouldKeep) doc.getElementById(slideID)?.remove();
+    });
   }
 
   function contactData() {
@@ -44,6 +70,7 @@
       client: {
         company_name: frame.dataset.clientName || '',
         contact_name: frame.dataset.contactName || '',
+        logo_url: frame.dataset.clientLogo || '',
       },
     });
   }
@@ -52,6 +79,7 @@
     const doc = frame.contentDocument;
     const win = frame.contentWindow;
     if (!doc || !win) return;
+    filterModuleSlides(doc);
     win.presentationContact = contactData();
     win.presentationSettings = presentationSettings();
     if (!doc.querySelector('script[data-presentation-bootstrap]')) {
