@@ -37,27 +37,15 @@ func NewGenerator(pool *pgxpool.Pool, store *Store, renderer *Renderer, pdf *PDF
 }
 
 func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID string) (Generated, error) {
-	var templateVersionID string
-	var templateMarkdown string
-	err := g.pool.QueryRow(ctx, `
-		select v.id::text,v.markdown
-		from contract_templates t
-		join contract_template_versions v on v.contract_template_id=t.id and v.version_number=t.current_version
-		where t.is_active=true and t.is_default=true
-		limit 1
-	`).Scan(&templateVersionID,&templateMarkdown)
-	if err != nil {
-		return Generated{}, fmt.Errorf("default contract template: %w",err)
-	}
-
-	var proposalVersionID,createdBy string
-	var legalName,tradeName,cnpj,street,number,complement,district,city,state,postalCode string
-	var repName,repCPF,repEmail,repPhone,repRole string
-	var minimumInvoice,setupFee float64
+	var proposalVersionID, createdBy, assignedTemplateVersionID string
+	var legalName, tradeName, cnpj, street, number, complement, district, city, state, postalCode string
+	var repName, repCPF, repEmail, repPhone, repRole string
+	var minimumInvoice, setupFee float64
 	var acceptedAt time.Time
 	var validUntilSnapshot string
-	err = g.pool.QueryRow(ctx, `
+	err := g.pool.QueryRow(ctx, `
 		select pv.id::text,p.created_by::text,
+		       coalesce(pv.content #>> '{proposal,contract_template_version_id}',''),
 		       o.legal_name,coalesce(o.trade_name,''),o.cnpj,coalesce(o.street,''),coalesce(o.street_number,''),
 		       coalesce(o.complement,''),coalesce(o.district,''),coalesce(o.city,''),coalesce(o.state,''),coalesce(o.postal_code,''),
 		       o.company_responsible_name,o.company_responsible_cpf,o.company_responsible_email::text,o.company_responsible_phone,coalesce(o.company_responsible_role,''),
@@ -67,11 +55,38 @@ func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID stri
 		join proposal_versions pv on pv.id=a.proposal_version_id
 		join proposals p on p.id=pv.proposal_id
 		where o.id=$1 and o.status='approved'
-	`,onboardingID).Scan(
-		&proposalVersionID,&createdBy,&legalName,&tradeName,&cnpj,&street,&number,&complement,&district,&city,&state,&postalCode,
+	`, onboardingID).Scan(
+		&proposalVersionID,&createdBy,&assignedTemplateVersionID,
+		&legalName,&tradeName,&cnpj,&street,&number,&complement,&district,&city,&state,&postalCode,
 		&repName,&repCPF,&repEmail,&repPhone,&repRole,&minimumInvoice,&setupFee,&acceptedAt,&validUntilSnapshot,
 	)
-	if err != nil { return Generated{},fmt.Errorf("load approved contract data: %w",err) }
+	if err != nil {
+		return Generated{}, fmt.Errorf("load approved contract data: %w", err)
+	}
+
+	var templateVersionID string
+	var templateMarkdown string
+	if assignedTemplateVersionID != "" {
+		err = g.pool.QueryRow(ctx, `
+			select id::text,markdown
+			from contract_template_versions
+			where id=$1
+		`, assignedTemplateVersionID).Scan(&templateVersionID, &templateMarkdown)
+		if err != nil {
+			return Generated{}, fmt.Errorf("assigned contract template version: %w", err)
+		}
+	} else {
+		err = g.pool.QueryRow(ctx, `
+			select v.id::text,v.markdown
+			from contract_templates t
+			join contract_template_versions v on v.contract_template_id=t.id and v.version_number=t.current_version
+			where t.is_active=true and t.is_default=true
+			limit 1
+		`).Scan(&templateVersionID, &templateMarkdown)
+		if err != nil {
+			return Generated{}, fmt.Errorf("proposal has no assigned contract template and no default template is available: %w", err)
+		}
+	}
 
 	products := map[string]any{
 		"cargo_score": false,
