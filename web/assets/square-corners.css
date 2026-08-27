@@ -1,0 +1,39 @@
+/* Regra visual ViaGate: componentes com cantos vivos, sem arredondamento. */
+html *,
+html *::before,
+html *::after {
+  border-radius: 0 !important;
+}
+
+input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  border: 1px solid #9aabb5;
+  background: #fff;
+  display: inline-grid;
+  place-content: center;
+  vertical-align: middle;
+}
+
+input[type="radio"]::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  background: transparent;
+}
+
+input[type="radio"]:checked {
+  border-color: #ff6b18;
+}
+
+input[type="radio"]:checked::before {
+  background: #ff6b18;
+}
+
+input[type="radio"]:focus-visible {
+  outline: 2px solid rgba(255, 107, 24, .35);
+  outline-offset: 2px;
+}
