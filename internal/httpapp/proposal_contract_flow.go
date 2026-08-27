@@ -13,6 +13,7 @@ import (
 	onboardingpkg "github.com/jefersonMarques/apresentacao-viagate/internal/onboarding"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/security"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/proposals"
+	"github.com/jefersonMarques/apresentacao-viagate/web/templates"
 )
 
 func (a *App) acceptProposalContractFlow(w http.ResponseWriter, r *http.Request, proposal proposals.PublicProposal) {
@@ -87,6 +88,14 @@ func (a *App) acceptProposalContractFlow(w http.ResponseWriter, r *http.Request,
 		a.finishInlineContractDelivery(w, r, proposal, current.ID)
 		return
 	}
+	if current.Status == "submitted" {
+		if err := a.approveInlineOnboarding(r, current.ID); err != nil {
+			a.proposalContractFlowError(w, r, proposal, http.StatusInternalServerError, "Os dados foram recebidos, mas não foi possível preparar o contrato agora. Tente novamente.")
+			return
+		}
+		a.finishInlineContractDelivery(w, r, proposal, current.ID)
+		return
+	}
 
 	cnpj, err := cleanCNPJ(r.FormValue("cnpj"))
 	if err != nil {
@@ -155,35 +164,42 @@ func (a *App) acceptProposalContractFlow(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
-	if current.Status != "submitted" {
-		if err := a.onboardingStore.Submit(r.Context(), current.ID); err != nil {
-			a.proposalContractFlowError(w, r, proposal, http.StatusBadRequest, err.Error())
-			return
-		}
-		a.queueOnboardingSubmittedNotification(r, current.ID)
-		_, _ = a.pool.Exec(r.Context(), `
-			insert into audit_events(actor_type,event_type,resource_type,resource_id,ip_address,user_agent,metadata)
-			values('customer','onboarding.submitted','onboarding',$1,$2,$3,jsonb_build_object('source','proposal_modal'))
-		`, current.ID, requestIP(r), r.UserAgent())
+	if err := a.onboardingStore.Submit(r.Context(), current.ID); err != nil {
+		a.proposalContractFlowError(w, r, proposal, http.StatusBadRequest, err.Error())
+		return
 	}
+	a.queueOnboardingSubmittedNotification(r, current.ID)
+	_, _ = a.pool.Exec(r.Context(), `
+		insert into audit_events(actor_type,event_type,resource_type,resource_id,ip_address,user_agent,metadata)
+		values('customer','onboarding.submitted','onboarding',$1,$2,$3,jsonb_build_object('source','proposal_modal'))
+	`, current.ID, requestIP(r), r.UserAgent())
 
+	if err := a.approveInlineOnboarding(r, current.ID); err != nil {
+		a.proposalContractFlowError(w, r, proposal, http.StatusInternalServerError, "Os dados foram recebidos, mas não foi possível preparar o contrato agora. Tente novamente.")
+		return
+	}
+	a.finishInlineContractDelivery(w, r, proposal, current.ID)
+}
+
+func (a *App) approveInlineOnboarding(r *http.Request, onboardingID string) error {
 	command, err := a.pool.Exec(r.Context(), `
 		update onboardings
 		set status='approved',approved_at=coalesce(approved_at,now()),reviewed_at=now(),
 		    review_notes='Aprovação automática após aceite e preenchimento completo na proposta.',updated_at=now()
 		where id=$1 and status='submitted'
-	`, current.ID)
-	if err != nil || command.RowsAffected() != 1 {
-		a.logger.Error("approve inline onboarding failed", "onboarding_id", current.ID, "error", err)
-		a.proposalContractFlowError(w, r, proposal, http.StatusInternalServerError, "Os dados foram recebidos, mas não foi possível preparar o contrato agora. Tente novamente.")
-		return
+	`, onboardingID)
+	if err != nil {
+		a.logger.Error("approve inline onboarding failed", "onboarding_id", onboardingID, "error", err)
+		return err
+	}
+	if command.RowsAffected() != 1 {
+		return fmt.Errorf("onboarding is not submitted")
 	}
 	_, _ = a.pool.Exec(r.Context(), `
 		insert into audit_events(actor_type,event_type,resource_type,resource_id,metadata)
 		values('system','onboarding.auto_approved','onboarding',$1,jsonb_build_object('source','proposal_modal'))
-	`, current.ID)
-
-	a.finishInlineContractDelivery(w, r, proposal, current.ID)
+	`, onboardingID)
+	return nil
 }
 
 func (a *App) storeInlineInsurancePolicy(r *http.Request, onboardingID string, file io.Reader, filename string) error {
