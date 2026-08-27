@@ -1,0 +1,10 @@
+.v1-product-row{grid-template-columns:minmax(260px,1fr) 48px minmax(160px,220px) 120px}
+.v1-switch{width:42px;gap:0;justify-content:flex-start;overflow:visible}
+.v1-switch-track{display:block;flex:0 0 42px;margin:0}
+.v1-product-price input[type="search"],.v1-field input[data-money]{padding-left:11px;padding-right:34px;font-variant-numeric:tabular-nums;text-align:right}
+.v1-product-price input[type="search"]::-webkit-search-cancel-button,.v1-field input[data-money]::-webkit-search-cancel-button{cursor:pointer}
+.v1-condition input[type="checkbox"],.v1-optional input[type="checkbox"]{margin-top:1px;flex:none}
+.v1-condition:has(input:checked){border-color:#ff6b18;background:#fffaf7}
+.v1-optional:has(input:checked){color:#b84d11}
+@media(max-width:900px){.v1-product-row{grid-template-columns:minmax(0,1fr) 48px minmax(145px,190px) 100px}}
+@media(max-width:680px){.v1-product-row{grid-template-columns:minmax(0,1fr) 48px}.v1-product-price,.v1-optional{grid-column:1/-1}.v1-product-price input[type="search"]{width:100%}}
