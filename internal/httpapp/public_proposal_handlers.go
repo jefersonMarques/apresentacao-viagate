@@ -65,8 +65,8 @@ func (a *App) acceptProposal(w http.ResponseWriter,r *http.Request) {
 	_,_ = a.pool.Exec(r.Context(),`
 		insert into notification_outbox(recipient,recipient_name,subject,html_body,text_body)
 		select u.email,u.name,'Proposta aceita: '||p.title,
-		       '<p>A proposta de <strong>'||c.legal_name||'</strong> foi aceita por '||$2||'.</p>',
-		       'A proposta de '||c.legal_name||' foi aceita por '||$2||'.'
+		       '<p>A proposta de <strong>'||coalesce(nullif(c.trade_name,''),nullif(c.legal_name,''),'cliente')||'</strong> foi aceita por '||$2||'.</p>',
+		       'A proposta de '||coalesce(nullif(c.trade_name,''),nullif(c.legal_name,''),'cliente')||' foi aceita por '||$2||'.'
 		from proposals p join clients c on c.id=p.client_id join users u on u.id=p.created_by where p.id=$1
 	`,proposal.ProposalID,input.Name)
 	http.Redirect(w,r,"/onboarding/"+result.OnboardingID,http.StatusSeeOther)
@@ -77,7 +77,7 @@ func (a *App) customerSessionRequired(next http.Handler) http.Handler {
 		cookie,err:=r.Cookie(customerSessionCookie)
 		if err!=nil||cookie.Value==""{http.Error(w,"Sessão do cliente expirada. Abra novamente o link da proposta.",http.StatusUnauthorized);return}
 		acceptanceID,err:=a.proposalStore.CustomerSessionAcceptance(r.Context(),hashToken(cookie.Value))
-		if err!=nil{clearCookie(w,customerSessionCookie);http.Error(w,"Sessão do cliente expirada.",http.StatusUnauthorized);return}
+		if err!=nil{clearCookie(w,a.cfg.Session.CookieName);http.Error(w,"Sessão do cliente expirada.",http.StatusUnauthorized);return}
 		ctx:=context.WithValue(r.Context(),customerAcceptanceContextKey,acceptanceID)
 		next.ServeHTTP(w,r.WithContext(ctx))
 	})
