@@ -100,6 +100,16 @@ templ ProposalEditorPage(user domain.User, input proposals.EditorInput, draft pr
 								<div class="v1-form-grid" style="margin-top:18px">
 									<div class="v1-field"><label>Título interno</label><input name="title" value={ proposalTitle(input.Title) }/></div>
 									<div class="v1-field"><label>Validade</label><input name="valid_until" type="date" value={ editorDate(input.ValidUntil) }/></div>
+									<div class="v1-field full">
+										<label>Modelo de contrato</label>
+										<select name="contract_template_id">
+											<option value="">Selecione o contrato desta proposta</option>
+											for _, contractTemplate := range ProposalContractTemplateOptions(input) {
+												<option value={ contractTemplate.ID } selected?={ ProposalContractTemplateID(input) == contractTemplate.ID }>{ contractTemplate.Name } · v{ contractTemplate.CurrentVersion }</option>
+											}
+										</select>
+										<div class="v1-help">A versão atual do modelo é congelada quando este rascunho é salvo e permanece vinculada à versão publicada da proposta.</div>
+									</div>
 								</div>
 								<details class="v1-details">
 									<summary>Personalização da proposta</summary>
