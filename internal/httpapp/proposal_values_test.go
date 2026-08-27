@@ -13,6 +13,8 @@ func TestParseMoney(t *testing.T){
 		{name:"decimal point",input:"1234.56",want:1234.56},
 		{name:"decimal comma",input:"1234,56",want:1234.56},
 		{name:"brazilian thousands",input:"1.234,56",want:1234.56},
+		{name:"formatted BRL",input:"R$ 1.234,56",want:1234.56},
+		{name:"formatted BRL zero",input:"R$ 0,00",want:0},
 		{name:"negative",input:"-1",wantErr:true},
 		{name:"invalid",input:"abc",wantErr:true},
 		{name:"nan",input:"NaN",wantErr:true},
