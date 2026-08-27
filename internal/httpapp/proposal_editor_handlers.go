@@ -21,6 +21,7 @@ func (a *App) newProposalPage(w http.ResponseWriter, r *http.Request) {
 	user, _ := currentUser(r.Context())
 	validUntil := time.Now().AddDate(0, 0, 15)
 	input := proposals.EditorInput{Title: "Proposta Comercial ViaGate", PricingModel: "per_item", ValidUntil: &validUntil}
+	input = a.decorateProposalContractOptions(r.Context(), input)
 	render(r.Context(), w, http.StatusOK, templates.ProposalEditorPage(user, input, proposals.SavedDraft{}, "", ""))
 }
 
@@ -32,6 +33,7 @@ func (a *App) editProposalPage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "proposta não encontrada ou acesso negado", http.StatusNotFound)
 		return
 	}
+	input = a.decorateProposalContractOptions(r.Context(), input)
 	message := ""
 	if r.URL.Query().Get("saved") == "1" {
 		message = "Rascunho salvo."
@@ -69,6 +71,7 @@ func (a *App) saveProposal(w http.ResponseWriter, r *http.Request) {
 	}
 	input, err := a.proposalInputFromForm(r, salesperson)
 	if err != nil {
+		input = a.decorateProposalContractOptions(r.Context(), input)
 		render(r.Context(), w, http.StatusBadRequest, templates.ProposalEditorPage(user, input, proposals.SavedDraft{}, "", err.Error()))
 		return
 	}
@@ -80,12 +83,14 @@ func (a *App) saveProposal(w http.ResponseWriter, r *http.Request) {
 		if a.cfg.Environment != "production" {
 			message += " Detalhe: " + err.Error()
 		}
+		input = a.decorateProposalContractOptions(r.Context(), input)
 		render(r.Context(), w, http.StatusBadRequest, templates.ProposalEditorPage(user, input, proposals.SavedDraft{}, "", message))
 		return
 	}
 
 	if action == "publish" {
 		if err := validateProposalForPublish(input); err != nil {
+			input = a.decorateProposalContractOptions(r.Context(), input)
 			render(r.Context(), w, http.StatusBadRequest, templates.ProposalEditorPage(user, input, draft, "Rascunho salvo antes da validação de publicação.", err.Error()))
 			return
 		}
@@ -95,6 +100,7 @@ func (a *App) saveProposal(w http.ResponseWriter, r *http.Request) {
 			if a.cfg.Environment != "production" {
 				message += " Detalhe: " + err.Error()
 			}
+			input = a.decorateProposalContractOptions(r.Context(), input)
 			render(r.Context(), w, http.StatusBadRequest, templates.ProposalEditorPage(user, input, draft, "", message))
 			return
 		}
@@ -110,6 +116,9 @@ func validateProposalForPublish(input proposals.EditorInput) error {
 	}
 	if len(input.Items) == 0 {
 		return fmt.Errorf("Informe o valor de ao menos um produto antes de publicar.")
+	}
+	if proposalContentString(input.Content, "proposal", "contract_template_version_id") == "" {
+		return fmt.Errorf("Selecione o modelo de contrato desta proposta antes de publicar.")
 	}
 	return nil
 }
@@ -212,6 +221,12 @@ func (a *App) proposalInputFromForm(r *http.Request, salesperson domain.User) (p
 		return input, fmt.Errorf("Modelo comercial inválido.")
 	}
 
+	contractTemplateID := strings.TrimSpace(r.FormValue("contract_template_id"))
+	contractTemplateVersionID, err := a.resolveProposalContractTemplateVersion(r.Context(), contractTemplateID)
+	if err != nil {
+		return input, err
+	}
+
 	minimumInvoice, err := parseMoney(r.FormValue("minimum_invoice"))
 	if err != nil {
 		return input, fmt.Errorf("Fatura mínima inválida.")
@@ -260,7 +275,12 @@ func (a *App) proposalInputFromForm(r *http.Request, salesperson domain.User) (p
 		validUntil = input.ValidUntil.Format("2006-01-02")
 	}
 	input.Content = map[string]any{
-		"proposal": map[string]any{"title": input.Title, "valid_until": validUntil},
+		"proposal": map[string]any{
+			"title": input.Title,
+			"valid_until": validUntil,
+			"contract_template_id": contractTemplateID,
+			"contract_template_version_id": contractTemplateVersionID,
+		},
 		"client": map[string]any{
 			"legal_name": input.ClientLegalName, "trade_name": input.ClientTradeName, "company_name": input.ClientLegalName,
 			"cnpj": input.ClientCNPJ, "email": input.ClientEmail, "phone": input.ClientPhone, "logo_url": input.ClientLogoURL,
@@ -290,6 +310,12 @@ func (a *App) proposalInputFromForm(r *http.Request, salesperson domain.User) (p
 	hash := sha256.Sum256(encoded)
 	input.ContentHash = hash[:]
 	return input, nil
+}
+
+func proposalContentString(content map[string]any, section, key string) string {
+	group, _ := content[section].(map[string]any)
+	value, _ := group[key].(string)
+	return strings.TrimSpace(value)
 }
 
 func validPricingModel(value string) bool {
