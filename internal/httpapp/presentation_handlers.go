@@ -156,6 +156,13 @@ func presentationInputFromForm(r *http.Request, salesperson domain.User) (presen
 	if err != nil {
 		return input, fmt.Errorf("E-mail do contato inválido.")
 	}
+	if logo := strings.TrimSpace(r.FormValue("client_logo_url")); logo != "" {
+		logoURL, logoErr := cleanCommercialImageURL(logo)
+		if logoErr != nil {
+			return input, fmt.Errorf("Logo do cliente inválido. Envie a imagem novamente.")
+		}
+		input.ClientLogoURL = logoURL
+	}
 	if input.Title == "" {
 		input.Title = "Apresentação Institucional ViaGate"
 	}
@@ -186,6 +193,7 @@ func presentationInputFromForm(r *http.Request, salesperson domain.User) (presen
 		ClientLegalName        string   `json:"client_legal_name"`
 		ClientTradeName        string   `json:"client_trade_name"`
 		ClientCNPJ             string   `json:"client_cnpj"`
+		ClientLogoURL          string   `json:"client_logo_url"`
 		Title                  string   `json:"title"`
 		ContactName            string   `json:"contact_name"`
 		ContactRole            string   `json:"contact_role"`
@@ -204,6 +212,7 @@ func presentationInputFromForm(r *http.Request, salesperson domain.User) (presen
 		input.ClientLegalName,
 		input.ClientTradeName,
 		input.ClientCNPJ,
+		input.ClientLogoURL,
 		input.Title,
 		input.ContactName,
 		input.ContactRole,
