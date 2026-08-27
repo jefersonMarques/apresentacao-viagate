@@ -77,7 +77,7 @@ func (a *App) customerSessionRequired(next http.Handler) http.Handler {
 		cookie,err:=r.Cookie(customerSessionCookie)
 		if err!=nil||cookie.Value==""{http.Error(w,"Sessão do cliente expirada. Abra novamente o link da proposta.",http.StatusUnauthorized);return}
 		acceptanceID,err:=a.proposalStore.CustomerSessionAcceptance(r.Context(),hashToken(cookie.Value))
-		if err!=nil{clearCookie(w,a.cfg.Session.CookieName);http.Error(w,"Sessão do cliente expirada.",http.StatusUnauthorized);return}
+		if err!=nil{clearCookie(w,customerSessionCookie);http.Error(w,"Sessão do cliente expirada.",http.StatusUnauthorized);return}
 		ctx:=context.WithValue(r.Context(),customerAcceptanceContextKey,acceptanceID)
 		next.ServeHTTP(w,r.WithContext(ctx))
 	})
