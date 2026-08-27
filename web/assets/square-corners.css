@@ -5,6 +5,15 @@ html *::after {
   border-radius: 0 !important;
 }
 
+.v1-switch {
+  gap: 0 !important;
+}
+
+.v1-switch-track {
+  flex: 0 0 42px;
+  margin: 0 !important;
+}
+
 input[type="radio"],
 input[type="checkbox"] {
   appearance: none;
