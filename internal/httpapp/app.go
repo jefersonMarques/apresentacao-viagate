@@ -99,6 +99,7 @@ func (a *App) Routes() http.Handler {
 
 	router.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServer(http.Dir("web/assets"))))
 	registerV1VisualAssets(router)
+	router.Get("/media/{id}", a.commercialAsset)
 	router.Get("/healthz", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) })
 	router.Get("/readyz", a.ready)
 
@@ -134,6 +135,8 @@ func (a *App) Routes() http.Handler {
 		admin.Get("/admin", a.dashboard)
 		admin.Get("/admin/profile", a.profilePage)
 		admin.Post("/admin/profile", a.updateProfile)
+		admin.Post("/admin/assets", a.uploadCommercialAsset)
+		admin.Get("/admin/api/cnpj/{cnpj}", a.adminLookupCNPJ)
 		admin.Get("/admin/pipeline", a.pipelinePage)
 		admin.Get("/admin/pipeline/{proposalID}", a.pipelineDetailPage)
 
@@ -167,29 +170,29 @@ func registerV1VisualAssets(router chi.Router) {
 	router.Handle("/v1/assets/*", http.StripPrefix("/v1/assets/", http.FileServer(http.Dir("assets"))))
 	router.Get("/v1/presentation-content.html", serveV1PresentationContent)
 	files := map[string]string{
-		"/v1/styles.css":                       "styles.css",
-		"/v1/script.js":                        "script.js",
-		"/v1/enhancements.css":                 "enhancements.css",
-		"/v1/insurers.css":                     "insurers.css",
-		"/v1/hero-v2.css":                      "hero-v2.css",
-		"/v1/executive-v2.css":                 "executive-v2.css",
-		"/v1/executive-v2.js":                  "executive-v2.js",
-		"/v1/presentation-fixes.css":            "presentation-fixes.css",
-		"/v1/presentation-story.css":            "presentation-story.css",
-		"/v1/presentation-story.js":             "presentation-story.js",
-		"/v1/presentation-contact.js":           "presentation-contact.js",
-		"/v1/presentation-mode.css":             "presentation-mode.css",
-		"/v1/presentation-mode.js":              "presentation-mode.js",
-		"/v1/presentation-personalization.js":   "presentation-personalization.js",
-		"/v1/presentation-social-links.js":      "presentation-social-links.js",
-		"/v1/presentation-host-bridge.js":       "presentation-host-bridge.js",
-		"/v1/presentation-bootstrap.js":         "presentation-bootstrap.js",
-		"/v1/viewer-active.css":                 "viewer-active.css",
-		"/v1/proposal.css":                      "proposal/proposal.css",
-		"/v1/proposal-view.css":                 "proposal/proposal-view.css",
-		"/v1/proposal-premium.css":              "proposal/proposal-premium.css",
-		"/v1/proposal-social.css":               "proposal/proposal-social.css",
-		"/v1/proposal-experience.css":           "proposal/proposal-experience.css",
+		"/v1/styles.css":                     "styles.css",
+		"/v1/script.js":                      "script.js",
+		"/v1/enhancements.css":               "enhancements.css",
+		"/v1/insurers.css":                   "insurers.css",
+		"/v1/hero-v2.css":                    "hero-v2.css",
+		"/v1/executive-v2.css":               "executive-v2.css",
+		"/v1/executive-v2.js":                "executive-v2.js",
+		"/v1/presentation-fixes.css":          "presentation-fixes.css",
+		"/v1/presentation-story.css":          "presentation-story.css",
+		"/v1/presentation-story.js":           "presentation-story.js",
+		"/v1/presentation-contact.js":         "presentation-contact.js",
+		"/v1/presentation-mode.css":           "presentation-mode.css",
+		"/v1/presentation-mode.js":            "presentation-mode.js",
+		"/v1/presentation-personalization.js": "presentation-personalization.js",
+		"/v1/presentation-social-links.js":    "presentation-social-links.js",
+		"/v1/presentation-host-bridge.js":     "presentation-host-bridge.js",
+		"/v1/presentation-bootstrap.js":       "presentation-bootstrap.js",
+		"/v1/viewer-active.css":               "viewer-active.css",
+		"/v1/proposal.css":                    "proposal/proposal.css",
+		"/v1/proposal-view.css":               "proposal/proposal-view.css",
+		"/v1/proposal-premium.css":            "proposal/proposal-premium.css",
+		"/v1/proposal-social.css":             "proposal/proposal-social.css",
+		"/v1/proposal-experience.css":         "proposal/proposal-experience.css",
 	}
 	for route, path := range files {
 		router.Get(route, serveProjectFile(path))
