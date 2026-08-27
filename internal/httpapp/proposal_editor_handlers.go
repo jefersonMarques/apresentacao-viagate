@@ -72,6 +72,7 @@ func (a *App) saveProposal(w http.ResponseWriter, r *http.Request) {
 		render(r.Context(), w, http.StatusBadRequest, templates.ProposalEditorPage(user, input, proposals.SavedDraft{}, "", err.Error()))
 		return
 	}
+
 	draft, err := a.proposalStore.SaveDraft(r.Context(), user.ID, allowAll, input)
 	if err != nil {
 		a.logger.Error("save proposal failed", "user_id", user.ID, "proposal_id", input.ProposalID, "action", action, "error", err)
@@ -84,8 +85,8 @@ func (a *App) saveProposal(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if action == "publish" {
-		if len(input.Items) == 0 {
-			render(r.Context(), w, http.StatusBadRequest, templates.ProposalEditorPage(user, input, draft, "", "Informe o valor de ao menos um produto para publicar."))
+		if err := validateProposalForPublish(input); err != nil {
+			render(r.Context(), w, http.StatusBadRequest, templates.ProposalEditorPage(user, input, draft, "Rascunho salvo antes da validação de publicação.", err.Error()))
 			return
 		}
 		if _, err := a.proposalStore.Publish(r.Context(), user.ID, allowAll, draft.VersionID); err != nil {
@@ -103,55 +104,102 @@ func (a *App) saveProposal(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/admin/proposals/"+draft.ProposalID+"/edit?saved=1", http.StatusSeeOther)
 }
 
-func (a *App) proposalInputFromForm(r *http.Request, salesperson domain.User) (proposals.EditorInput, error) {
-	var input proposals.EditorInput
-	input.ProposalID = strings.TrimSpace(r.FormValue("proposal_id"))
-	input.ClientLegalName = strings.TrimSpace(r.FormValue("client_legal_name"))
-	if input.ClientLegalName == "" {
-		return input, fmt.Errorf("Informe a razão social do cliente.")
+func validateProposalForPublish(input proposals.EditorInput) error {
+	if strings.TrimSpace(input.ClientLegalName) == "" && strings.TrimSpace(input.ClientTradeName) == "" {
+		return fmt.Errorf("Informe a razão social ou o nome fantasia do cliente antes de publicar.")
 	}
-	input.ClientTradeName = strings.TrimSpace(r.FormValue("client_trade_name"))
-	if value := strings.TrimSpace(r.FormValue("client_cnpj")); value != "" {
-		cnpj, err := cleanCNPJ(value)
+	if len(input.Items) == 0 {
+		return fmt.Errorf("Informe o valor de ao menos um produto antes de publicar.")
+	}
+	return nil
+}
+
+func (a *App) proposalInputFromForm(r *http.Request, salesperson domain.User) (proposals.EditorInput, error) {
+	input := proposals.EditorInput{
+		ProposalID:         strings.TrimSpace(r.FormValue("proposal_id")),
+		ClientLegalName:    strings.TrimSpace(r.FormValue("client_legal_name")),
+		ClientTradeName:    strings.TrimSpace(r.FormValue("client_trade_name")),
+		ClientCNPJ:         strings.TrimSpace(r.FormValue("client_cnpj")),
+		ClientEmail:        strings.TrimSpace(r.FormValue("client_email")),
+		ClientPhone:        strings.TrimSpace(r.FormValue("client_phone")),
+		ClientLogoURL:      strings.TrimSpace(r.FormValue("client_logo_url")),
+		ClientStreet:       strings.TrimSpace(r.FormValue("client_street")),
+		ClientStreetNumber: strings.TrimSpace(r.FormValue("client_street_number")),
+		ClientComplement:   strings.TrimSpace(r.FormValue("client_complement")),
+		ClientDistrict:     strings.TrimSpace(r.FormValue("client_district")),
+		ClientCity:         strings.TrimSpace(r.FormValue("client_city")),
+		ClientState:        strings.ToUpper(strings.TrimSpace(r.FormValue("client_state"))),
+		ClientPostalCode:   strings.TrimSpace(r.FormValue("client_postal_code")),
+		ContactName:        strings.TrimSpace(r.FormValue("contact_name")),
+		ContactRole:        strings.TrimSpace(r.FormValue("contact_role")),
+		ContactEmail:       strings.TrimSpace(r.FormValue("contact_email")),
+		ContactPhone:       strings.TrimSpace(r.FormValue("contact_phone")),
+		Title:              strings.TrimSpace(r.FormValue("title")),
+		OperationContext:   strings.TrimSpace(r.FormValue("operation_context")),
+		CustomerPriorities: multilineValues(r.FormValue("customer_priorities")),
+		SolutionTitle:      strings.TrimSpace(r.FormValue("solution_title")),
+		SolutionScope:      multilineValues(r.FormValue("solution_scope")),
+		PricingModel:       strings.TrimSpace(r.FormValue("pricing_model")),
+	}
+
+	if input.Title == "" {
+		input.Title = "Proposta Comercial ViaGate"
+	}
+	if input.PricingModel == "" {
+		input.PricingModel = "per_item"
+	}
+
+	if input.ClientCNPJ != "" {
+		cnpj, err := cleanCNPJ(input.ClientCNPJ)
 		if err != nil {
 			return input, err
 		}
 		input.ClientCNPJ = cnpj
 	}
-	clientEmail, err := cleanEmail(r.FormValue("client_email"), false)
-	if err != nil {
-		return input, fmt.Errorf("E-mail do cliente inválido.")
+	if input.ClientEmail != "" {
+		clientEmail, err := cleanEmail(input.ClientEmail, false)
+		if err != nil {
+			return input, fmt.Errorf("E-mail do cliente inválido.")
+		}
+		input.ClientEmail = clientEmail
 	}
-	input.ClientEmail = clientEmail
-	clientPhone, err := cleanPhone(r.FormValue("client_phone"), false)
-	if err != nil {
-		return input, fmt.Errorf("Telefone do cliente inválido.")
+	if input.ClientPhone != "" {
+		clientPhone, err := cleanPhone(input.ClientPhone, false)
+		if err != nil {
+			return input, fmt.Errorf("Telefone do cliente inválido.")
+		}
+		input.ClientPhone = clientPhone
 	}
-	input.ClientPhone = clientPhone
-	if value := strings.TrimSpace(r.FormValue("client_logo_url")); value != "" {
-		logoURL, err := cleanCommercialImageURL(value)
+	if input.ClientPostalCode != "" {
+		postalCode, err := cleanPostalCode(input.ClientPostalCode, false)
+		if err != nil {
+			return input, fmt.Errorf("CEP do cliente inválido.")
+		}
+		input.ClientPostalCode = postalCode
+	}
+	if input.ClientState != "" && len(input.ClientState) != 2 {
+		return input, fmt.Errorf("UF do cliente inválida.")
+	}
+	if input.ClientLogoURL != "" {
+		logoURL, err := cleanCommercialImageURL(input.ClientLogoURL)
 		if err != nil {
 			return input, fmt.Errorf("Logo do cliente inválido. Envie a imagem novamente.")
 		}
 		input.ClientLogoURL = logoURL
 	}
-
-	input.ContactName = strings.TrimSpace(r.FormValue("contact_name"))
-	input.ContactRole = strings.TrimSpace(r.FormValue("contact_role"))
-	contactEmail, err := cleanEmail(r.FormValue("contact_email"), false)
-	if err != nil {
-		return input, fmt.Errorf("E-mail do contato inválido.")
+	if input.ContactEmail != "" {
+		contactEmail, err := cleanEmail(input.ContactEmail, false)
+		if err != nil {
+			return input, fmt.Errorf("E-mail do contato inválido.")
+		}
+		input.ContactEmail = contactEmail
 	}
-	input.ContactEmail = contactEmail
-	contactPhone, err := cleanPhone(r.FormValue("contact_phone"), false)
-	if err != nil {
-		return input, fmt.Errorf("Telefone do contato inválido.")
-	}
-	input.ContactPhone = contactPhone
-
-	input.Title = strings.TrimSpace(r.FormValue("title"))
-	if input.Title == "" {
-		input.Title = "Proposta Comercial ViaGate"
+	if input.ContactPhone != "" {
+		contactPhone, err := cleanPhone(input.ContactPhone, false)
+		if err != nil {
+			return input, fmt.Errorf("Telefone do contato inválido.")
+		}
+		input.ContactPhone = contactPhone
 	}
 	if value := strings.TrimSpace(r.FormValue("valid_until")); value != "" {
 		date, err := time.Parse("2006-01-02", value)
@@ -160,11 +208,6 @@ func (a *App) proposalInputFromForm(r *http.Request, salesperson domain.User) (p
 		}
 		input.ValidUntil = &date
 	}
-	input.OperationContext = strings.TrimSpace(r.FormValue("operation_context"))
-	input.CustomerPriorities = multilineValues(r.FormValue("customer_priorities"))
-	input.SolutionTitle = strings.TrimSpace(r.FormValue("solution_title"))
-	input.SolutionScope = multilineValues(r.FormValue("solution_scope"))
-	input.PricingModel = strings.TrimSpace(r.FormValue("pricing_model"))
 	if !validPricingModel(input.PricingModel) {
 		return input, fmt.Errorf("Modelo comercial inválido.")
 	}
@@ -195,7 +238,6 @@ func (a *App) proposalInputFromForm(r *http.Request, salesperson domain.User) (p
 		if index < len(prices) {
 			priceValue = strings.TrimSpace(prices[index])
 		}
-		// Valor vazio sempre prevalece como "Não oferecer", mesmo se o cliente desabilitar o JavaScript.
 		if status == "off" || priceValue == "" {
 			continue
 		}
@@ -222,6 +264,8 @@ func (a *App) proposalInputFromForm(r *http.Request, salesperson domain.User) (p
 		"client": map[string]any{
 			"legal_name": input.ClientLegalName, "trade_name": input.ClientTradeName, "company_name": input.ClientLegalName,
 			"cnpj": input.ClientCNPJ, "email": input.ClientEmail, "phone": input.ClientPhone, "logo_url": input.ClientLogoURL,
+			"street": input.ClientStreet, "street_number": input.ClientStreetNumber, "complement": input.ClientComplement,
+			"district": input.ClientDistrict, "city": input.ClientCity, "state": input.ClientState, "postal_code": input.ClientPostalCode,
 		},
 		"contact":             map[string]any{"name": input.ContactName, "role": input.ContactRole, "email": input.ContactEmail, "phone": input.ContactPhone},
 		"operation_context":   input.OperationContext,
@@ -262,10 +306,13 @@ func parseMoney(value string) (float64, error) {
 	if value == "" {
 		return 0, nil
 	}
+	if strings.Contains(value, "-") {
+		return 0, fmt.Errorf("invalid money")
+	}
+	value = strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(value, "R$", ""), "\u00a0", ""))
+	value = strings.ReplaceAll(value, " ", "")
 	if strings.Contains(value, ",") {
-		if strings.Contains(value, ".") {
-			value = strings.ReplaceAll(value, ".", "")
-		}
+		value = strings.ReplaceAll(value, ".", "")
 		value = strings.ReplaceAll(value, ",", ".")
 	}
 	number, err := strconv.ParseFloat(value, 64)
