@@ -121,7 +121,12 @@ templ ContractTemplatesPage(user domain.User, items []domain.ContractTemplate, v
 					for _, item := range items {
 						<a class="v1-contract-item" href={ templ.SafeURL("/admin/contracts/templates?template=" + item.ID) }>
 							<strong>{ item.Name }</strong>
-							<span>v{ item.CurrentVersion } · if item.IsActive { ativo } else { inativo }</span>
+							<span>v{ item.CurrentVersion }</span>
+							if item.IsActive {
+								<span>Ativo</span>
+							} else {
+								<span>Inativo</span>
+							}
 							if item.Description != "" {
 								<span>{ item.Description }</span>
 							}
