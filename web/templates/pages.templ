@@ -100,73 +100,79 @@ templ InvitationPage(name, email, token, errorMessage string) {
 	}
 }
 
-templ ContractTemplatesPage(user domain.User, items []domain.ContractTemplate, variables []string, message string) {
+templ ContractTemplatesPage(user domain.User, items []domain.ContractTemplate, variables []string, message, selectedID, selectedName, selectedDescription, selectedMarkdown string) {
 	@AdminLayout("ViaGate — Modelos de contrato", user) {
-		<header class="header">
-			<div>
-				<span class="step-title">CONTRATOS</span>
-				<h1>Modelos versionados</h1>
-				<p>Cada salvamento cria uma nova versão. Contratos já gerados nunca são modificados retroativamente.</p>
-			</div>
-		</header>
-		if message != "" {
-			<div class="notice">{ message }</div>
-		}
-		<section class="panel">
-			<div class="panel-head"><h2>Novo modelo / nova versão</h2></div>
-			<div class="panel-body">
-				<form method="post" action="/admin/contracts/templates" class="grid">
-					<div class="field">
-						<label>Modelo existente</label>
-						<select name="template_id">
-							<option value="">Novo modelo</option>
-							for _, item := range items {
-								<option value={ item.ID }>{ item.Name } · v{ item.CurrentVersion }</option>
-							}
-						</select>
-					</div>
-					<div class="field"><label>Nome</label><input name="name" required/></div>
-					<div class="field full"><label>Descrição</label><input name="description"/></div>
-					<div class="field full"><label>Markdown</label><textarea name="markdown" required placeholder="# CONTRATO\n\nCONTRATANTE: {client.legal_name} ..."></textarea></div>
-					<div class="field full"><label><input type="checkbox" name="make_default" value="1"/> Tornar este modelo padrão para novos contratos</label></div>
-					<div class="field full"><button class="btn primary" type="submit">Salvar nova versão</button></div>
-				</form>
-				<div style="margin-top:20px">
-					<span class="step-title">VARIÁVEIS DISPONÍVEIS</span>
-					<p style="line-height:1.8">
-						for _, variable := range variables {
-							<code>{ "{" + variable + "}" }</code>{ " " }
-						}
-					</p>
+		<link rel="stylesheet" href="/assets/v1-admin-forms.css"/>
+		<div class="v1-page">
+			<header class="v1-editor-header">
+				<div>
+					<span class="v1-eyebrow">CONTRATOS</span>
+					<h1>Modelos versionados</h1>
+					<p>Edite o conteúdo em Markdown com variáveis controladas. Cada salvamento cria uma nova versão e nunca altera contratos já gerados.</p>
 				</div>
-			</div>
-		</section>
-		<section class="panel">
-			<div class="panel-head"><h2>Modelos disponíveis</h2></div>
-			<div class="table-wrap">
-				<table class="table">
-					<thead><tr><th>Nome</th><th>Descrição</th><th>Versão</th><th>Status</th></tr></thead>
-					<tbody>
-						for _, item := range items {
-							<tr>
-								<td>{ item.Name }</td>
-								<td>{ item.Description }</td>
-								<td>v{ item.CurrentVersion }</td>
-								<td>
-									if item.IsActive {
-										<span class="badge">Ativo</span>
-									} else {
-										<span class="badge">Inativo</span>
+				<div class="v1-actions"><a class="v1-button primary" href="/admin/contracts/templates">Novo modelo</a></div>
+			</header>
+			if message != "" {
+				<div class="v1-message">{ message }</div>
+			}
+			<div class="v1-contract-layout">
+				<aside class="v1-contract-list">
+					<div class="v1-contract-list-head"><h2>Modelos disponíveis</h2><div class="v1-help" style="margin-top:5px">Selecione um modelo para criar a próxima versão.</div></div>
+					for _, item := range items {
+						<a class="v1-contract-item" href={ templ.SafeURL("/admin/contracts/templates?template=" + item.ID) }>
+							<strong>{ item.Name }</strong>
+							<span>v{ item.CurrentVersion } · if item.IsActive { ativo } else { inativo }</span>
+							if item.Description != "" {
+								<span>{ item.Description }</span>
+							}
+							if selectedID == item.ID {
+								<span style="color:#ff6b18;font-weight:800">EDITANDO ESTE MODELO</span>
+							}
+						</a>
+					}
+					if len(items) == 0 {
+						<div class="v1-contract-item"><strong>Nenhum modelo cadastrado</strong><span>Crie o primeiro modelo no editor.</span></div>
+					}
+				</aside>
+				<section class="v1-contract-editor">
+					<div class="v1-contract-editor-head">
+						if selectedID == "" {
+							<h2>Novo modelo</h2>
+							<div class="v1-help" style="margin-top:5px">Crie a versão inicial de um novo contrato.</div>
+						} else {
+							<h2>Nova versão de { selectedName }</h2>
+							<div class="v1-help" style="margin-top:5px">O conteúdo abaixo é uma cópia da versão atual. Ao salvar, uma nova versão imutável será criada.</div>
+						}
+					</div>
+					<div class="v1-contract-editor-body">
+						<form method="post" action="/admin/contracts/templates">
+							<input type="hidden" name="template_id" value={ selectedID }/>
+							<div class="v1-form-grid">
+								<div class="v1-field"><label>Nome do modelo</label><input name="name" value={ selectedName } placeholder="Contrato padrão ViaGate" required/></div>
+								<div class="v1-field"><label>Descrição</label><input name="description" value={ selectedDescription } placeholder="Quando este modelo deve ser usado"/></div>
+								<div class="v1-field full">
+									<label>Conteúdo Markdown</label>
+									<textarea class="v1-contract-markdown" name="markdown" data-contract-markdown required placeholder="# CONTRATO\n\nCONTRATANTE: {client.legal_name} ...">{ selectedMarkdown }</textarea>
+								</div>
+							</div>
+							<div style="margin-top:18px">
+								<div class="v1-label" style="margin-bottom:8px">Inserir variável</div>
+								<div class="v1-variable-cloud">
+									for _, variable := range variables {
+										<button class="v1-variable-chip" type="button" data-contract-variable={ "{" + variable + "}" }>{ "{" + variable + "}" }</button>
 									}
-								</td>
-							</tr>
-						}
-						if len(items) == 0 {
-							<tr><td colspan="4">Nenhum modelo cadastrado.</td></tr>
-						}
-					</tbody>
-				</table>
+								</div>
+								<div class="v1-help" style="margin-top:8px">Clique em uma variável para inseri-la na posição atual do cursor.</div>
+							</div>
+							<label class="v1-option-card" style="margin-top:18px">
+								<span class="v1-switch"><input type="checkbox" name="make_default" value="1"/><span class="v1-switch-track"></span></span>
+								<span><strong>Usar como modelo padrão</strong><small>Novos contratos utilizarão este modelo quando não houver outra regra específica.</small></span>
+							</label>
+							<div class="v1-actions" style="margin-top:18px"><button class="v1-button primary" type="submit" data-processing="Salvando nova versão...">Salvar nova versão</button></div>
+						</form>
+					</div>
+				</section>
 			</div>
-		</section>
+		</div>
 	}
 }
