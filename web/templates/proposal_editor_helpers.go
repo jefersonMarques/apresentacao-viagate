@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/proposals"
 )
 
 func editorDate(value *time.Time) string {
@@ -43,6 +46,23 @@ func conditionChecked(current []string, value string) bool {
 		}
 	}
 	return len(current) == 0
+}
+
+func ProposalContractTemplateOptions(input proposals.EditorInput) []domain.ContractTemplate {
+	if input.Content == nil {
+		return nil
+	}
+	items, _ := input.Content["__ui_contract_template_options"].([]domain.ContractTemplate)
+	return items
+}
+
+func ProposalContractTemplateID(input proposals.EditorInput) string {
+	if input.Content == nil {
+		return ""
+	}
+	proposal, _ := input.Content["proposal"].(map[string]any)
+	value, _ := proposal["contract_template_id"].(string)
+	return value
 }
 
 func proposalPublicURL(token string) string { return "/p/" + token }
