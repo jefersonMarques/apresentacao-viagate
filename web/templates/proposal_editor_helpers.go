@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-
-	"github.com/jefersonMarques/apresentacao-viagate/internal/proposals"
 )
 
 func editorDate(value *time.Time) string {
@@ -48,23 +46,3 @@ func conditionChecked(current []string, value string) bool {
 }
 
 func proposalPublicURL(token string) string { return "/p/" + token }
-
-func ProposalItemStatus(item proposals.EditorItem, found bool) string {
-	if !found {
-		return "off"
-	}
-	if item.IsOptional {
-		return "optional"
-	}
-	return "included"
-}
-
-func ProposalClientDisplayName(input proposals.EditorInput) string {
-	if strings.TrimSpace(input.ClientTradeName) != "" {
-		return input.ClientTradeName
-	}
-	if strings.TrimSpace(input.ClientLegalName) != "" {
-		return input.ClientLegalName
-	}
-	return "Novo cliente"
-}
