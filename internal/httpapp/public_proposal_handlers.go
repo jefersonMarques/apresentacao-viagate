@@ -23,6 +23,10 @@ func (a *App) publicProposalPage(w http.ResponseWriter,r *http.Request) {
 		if err==pgx.ErrNoRows { http.Error(w,"Proposta não encontrada.",http.StatusNotFound);return }
 		http.Error(w,"Esta proposta não está mais disponível.",http.StatusGone);return
 	}
+	if wantsJSON(r) {
+		a.writeProposalContractData(w,r,proposal)
+		return
+	}
 	sessionID,_:=newUUID()
 	_,_ = a.pool.Exec(r.Context(),`
 		insert into document_events(document_kind,document_version_id,event_type,viewer_session,ip_address,user_agent)
@@ -35,6 +39,10 @@ func (a *App) acceptProposal(w http.ResponseWriter,r *http.Request) {
 	token:=chi.URLParam(r,"token")
 	proposal,err:=a.proposalStore.PublicByToken(r.Context(),token)
 	if err!=nil { http.Error(w,"Proposta não disponível.",http.StatusGone);return }
+	if strings.HasPrefix(strings.ToLower(r.Header.Get("Content-Type")),"multipart/form-data") {
+		a.acceptProposalContractFlow(w,r,proposal)
+		return
+	}
 	if err:=r.ParseForm();err!=nil { http.Error(w,"dados inválidos",http.StatusBadRequest);return }
 	cpf,err:=cleanCPF(r.FormValue("cpf"))
 	if err!=nil { render(r.Context(),w,http.StatusBadRequest,templates.PublicProposalViewerPage(proposal,err.Error()));return }
