@@ -41,6 +41,16 @@ func NewS3(ctx context.Context, cfg appconfig.S3Config) (*S3, error) {
 		return nil, fmt.Errorf("load aws config: %w", err)
 	}
 
+	// A partir do service/s3 v1.74.1 o SDK passou a adicionar CRC32 por padrão
+	// em uploads. Alguns provedores S3 compatíveis não suportam corretamente o
+	// checksum/trailer automático e respondem XAmzContentSHA256Mismatch.
+	// Para endpoints customizados mantemos a assinatura SigV4 normal e calculamos
+	// checksums adicionais somente quando uma operação realmente exigir.
+	if cfg.Endpoint != "" {
+		awsConfig.RequestChecksumCalculation = aws.RequestChecksumCalculationWhenRequired
+		awsConfig.ResponseChecksumValidation = aws.ResponseChecksumValidationWhenRequired
+	}
+
 	client := s3.NewFromConfig(awsConfig, func(options *s3.Options) {
 		options.UsePathStyle = cfg.UsePathStyle
 		if cfg.Endpoint != "" {
