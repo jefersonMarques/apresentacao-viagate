@@ -99,6 +99,9 @@ func cleanProfileURL(value string) (string, error) {
 	if value == "" {
 		return "", nil
 	}
+	if commercialMediaPathPattern.MatchString(value) {
+		return value, nil
+	}
 	parsed, err := url.ParseRequestURI(value)
 	if err != nil || parsed.Host == "" || (parsed.Scheme != "https" && parsed.Scheme != "http") {
 		return "", errors.New("invalid URL")
