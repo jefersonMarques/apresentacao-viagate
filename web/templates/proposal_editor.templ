@@ -9,6 +9,7 @@ import (
 templ ProposalEditorPage(user domain.User, input proposals.EditorInput, draft proposals.SavedDraft, message, errorMessage string) {
 	@AdminLayout("ViaGate — Editor de proposta", user) {
 		<link rel="stylesheet" href="/assets/v1-admin-forms.css"/>
+		<link rel="stylesheet" href="/assets/proposal-editor-adjustments.css"/>
 		<div class="v1-page">
 			<header class="v1-editor-header">
 				<div>
@@ -49,7 +50,7 @@ templ ProposalEditorPage(user domain.User, input proposals.EditorInput, draft pr
 											<div class="v1-cnpj-status" data-cnpj-status></div>
 										</div>
 									</div>
-									<div class="v1-field"><label>Razão social</label><input name="client_legal_name" value={ input.ClientLegalName } required/></div>
+									<div class="v1-field"><label>Razão social</label><input name="client_legal_name" value={ input.ClientLegalName }/></div>
 									<div class="v1-field"><label>Nome fantasia</label><input name="client_trade_name" value={ input.ClientTradeName }/></div>
 									<div class="v1-field"><label>E-mail da empresa</label><input name="client_email" type="email" value={ input.ClientEmail }/></div>
 									<div class="v1-field"><label>Telefone da empresa</label><input name="client_phone" data-mask="phone" autocomplete="tel" value={ input.ClientPhone }/></div>
@@ -72,7 +73,7 @@ templ ProposalEditorPage(user domain.User, input proposals.EditorInput, draft pr
 										</div>
 									</div>
 								</div>
-								<details class="v1-details">
+								<details class="v1-details" open>
 									<summary>Contato da negociação</summary>
 									<div class="v1-details-body">
 										<div class="v1-form-grid">
@@ -97,7 +98,7 @@ templ ProposalEditorPage(user domain.User, input proposals.EditorInput, draft pr
 									<button class="v1-template" type="button" data-proposal-preset data-model="item_and_bundle" data-groups="score" data-optional-groups="authentication,logistics,prevention,monitoring"><strong>Operação completa</strong><span>Score principal com demais soluções como oportunidades.</span></button>
 								</div>
 								<div class="v1-form-grid" style="margin-top:18px">
-									<div class="v1-field"><label>Título interno</label><input name="title" value={ proposalTitle(input.Title) } required/></div>
+									<div class="v1-field"><label>Título interno</label><input name="title" value={ proposalTitle(input.Title) }/></div>
 									<div class="v1-field"><label>Validade</label><input name="valid_until" type="date" value={ editorDate(input.ValidUntil) }/></div>
 								</div>
 								<details class="v1-details">
@@ -143,11 +144,11 @@ templ ProposalEditorPage(user domain.User, input proposals.EditorInput, draft pr
 													<input type="hidden" name="catalog_id" value={ catalogItem.ID }/>
 													<input type="hidden" name="item_status" value={ ProposalItemStatus(existing, found) }/>
 													<div class="v1-product-copy"><strong>{ catalogItem.Label }</strong><small>{ catalogItem.Unit }</small></div>
-													<label class="v1-switch">
+													<label class="v1-switch" aria-label="Incluir produto">
 														<input type="checkbox" data-product-enabled checked?={ found }/>
-														<span class="v1-switch-track"></span><span class="v1-switch-text">Incluir</span>
+														<span class="v1-switch-track"></span>
 													</label>
-													<div class="v1-product-price"><span>R$</span><input name="item_price" type="number" min="0" step="0.01" value={ editorPrice(existing.Price, found) } placeholder="Valor"/></div>
+													<div class="v1-product-price"><input name="item_price" type="search" inputmode="numeric" autocomplete="off" data-money value={ editorPrice(existing.Price, found) } placeholder="R$ 0,00"/></div>
 													<label class="v1-optional"><input type="checkbox" data-product-optional checked?={ found && existing.IsOptional }/><span>Opcional</span></label>
 												</div>
 											}
@@ -161,8 +162,8 @@ templ ProposalEditorPage(user domain.User, input proposals.EditorInput, draft pr
 							<header class="v1-section-head"><div><h2>5. Condições comerciais</h2><p>As condições padrão ficam disponíveis para seleção e as exceções ficam recolhidas.</p></div></header>
 							<div class="v1-section-body">
 								<div class="v1-form-grid" style="margin-bottom:16px">
-									<div class="v1-field"><label>Fatura mínima mensal</label><input name="minimum_invoice" type="number" min="0" step="0.01" value={ editorFloat(input.MinimumInvoice) }/></div>
-									<div class="v1-field"><label>Implantação</label><input name="setup_fee" type="number" min="0" step="0.01" value={ editorFloat(input.SetupFee) }/></div>
+									<div class="v1-field"><label>Fatura mínima mensal</label><input name="minimum_invoice" type="search" inputmode="numeric" autocomplete="off" data-money value={ editorFloat(input.MinimumInvoice) } placeholder="R$ 0,00"/></div>
+									<div class="v1-field"><label>Implantação</label><input name="setup_fee" type="search" inputmode="numeric" autocomplete="off" data-money value={ editorFloat(input.SetupFee) } placeholder="R$ 0,00"/></div>
 								</div>
 								<div class="v1-condition-grid">
 									for _, condition := range catalog.StandardConditions {
@@ -191,7 +192,7 @@ templ ProposalEditorPage(user domain.User, input proposals.EditorInput, draft pr
 				<div class="v1-editor-footer">
 					<span class="v1-version-label">Publicar congela esta versão. Novas alterações geram uma nova versão.</span>
 					<div class="v1-actions">
-						<button class="v1-button dark" type="submit">Salvar rascunho</button>
+						<button class="v1-button dark" type="submit" formnovalidate data-processing="Salvando rascunho...">Salvar rascunho</button>
 						<button class="v1-button primary" type="submit" formaction="/admin/proposals/save?action=publish" data-processing="Publicando proposta...">Publicar versão</button>
 					</div>
 				</div>
