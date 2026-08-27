@@ -70,21 +70,21 @@ type Dependencies struct {
 
 func New(deps Dependencies) *App {
 	return &App{
-		cfg: deps.Config,
-		pool: deps.Pool,
-		logger: deps.Logger,
-		authStore: deps.AuthStore,
-		proposalStore: deps.ProposalStore,
+		cfg:               deps.Config,
+		pool:              deps.Pool,
+		logger:            deps.Logger,
+		authStore:         deps.AuthStore,
+		proposalStore:     deps.ProposalStore,
 		presentationStore: deps.PresentationStore,
-		pipelineStore: deps.PipelineStore,
-		onboardingStore: deps.OnboardingStore,
-		contractStore: deps.ContractStore,
-		contractRenderer: deps.ContractRenderer,
+		pipelineStore:     deps.PipelineStore,
+		onboardingStore:   deps.OnboardingStore,
+		contractStore:     deps.ContractStore,
+		contractRenderer:  deps.ContractRenderer,
 		contractGenerator: deps.ContractGenerator,
 		contractFinalizer: deps.ContractFinalizer,
-		storage: deps.Storage,
-		mailer: deps.Mailer,
-		registry: deps.Registry,
+		storage:           deps.Storage,
+		mailer:            deps.Mailer,
+		registry:          deps.Registry,
 	}
 }
 
@@ -100,7 +100,7 @@ func (a *App) Routes() http.Handler {
 	router.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServer(http.Dir("web/assets"))))
 	registerV1VisualAssets(router)
 	router.Get("/healthz", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) })
-	router.Get("/readyz",a.ready)
+	router.Get("/readyz", a.ready)
 
 	router.Get("/login", a.loginPage)
 	router.Post("/login", a.login)
@@ -111,7 +111,7 @@ func (a *App) Routes() http.Handler {
 	router.Get("/p/{token}", a.publicProposalPage)
 	router.Post("/p/{token}/accept", a.acceptProposal)
 	router.Get("/a/{token}", a.publicPresentationPage)
-	router.Get("/onboarding/resume/{token}",a.resumeOnboarding)
+	router.Get("/onboarding/resume/{token}", a.resumeOnboarding)
 
 	router.Group(func(customer chi.Router) {
 		customer.Use(a.customerSessionRequired)
@@ -147,15 +147,15 @@ func (a *App) Routes() http.Handler {
 		admin.With(a.permission("presentation.create")).Get("/admin/presentations/{id}/edit", a.editPresentationPage)
 		admin.With(a.permission("presentation.create")).Post("/admin/presentations/save", a.savePresentation)
 
-		admin.With(a.permission("onboarding.review")).Get("/admin/onboardings",a.adminOnboardings)
-		admin.With(a.permission("onboarding.review")).Get("/admin/onboardings/{id}",a.adminOnboardingDetail)
-		admin.With(a.permission("onboarding.review")).Post("/admin/onboardings/{id}/review",a.reviewOnboarding)
-		admin.With(a.permission("onboarding.review")).Post("/admin/onboardings/{id}/contract/retry",a.retryOnboardingContract)
-		admin.With(a.permission("onboarding.review")).Get("/admin/onboardings/{id}/documents/{documentID}",a.adminOnboardingDocument)
+		admin.With(a.permission("onboarding.review")).Get("/admin/onboardings", a.adminOnboardings)
+		admin.With(a.permission("onboarding.review")).Get("/admin/onboardings/{id}", a.adminOnboardingDetail)
+		admin.With(a.permission("onboarding.review")).Post("/admin/onboardings/{id}/review", a.reviewOnboarding)
+		admin.With(a.permission("onboarding.review")).Post("/admin/onboardings/{id}/contract/retry", a.retryOnboardingContract)
+		admin.With(a.permission("onboarding.review")).Get("/admin/onboardings/{id}/documents/{documentID}", a.adminOnboardingDocument)
 
 		admin.With(a.permission("user.manage")).Get("/admin/users", a.usersPage)
 		admin.With(a.permission("user.manage")).Post("/admin/users/invite", a.inviteUser)
-		admin.With(a.permission("user.manage")).Post("/admin/users/{id}/access",a.updateUserAccess)
+		admin.With(a.permission("user.manage")).Post("/admin/users/{id}/access", a.updateUserAccess)
 		admin.With(a.permission("contract.template.manage")).Get("/admin/contracts/templates", a.contractTemplatesPage)
 		admin.With(a.permission("contract.template.manage")).Post("/admin/contracts/templates", a.saveContractTemplate)
 	})
@@ -163,66 +163,73 @@ func (a *App) Routes() http.Handler {
 	return router
 }
 
-func registerV1VisualAssets(router chi.Router){
-	router.Handle("/v1/assets/*",http.StripPrefix("/v1/assets/",http.FileServer(http.Dir("assets"))))
-	router.Get("/v1/presentation-content.html",serveV1PresentationContent)
-	files:=map[string]string{
-		"/v1/styles.css":"styles.css",
-		"/v1/script.js":"script.js",
-		"/v1/enhancements.css":"enhancements.css",
-		"/v1/insurers.css":"insurers.css",
-		"/v1/hero-v2.css":"hero-v2.css",
-		"/v1/executive-v2.css":"executive-v2.css",
-		"/v1/executive-v2.js":"executive-v2.js",
-		"/v1/presentation-fixes.css":"presentation-fixes.css",
-		"/v1/presentation-story.css":"presentation-story.css",
-		"/v1/presentation-story.js":"presentation-story.js",
-		"/v1/presentation-contact.js":"presentation-contact.js",
-		"/v1/presentation-mode.css":"presentation-mode.css",
-		"/v1/presentation-mode.js":"presentation-mode.js",
-		"/v1/presentation-personalization.js":"presentation-personalization.js",
-		"/v1/presentation-social-links.js":"presentation-social-links.js",
-		"/v1/presentation-host-bridge.js":"presentation-host-bridge.js",
-		"/v1/presentation-bootstrap.js":"presentation-bootstrap.js",
-		"/v1/viewer-active.css":"viewer-active.css",
-		"/v1/proposal.css":"proposal/proposal.css",
-		"/v1/proposal-view.css":"proposal/proposal-view.css",
-		"/v1/proposal-premium.css":"proposal/proposal-premium.css",
-		"/v1/proposal-social.css":"proposal/proposal-social.css",
-		"/v1/proposal-experience.css":"proposal/proposal-experience.css",
+func registerV1VisualAssets(router chi.Router) {
+	router.Handle("/v1/assets/*", http.StripPrefix("/v1/assets/", http.FileServer(http.Dir("assets"))))
+	router.Get("/v1/presentation-content.html", serveV1PresentationContent)
+	files := map[string]string{
+		"/v1/styles.css":                       "styles.css",
+		"/v1/script.js":                        "script.js",
+		"/v1/enhancements.css":                 "enhancements.css",
+		"/v1/insurers.css":                     "insurers.css",
+		"/v1/hero-v2.css":                      "hero-v2.css",
+		"/v1/executive-v2.css":                 "executive-v2.css",
+		"/v1/executive-v2.js":                  "executive-v2.js",
+		"/v1/presentation-fixes.css":            "presentation-fixes.css",
+		"/v1/presentation-story.css":            "presentation-story.css",
+		"/v1/presentation-story.js":             "presentation-story.js",
+		"/v1/presentation-contact.js":           "presentation-contact.js",
+		"/v1/presentation-mode.css":             "presentation-mode.css",
+		"/v1/presentation-mode.js":              "presentation-mode.js",
+		"/v1/presentation-personalization.js":   "presentation-personalization.js",
+		"/v1/presentation-social-links.js":      "presentation-social-links.js",
+		"/v1/presentation-host-bridge.js":       "presentation-host-bridge.js",
+		"/v1/presentation-bootstrap.js":         "presentation-bootstrap.js",
+		"/v1/viewer-active.css":                 "viewer-active.css",
+		"/v1/proposal.css":                      "proposal/proposal.css",
+		"/v1/proposal-view.css":                 "proposal/proposal-view.css",
+		"/v1/proposal-premium.css":              "proposal/proposal-premium.css",
+		"/v1/proposal-social.css":               "proposal/proposal-social.css",
+		"/v1/proposal-experience.css":           "proposal/proposal-experience.css",
 	}
-	for route,path:=range files{router.Get(route,serveProjectFile(path))}
+	for route, path := range files {
+		router.Get(route, serveProjectFile(path))
+	}
 }
 
-func serveV1PresentationContent(w http.ResponseWriter,r *http.Request){
-	content,err:=os.ReadFile("presentation-content.html")
-	if err!=nil{http.Error(w,"apresentação indisponível",http.StatusInternalServerError);return}
-	html:=string(content)
-	html=strings.Replace(html,`<base href="/apresentacao/" />`,"",1)
-	html=strings.Replace(html,`<base href="/apresentacao/">`,"",1)
-	w.Header().Set("Content-Type","text/html; charset=utf-8")
-	_,_=w.Write([]byte(html))
+func serveV1PresentationContent(w http.ResponseWriter, r *http.Request) {
+	content, err := os.ReadFile("presentation-content.html")
+	if err != nil {
+		http.Error(w, "apresentação indisponível", http.StatusInternalServerError)
+		return
+	}
+	html := string(content)
+	html = strings.Replace(html, `<base href="/apresentacao/" />`, "", 1)
+	html = strings.Replace(html, `<base href="/apresentacao/">`, "", 1)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = w.Write([]byte(html))
 }
 
-func serveProjectFile(path string) http.HandlerFunc{
-	return func(w http.ResponseWriter,r *http.Request){http.ServeFile(w,r,path)}
+func serveProjectFile(path string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) { http.ServeFile(w, r, path) }
 }
 
 func (a *App) proxyClientIP(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter,r *http.Request){
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !a.cfg.TrustProxyHeaders {
-			next.ServeHTTP(w,r)
+			next.ServeHTTP(w, r)
 			return
 		}
-		candidate:=""
-		if forwarded:=r.Header.Get("X-Forwarded-For");forwarded!=""{
-			candidate=strings.TrimSpace(strings.Split(forwarded,",")[0])
+		candidate := ""
+		if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
+			candidate = strings.TrimSpace(strings.Split(forwarded, ",")[0])
 		}
-		if candidate==""{candidate=strings.TrimSpace(r.Header.Get("X-Real-IP"))}
-		if ip:=net.ParseIP(candidate);ip!=nil{
-			r.RemoteAddr=net.JoinHostPort(ip.String(),"0")
+		if candidate == "" {
+			candidate = strings.TrimSpace(r.Header.Get("X-Real-IP"))
 		}
-		next.ServeHTTP(w,r)
+		if ip := net.ParseIP(candidate); ip != nil {
+			r.RemoteAddr = net.JoinHostPort(ip.String(), "0")
+		}
+		next.ServeHTTP(w, r)
 	})
 }
 
@@ -231,7 +238,7 @@ func (a *App) securityHeaders(next http.Handler) http.Handler {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
 		w.Header().Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
-		if strings.HasPrefix(r.URL.Path,"/v1/") {
+		if strings.HasPrefix(r.URL.Path, "/v1/") {
 			w.Header().Set("X-Frame-Options", "SAMEORIGIN")
 			w.Header().Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://unpkg.com; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'")
 		} else {
@@ -241,70 +248,86 @@ func (a *App) securityHeaders(next http.Handler) http.Handler {
 		if a.cfg.Environment == "production" {
 			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 		}
-		next.ServeHTTP(w,r)
+		next.ServeHTTP(w, r)
 	})
 }
 
 func (a *App) sameOriginWrites(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet || r.Method == http.MethodHead || r.Method == http.MethodOptions {
-			next.ServeHTTP(w,r)
+			next.ServeHTTP(w, r)
 			return
 		}
 
 		source := r.Header.Get("Origin")
-		if source == "" { source = r.Header.Get("Referer") }
+		if source == "" {
+			source = r.Header.Get("Referer")
+		}
 		if source == "" && a.cfg.Environment == "production" {
-			http.Error(w,"origem da requisição ausente",http.StatusForbidden)
+			http.Error(w, "origem da requisição ausente", http.StatusForbidden)
 			return
 		}
 		if source != "" {
 			parsed, err := url.Parse(source)
 			if err != nil || !strings.EqualFold(parsed.Host, r.Host) {
-				http.Error(w,"origem da requisição não permitida",http.StatusForbidden)
+				http.Error(w, "origem da requisição não permitida", http.StatusForbidden)
 				return
 			}
-		next.ServeHTTP(w,r)
+		}
+		next.ServeHTTP(w, r)
 	})
 }
 
 func (a *App) requestBodyLimit(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter,r *http.Request){
-		if r.Body!=nil&&r.Method!=http.MethodGet&&r.Method!=http.MethodHead&&r.Method!=http.MethodOptions{
-			r.Body=http.MaxBytesReader(w,r.Body,maxRequestBodyBytes)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Body != nil && r.Method != http.MethodGet && r.Method != http.MethodHead && r.Method != http.MethodOptions {
+			r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
 		}
-		next.ServeHTTP(w,r)
+		next.ServeHTTP(w, r)
 	})
 }
 
 func (a *App) authenticated(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter,r *http.Request){
-		cookie,err:=r.Cookie(a.cfg.Session.CookieName)
-		if err!=nil || cookie.Value=="" { http.Redirect(w,r,"/login",http.StatusSeeOther); return }
-		user,err:=a.authStore.SessionUser(r.Context(),hashToken(cookie.Value))
-		if err!=nil { clearCookie(w,a.cfg.Session.CookieName); http.Redirect(w,r,"/login",http.StatusSeeOther); return }
-		ctx:=context.WithValue(r.Context(),userContextKey,user)
-		next.ServeHTTP(w,r.WithContext(ctx))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cookie, err := r.Cookie(a.cfg.Session.CookieName)
+		if err != nil || cookie.Value == "" {
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+		user, err := a.authStore.SessionUser(r.Context(), hashToken(cookie.Value))
+		if err != nil {
+			clearCookie(w, a.cfg.Session.CookieName)
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+		ctx := context.WithValue(r.Context(), userContextKey, user)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
 func (a *App) permission(code string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter,r *http.Request){
-			user,ok:=currentUser(r.Context())
-			if !ok { http.Error(w,"não autenticado",http.StatusUnauthorized); return }
-			allowed,err:=a.authStore.HasPermission(r.Context(),user.ID,code)
-			if err!=nil || !allowed { http.Error(w,"acesso negado",http.StatusForbidden); return }
-			next.ServeHTTP(w,r)
-	})
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			user, ok := currentUser(r.Context())
+			if !ok {
+				http.Error(w, "não autenticado", http.StatusUnauthorized)
+				return
+			}
+			allowed, err := a.authStore.HasPermission(r.Context(), user.ID, code)
+			if err != nil || !allowed {
+				http.Error(w, "acesso negado", http.StatusForbidden)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
 	}
 }
 
-func currentUser(ctx context.Context) (domain.User,bool) {
-	user,ok:=ctx.Value(userContextKey).(domain.User)
-	return user,ok
+func currentUser(ctx context.Context) (domain.User, bool) {
+	user, ok := ctx.Value(userContextKey).(domain.User)
+	return user, ok
 }
 
-func clearCookie(w http.ResponseWriter,name string) {
-	http.SetCookie(w,&http.Cookie{Name:name,Value:"",Path:"/",MaxAge:-1,HttpOnly:true,SameSite:http.SameSiteStrictMode})
+func clearCookie(w http.ResponseWriter, name string) {
+	http.SetCookie(w, &http.Cookie{Name: name, Value: "", Path: "/", MaxAge: -1, HttpOnly: true, SameSite: http.SameSiteStrictMode})
 }
