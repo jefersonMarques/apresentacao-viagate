@@ -194,7 +194,7 @@ func (s *Store) Publish(ctx context.Context,userID string,allowAll bool,versionI
 	if !allowAll&&owner!=userID{return "",fmt.Errorf("presentation access denied")}
 	if _,err:=tx.Exec(ctx,`update presentation_versions set published_at=now() where id=$1`,versionID);err!=nil{return "",err}
 	if _,err:=tx.Exec(ctx,`update presentations set status='published',current_version=$2,updated_at=now() where id=$1`,presentationID,versionNumber);err!=nil{return "",err}
-	if _,err:=tx.Exec(ctx,`insert into audit_events(actor_user_id,event_type,resource_type,resource_id,metadata) values($1,'presentation.published','presentation',$2,jsonb_build_object('version',$3,'version_id',$4))`,userID,presentationID,versionNumber,versionID);err!=nil{return "",err}
+	if _,err:=tx.Exec(ctx,`insert into audit_events(actor_user_id,event_type,resource_type,resource_id,metadata) values($1,'presentation.published','presentation',$2,jsonb_build_object('version',$3::integer,'version_id',$4::uuid))`,userID,presentationID,versionNumber,versionID);err!=nil{return "",err}
 	if err:=tx.Commit(ctx);err!=nil{return "",err};return token,nil
 }
 
