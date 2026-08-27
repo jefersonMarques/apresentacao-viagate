@@ -1,1 +1,271 @@
-.proposal-acceptance-layout{display:grid;grid-template-columns:minmax(0,.72fr) minmax(520px,1.28fr);gap:54px;align-items:center}.proposal-acceptance-copy .proposal-lead{color:rgba(255,255,255,.78)}.proposal-acceptance-card{padding:28px;border:1px solid rgba(255,255,255,.22);background:#fff;color:#102637;box-shadow:0 30px 80px rgba(0,0,0,.18)}.proposal-acceptance-card .form-grid{gap:14px}.proposal-acceptance-card .form-field label{font-size:10px;letter-spacing:.04em}.proposal-acceptance-card .form-field input{min-height:44px}.proposal-authority label{display:flex;align-items:flex-start;gap:9px;color:#536976;font-size:9px;line-height:1.55}.proposal-authority input{width:auto!important;min-height:auto!important;margin-top:2px;accent-color:#ff6b18}.proposal-acceptance-card .primary-button{margin-top:4px;width:100%;min-height:50px}.proposal-public-error{margin-bottom:14px;padding:11px 13px;border-left:3px solid #b42318;background:#fff1ef;color:#7e2c22;font-size:10px}.proposal-person-card .proposal-social-links{margin-top:14px}.proposal-contact-data .proposal-social-links{margin-top:14px}.proposal-contact-data .proposal-social-links a{color:#fff}.proposal-slide .proposal-content-card h3{overflow-wrap:anywhere}.proposal-view-navigation{z-index:1500}@media(max-width:960px){.proposal-acceptance-layout{grid-template-columns:1fr;gap:26px}.proposal-acceptance-card{padding:20px}.proposal-acceptance-card .form-grid{grid-template-columns:1fr}.proposal-acceptance-card .form-field.full{grid-column:auto}}@media(max-width:640px){.proposal-acceptance-card{padding:16px}.proposal-acceptance-copy h2{font-size:clamp(34px,11vw,50px)}}
+.public-proposal *,
+.public-proposal *::before,
+.public-proposal *::after {
+  border-radius: 0 !important;
+}
+
+.proposal-acceptance-layout {
+  display: grid;
+  grid-template-columns: minmax(0,.72fr) minmax(520px,1.28fr);
+  gap: 54px;
+  align-items: center;
+}
+.proposal-acceptance-copy .proposal-lead { color: rgba(255,255,255,.78); }
+.proposal-acceptance-card {
+  padding: 28px;
+  border: 1px solid rgba(255,255,255,.22);
+  background: #fff;
+  color: #102637;
+  box-shadow: 0 30px 80px rgba(0,0,0,.18);
+}
+.proposal-acceptance-card .form-grid { gap: 14px; }
+.proposal-acceptance-card .form-field label { font-size: 11px; letter-spacing: .04em; }
+.proposal-acceptance-card .form-field input { min-height: 44px; }
+.proposal-authority label { display: flex; align-items: flex-start; gap: 9px; color: #536976; font-size: 11px; line-height: 1.55; }
+.proposal-authority input { width: auto!important; min-height: auto!important; margin-top: 2px; accent-color: #ff6b18; }
+.proposal-acceptance-card .primary-button { margin-top: 4px; width: 100%; min-height: 50px; }
+.proposal-public-error { margin-bottom: 14px; padding: 11px 13px; border-left: 3px solid #b42318; background: #fff1ef; color: #7e2c22; font-size: 11px; }
+.proposal-person-card .proposal-social-links { margin-top: 14px; }
+.proposal-contact-data .proposal-social-links { margin-top: 14px; }
+.proposal-contact-data .proposal-social-links a { color: #fff; }
+.proposal-slide .proposal-content-card h3 { overflow-wrap: anywhere; }
+.proposal-view-navigation { z-index: 1500; }
+
+.proposal-accept-floating {
+  position: fixed;
+  right: 30px;
+  bottom: 24px;
+  z-index: 1800;
+  min-width: 240px;
+  min-height: 52px;
+  padding: 0 24px;
+  border: 1px solid #ff6b18;
+  background: #ff6b18;
+  color: #fff;
+  font: 800 12px/1 Inter,Arial,sans-serif;
+  letter-spacing: .08em;
+  cursor: pointer;
+  box-shadow: 0 18px 45px rgba(0,0,0,.28);
+}
+.proposal-accept-floating:hover { background: #e95b0c; border-color: #e95b0c; }
+.proposal-accept-floating:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.proposal-accept-floating[hidden] { display: none !important; }
+
+body.proposal-contract-open { overflow: hidden; }
+.proposal-contract-modal[hidden] { display: none !important; }
+.proposal-contract-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  font-family: Inter,Arial,sans-serif;
+}
+.proposal-contract-backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: rgba(4,17,28,.78);
+  backdrop-filter: blur(8px);
+  cursor: default;
+}
+.proposal-contract-panel {
+  position: relative;
+  z-index: 1;
+  width: min(1040px,100%);
+  max-height: min(92vh,900px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #cfd9df;
+  background: #f5f7f8;
+  color: #132432;
+  box-shadow: 0 36px 100px rgba(0,0,0,.38);
+}
+.proposal-contract-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px 26px;
+  border-bottom: 1px solid #dfe6ea;
+  background: #071827;
+  color: #fff;
+}
+.proposal-contract-header small {
+  display: block;
+  margin-bottom: 7px;
+  color: #ff6b18;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .1em;
+}
+.proposal-contract-header h2 { margin: 0; font-size: clamp(28px,4vw,44px); line-height: 1; letter-spacing: -.04em; }
+.proposal-contract-header p { margin: 9px 0 0; max-width: 680px; color: #adbbc4; font-size: 12px; line-height: 1.55; }
+.proposal-contract-close {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(255,255,255,.28);
+  background: transparent;
+  color: #fff;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+.proposal-contract-body { overflow: auto; padding: 22px 26px 28px; }
+.proposal-contract-model {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-left: 3px solid #ff6b18;
+  background: #fff;
+  color: #425866;
+  font-size: 11px;
+  font-weight: 700;
+}
+.proposal-contract-error {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-left: 3px solid #b42318;
+  background: #fff0ee;
+  color: #842b20;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.proposal-contract-error[hidden] { display: none !important; }
+.proposal-contract-form { display: grid; gap: 14px; }
+.proposal-contract-section { border: 1px solid #dfe6ea; background: #fff; }
+.proposal-contract-section > header {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e5ebee;
+}
+.proposal-contract-section > header > small {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  background: #071827;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+}
+.proposal-contract-section > header strong { display: block; font-size: 14px; }
+.proposal-contract-section > header span { display: block; margin-top: 3px; color: #73848e; font-size: 11px; line-height: 1.4; }
+.proposal-contract-grid {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 12px;
+  padding: 16px;
+}
+.proposal-contract-grid > label { display: grid; align-content: start; gap: 6px; min-width: 0; }
+.proposal-contract-grid > label.full { grid-column: 1/-1; }
+.proposal-contract-grid > label > span,
+.proposal-policy-upload > span {
+  color: #445966;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.proposal-contract-grid input,
+.proposal-contract-grid select {
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 11px;
+  border: 1px solid #cbd6dc;
+  outline: 0;
+  background: #fff;
+  color: #132432;
+  font: 500 12px/1.25 Inter,Arial,sans-serif;
+}
+.proposal-contract-grid input:focus,
+.proposal-contract-grid select:focus { border-color: #ff6b18; box-shadow: inset 3px 0 0 #ff6b18; }
+.proposal-contract-grid input[type="file"] { padding: 8px; background: #f8fafb; }
+.proposal-contract-grid label > small { color: #7c8c96; font-size: 11px; line-height: 1.35; }
+.proposal-policy-upload { padding-top: 2px; }
+.proposal-contract-authority {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 16px 16px;
+  padding: 13px;
+  border: 1px solid #dfe6ea;
+  background: #f8fafb;
+  color: #536976;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.proposal-contract-authority input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  margin: 1px 0 0;
+  border: 1px solid #9caeb8;
+  background: #fff;
+  display: grid;
+  place-items: center;
+}
+.proposal-contract-authority input[type="checkbox"]::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  background: transparent;
+}
+.proposal-contract-authority input[type="checkbox"]:checked { border-color: #ff6b18; }
+.proposal-contract-authority input[type="checkbox"]:checked::after { background: #ff6b18; }
+.proposal-contract-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px;
+  border: 1px solid #dfe6ea;
+  background: #071827;
+}
+.proposal-contract-footer p { margin: 0; max-width: 620px; color: #a8b7c0; font-size: 11px; line-height: 1.5; }
+.proposal-contract-footer button {
+  flex: 0 0 auto;
+  min-height: 48px;
+  padding: 0 20px;
+  border: 1px solid #ff6b18;
+  background: #ff6b18;
+  color: #fff;
+  font: 800 11px/1 Inter,Arial,sans-serif;
+  letter-spacing: .06em;
+  cursor: pointer;
+}
+.proposal-contract-footer button:disabled { opacity: .58; cursor: wait; }
+
+@media(max-width:960px) {
+  .proposal-acceptance-layout { grid-template-columns: 1fr; gap: 26px; }
+  .proposal-acceptance-card { padding: 20px; }
+  .proposal-acceptance-card .form-grid { grid-template-columns: 1fr; }
+  .proposal-acceptance-card .form-field.full { grid-column: auto; }
+  .proposal-contract-modal { padding: 14px; }
+  .proposal-contract-panel { max-height: 94vh; }
+}
+
+@media(max-width:640px) {
+  .proposal-acceptance-card { padding: 16px; }
+  .proposal-acceptance-copy h2 { font-size: clamp(34px,11vw,50px); }
+  .proposal-accept-floating { left: 14px; right: 14px; bottom: 68px; width: calc(100% - 28px); min-width: 0; }
+  .proposal-contract-modal { padding: 0; }
+  .proposal-contract-panel { width: 100%; height: 100%; max-height: 100vh; border: 0; }
+  .proposal-contract-header { padding: 18px 16px; }
+  .proposal-contract-header p { font-size: 11px; }
+  .proposal-contract-body { padding: 14px; }
+  .proposal-contract-grid { grid-template-columns: 1fr; padding: 14px; }
+  .proposal-contract-grid > label.full { grid-column: auto; }
+  .proposal-contract-footer { align-items: stretch; flex-direction: column; }
+  .proposal-contract-footer button { width: 100%; }
+}
