@@ -14,7 +14,7 @@ templ PresentationEditorPage(user domain.User, input presentations.EditorInput, 
 				<div>
 					<span class="v1-eyebrow">APRESENTAÇÃO INSTITUCIONAL</span>
 					<h1>Gerador de apresentação</h1>
-					<p>O material visual segue a apresentação V1. Aqui o comercial informa apenas cliente, contato e quais soluções serão destacadas.</p>
+					<p>Personalize a apresentação V1 sem transformar o editor em uma ferramenta de diagramação. Cliente, conteúdo e contato são os únicos ajustes necessários.</p>
 				</div>
 				<div class="v1-actions">
 					<a class="v1-button" href="/admin/presentations">Voltar</a>
@@ -29,41 +29,77 @@ templ PresentationEditorPage(user domain.User, input presentations.EditorInput, 
 			if errorMessage != "" {
 				<div class="v1-message error">{ errorMessage }</div>
 			}
-			<form method="post" action="/admin/presentations/save?action=save">
+			<form method="post" action="/admin/presentations/save">
 				<input type="hidden" name="presentation_id" value={ input.PresentationID }/>
 				<section class="v1-section">
-					<header class="v1-section-head"><div><h2>Cliente e material</h2><p>Personalização aplicada sobre o conteúdo institucional da V1.</p></div></header>
+					<header class="v1-section-head"><div><h2>1. Cliente e material</h2><p>O CNPJ pode preencher a identificação da empresa automaticamente.</p></div></header>
 					<div class="v1-section-body">
 						<div class="v1-form-grid">
 							<div class="v1-field full"><label>Título interno</label><input name="title" value={ input.Title } required/></div>
+							<div class="v1-field full">
+								<label>CNPJ</label>
+								<div class="v1-cnpj-row">
+									<input name="client_cnpj" data-mask="cnpj" autocomplete="off" value={ input.ClientCNPJ }/>
+									<button class="v1-button dark" type="button" data-cnpj-lookup data-cnpj-field="client_cnpj" data-cnpj-prefix="client_">Buscar dados</button>
+									<div class="v1-cnpj-status" data-cnpj-status></div>
+								</div>
+							</div>
 							<div class="v1-field"><label>Razão social</label><input name="client_legal_name" value={ input.ClientLegalName }/></div>
 							<div class="v1-field"><label>Nome fantasia</label><input name="client_trade_name" value={ input.ClientTradeName }/></div>
-							<div class="v1-field"><label>CNPJ</label><input name="client_cnpj" data-mask="cnpj" autocomplete="off" value={ input.ClientCNPJ }/></div>
-							<div class="v1-field"><label>Personalização</label><label class="v1-condition"><input type="checkbox" name="show_client_identity" value="1" checked?={ input.ShowClientIdentity }/><span>Mostrar o cliente na abertura da apresentação.</span></label></div>
+							<div class="v1-field full">
+								<label>Logo do cliente</label>
+								<div class="v1-upload" data-image-upload="client_logo">
+									<input type="hidden" name="client_logo_url" value={ input.ClientLogoURL } data-image-value/>
+									<div class="v1-upload-preview">
+										<img src={ templ.SafeURL(input.ClientLogoURL) } alt="Prévia do logo" data-image-preview hidden?={ input.ClientLogoURL == "" }/>
+										<div class="v1-upload-empty" data-image-empty hidden?={ input.ClientLogoURL != "" }>Logo do cliente</div>
+									</div>
+									<div class="v1-upload-controls">
+										<div class="v1-upload-row">
+											<label class="v1-button dark small">Selecionar imagem<input type="file" accept="image/jpeg,image/png,image/webp" data-image-file hidden/></label>
+											<button class="v1-button ghost small" type="button" data-image-remove hidden>Remover</button>
+										</div>
+										<div class="v1-help">JPG, PNG ou WEBP · máximo 2 MB.</div>
+										<div class="v1-upload-status" data-image-status></div>
+									</div>
+								</div>
+							</div>
 						</div>
 					</div>
 				</section>
 				<section class="v1-section">
-					<header class="v1-section-head"><div><h2>Contato do cliente</h2><p>Usado na personalização e no encerramento quando habilitado.</p></div></header>
+					<header class="v1-section-head"><div><h2>2. Personalização</h2><p>Controles visuais equivalentes aos usados na V1, sem checkbox solto.</p></div></header>
 					<div class="v1-section-body">
-						<div class="v1-form-grid">
-							<div class="v1-field"><label>Nome</label><input name="contact_name" value={ input.ContactName }/></div>
-							<div class="v1-field"><label>Cargo</label><input name="contact_role" value={ input.ContactRole }/></div>
-							<div class="v1-field"><label>E-mail</label><input name="contact_email" type="email" value={ input.ContactEmail }/></div>
-							<div class="v1-field"><label>Encerramento</label><label class="v1-condition"><input type="checkbox" name="show_contact_slide" value="1" checked?={ input.ShowContactSlide }/><span>Mostrar o slide de contato comercial ao final.</span></label></div>
+						<div class="v1-option-grid">
+							<label class="v1-option-card">
+								<span class="v1-switch"><input type="checkbox" name="show_client_identity" value="1" checked?={ input.ShowClientIdentity }/><span class="v1-switch-track"></span></span>
+								<span><strong>Identificar o cliente na abertura</strong><small>Exibe empresa, contato e logo cadastrados acima.</small></span>
+							</label>
+							<label class="v1-option-card">
+								<span class="v1-switch"><input type="checkbox" name="show_contact_slide" value="1" checked?={ input.ShowContactSlide }/><span class="v1-switch-track"></span></span>
+								<span><strong>Exibir contato comercial ao final</strong><small>Usa automaticamente os dados do perfil do comercial responsável.</small></span>
+							</label>
 						</div>
+						<details class="v1-details">
+							<summary>Contato de referência do cliente</summary>
+							<div class="v1-details-body">
+								<div class="v1-form-grid">
+									<div class="v1-field"><label>Nome</label><input name="contact_name" value={ input.ContactName }/></div>
+									<div class="v1-field"><label>Cargo</label><input name="contact_role" value={ input.ContactRole }/></div>
+									<div class="v1-field full"><label>E-mail</label><input name="contact_email" type="email" value={ input.ContactEmail }/></div>
+								</div>
+							</div>
+						</details>
 					</div>
 				</section>
 				<section class="v1-section">
-					<header class="v1-section-head"><div><h2>Soluções a apresentar</h2><p>O conteúdo e o design dos slides continuam sendo os da V1.</p></div></header>
+					<header class="v1-section-head"><div><h2>3. Soluções a apresentar</h2><p>Ative apenas os blocos relevantes. A apresentação pública remove os slides específicos dos módulos desmarcados e recalcula a navegação.</p></div></header>
 					<div class="v1-section-body">
-						<div class="v1-model-grid">
+						<div class="v1-option-grid">
 							for _, group := range catalog.Groups {
-								<label class="v1-model-card">
-									<input type="checkbox" name="module" value={ group.ID } checked?={ PresentationModuleSelected(input, group.ID) }/>
-									<small>SOLUÇÃO VIAGATE</small>
-									<strong>{ group.ShortTitle }</strong>
-									<span>{ group.Summary }</span>
+								<label class="v1-option-card">
+									<span class="v1-switch"><input type="checkbox" name="module" value={ group.ID } checked?={ PresentationModuleSelected(input, group.ID) }/><span class="v1-switch-track"></span></span>
+									<span><strong>{ group.ShortTitle }</strong><small>{ group.Summary }</small></span>
 								</label>
 							}
 						</div>
@@ -109,8 +145,10 @@ templ PublicPresentationPage(p presentations.PublicPresentation) {
 				data-sales-instagram={ p.SalespersonInstagram }
 				data-show-client={ BoolString(p.ShowClientIdentity) }
 				data-client-name={ PresentationClientName(p) }
+				data-client-logo={ p.ClientLogoURL }
 				data-contact-name={ p.ContactName }
 				data-show-contact={ BoolString(p.ShowContactSlide) }
+				data-modules={ PresentationModulesCSV(p.SelectedModules) }
 				title="Apresentação ViaGate"
 				allow="fullscreen"
 				hidden
