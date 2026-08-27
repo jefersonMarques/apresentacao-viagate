@@ -60,9 +60,7 @@
 
   function formatPhone(value) {
     const raw = digits(value, 13);
-    if (raw.startsWith('55') && raw.length >= 12) {
-      return `+55 ${formatLocalPhone(raw.slice(2))}`;
-    }
+    if (raw.startsWith('55') && raw.length >= 12) return `+55 ${formatLocalPhone(raw.slice(2))}`;
     return formatLocalPhone(raw.slice(0, 11));
   }
 
@@ -75,7 +73,6 @@
   function inferMaskType(input) {
     const explicit = input.getAttribute('data-mask');
     if (maskTypes.has(explicit)) return explicit;
-
     const name = String(input.name || '').toLowerCase();
     if (name === 'cpf' || name.endsWith('_cpf')) return 'cpf';
     if (name === 'cnpj' || name.endsWith('_cnpj')) return 'cnpj';
@@ -108,7 +105,6 @@
     if (!(input instanceof HTMLInputElement)) return;
     const type = inferMaskType(input);
     if (!type) return;
-
     input.dataset.mask = type;
     if (type === 'cpf') {
       input.maxLength = 14;
@@ -134,9 +130,7 @@
 
   function normalizeFormFields(form) {
     const masked = Array.from(form.querySelectorAll('input[data-mask]'));
-    masked.forEach((input) => {
-      input.value = rawMaskedValue(input.dataset.mask || '', input.value);
-    });
+    masked.forEach((input) => { input.value = rawMaskedValue(input.dataset.mask || '', input.value); });
     return masked;
   }
 
@@ -148,37 +142,25 @@
   }
 
   function normalizedSearch(value) {
-    return String(value || '')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .trim();
+    return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
   }
 
   function initAdminSidebar() {
     const shell = document.querySelector('[data-admin-shell]');
     if (!shell) return;
-
     try {
       if (localStorage.getItem(sidebarStorageKey) === '1') shell.classList.add('sidebar-collapsed');
     } catch (_) {}
-
     document.querySelectorAll('[data-sidebar-toggle]').forEach((button) => {
       button.addEventListener('click', () => {
         shell.classList.toggle('sidebar-collapsed');
-        try {
-          localStorage.setItem(sidebarStorageKey, shell.classList.contains('sidebar-collapsed') ? '1' : '0');
-        } catch (_) {}
+        try { localStorage.setItem(sidebarStorageKey, shell.classList.contains('sidebar-collapsed') ? '1' : '0'); } catch (_) {}
       });
     });
-
     const closeMobile = () => shell.classList.remove('sidebar-mobile-open');
-    document.querySelectorAll('[data-sidebar-mobile-toggle]').forEach((button) => {
-      button.addEventListener('click', () => shell.classList.add('sidebar-mobile-open'));
-    });
+    document.querySelectorAll('[data-sidebar-mobile-toggle]').forEach((button) => button.addEventListener('click', () => shell.classList.add('sidebar-mobile-open')));
     document.querySelectorAll('[data-sidebar-backdrop]').forEach((button) => button.addEventListener('click', closeMobile));
     document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeMobile(); });
-
     const path = window.location.pathname.replace(/\/$/, '') || '/';
     document.querySelectorAll('[data-admin-nav]').forEach((link) => {
       const href = new URL(link.href, window.location.origin).pathname.replace(/\/$/, '') || '/';
@@ -195,26 +177,21 @@
       const status = dashboard.querySelector('[data-dashboard-status]');
       const count = dashboard.querySelector('[data-dashboard-count]');
       const empty = dashboard.querySelector('[data-dashboard-empty]');
-
       const apply = () => {
         const searchValue = normalizedSearch(search?.value);
         const typeValue = type?.value || '';
         const statusValue = status?.value || '';
         let visible = 0;
-
         rows.forEach((row) => {
-          const matchesSearch = !searchValue || normalizedSearch(row.dataset.search).includes(searchValue);
-          const matchesType = !typeValue || row.dataset.kind === typeValue;
-          const matchesStatus = !statusValue || row.dataset.status === statusValue;
-          const show = matchesSearch && matchesType && matchesStatus;
+          const show = (!searchValue || normalizedSearch(row.dataset.search).includes(searchValue))
+            && (!typeValue || row.dataset.kind === typeValue)
+            && (!statusValue || row.dataset.status === statusValue);
           row.hidden = !show;
           if (show) visible += 1;
         });
-
         if (count) count.textContent = String(visible);
         if (empty) empty.hidden = visible !== 0 || rows.length === 0;
       };
-
       search?.addEventListener('input', apply);
       type?.addEventListener('change', apply);
       status?.addEventListener('change', apply);
@@ -222,10 +199,268 @@
     });
   }
 
+  function initPipelineFilters() {
+    document.querySelectorAll('[data-pipeline]').forEach((root) => {
+      const rows = Array.from(root.querySelectorAll('[data-pipeline-row]'));
+      const search = root.querySelector('[data-pipeline-search]');
+      const stage = root.querySelector('[data-pipeline-stage]');
+      const commercial = root.querySelector('[data-pipeline-commercial]');
+      const count = root.querySelector('[data-pipeline-count]');
+      const apply = () => {
+        const q = normalizedSearch(search?.value);
+        const selectedStage = stage?.value || '';
+        const selectedCommercial = commercial?.value || '';
+        let visible = 0;
+        rows.forEach((row) => {
+          const show = (!q || normalizedSearch(row.dataset.search).includes(q))
+            && (!selectedStage || row.dataset.stage === selectedStage)
+            && (!selectedCommercial || row.dataset.commercial === selectedCommercial);
+          row.hidden = !show;
+          if (show) visible += 1;
+        });
+        if (count) count.textContent = String(visible);
+      };
+      search?.addEventListener('input', apply);
+      stage?.addEventListener('change', apply);
+      commercial?.addEventListener('change', apply);
+      apply();
+    });
+  }
+
+  async function uploadCommercialImage(root, file) {
+    if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) throw new Error('Use JPG, PNG ou WEBP.');
+    if (file.size > 2 * 1024 * 1024) throw new Error('A imagem deve ter no máximo 2 MB.');
+    const category = root.dataset.imageUpload;
+    const body = new FormData();
+    body.append('image', file);
+    const response = await fetch(`/admin/assets?category=${encodeURIComponent(category)}`, { method: 'POST', body, credentials: 'same-origin' });
+    if (!response.ok) throw new Error((await response.text()).trim() || 'Não foi possível enviar a imagem.');
+    return response.json();
+  }
+
+  function syncImageUpload(root) {
+    const value = root.querySelector('[data-image-value]');
+    const preview = root.querySelector('[data-image-preview]');
+    const empty = root.querySelector('[data-image-empty]');
+    const remove = root.querySelector('[data-image-remove]');
+    const url = value?.value?.trim() || '';
+    if (preview instanceof HTMLImageElement) {
+      if (url) preview.src = url;
+      else preview.removeAttribute('src');
+      preview.hidden = !url;
+    }
+    if (empty) empty.hidden = Boolean(url);
+    if (remove) remove.hidden = !url;
+  }
+
+  function initImageUploads() {
+    document.querySelectorAll('[data-image-upload]').forEach((root) => {
+      const file = root.querySelector('[data-image-file]');
+      const value = root.querySelector('[data-image-value]');
+      const status = root.querySelector('[data-image-status]');
+      const remove = root.querySelector('[data-image-remove]');
+      syncImageUpload(root);
+      file?.addEventListener('change', async () => {
+        const selected = file.files?.[0];
+        if (!selected) return;
+        if (status) { status.textContent = 'Enviando imagem...'; status.classList.remove('error'); }
+        try {
+          const result = await uploadCommercialImage(root, selected);
+          if (value) value.value = result.url || '';
+          syncImageUpload(root);
+          if (status) status.textContent = 'Imagem enviada.';
+          value?.dispatchEvent(new Event('change', { bubbles: true }));
+        } catch (error) {
+          if (status) { status.textContent = error.message || 'Falha no upload.'; status.classList.add('error'); }
+        } finally {
+          file.value = '';
+        }
+      });
+      remove?.addEventListener('click', () => {
+        if (value) value.value = '';
+        syncImageUpload(root);
+        if (status) { status.textContent = 'Imagem removida deste material.'; status.classList.remove('error'); }
+        value?.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    });
+  }
+
+  function fillInput(form, name, value) {
+    if (!value) return;
+    const input = form.elements.namedItem(name);
+    if (!(input instanceof HTMLInputElement) && !(input instanceof HTMLTextAreaElement)) return;
+    input.value = value;
+    configureMaskedInput(input);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  function initCNPJLookups() {
+    document.querySelectorAll('[data-cnpj-lookup]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const form = button.closest('form');
+        if (!form) return;
+        const cnpjField = form.elements.namedItem(button.dataset.cnpjField || 'client_cnpj');
+        if (!(cnpjField instanceof HTMLInputElement)) return;
+        const raw = cnpjCharacters(cnpjField.value);
+        const status = button.parentElement?.querySelector('[data-cnpj-status]') || form.querySelector('[data-cnpj-status]');
+        if (raw.length !== 14) {
+          if (status) { status.textContent = 'Informe um CNPJ válido.'; status.classList.add('error'); }
+          cnpjField.focus();
+          return;
+        }
+        button.disabled = true;
+        if (status) { status.textContent = 'Buscando dados na Receita...'; status.classList.remove('error'); }
+        try {
+          const response = await fetch(`/admin/api/cnpj/${encodeURIComponent(raw)}`, { credentials: 'same-origin' });
+          if (!response.ok) throw new Error((await response.text()).trim() || 'CNPJ não encontrado.');
+          const data = await response.json();
+          const prefix = button.dataset.cnpjPrefix || 'client_';
+          fillInput(form, `${prefix}legal_name`, data.legal_name);
+          fillInput(form, `${prefix}trade_name`, data.trade_name);
+          fillInput(form, `${prefix}email`, data.email);
+          fillInput(form, `${prefix}phone`, data.phone);
+          fillInput(form, `${prefix}street`, data.street);
+          fillInput(form, `${prefix}street_number`, data.number);
+          fillInput(form, `${prefix}complement`, data.complement);
+          fillInput(form, `${prefix}district`, data.district);
+          fillInput(form, `${prefix}city`, data.city);
+          fillInput(form, `${prefix}state`, data.state);
+          fillInput(form, `${prefix}postal_code`, data.postal_code);
+          if (status) status.textContent = 'Dados encontrados. Revise antes de salvar.';
+        } catch (error) {
+          if (status) { status.textContent = error.message || 'Não foi possível consultar o CNPJ.'; status.classList.add('error'); }
+        } finally {
+          button.disabled = false;
+        }
+      });
+    });
+  }
+
+  function updateProposalProduct(row) {
+    const enabled = row.querySelector('[data-product-enabled]');
+    const optional = row.querySelector('[data-product-optional]');
+    const price = row.querySelector('[name="item_price"]');
+    const status = row.querySelector('[name="item_status"]');
+    const active = Boolean(enabled?.checked);
+    row.dataset.productState = active ? (optional?.checked ? 'optional' : 'included') : 'off';
+    if (status) status.value = active ? (optional?.checked ? 'optional' : 'included') : 'off';
+    if (optional) optional.disabled = !active;
+    if (price) price.classList.toggle('is-disabled', !active);
+  }
+
+  function initProposalEditor() {
+    const form = document.querySelector('[data-proposal-editor]');
+    if (!(form instanceof HTMLFormElement)) return;
+    const products = Array.from(form.querySelectorAll('[data-proposal-product]'));
+    const summaryCount = form.querySelector('[data-proposal-summary-count]');
+    const summaryOptional = form.querySelector('[data-proposal-summary-optional]');
+    const summaryTotal = form.querySelector('[data-proposal-summary-total]');
+
+    const refreshSummary = () => {
+      let included = 0;
+      let optional = 0;
+      let total = 0;
+      products.forEach((row) => {
+        updateProposalProduct(row);
+        const price = Number(String(row.querySelector('[name="item_price"]')?.value || '').replace(',', '.'));
+        if (row.dataset.productState === 'included') { included += 1; if (Number.isFinite(price)) total += price; }
+        if (row.dataset.productState === 'optional') optional += 1;
+      });
+      if (summaryCount) summaryCount.textContent = String(included);
+      if (summaryOptional) summaryOptional.textContent = String(optional);
+      if (summaryTotal) summaryTotal.textContent = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    };
+
+    products.forEach((row) => {
+      const enabled = row.querySelector('[data-product-enabled]');
+      const optional = row.querySelector('[data-product-optional]');
+      const price = row.querySelector('[name="item_price"]');
+      enabled?.addEventListener('change', () => {
+        if (!enabled.checked) {
+          if (price) price.value = '';
+          if (optional) optional.checked = false;
+        } else if (price) {
+          price.focus();
+        }
+        refreshSummary();
+      });
+      optional?.addEventListener('change', refreshSummary);
+      price?.addEventListener('input', () => {
+        if (price.value.trim() !== '' && enabled && !enabled.checked) enabled.checked = true;
+        if (price.value.trim() === '' && enabled) { enabled.checked = false; if (optional) optional.checked = false; }
+        refreshSummary();
+      });
+      updateProposalProduct(row);
+    });
+
+    form.querySelectorAll('[data-proposal-preset]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const model = button.dataset.model || 'per_item';
+        const groups = new Set((button.dataset.groups || '').split(',').filter(Boolean));
+        const optionalGroups = new Set((button.dataset.optionalGroups || '').split(',').filter(Boolean));
+        const radio = form.querySelector(`[name="pricing_model"][value="${CSS.escape(model)}"]`);
+        if (radio instanceof HTMLInputElement) { radio.checked = true; radio.dispatchEvent(new Event('change', { bubbles: true })); }
+        products.forEach((row) => {
+          const group = row.dataset.group || '';
+          const enabled = row.querySelector('[data-product-enabled]');
+          const optional = row.querySelector('[data-product-optional]');
+          if (!(enabled instanceof HTMLInputElement)) return;
+          if (!groups.has(group) && !optionalGroups.has(group)) {
+            enabled.checked = false;
+            const price = row.querySelector('[name="item_price"]');
+            if (price) price.value = '';
+            if (optional) optional.checked = false;
+          } else if (optional instanceof HTMLInputElement && optionalGroups.has(group) && enabled.checked) {
+            optional.checked = true;
+          }
+          updateProposalProduct(row);
+        });
+        refreshSummary();
+      });
+    });
+
+    form.addEventListener('submit', () => {
+      products.forEach((row) => {
+        const price = row.querySelector('[name="item_price"]');
+        const enabled = row.querySelector('[data-product-enabled]');
+        const optional = row.querySelector('[data-product-optional]');
+        const status = row.querySelector('[name="item_status"]');
+        const hasPrice = Boolean(price?.value?.trim());
+        if (enabled) enabled.checked = hasPrice;
+        if (status) status.value = hasPrice ? (optional?.checked ? 'optional' : 'included') : 'off';
+      });
+    }, { capture: true });
+
+    refreshSummary();
+  }
+
+  function initContractVariables() {
+    document.querySelectorAll('[data-contract-variable]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const value = button.dataset.contractVariable || '';
+        const editor = document.querySelector('[data-contract-markdown]');
+        if (editor instanceof HTMLTextAreaElement) {
+          const start = editor.selectionStart;
+          const end = editor.selectionEnd;
+          editor.setRangeText(value, start, end, 'end');
+          editor.focus();
+          return;
+        }
+        try { await copyText(value); } catch (_) {}
+      });
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     configureMaskedInputs();
     initAdminSidebar();
     initDashboardFilters();
+    initPipelineFilters();
+    initImageUploads();
+    initCNPJLookups();
+    initProposalEditor();
+    initContractVariables();
   });
 
   document.addEventListener('input', (event) => {
@@ -257,15 +492,12 @@
   document.addEventListener('submit', (event) => {
     const form = event.target;
     if (!(form instanceof HTMLFormElement)) return;
-
     const normalizedInputs = normalizeFormFields(form);
     window.setTimeout(() => restoreFormattedFields(normalizedInputs), 0);
-
     const submitter = event.submitter;
     if (!(submitter instanceof HTMLButtonElement)) return;
     const label = submitter.getAttribute('data-processing');
     if (!label) return;
-
     window.setTimeout(() => {
       if (!document.contains(form)) return;
       submitter.dataset.originalText = submitter.textContent || '';
