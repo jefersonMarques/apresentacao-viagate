@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -25,6 +26,8 @@ var commercialImageExtensions = map[string]string{
 	"image/png":  "png",
 	"image/webp": "webp",
 }
+
+var commercialMediaPathPattern = regexp.MustCompile(`^/media/[0-9a-fA-F-]{36}$`)
 
 func (a *App) uploadCommercialAsset(w http.ResponseWriter, r *http.Request) {
 	user, _ := currentUser(r.Context())
@@ -125,6 +128,17 @@ func (a *App) commercialAsset(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	_, _ = io.Copy(w, body)
+}
+
+func cleanCommercialImageURL(value string) (string, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "", nil
+	}
+	if commercialMediaPathPattern.MatchString(value) {
+		return value, nil
+	}
+	return cleanProfileURL(value)
 }
 
 func (a *App) adminLookupCNPJ(w http.ResponseWriter, r *http.Request) {
