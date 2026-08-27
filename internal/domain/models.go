@@ -104,6 +104,7 @@ type ContractTemplate struct {
 	Description    string
 	CurrentVersion int
 	IsActive       bool
+	IsDefault      bool
 }
 
 type ContractTemplateVersion struct {
