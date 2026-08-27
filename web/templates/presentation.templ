@@ -29,7 +29,7 @@ templ PresentationEditorPage(user domain.User, input presentations.EditorInput, 
 			if errorMessage != "" {
 				<div class="v1-message error">{ errorMessage }</div>
 			}
-			<form method="post" action="/admin/presentations/save">
+			<form method="post" action="/admin/presentations/save?action=save">
 				<input type="hidden" name="presentation_id" value={ input.PresentationID }/>
 				<section class="v1-section">
 					<header class="v1-section-head"><div><h2>Cliente e material</h2><p>Personalização aplicada sobre o conteúdo institucional da V1.</p></div></header>
@@ -72,8 +72,8 @@ templ PresentationEditorPage(user domain.User, input presentations.EditorInput, 
 				<div class="v1-editor-footer">
 					<span class="v1-version-label">As versões publicadas permanecem imutáveis.</span>
 					<div class="v1-actions">
-						<button class="v1-button dark" type="submit" name="action" value="save">Salvar rascunho</button>
-						<button class="v1-button primary" type="submit" name="action" value="publish" data-processing="Publicando apresentação...">Publicar apresentação</button>
+						<button class="v1-button dark" type="submit">Salvar rascunho</button>
+						<button class="v1-button primary" type="submit" formaction="/admin/presentations/save?action=publish" data-processing="Publicando apresentação...">Publicar apresentação</button>
 					</div>
 				</div>
 			</form>
