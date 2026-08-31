@@ -22,7 +22,7 @@ func (a *App) signaturePage(w http.ResponseWriter, r *http.Request) {
 
 	message := ""
 	if r.URL.Query().Get("otp") == "sent" {
-		message = "Código enviado para o e-mail do responsável."
+		message = "Código solicitado. O envio para o e-mail do responsável pode levar alguns segundos."
 	}
 	if r.URL.Query().Get("signed") == "1" {
 		message = "Contrato assinado com sucesso."
@@ -95,6 +95,7 @@ func (a *App) sendSignatureOTP(w http.ResponseWriter, r *http.Request) {
 		htmlBody,
 		"Código: "+otp,
 	); err != nil {
+		a.logger.Error("enqueue signature OTP failed", "signer_id", access.Signer.ID, "recipient", access.Signer.Email, "error", err)
 		http.Error(w, "não foi possível enviar o código", http.StatusInternalServerError)
 		return
 	}
