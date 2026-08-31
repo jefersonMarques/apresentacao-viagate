@@ -29,6 +29,25 @@ templ AdminListToolbar(total int, noun string) {
 	</div>
 }
 
+templ AdminServerSearchToolbar(action, query, placeholder string, total int, noun string) {
+	<form method="get" action={ templ.SafeURL(action) } class="admin-list-toolbar">
+		<div class="admin-list-filters">
+			<label class="admin-list-control admin-list-search">
+				<span>Buscar</span>
+				<div class="admin-list-search-field">
+					<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+					<input type="search" name="q" value={ query } placeholder={ placeholder } autocomplete="off"/>
+				</div>
+			</label>
+			<button class="btn dark admin-list-submit" type="submit">Buscar</button>
+			if query != "" {
+				<a class="btn" href={ templ.SafeURL(action) }>Limpar</a>
+			}
+		</div>
+		<div class="admin-list-meta"><span><strong>{ fmt.Sprintf("%d", total) }</strong> { noun }</span></div>
+	</form>
+}
+
 templ AdminListSearch(placeholder string) {
 	<label class="admin-list-control admin-list-search">
 		<span>Buscar</span>
