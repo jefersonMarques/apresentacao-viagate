@@ -27,7 +27,7 @@ templ SignatureContractPage(access contracts.SignerAccess, token string, message
 					<section class="accept-box">
 						<span class="step-title">CONFIRMAÇÃO DE IDENTIDADE</span>
 						<h2>Assinar este documento</h2>
-						<p>O código é enviado para o e-mail informado pelo responsável durante o aceite da proposta. O documento acima é identificado por hash SHA-256 e não pode ser substituído após a assinatura.</p>
+						<p>Enviaremos um código para o e-mail informado no aceite da proposta. Depois da confirmação, sua assinatura ficará vinculada exatamente a esta versão do contrato.</p>
 						<div class="actions" style="align-items:center;margin-bottom:18px">
 							<form method="post" action={ templ.SafeURL("/sign/" + token + "/otp") }>
 								<button class="btn dark" type="submit" data-processing="Enviando código...">Enviar código por e-mail</button>
@@ -55,17 +55,17 @@ templ SignatureContractPage(access contracts.SignerAccess, token string, message
 				} else {
 					<section class="accept-box">
 						<span class="step-title">CONTRATO ASSINADO</span>
-						<h2>Assinatura registrada.</h2>
-						<p>A versão assinada permanece vinculada ao mesmo hash do documento visualizado. Os registros de OTP, sessão, IP, dispositivo e eventos fazem parte da trilha de evidências.</p>
+						<h2>Assinatura registrada com sucesso.</h2>
+						<p>A ViaGate mantém os registros necessários para comprovar a autenticidade da assinatura e preservar a versão do documento que foi aceita.</p>
 						<div class="actions">
-							<a class="btn dark" href={ templ.SafeURL("/sign/" + token + "/contract") }>Baixar contrato</a>
+							<a class="btn dark" href={ templ.SafeURL("/sign/" + token + "/contract") }>Baixar contrato assinado</a>
 							if access.Contract.FinalizedAt != nil {
-								<a class="btn" href={ templ.SafeURL("/sign/" + token + "/evidence") }>Relatório de evidências</a>
-								<a class="btn primary" href={ templ.SafeURL("/sign/" + token + "/package") }>Baixar pacote completo</a>
+								<a class="btn" href={ templ.SafeURL("/sign/" + token + "/evidence") }>Comprovante da assinatura</a>
+								<a class="btn primary" href={ templ.SafeURL("/sign/" + token + "/package") }>Baixar documentos da assinatura</a>
 							}
 						</div>
 						if access.Contract.FinalizedAt == nil {
-							<div class="notice" style="margin-top:16px">O pacote final de evidências está sendo gerado. Recarregue esta página em instantes.</div>
+							<div class="notice" style="margin-top:16px">Os documentos finais da assinatura estão sendo preparados. Recarregue esta página em instantes.</div>
 						}
 					</section>
 				}
