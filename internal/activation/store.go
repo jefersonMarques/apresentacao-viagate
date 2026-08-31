@@ -80,20 +80,7 @@ func NewStore(pool *pgxpool.Pool) *Store {
 }
 
 func (s *Store) EnsureForSignedContract(ctx context.Context, contractID string) (Profile, error) {
-	var id string
-	err := s.pool.QueryRow(ctx, `
-		insert into activation_profiles(contract_id,client_id)
-		select c.id,o.client_id
-		from contracts c
-		join onboardings o on o.id=c.onboarding_id
-		where c.id=$1 and c.status='signed' and c.fully_signed_at is not null
-		on conflict (contract_id) do update set updated_at=activation_profiles.updated_at
-		returning id::text
-	`, contractID).Scan(&id)
-	if err != nil {
-		return Profile{}, fmt.Errorf("ensure activation profile: %w", err)
-	}
-	return s.ByID(ctx, id)
+	return s.EnsureForSignedContractWithExistingData(ctx, contractID)
 }
 
 func (s *Store) CreateAccessToken(ctx context.Context, activationID, accessType, section, name, email, signerID string, tokenHash []byte, expiresAt time.Time) error {
