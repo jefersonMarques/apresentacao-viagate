@@ -26,7 +26,7 @@ templ UsersManagementPage(current domain.User, users []domain.User, message, err
 							<option value="super_admin">Super Admin</option>
 						</select>
 					</div>
-					<div class="field" style="align-content:end"><button class="btn primary" type="submit">Enviar convite</button></div>
+					<div class="field" style="align-content:end"><button class="btn primary" type="submit" data-processing="Enviando convite...">Enviar convite</button></div>
 				</form>
 			</div>
 		</section>
@@ -55,27 +55,39 @@ templ UsersManagementPage(current domain.User, users []domain.User, message, err
 						<td data-label="Perfil">{ AdminRoleLabel(PrimaryRole(item)) }</td>
 						<td data-label="Criado">{ item.CreatedAt.Format("02/01/2006 15:04") }</td>
 						<td data-label="Ações" data-actions="true">
-							if item.ID == current.ID {
-								<span class="badge status-badge status-success">Seu acesso</span>
-							} else {
-								<form method="post" action={ templ.SafeURL("/admin/users/" + item.ID + "/access") } class="admin-list-inline-form">
-									<select name="role" aria-label="Perfil">
-										<option value="commercial" selected?={ PrimaryRole(item) == "commercial" }>Comercial</option>
-										<option value="operations" selected?={ PrimaryRole(item) == "operations" }>Operações</option>
-										<option value="legal" selected?={ PrimaryRole(item) == "legal" }>Jurídico</option>
-										<option value="super_admin" selected?={ PrimaryRole(item) == "super_admin" }>Super Admin</option>
-									</select>
-									<select name="status" aria-label="Status">
-										if item.Status == "invited" {
-											<option value="invited" selected>Convidado</option>
-										} else {
-											<option value="active" selected?={ item.Status == "active" }>Ativo</option>
-										}
-										<option value="disabled" selected?={ item.Status == "disabled" }>Desativado</option>
-									</select>
-									<button class="btn" type="submit">Salvar</button>
-								</form>
-							}
+							<div class="admin-list-actions">
+								if item.ID == current.ID {
+									<span class="badge status-badge status-success">Seu acesso</span>
+								} else {
+									@AdminActionMenu("Gerenciar acesso de " + item.Name) {
+										<form method="post" action={ templ.SafeURL("/admin/users/" + item.ID + "/access") } class="admin-action-menu-form">
+											<strong>Gerenciar acesso</strong>
+											<small>{ item.Name }</small>
+											<label>
+												<span>Perfil</span>
+												<select name="role" aria-label="Perfil">
+													<option value="commercial" selected?={ PrimaryRole(item) == "commercial" }>Comercial</option>
+													<option value="operations" selected?={ PrimaryRole(item) == "operations" }>Operações</option>
+													<option value="legal" selected?={ PrimaryRole(item) == "legal" }>Jurídico</option>
+													<option value="super_admin" selected?={ PrimaryRole(item) == "super_admin" }>Super Admin</option>
+												</select>
+											</label>
+											<label>
+												<span>Status</span>
+												<select name="status" aria-label="Status">
+													if item.Status == "invited" {
+														<option value="invited" selected>Convidado</option>
+													} else {
+														<option value="active" selected?={ item.Status == "active" }>Ativo</option>
+													}
+													<option value="disabled" selected?={ item.Status == "disabled" }>Desativado</option>
+												</select>
+											</label>
+											<button class="btn dark" type="submit" data-processing="Salvando...">Salvar alterações</button>
+										</form>
+									}
+								}
+							</div>
 						</td>
 					</tr>
 				}
