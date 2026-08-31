@@ -28,10 +28,10 @@ func TestBuildProposalPricingDataUsesProposalSnapshot(t *testing.T) {
 	data := buildProposalPricingData(items)
 
 	if data.Products["cargo_score"] != true {
-		t.Fatal("cargo score must be enabled when the proposal contains a score item")
+		t.Fatal("cargo score must be enabled when the proposal contains an included score item")
 	}
-	if data.Products["monitoring"] != true {
-		t.Fatal("monitoring must be enabled even when the proposal item is optional")
+	if data.Products["monitoring"] != false {
+		t.Fatal("optional monitoring must not activate contracted monitoring clauses")
 	}
 	if data.Prices["score_item_driver_register"] != "R$ 25,00" {
 		t.Fatalf("unexpected score price: %v", data.Prices["score_item_driver_register"])
