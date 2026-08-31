@@ -119,6 +119,27 @@ templ PipelineDetailPage(user domain.User, item domain.PipelineItem, events []do
 						<div class="signed"><small>Contrato assinado</small><strong>{ item.FullySignedAt.Format("02/01/2006 15:04") }</strong><span>por { PipelineSignedBy(item) }</span></div>
 					}
 				</div>
+				if item.ContractID != "" {
+					<div style="margin-top:18px;padding-top:18px;border-top:1px solid var(--line)">
+						<strong style="display:block;margin-bottom:10px">Documentos da contratação</strong>
+						<div class="actions">
+							<a class="btn dark" target="_blank" rel="noopener" href={ templ.SafeURL("/admin/contracts/" + item.ContractID + "/document") }>
+								if PipelineIsSigned(item) {
+									Baixar contrato assinado
+								} else {
+									Baixar contrato
+								}
+							</a>
+							if item.ContractFinalizedAt != nil {
+								<a class="btn" target="_blank" rel="noopener" href={ templ.SafeURL("/admin/contracts/" + item.ContractID + "/evidence") }>Comprovante da assinatura</a>
+								<a class="btn primary" target="_blank" rel="noopener" href={ templ.SafeURL("/admin/contracts/" + item.ContractID + "/package") }>Documentos da assinatura</a>
+							}
+						</div>
+						if PipelineIsSigned(item) && item.ContractFinalizedAt == nil {
+							<div class="notice" style="margin-top:12px">Os documentos comprobatórios da assinatura ainda estão sendo preparados.</div>
+						}
+					</div>
+				}
 			</div>
 		</section>
 		<section class="panel">
