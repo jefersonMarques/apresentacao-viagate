@@ -2,6 +2,7 @@ package contracts
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
@@ -25,6 +26,14 @@ type VerificationRecord struct {
 	DocumentSHA256 []byte
 	GeneratedAt    *time.Time
 	FullySignedAt  *time.Time
+}
+
+func newVerificationNonce() (string, error) {
+	value := make([]byte, 16)
+	if _, err := rand.Read(value); err != nil {
+		return "", fmt.Errorf("generate contract verification nonce: %w", err)
+	}
+	return hex.EncodeToString(value), nil
 }
 
 func VerificationToken(renderedHTML string) string {
