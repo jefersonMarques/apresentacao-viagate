@@ -71,6 +71,15 @@ func TestEnsureProposalFinancialTermsAppendsMissingProposalValues(t *testing.T) 
 	}
 }
 
+func TestEnsureProposalFinancialTermsKeepsCompleteTableWithIndividualPriceVariables(t *testing.T) {
+	markdown := "Preço específico: {pricing.score_item_driver_register}"
+	result := ensureProposalFinancialTerms(markdown)
+
+	if !strings.Contains(result, "{proposal.pricing_table}") {
+		t.Fatalf("individual price variables must not suppress the complete proposal pricing table: %s", result)
+	}
+}
+
 func TestEnsureProposalFinancialTermsDoesNotDuplicateBoundValues(t *testing.T) {
 	markdown := "{proposal.pricing_table}\n\n{proposal.minimum_invoice}\n\n{proposal.setup_fee}"
 	result := ensureProposalFinancialTerms(markdown)
