@@ -23,6 +23,7 @@ type PublicProposal struct {
 	VersionNumber   int
 	PublicToken     string
 	Title           string
+	Status          string
 	ClientID        string
 	ClientName      string
 	ClientTradeName string
@@ -75,7 +76,7 @@ func (s *Store) PublicByToken(ctx context.Context, token string) (PublicProposal
 	var currentValidUntil *time.Time
 
 	err := s.pool.QueryRow(ctx, `
-		select p.id::text, v.id::text, v.version_number, v.public_token::text, p.title,
+		select p.id::text, v.id::text, v.version_number, v.public_token::text, p.title,p.status::text,
 		       c.id::text, coalesce(c.legal_name,''), coalesce(c.cnpj,''), v.pricing_model,
 		       v.content, v.conditions, v.minimum_invoice, v.setup_fee, v.content_hash, p.valid_until
 		from proposal_versions v
@@ -90,6 +91,7 @@ func (s *Store) PublicByToken(ctx context.Context, token string) (PublicProposal
 		&result.VersionNumber,
 		&result.PublicToken,
 		&currentTitle,
+		&result.Status,
 		&result.ClientID,
 		&currentClientName,
 		&currentClientCNPJ,
@@ -121,7 +123,9 @@ func (s *Store) PublicByToken(ctx context.Context, token string) (PublicProposal
 		}
 	}
 
-	if result.ValidUntil != nil {
+	// Validade é uma regra para celebrar um novo aceite. Depois de aceita, a
+	// proposta passa a ser um registro histórico e continua consultável.
+	if result.Status == "published" && result.ValidUntil != nil {
 		today := time.Now().In(time.Local)
 		today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
 		if result.ValidUntil.Before(today) {
