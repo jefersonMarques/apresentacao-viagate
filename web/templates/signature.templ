@@ -59,6 +59,7 @@ templ SignatureContractPage(access contracts.SignerAccess, token string, message
 						<p>Esta versão do contrato foi registrada como assinada. A ViaGate mantém de forma segura os registros necessários para comprovar a assinatura quando necessário.</p>
 						<div class="actions">
 							<a class="btn dark" href={ templ.SafeURL("/sign/" + token + "/contract") }>Baixar contrato assinado</a>
+							<a class="btn" href={ templ.SafeURL("/sign/" + token + "/receipt") }>Comprovante da assinatura</a>
 						</div>
 					</section>
 				}
