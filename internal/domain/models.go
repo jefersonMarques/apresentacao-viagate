@@ -161,19 +161,21 @@ type AuditEvent struct {
 }
 
 type PipelineItem struct {
-	ProposalID        string
-	ProposalTitle     string
-	ClientName        string
-	CommercialName    string
-	ProposalStatus    string
-	OnboardingID      string
-	OnboardingStatus  string
-	ContractID        string
-	ContractStatus    string
-	AcceptedAt        *time.Time
-	SubmittedAt       *time.Time
-	FullySignedAt     *time.Time
-	UpdatedAt         time.Time
+	ProposalID              string
+	ProposalTitle           string
+	ClientName              string
+	CommercialName          string
+	CustomerResponsibleName string
+	SignedByName            string
+	ProposalStatus          string
+	OnboardingID            string
+	OnboardingStatus        string
+	ContractID              string
+	ContractStatus          string
+	AcceptedAt              *time.Time
+	SubmittedAt             *time.Time
+	FullySignedAt           *time.Time
+	UpdatedAt               time.Time
 }
 
 type PipelineEvent struct {
