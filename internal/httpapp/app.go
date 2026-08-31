@@ -12,6 +12,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/activation"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/auditlog"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/auth"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/config"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/contracts"
@@ -42,6 +44,8 @@ type App struct {
 	pipelineStore     *pipeline.Store
 	onboardingStore   *onboarding.Store
 	contractStore     *contracts.Store
+	activationStore   *activation.Store
+	auditStore        *auditlog.Store
 	contractRenderer  *contracts.Renderer
 	contractGenerator *contracts.Generator
 	contractFinalizer *contracts.Finalizer
@@ -60,6 +64,8 @@ type Dependencies struct {
 	PipelineStore     *pipeline.Store
 	OnboardingStore   *onboarding.Store
 	ContractStore     *contracts.Store
+	ActivationStore   *activation.Store
+	AuditStore        *auditlog.Store
 	ContractRenderer  *contracts.Renderer
 	ContractGenerator *contracts.Generator
 	ContractFinalizer *contracts.Finalizer
@@ -79,6 +85,8 @@ func New(deps Dependencies) *App {
 		pipelineStore:     deps.PipelineStore,
 		onboardingStore:   deps.OnboardingStore,
 		contractStore:     deps.ContractStore,
+		activationStore:   deps.ActivationStore,
+		auditStore:        deps.AuditStore,
 		contractRenderer:  deps.ContractRenderer,
 		contractGenerator: deps.ContractGenerator,
 		contractFinalizer: deps.ContractFinalizer,
@@ -106,6 +114,10 @@ func (a *App) Routes() http.Handler {
 	router.Get("/login", a.loginPage)
 	router.Post("/login", a.login)
 	router.Post("/logout", a.logout)
+	router.Get("/forgot-password", a.forgotPasswordPage)
+	router.Post("/forgot-password", a.requestPasswordReset)
+	router.Get("/reset-password/{token}", a.resetPasswordPage)
+	router.Post("/reset-password/{token}", a.resetPassword)
 	router.Get("/invite/{token}", a.invitationPage)
 	router.Post("/invite/{token}", a.acceptInvitation)
 
@@ -125,9 +137,16 @@ func (a *App) Routes() http.Handler {
 	})
 
 	router.Get("/sign/{token}", a.signaturePage)
+	router.Get("/sign/{token}/document", a.viewContractDocument)
 	router.Post("/sign/{token}/otp", a.sendSignatureOTP)
 	router.Post("/sign/{token}/confirm", a.confirmSignature)
+	router.Post("/sign/{token}/activation", a.issueActivationAccess)
 	router.Get("/sign/{token}/contract", a.downloadSignedContract)
+
+	router.Get("/activation/{token}", a.activationPage)
+	router.Post("/activation/{token}/{section:finance|goods|users}", a.saveActivationSection)
+	router.Post("/activation/{token}/delegate", a.delegateActivation)
+	router.Post("/activation/{token}/submit", a.submitActivation)
 
 	router.Group(func(admin chi.Router) {
 		admin.Use(a.authenticated)
@@ -155,12 +174,19 @@ func (a *App) Routes() http.Handler {
 		admin.With(a.permission("onboarding.review")).Post("/admin/onboardings/{id}/contract/retry", a.retryOnboardingContract)
 		admin.With(a.permission("onboarding.review")).Get("/admin/onboardings/{id}/documents/{documentID}", a.adminOnboardingDocument)
 
+		admin.With(a.permission("activation.read_all")).Get("/admin/activations", a.adminActivations)
+		admin.With(a.permission("activation.read_all")).Get("/admin/activations/{id}", a.adminActivationDetail)
+		admin.With(a.permission("activation.manage")).Post("/admin/activations/{id}/status", a.adminActivationStatus)
+
 		admin.Get("/admin/contracts/{contractID}/document", a.adminContractDocument)
 		admin.Get("/admin/contracts/{contractID}/evidence", a.adminContractEvidence)
 		admin.Get("/admin/contracts/{contractID}/package", a.adminContractPackage)
 		admin.With(a.permission("contract.read_all")).Get("/admin/contracts", a.adminContracts)
 		admin.With(a.permission("contract.template.manage")).Get("/admin/contracts/templates", a.contractTemplatesPage)
 		admin.With(a.permission("contract.template.manage")).Post("/admin/contracts/templates", a.saveContractTemplate)
+		admin.With(a.permission("contract.template.manage")).Post("/admin/contracts/templates/preview", a.previewContractTemplate)
+
+		admin.With(a.permission("audit.read")).Get("/admin/audit", a.auditPage)
 
 		admin.With(a.permission("user.manage")).Get("/admin/users", a.usersPage)
 		admin.With(a.permission("user.manage")).Post("/admin/users/invite", a.inviteUser)
@@ -250,7 +276,7 @@ func (a *App) securityHeaders(next http.Handler) http.Handler {
 			w.Header().Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://unpkg.com; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'")
 		} else {
 			w.Header().Set("X-Frame-Options", "DENY")
-			w.Header().Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
+			w.Header().Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
 		}
 		if a.cfg.Environment == "production" {
 			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
