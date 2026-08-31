@@ -27,13 +27,6 @@ func (a *App) signaturePage(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query().Get("signed") == "1" {
 		message = "Contrato assinado com sucesso."
 	}
-	if access.Contract.Status == "signed" && access.Contract.FinalizedAt == nil {
-		if err := a.contractFinalizer.Finalize(r.Context(), access.Contract.ID); err != nil {
-			a.logger.Error("contract evidence finalization failed", "error", err, "contract_id", access.Contract.ID)
-		} else {
-			access, _ = a.contractStore.SignerByPublicToken(r.Context(), token)
-		}
-	}
 
 	_, _ = a.pool.Exec(r.Context(), `
 		insert into signature_events(contract_id,contract_signer_id,event_type,document_hash,ip_address,user_agent,metadata)
@@ -71,10 +64,21 @@ func (a *App) sendSignatureOTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "erro interno", http.StatusInternalServerError)
 		return
 	}
-	if err := a.contractStore.CreateChallenge(r.Context(), access.Signer.ID, hash, time.Now().Add(a.cfg.Session.SignatureOTPTTL)); err != nil {
+	expiresAt := time.Now().Add(a.cfg.Session.SignatureOTPTTL)
+	if err := a.contractStore.CreateChallenge(r.Context(), access.Signer.ID, hash, expiresAt); err != nil {
 		http.Error(w, "não foi possível gerar o código", http.StatusInternalServerError)
 		return
 	}
+
+	// Um novo desafio invalida qualquer e-mail OTP anterior deste signatário que
+	// ainda esteja aguardando envio. O corpo também é removido para não manter
+	// códigos antigos em texto puro na outbox.
+	_, _ = a.pool.Exec(r.Context(), `
+		update notification_outbox
+		set status='expired',processing_at=null,last_error='replaced by a newer OTP',
+		    html_body='[conteúdo sensível substituído]',text_body='[conteúdo sensível substituído]'
+		where dedupe_key like $1 and status in ('pending','processing')
+	`, "signature-otp:"+access.Signer.ID+":%")
 
 	_, _ = a.pool.Exec(r.Context(), `
 		insert into signature_events(contract_id,contract_signer_id,event_type,document_hash,ip_address,user_agent,metadata)
@@ -86,15 +90,17 @@ func (a *App) sendSignatureOTP(w http.ResponseWriter, r *http.Request) {
 		otp,
 		a.cfg.Session.SignatureOTPTTL,
 	)
-	if err := notifications.Enqueue(
-		r.Context(),
-		a.pool,
-		access.Signer.Name,
-		access.Signer.Email,
-		"Código de assinatura ViaGate",
-		htmlBody,
-		"Código: "+otp,
-	); err != nil {
+	if err := notifications.EnqueueWithOptions(r.Context(), a.pool, notifications.MessageOptions{
+		DedupeKey: fmt.Sprintf("signature-otp:%s:%d", access.Signer.ID, time.Now().UTC().UnixNano()),
+		Kind:      "signature_otp",
+		ToName:    access.Signer.Name,
+		ToEmail:   access.Signer.Email,
+		Subject:   "Código de assinatura ViaGate",
+		HTMLBody:  htmlBody,
+		TextBody:  "Código: " + otp,
+		ExpiresAt: &expiresAt,
+		Sensitive: true,
+	}); err != nil {
 		a.logger.Error("enqueue signature OTP failed", "signer_id", access.Signer.ID, "recipient", access.Signer.Email, "error", err)
 		http.Error(w, "não foi possível enviar o código", http.StatusInternalServerError)
 		return
@@ -134,40 +140,26 @@ func (a *App) confirmSignature(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "erro interno", http.StatusInternalServerError)
 		return
 	}
-	if err := a.contractStore.VerifyChallenge(
+	contractID, fullySigned, err := a.contractStore.ConfirmAndSign(
 		r.Context(),
 		access.Signer.ID,
 		security.HashToken(otp),
-		sessionID,
-		requestIP(r),
-		r.UserAgent(),
-	); err != nil {
-		render(r.Context(), w, http.StatusUnauthorized, templates.SignatureContractPage(access, token, "", "Código inválido ou expirado."))
-		return
-	}
-
-	contractID, fullySigned, err := a.contractStore.Sign(
-		r.Context(),
-		access.Signer.ID,
 		access.Contract.DocumentSHA256,
 		sessionID,
 		requestIP(r),
 		r.UserAgent(),
 	)
 	if err != nil {
-		a.logger.Error("contract sign failed", "error", err)
-		render(r.Context(), w, http.StatusConflict, templates.SignatureContractPage(access, token, "", "Não foi possível concluir a assinatura. O documento pode ter sido alterado ou a validação expirou."))
+		a.logger.Warn("contract confirmation failed", "signer_id", access.Signer.ID, "error", err)
+		render(r.Context(), w, http.StatusUnauthorized, templates.SignatureContractPage(access, token, "", "Código inválido ou expirado. Solicite um novo código se necessário."))
 		return
 	}
 
 	if fullySigned {
-		if err := a.contractFinalizer.Finalize(r.Context(), contractID); err != nil {
-			a.logger.Error("contract evidence finalization failed", "error", err, "contract_id", contractID)
-		}
 		_, _ = a.pool.Exec(r.Context(), `
-			insert into notification_outbox(recipient,recipient_name,subject,html_body,text_body)
-			select u.email,u.name,'Contrato assinado: '||p.title,
-			       '<p>O contrato de <strong>'||cl.legal_name||'</strong> foi assinado e a trilha de evidências foi registrada.</p>',
+			insert into notification_outbox(dedupe_key,recipient,recipient_name,subject,html_body,text_body)
+			select 'contract-signed:'||c.id::text,u.email,u.name,'Contrato assinado: '||p.title,
+			       '<p>O contrato de <strong>'||cl.legal_name||'</strong> foi assinado. O pacote técnico de evidências está sendo finalizado automaticamente.</p>',
 			       'O contrato de '||cl.legal_name||' foi assinado.'
 			from contracts c
 			join onboardings o on o.id=c.onboarding_id
@@ -176,6 +168,7 @@ func (a *App) confirmSignature(w http.ResponseWriter, r *http.Request) {
 			join clients cl on cl.id=o.client_id
 			join users u on u.id=p.created_by
 			where c.id=$1
+			on conflict (dedupe_key) where dedupe_key is not null do nothing
 		`, contractID)
 	}
 
@@ -189,7 +182,11 @@ func (a *App) downloadSignedContract(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Link inválido", http.StatusNotFound)
 		return
 	}
-	a.redirectPrivateArtifact(w, r, access.Contract.PDFStorageKey, "contrato-viagate.pdf")
+	filename := "contrato-viagate.pdf"
+	if access.Contract.Status != "signed" {
+		filename = "contrato-para-assinatura-viagate.pdf"
+	}
+	a.redirectPrivateArtifact(w, r, access.Contract.PDFStorageKey, filename)
 }
 
 func (a *App) downloadSignatureEvidence(w http.ResponseWriter, r *http.Request) {
