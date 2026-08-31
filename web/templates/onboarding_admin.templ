@@ -7,49 +7,46 @@ import (
 
 templ OnboardingAdminListPage(user domain.User, items []onboardingpkg.AdminItem) {
 	@AdminLayout("ViaGate — Cadastros", user) {
-		<header class="header">
-			<div>
-				<span class="step-title">ONBOARDING</span>
-				<h1>Cadastros de contratação</h1>
-				<p>Revise documentos e dados enviados, acompanhe falhas de geração de contrato e solicite correções quando necessário.</p>
-			</div>
-		</header>
-		<section class="panel">
-			<div class="table-wrap">
-				<table class="table">
-					<thead><tr><th>Cliente</th><th>Comercial</th><th>Status</th><th>Contrato</th><th>Enviado</th><th></th></tr></thead>
-					<tbody>
-						for _, item := range items {
-							<tr class={ OnboardingAdminRowClass(item) }>
-								<td><strong>{ item.LegalName }</strong><br/><small>{ CNPJ(item.CNPJ) }</small></td>
-								<td>{ item.CommercialName }</td>
-								<td><span class="badge">{ humanStatus(item.Status) }</span></td>
-								<td>
-									if item.ContractStatus == "signed" {
-										<span class="badge success">Contrato assinado</span>
-									} else if item.ContractStatus != "" {
-										<span class="badge">{ humanStatus(item.ContractStatus) }</span>
-									} else {
-										<span>—</span>
-									}
-								</td>
-								<td>
-									if item.SubmittedAt != nil {
-										{ item.SubmittedAt.Format("02/01/2006 15:04") }
-									} else {
-										{ item.UpdatedAt.Format("02/01/2006 15:04") }
-									}
-								</td>
-								<td><a class="btn" href={ templ.SafeURL("/admin/onboardings/" + item.ID) }>Revisar</a></td>
-							</tr>
-						}
-						if len(items) == 0 {
-							<tr><td colspan="6">Nenhum cadastro encontrado.</td></tr>
-						}
-					</tbody>
-				</table>
-			</div>
-		</section>
+		@AdminPageHeader("ONBOARDING", "Cadastros de contratação", "Revise documentos e dados enviados, acompanhe falhas de geração de contrato e solicite correções quando necessário.")
+		<div class="admin-list-root" data-admin-list>
+			@AdminListToolbar(len(items), "cadastro(s)") {
+				@AdminListSearch("Buscar cliente, CNPJ ou comercial...")
+				@AdminListFilter("Status", "status") {
+					<option value="">Todos os status</option>
+					<option value="draft">Rascunho</option>
+					<option value="submitted">Enviado</option>
+					<option value="under_review">Em revisão</option>
+					<option value="correction_requested">Correção solicitada</option>
+					<option value="approved">Aprovado</option>
+				}
+			}
+			@AdminDataTable([]string{"Cliente", "Comercial", "Status", "Contrato", "Enviado", "Ações"}, len(items), "Nenhum cadastro encontrado.") {
+				for _, item := range items {
+					<tr class={ OnboardingAdminRowClass(item) } data-admin-list-row data-search={ item.LegalName + " " + item.CNPJ + " " + item.CommercialName } data-filter-status={ item.Status }>
+						<td data-label="Cliente" data-primary="true"><strong>{ item.LegalName }</strong><small>{ CNPJ(item.CNPJ) }</small></td>
+						<td data-label="Comercial">{ item.CommercialName }</td>
+						<td data-label="Status"><span class={ "badge status-badge " + AdminStatusBadgeClass(item.Status) }>{ humanStatus(item.Status) }</span></td>
+						<td data-label="Contrato">
+							if item.ContractStatus == "signed" {
+								<span class="badge status-badge status-success">Contrato assinado</span>
+							} else if item.ContractStatus != "" {
+								<span class={ "badge status-badge " + AdminStatusBadgeClass(item.ContractStatus) }>{ humanStatus(item.ContractStatus) }</span>
+							} else {
+								<span>—</span>
+							}
+						</td>
+						<td data-label="Enviado">
+							if item.SubmittedAt != nil {
+								{ item.SubmittedAt.Format("02/01/2006 15:04") }
+							} else {
+								{ item.UpdatedAt.Format("02/01/2006 15:04") }
+							}
+						</td>
+						<td data-label="Ações" data-actions="true"><div class="admin-list-actions"><a class="btn" href={ templ.SafeURL("/admin/onboardings/" + item.ID) }>Revisar</a></div></td>
+					</tr>
+				}
+			}
+		</div>
 	}
 }
 
