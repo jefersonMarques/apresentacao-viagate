@@ -2,8 +2,10 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -129,8 +131,31 @@ func Load() (Config, error) {
 	if cfg.Environment == "production" && cfg.Brevo.APIKey == "" {
 		return Config{}, fmt.Errorf("BREVO_API_KEY is required in production")
 	}
+	if cfg.Environment == "production" {
+		if err := validateProductionBaseURL(cfg.BaseURL); err != nil {
+			return Config{}, err
+		}
+	}
 
 	return cfg, nil
+}
+
+func validateProductionBaseURL(value string) error {
+	parsed, err := url.Parse(strings.TrimSpace(value))
+	if err != nil || parsed.Scheme == "" || parsed.Hostname() == "" {
+		return fmt.Errorf("APP_BASE_URL must be an absolute public URL in production")
+	}
+	if !strings.EqualFold(parsed.Scheme, "https") {
+		return fmt.Errorf("APP_BASE_URL must use https in production")
+	}
+	host := strings.ToLower(parsed.Hostname())
+	if host == "localhost" || host == "127.0.0.1" || host == "::1" || strings.HasSuffix(host, ".localhost") {
+		return fmt.Errorf("APP_BASE_URL cannot point to localhost in production")
+	}
+	if parsed.RawQuery != "" || parsed.Fragment != "" {
+		return fmt.Errorf("APP_BASE_URL cannot contain query parameters or fragments")
+	}
+	return nil
 }
 
 func env(key, fallback string) string {
