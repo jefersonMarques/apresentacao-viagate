@@ -16,6 +16,7 @@ templ Base(title string) {
 			<link rel="stylesheet" href="/assets/app.css"/>
 			<link rel="stylesheet" href="/assets/admin-enhancements.css"/>
 			<link rel="stylesheet" href="/assets/square-corners.css"/>
+			<link rel="stylesheet" href="/assets/activation.css"/>
 		</head>
 		<body>
 			{ children... }
@@ -63,11 +64,19 @@ templ AdminLayout(title string, user domain.User) {
 							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v15H4z"/><path d="M8 3v4M16 3v4M8 11h8M8 15h5"/></svg>
 							<span>Cadastros</span>
 						</a>
+						<a href="/admin/activations" data-admin-nav>
+							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16"/><path d="m14 6 6 6-6 6"/><path d="M4 6h6M4 18h6"/></svg>
+							<span>Ativações</span>
+						</a>
 					}
 					if HasRole(user,"super_admin") || HasRole(user,"legal") {
 						<a href="/admin/contracts" data-admin-nav>
 							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6z"/><path d="M14 3v4h4"/><path d="M9 12h6M9 16h6"/></svg>
 							<span>Contratos</span>
+						</a>
+						<a href="/admin/audit" data-admin-nav>
+							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.4 8 8 9 4.6-1 8-4 8-9V6z"/><path d="M9 12h6M12 9v6"/></svg>
+							<span>Auditoria</span>
 						</a>
 					}
 					if HasRole(user,"super_admin") {
