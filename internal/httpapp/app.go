@@ -113,6 +113,7 @@ func (a *App) Routes() http.Handler {
 	router.Post("/p/{token}/accept", a.acceptProposal)
 	router.Get("/a/{token}", a.publicPresentationPage)
 	router.Get("/onboarding/resume/{token}", a.resumeOnboarding)
+	router.Get("/verify/{token}", a.contractVerificationPage)
 
 	router.Group(func(customer chi.Router) {
 		customer.Use(a.customerSessionRequired)
@@ -127,7 +128,6 @@ func (a *App) Routes() http.Handler {
 	router.Post("/sign/{token}/otp", a.sendSignatureOTP)
 	router.Post("/sign/{token}/confirm", a.confirmSignature)
 	router.Get("/sign/{token}/contract", a.downloadSignedContract)
-	router.Get("/sign/{token}/receipt", a.downloadCustomerSignatureReceipt)
 
 	router.Group(func(admin chi.Router) {
 		admin.Use(a.authenticated)
@@ -280,7 +280,6 @@ func (a *App) sameOriginWrites(next http.Handler) http.Handler {
 				http.Error(w, "origem da requisição não permitida", http.StatusForbidden)
 				return
 			}
-		}
 		next.ServeHTTP(w, r)
 	})
 }
