@@ -20,7 +20,7 @@ func (s *Store) List(ctx context.Context, userID string, all bool) ([]domain.Pip
 		       coalesce(a.accepted_by_name,''),coalesce(ct.signed_by_name,''),p.status::text,
 		       coalesce(o.id::text,''),coalesce(o.status::text,''),
 		       coalesce(ct.id::text,''),coalesce(ct.status::text,''),
-		       a.accepted_at,o.submitted_at,ct.fully_signed_at,
+		       a.accepted_at,o.submitted_at,ct.fully_signed_at,ct.finalized_at,
 		       greatest(p.updated_at,coalesce(o.updated_at,p.updated_at),coalesce(ct.updated_at,p.updated_at))
 		from proposals p
 		join clients cl on cl.id=p.client_id
@@ -33,7 +33,7 @@ func (s *Store) List(ctx context.Context, userID string, all bool) ([]domain.Pip
 		) a on true
 		left join onboardings o on o.proposal_acceptance_id=a.id
 		left join lateral (
-			select c.id,c.status,c.fully_signed_at,c.updated_at,
+			select c.id,c.status,c.fully_signed_at,c.finalized_at,c.updated_at,
 			       coalesce((
 			           select cs.name
 			           from contract_signers cs
@@ -62,10 +62,10 @@ func (s *Store) List(ctx context.Context, userID string, all bool) ([]domain.Pip
 	for rows.Next() {
 		var item domain.PipelineItem
 		if err := rows.Scan(
-			&item.ProposalID,&item.ProposalTitle,&item.ClientName,&item.CommercialName,
-			&item.CustomerResponsibleName,&item.SignedByName,&item.ProposalStatus,
-			&item.OnboardingID,&item.OnboardingStatus,&item.ContractID,&item.ContractStatus,
-			&item.AcceptedAt,&item.SubmittedAt,&item.FullySignedAt,&item.UpdatedAt,
+			&item.ProposalID, &item.ProposalTitle, &item.ClientName, &item.CommercialName,
+			&item.CustomerResponsibleName, &item.SignedByName, &item.ProposalStatus,
+			&item.OnboardingID, &item.OnboardingStatus, &item.ContractID, &item.ContractStatus,
+			&item.AcceptedAt, &item.SubmittedAt, &item.FullySignedAt, &item.ContractFinalizedAt, &item.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -99,16 +99,16 @@ func (s *Store) Timeline(ctx context.Context, proposalID string) ([]domain.Pipel
 	for rows.Next() {
 		var event domain.PipelineEvent
 		var metadata []byte
-		if err := rows.Scan(&event.EventType,&event.ActorType,&event.ActorName,&metadata,&event.CreatedAt); err != nil {
+		if err := rows.Scan(&event.EventType, &event.ActorType, &event.ActorName, &metadata, &event.CreatedAt); err != nil {
 			return nil, err
 		}
 		if len(metadata) > 0 {
 			var normalized any
-			if json.Unmarshal(metadata,&normalized) == nil {
+			if json.Unmarshal(metadata, &normalized) == nil {
 				event.MetadataJSON, _ = json.Marshal(normalized)
 			}
 		}
-		events = append(events,event)
+		events = append(events, event)
 	}
-	return events,rows.Err()
+	return events, rows.Err()
 }
