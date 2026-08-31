@@ -20,8 +20,14 @@ func (s *Store) List(ctx context.Context, userID string, all bool) ([]domain.Pip
 		       coalesce(a.accepted_by_name,''),coalesce(ct.signed_by_name,''),p.status::text,
 		       coalesce(o.id::text,''),coalesce(o.status::text,''),
 		       coalesce(ct.id::text,''),coalesce(ct.status::text,''),
-		       a.accepted_at,o.submitted_at,ct.fully_signed_at,ct.finalized_at,
-		       greatest(p.updated_at,coalesce(o.updated_at,p.updated_at),coalesce(ct.updated_at,p.updated_at))
+		       coalesce(act.id::text,''),coalesce(act.status,''),
+		       a.accepted_at,o.submitted_at,ct.fully_signed_at,ct.finalized_at,act.submitted_at,act.activated_at,
+		       greatest(
+		         p.updated_at,
+		         coalesce(o.updated_at,p.updated_at),
+		         coalesce(ct.updated_at,p.updated_at),
+		         coalesce(act.updated_at,p.updated_at)
+		       )
 		from proposals p
 		join clients cl on cl.id=p.client_id
 		join users u on u.id=p.created_by
@@ -45,13 +51,14 @@ func (s *Store) List(ctx context.Context, userID string, all bool) ([]domain.Pip
 			where c.onboarding_id=o.id
 			order by c.created_at desc limit 1
 		) ct on true
+		left join activation_profiles act on act.contract_id=ct.id
 	`
 	args := []any{}
 	if !all {
 		query += ` where p.created_by=$1`
 		args = append(args, userID)
 	}
-	query += ` order by greatest(p.updated_at,coalesce(o.updated_at,p.updated_at),coalesce(ct.updated_at,p.updated_at)) desc`
+	query += ` order by greatest(p.updated_at,coalesce(o.updated_at,p.updated_at),coalesce(ct.updated_at,p.updated_at),coalesce(act.updated_at,p.updated_at)) desc`
 
 	rows, err := s.pool.Query(ctx, query, args...)
 	if err != nil {
@@ -65,7 +72,9 @@ func (s *Store) List(ctx context.Context, userID string, all bool) ([]domain.Pip
 			&item.ProposalID, &item.ProposalTitle, &item.ClientName, &item.CommercialName,
 			&item.CustomerResponsibleName, &item.SignedByName, &item.ProposalStatus,
 			&item.OnboardingID, &item.OnboardingStatus, &item.ContractID, &item.ContractStatus,
-			&item.AcceptedAt, &item.SubmittedAt, &item.FullySignedAt, &item.ContractFinalizedAt, &item.UpdatedAt,
+			&item.ActivationID, &item.ActivationStatus,
+			&item.AcceptedAt, &item.SubmittedAt, &item.FullySignedAt, &item.ContractFinalizedAt,
+			&item.ActivationSubmittedAt, &item.ActivatedAt, &item.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -84,6 +93,13 @@ func (s *Store) Timeline(ctx context.Context, proposalID string) ([]domain.Pipel
 			select o.id from onboardings o join proposal_acceptances pa on pa.id=o.proposal_acceptance_id where pa.proposal_id=$1
 			union
 			select c.id from contracts c join onboardings o on o.id=c.onboarding_id join proposal_acceptances pa on pa.id=o.proposal_acceptance_id where pa.proposal_id=$1
+			union
+			select act.id
+			from activation_profiles act
+			join contracts c on c.id=act.contract_id
+			join onboardings o on o.id=c.onboarding_id
+			join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
+			where pa.proposal_id=$1
 		)
 		select a.event_type,a.actor_type,coalesce(u.name,''),a.metadata,a.created_at
 		from audit_events a
