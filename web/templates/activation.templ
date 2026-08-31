@@ -146,30 +146,37 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
 
 templ ActivationsAdminPage(user domain.User, items []activation.AdminItem) {
 	@AdminLayout("Ativações", user) {
-		<section class="page-head"><div><span class="eyebrow">IMPLANTAÇÃO</span><h1>Dados para ativação</h1><p>Acompanhe o que ainda depende do cliente e o que já está pronto para implantação.</p></div></section>
-		<div class="panel table-wrap">
-			<table>
-				<thead><tr><th>Cliente</th><th>Comercial</th><th>Status</th><th>Dados</th><th>Contrato</th><th></th></tr></thead>
-				<tbody>
-					for _, item := range items {
-						<tr>
-							<td><strong>{ item.ClientName }</strong></td>
-							<td>{ item.CommercialName }</td>
-							<td><span class="badge">{ ActivationStatusLabel(item.Status) }</span></td>
-							<td>{ fmt.Sprintf("%d mercadorias · %d usuários", item.GoodsCount, item.SystemUserCount) }</td>
-							<td>
-								if item.FullySignedAt != nil {
-									{ item.FullySignedAt.Format("02/01/2006 15:04") }
-								}
-							</td>
-							<td><a class="btn ghost" href={ templ.SafeURL("/admin/activations/" + item.ProfileID) }>Abrir</a></td>
-						</tr>
-					}
-					if len(items) == 0 {
-						<tr><td colspan="6">Nenhuma ativação encontrada.</td></tr>
-					}
-				</tbody>
-			</table>
+		@AdminPageHeader("IMPLANTAÇÃO", "Dados para ativação", "Acompanhe o que ainda depende do cliente e o que já está pronto para implantação.")
+		<div class="admin-list-root" data-admin-list>
+			@AdminListToolbar(len(items), "ativação(ões)") {
+				@AdminListSearch("Buscar cliente ou comercial...")
+				@AdminListFilter("Status", "status") {
+					<option value="">Todos os status</option>
+					<option value="pending">Aguardando dados</option>
+					<option value="in_progress">Em preenchimento</option>
+					<option value="completed">Dados recebidos</option>
+					<option value="under_internal_setup">Em implantação</option>
+					<option value="activated">Operação liberada</option>
+				}
+			}
+			@AdminDataTable([]string{"Cliente", "Comercial", "Status", "Dados", "Contrato", "Ações"}, len(items), "Nenhuma ativação encontrada.") {
+				for _, item := range items {
+					<tr data-admin-list-row data-search={ item.ClientName + " " + item.CommercialName + " " + ActivationStatusLabel(item.Status) } data-filter-status={ item.Status }>
+						<td data-label="Cliente" data-primary="true"><strong>{ item.ClientName }</strong></td>
+						<td data-label="Comercial">{ item.CommercialName }</td>
+						<td data-label="Status"><span class={ "badge status-badge " + AdminStatusBadgeClass(item.Status) }>{ ActivationStatusLabel(item.Status) }</span></td>
+						<td data-label="Dados">{ fmt.Sprintf("%d mercadorias · %d usuários", item.GoodsCount, item.SystemUserCount) }</td>
+						<td data-label="Contrato">
+							if item.FullySignedAt != nil {
+								{ item.FullySignedAt.Format("02/01/2006 15:04") }
+							} else {
+								<span>—</span>
+							}
+						</td>
+						<td data-label="Ações" data-actions="true"><div class="admin-list-actions"><a class="btn" href={ templ.SafeURL("/admin/activations/" + item.ProfileID) }>Abrir</a></div></td>
+					</tr>
+				}
+			}
 		</div>
 	}
 }
