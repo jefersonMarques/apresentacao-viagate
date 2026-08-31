@@ -11,7 +11,7 @@ templ ProposalListPage(user domain.User, items []domain.Proposal) {
 			<div>
 				<span class="step-title">PROPOSTAS</span>
 				<h1>Propostas comerciais</h1>
-				<p>Versões publicadas e aceitas permanecem imutáveis. Alterações posteriores criam uma nova versão.</p>
+				<p>Propostas aceitas são imutáveis. Para reaproveitar estrutura, produtos e condições, duplique a proposta e crie uma nova negociação sem os dados do cliente anterior.</p>
 			</div>
 			<div class="actions">
 				<a class="btn primary" href="/admin/proposals/new">Nova proposta</a>
@@ -28,15 +28,27 @@ templ ProposalListPage(user domain.User, items []domain.Proposal) {
 							<tr>
 								<td><strong>{ item.ClientName }</strong></td>
 								<td>{ item.Title }</td>
-								<td><span class="badge">{ humanStatus(item.Status) }</span></td>
+								<td>
+									if item.Status == "accepted" {
+										<span class="badge success">Aceita · bloqueada</span>
+									} else {
+										<span class="badge">{ humanStatus(item.Status) }</span>
+									}
+								</td>
 								<td>v{ item.CurrentVersion }</td>
 								<td>{ Date(item.ValidUntil) }</td>
 								<td>{ item.UpdatedAt.Format("02/01/2006 15:04") }</td>
 								<td>
 									<div class="actions compact">
-										<a class="btn" href={ templ.SafeURL("/admin/proposals/" + item.ID + "/edit") }>
-											@IconEdit()
-											<span>Editar</span>
+										if item.Status != "accepted" && item.Status != "cancelled" {
+											<a class="btn" href={ templ.SafeURL("/admin/proposals/" + item.ID + "/edit") }>
+												@IconEdit()
+												<span>Editar</span>
+											</a>
+										}
+										<a class="btn" href={ templ.SafeURL("/admin/proposals/new?duplicate=" + item.ID) }>
+											@IconCopy()
+											<span>Duplicar</span>
 										</a>
 										if item.PublicToken != "" {
 											<a class="btn dark" target="_blank" rel="noopener" href={ templ.SafeURL("/p/" + item.PublicToken) }>
@@ -55,8 +67,7 @@ templ ProposalListPage(user domain.User, items []domain.Proposal) {
 						if len(items) == 0 {
 							<tr><td colspan="7">Nenhuma proposta encontrada.</td></tr>
 						}
-					</tbody>
-				</table>
+					</tbody></table>
 			</div>
 		</section>
 	}
@@ -111,8 +122,7 @@ templ PresentationListPage(user domain.User, items []presentations.Presentation)
 						if len(items) == 0 {
 							<tr><td colspan="6">Nenhuma apresentação encontrada.</td></tr>
 						}
-					</tbody>
-				</table>
+					</tbody></table>
 			</div>
 		</section>
 	}
