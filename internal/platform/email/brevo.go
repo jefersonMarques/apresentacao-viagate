@@ -5,7 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	appconfig "github.com/jefersonMarques/apresentacao-viagate/internal/config"
@@ -36,8 +38,14 @@ func NewBrevo(cfg appconfig.BrevoConfig) *Brevo {
 }
 
 func (b *Brevo) Send(ctx context.Context, message Message) error {
-	if b.apiKey == "" {
+	if strings.TrimSpace(b.apiKey) == "" {
 		return fmt.Errorf("BREVO_API_KEY is not configured")
+	}
+	if strings.TrimSpace(b.senderEmail) == "" {
+		return fmt.Errorf("BREVO_SENDER_EMAIL is not configured")
+	}
+	if strings.TrimSpace(message.ToEmail) == "" {
+		return fmt.Errorf("recipient email is empty")
 	}
 
 	payload := map[string]any{
@@ -67,8 +75,18 @@ func (b *Brevo) Send(ctx context.Context, message Message) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("brevo returned status %d", resp.StatusCode)
+	responseBody, readErr := io.ReadAll(io.LimitReader(resp.Body, 32*1024))
+	if readErr != nil {
+		return fmt.Errorf("read brevo response: %w", readErr)
 	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		detail := strings.TrimSpace(string(responseBody))
+		if detail == "" {
+			detail = http.StatusText(resp.StatusCode)
+		}
+		return fmt.Errorf("brevo returned status %d: %s", resp.StatusCode, detail)
+	}
+
 	return nil
 }
