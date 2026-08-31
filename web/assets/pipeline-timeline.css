@@ -1,0 +1,25 @@
+.pipeline-timeline-dot.completed {
+	background: var(--orange);
+	box-shadow: 0 0 0 4px #fff;
+}
+
+.pipeline-timeline-step.completed:not(.current):not(:last-child)::before {
+	background: var(--orange);
+}
+
+.pipeline-timeline-step.planned:not(:last-child)::before {
+	background: #d6e0e5;
+}
+
+.pipeline-timeline-step.planned .pipeline-timeline-content {
+	background: #fafbfc;
+	border-color: #e2e8ec;
+	border-style: dashed;
+	opacity: .52;
+}
+
+.pipeline-timeline-step.planned .pipeline-timeline-head strong,
+.pipeline-timeline-step.planned .pipeline-timeline-content p,
+.pipeline-timeline-step.planned .pipeline-timeline-content small {
+	color: #8a98a1;
+}
