@@ -21,6 +21,13 @@ func ActivationComplete(profile activation.Profile) bool {
 		len(profile.Goods) > 0 && len(profile.SystemUsers) > 0
 }
 
+func activationDoneClass(done bool) string {
+	if done {
+		return "done"
+	}
+	return "pending"
+}
+
 func ActivationStatusLabel(status string) string {
 	switch status {
 	case "pending":
@@ -59,5 +66,18 @@ func ActivationSectionLabel(section string) string {
 		return "usuários do sistema"
 	default:
 		return "todos os dados para ativação"
+	}
+}
+
+func humanOperationType(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "normal":
+		return "Normal"
+	case "avulsa", "avulso":
+		return "Avulsa"
+	case "":
+		return "Não informada"
+	default:
+		return strings.TrimSpace(value)
 	}
 }
