@@ -20,12 +20,14 @@ templ OnboardingAdminListPage(user domain.User, items []onboardingpkg.AdminItem)
 					<thead><tr><th>Cliente</th><th>Comercial</th><th>Status</th><th>Contrato</th><th>Enviado</th><th></th></tr></thead>
 					<tbody>
 						for _, item := range items {
-							<tr>
+							<tr class={ templ.KV("pipeline-row-signed", item.ContractStatus == "signed") }>
 								<td><strong>{ item.LegalName }</strong><br/><small>{ CNPJ(item.CNPJ) }</small></td>
 								<td>{ item.CommercialName }</td>
 								<td><span class="badge">{ humanStatus(item.Status) }</span></td>
 								<td>
-									if item.ContractStatus != "" {
+									if item.ContractStatus == "signed" {
+										<span class="badge success">Contrato assinado</span>
+									} else if item.ContractStatus != "" {
 										<span class="badge">{ humanStatus(item.ContractStatus) }</span>
 									} else {
 										<span>—</span>
@@ -72,8 +74,10 @@ templ OnboardingAdminDetailPage(user domain.User, detail onboardingpkg.AdminDeta
 				<h2>Situação</h2>
 				<div class="actions">
 					<span class="badge">Cadastro · { humanStatus(detail.Onboarding.Status) }</span>
-					if detail.ContractStatus != "" {
-						<span class="badge success">Contrato · { humanStatus(detail.ContractStatus) }</span>
+					if detail.ContractStatus == "signed" {
+						<span class="badge success">Contrato assinado</span>
+					} else if detail.ContractStatus != "" {
+						<span class="badge">Contrato · { humanStatus(detail.ContractStatus) }</span>
 					}
 				</div>
 			</div>
@@ -150,6 +154,34 @@ templ OnboardingAdminDetailPage(user domain.User, detail onboardingpkg.AdminDeta
 				if detail.ReviewNotes != "" {
 					<div class="notice"><strong>Última observação:</strong> { detail.ReviewNotes }</div>
 				}
+				if detail.ContractID != "" {
+					<div style="margin-bottom:18px">
+						<span class="step-title">DOCUMENTOS DA CONTRATAÇÃO</span>
+						<p>
+							if detail.ContractStatus == "signed" {
+								O contrato foi assinado e está disponível para consulta pela ViaGate.
+							} else {
+								O contrato gerado está disponível para consulta pela ViaGate.
+							}
+						</p>
+						<div class="actions">
+							<a class="btn dark" target="_blank" rel="noopener" href={ templ.SafeURL("/admin/contracts/" + detail.ContractID + "/document") }>
+								if detail.ContractStatus == "signed" {
+									Baixar contrato assinado
+								} else {
+									Baixar contrato
+								}
+							</a>
+							if detail.ContractFinalizedAt != nil {
+								<a class="btn" target="_blank" rel="noopener" href={ templ.SafeURL("/admin/contracts/" + detail.ContractID + "/evidence") }>Comprovante da assinatura</a>
+								<a class="btn primary" target="_blank" rel="noopener" href={ templ.SafeURL("/admin/contracts/" + detail.ContractID + "/package") }>Documentos da assinatura</a>
+							}
+						</div>
+						if detail.ContractStatus == "signed" && detail.ContractFinalizedAt == nil {
+							<div class="notice" style="margin-top:12px">Os documentos comprobatórios da assinatura ainda estão sendo preparados.</div>
+						}
+					</div>
+				}
 				if detail.ContractID == "" && (detail.Onboarding.Status == "submitted" || detail.Onboarding.Status == "under_review") {
 					<form method="post" action={ templ.SafeURL("/admin/onboardings/" + detail.Onboarding.ID + "/review") }>
 						<div class="field"><label>Observação / solicitação de correção</label><textarea name="notes" placeholder="Explique objetivamente o que precisa ser ajustado.">{ detail.ReviewNotes }</textarea></div>
@@ -167,7 +199,7 @@ templ OnboardingAdminDetailPage(user domain.User, detail onboardingpkg.AdminDeta
 				if detail.Onboarding.Status == "approved" && detail.ContractStatus != "signed" {
 					<div style="margin-top:18px;border-top:1px solid var(--line);padding-top:18px">
 						<span class="step-title">RECUPERAÇÃO</span>
-						<p>Use se a geração do contrato ou a preparação do e-mail de assinatura falhar. A operação é idempotente e não cria um segundo contrato ativo.</p>
+						<p>Use se a geração do contrato ou a preparação do e-mail de assinatura falhar. A operação pode ser repetida sem criar um segundo contrato ativo.</p>
 						<form method="post" action={ templ.SafeURL("/admin/onboardings/" + detail.Onboarding.ID + "/contract/retry") }>
 							<button class="btn dark" type="submit" data-processing="Preparando contrato...">Gerar / reenviar contrato</button>
 						</form>
