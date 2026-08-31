@@ -4,57 +4,47 @@ import "github.com/jefersonMarques/apresentacao-viagate/internal/domain"
 
 templ PipelinePage(user domain.User, items []domain.PipelineItem, all bool) {
 	@AdminLayout("ViaGate — Pipeline comercial", user) {
-		<link rel="stylesheet" href="/assets/v1-admin-forms.css"/>
-		<div class="v1-page" data-pipeline>
-			<header class="v1-editor-header">
-				<div><span class="v1-eyebrow">PIPELINE</span><h1>Contratações e ativações</h1><p>Acompanhe da publicação da proposta à assinatura do contrato, dados para ativação e liberação da operação.</p></div>
-				<div class="v1-actions"><a class="v1-button primary" href="/admin/proposals/new">Nova proposta</a></div>
-			</header>
-			if all {
-				<div class="v1-message">Visão global habilitada: você está vendo negociações de todos os comerciais.</div>
-			}
-			<div class="v1-filterbar">
-				<input type="search" placeholder="Buscar cliente, proposta ou comercial..." autocomplete="off" data-pipeline-search/>
-				<select data-pipeline-stage>
+		@AdminPageHeader("PIPELINE", "Contratações e ativações", "Acompanhe da publicação da proposta à assinatura do contrato, dados para ativação e liberação da operação.") {
+			<a class="btn primary" href="/admin/proposals/new">Nova proposta</a>
+		}
+		if all {
+			<div class="notice">Visão global habilitada: você está vendo negociações de todos os comerciais.</div>
+		}
+		<div class="admin-list-root" data-admin-list>
+			@AdminListToolbar(len(items), "negociação(ões)") {
+				@AdminListSearch("Buscar cliente, proposta ou comercial...")
+				@AdminListFilter("Etapa", "stage") {
 					<option value="">Todas as etapas</option>
 					for _, stage := range PipelineStages(items) {
 						<option value={ stage }>{ stage }</option>
 					}
-				</select>
+				}
 				if all {
-					<select data-pipeline-commercial>
+					@AdminListFilter("Comercial", "commercial") {
 						<option value="">Todos os comerciais</option>
 						for _, commercial := range PipelineCommercials(items) {
 							<option value={ commercial }>{ commercial }</option>
 						}
-					</select>
-				} else {
-					<input type="hidden" data-pipeline-commercial/>
+					}
 				}
-			</div>
-			<div class="v1-filter-meta"><span>Mostrando <strong data-pipeline-count>{ len(items) }</strong> negociação(ões)</span><span>Filtros aplicados instantaneamente</span></div>
-			<section class="panel">
-				<div class="table-wrap"><table class="table"><thead><tr><th>Cliente</th><th>Comercial</th><th>Etapa</th><th>Proposta</th><th>Última atividade</th><th></th></tr></thead><tbody>
-					for _, item := range items {
-						<tr class={ PipelineRowClass(item) } data-pipeline-row data-search={ PipelineSearch(item) } data-stage={ PipelineStage(item) } data-commercial={ item.CommercialName }>
-							<td><strong>{ item.ClientName }</strong></td>
-							<td>{ item.CommercialName }</td>
-							<td>
-								<span class={ PipelineStageBadgeClass(item) }>{ PipelineStage(item) }</span>
-								if PipelineIsSigned(item) && item.FullySignedAt != nil {
-									<small class="pipeline-list-signed-meta"><span class="pipeline-list-signed-dot" aria-hidden="true"></span> Contrato assinado em { item.FullySignedAt.Format("02/01/2006 15:04") }</small>
-								}
-							</td>
-							<td>{ item.ProposalTitle }</td>
-							<td>{ item.UpdatedAt.Format("02/01/2006 15:04") }</td>
-							<td><a class="btn" href={ templ.SafeURL("/admin/pipeline/" + item.ProposalID) }>Detalhes</a></td>
-						</tr>
-					}
-					if len(items) == 0 {
-						<tr><td colspan="6">Nenhuma negociação encontrada.</td></tr>
-					}
-				</tbody></table></div>
-			</section>
+			}
+			@AdminDataTable([]string{"Cliente", "Comercial", "Etapa", "Proposta", "Última atividade", "Ações"}, len(items), "Nenhuma negociação encontrada.") {
+				for _, item := range items {
+					<tr class={ PipelineRowClass(item) } data-admin-list-row data-search={ PipelineSearch(item) } data-filter-stage={ PipelineStage(item) } data-filter-commercial={ item.CommercialName }>
+						<td data-label="Cliente" data-primary="true"><strong>{ item.ClientName }</strong></td>
+						<td data-label="Comercial">{ item.CommercialName }</td>
+						<td data-label="Etapa">
+							<span class={ PipelineStageBadgeClass(item) }>{ PipelineStage(item) }</span>
+							if PipelineIsSigned(item) && item.FullySignedAt != nil {
+								<small class="pipeline-list-signed-meta"><span class="pipeline-list-signed-dot" aria-hidden="true"></span> Contrato assinado em { item.FullySignedAt.Format("02/01/2006 15:04") }</small>
+							}
+						</td>
+						<td data-label="Proposta">{ item.ProposalTitle }</td>
+						<td data-label="Última atividade">{ item.UpdatedAt.Format("02/01/2006 15:04") }</td>
+						<td data-label="Ações" data-actions="true"><div class="admin-list-actions"><a class="btn" href={ templ.SafeURL("/admin/pipeline/" + item.ProposalID) }>Detalhes</a></div></td>
+					</tr>
+				}
+			}
 		</div>
 	}
 }
