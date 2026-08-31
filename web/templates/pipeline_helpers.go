@@ -42,20 +42,20 @@ var pipelineStepDefinitions = []pipelineStepDefinition{
 	},
 	{
 		Key:         "document_uploaded",
-		Title:       "Documento enviado",
-		Description: "A apólice ou documento obrigatório foi anexado ao cadastro.",
+		Title:       "Apólice enviada",
+		Description: "A apólice necessária para a contratação foi anexada.",
 		EventTypes:  []string{"document.uploaded"},
 	},
 	{
 		Key:         "onboarding_submitted",
-		Title:       "Dados da operação enviados",
-		Description: "O cliente concluiu o preenchimento e enviou os dados operacionais.",
+		Title:       "Dados para contratação enviados",
+		Description: "O cliente enviou os dados necessários para a ViaGate preparar o contrato.",
 		EventTypes:  []string{"onboarding.submitted"},
 	},
 	{
 		Key:         "onboarding_approved",
-		Title:       "Cadastro aprovado",
-		Description: "Os dados foram validados e o cadastro foi liberado para a contratação.",
+		Title:       "Contratação aprovada",
+		Description: "Os dados foram validados e o contrato pôde ser preparado.",
 		EventTypes:  []string{"onboarding.approved", "onboarding.auto_approved"},
 	},
 	{
@@ -71,22 +71,47 @@ var pipelineStepDefinitions = []pipelineStepDefinition{
 		EventTypes:  []string{"contract.signed"},
 	},
 	{
-		Key:         "evidence_finalized",
-		Title:       "Pacote de evidências finalizado",
-		Description: "O sistema consolidou o contrato assinado e a trilha final de evidências.",
-		EventTypes:  []string{"contract.evidence_finalized"},
+		Key:         "activation_data",
+		Title:       "Dados para ativação",
+		Description: "Financeiro, mercadorias e usuários iniciais foram informados para preparar a operação.",
+		EventTypes:  []string{"activation.submitted"},
+	},
+	{
+		Key:         "internal_setup",
+		Title:       "Implantação interna",
+		Description: "A equipe ViaGate está configurando os dados recebidos e preparando a operação.",
+		EventTypes:  nil,
+	},
+	{
+		Key:         "activated",
+		Title:       "Operação liberada",
+		Description: "A implantação foi concluída e a operação está liberada para uso.",
+		EventTypes:  nil,
 	},
 }
 
 func PipelineStage(item domain.PipelineItem) string {
 	if PipelineIsSigned(item) {
-		return "Contrato assinado"
+		switch item.ActivationStatus {
+		case "activated":
+			return "Operação liberada"
+		case "under_internal_setup":
+			return "Implantação interna"
+		case "completed":
+			return "Dados para ativação recebidos"
+		case "in_progress":
+			return "Dados para ativação · em preenchimento"
+		case "pending", "":
+			return "Dados para ativação"
+		default:
+			return "Dados para ativação"
+		}
 	}
 	if item.ContractStatus != "" {
 		return "Contrato · " + humanStatus(item.ContractStatus)
 	}
 	if item.OnboardingStatus != "" {
-		return "Cadastro · " + humanStatus(item.OnboardingStatus)
+		return "Contratação · " + humanStatus(item.OnboardingStatus)
 	}
 	if item.ProposalStatus == "accepted" {
 		return "Proposta aceita"
@@ -101,8 +126,12 @@ func PipelineIsSigned(item domain.PipelineItem) bool {
 	return item.ContractStatus == "signed" || item.FullySignedAt != nil
 }
 
+func PipelineIsActivated(item domain.PipelineItem) bool {
+	return item.ActivationStatus == "activated" || item.ActivatedAt != nil
+}
+
 func PipelineStageBadgeClass(item domain.PipelineItem) string {
-	if PipelineIsSigned(item) {
+	if PipelineIsActivated(item) {
 		return "badge success pipeline-signed-badge"
 	}
 	return "badge"
@@ -117,22 +146,30 @@ func PipelineRowClass(item domain.PipelineItem) string {
 
 func PipelineStageDescription(item domain.PipelineItem) string {
 	switch {
+	case PipelineIsActivated(item):
+		return "A implantação foi concluída e a operação está liberada. O contrato permanece preservado como foi assinado."
+	case item.ActivationStatus == "under_internal_setup":
+		return "Os dados para ativação foram recebidos e a equipe ViaGate está preparando a operação."
+	case item.ActivationStatus == "completed":
+		return "O cliente concluiu os dados para ativação. A implantação interna é a próxima etapa."
+	case item.ActivationStatus == "in_progress":
+		return "O contrato está assinado e o cliente ou alguém da equipe dele está complementando os dados para ativação."
 	case PipelineIsSigned(item):
-		return "A assinatura eletrônica foi concluída. A contratação está formalizada e vinculada à trilha de evidências."
+		return "A contratação está formalizada. Agora aguardamos os dados operacionais necessários para preparar a ativação."
 	case item.ContractStatus == "sent" || item.ContractStatus == "partially_signed":
 		return "O contrato já foi enviado e está aguardando a conclusão da assinatura eletrônica."
 	case item.ContractStatus == "generated":
 		return "O contrato foi gerado e está sendo preparado para envio ao responsável."
 	case item.OnboardingStatus == "approved":
-		return "O cadastro foi aprovado e a preparação do contrato é a próxima etapa."
+		return "Os dados para contratação foram aprovados e a preparação do contrato é a próxima etapa."
 	case item.OnboardingStatus == "under_review":
 		return "Os dados enviados pelo cliente estão em revisão pela equipe ViaGate."
 	case item.OnboardingStatus == "submitted":
-		return "O cadastro foi enviado e aguarda validação."
+		return "Os dados para contratação foram enviados e aguardam validação."
 	case item.OnboardingStatus != "":
-		return "O cliente está concluindo os dados necessários para a contratação."
+		return "O cliente está concluindo somente os dados necessários para preparar o contrato."
 	case item.ProposalStatus == "accepted":
-		return "A proposta foi aceita e o cadastro operacional é a próxima etapa."
+		return "A proposta foi aceita e os dados para contratação são a próxima etapa."
 	case item.ProposalStatus == "published":
 		return "A proposta está disponível e aguarda o aceite do cliente."
 	default:
@@ -217,12 +254,9 @@ func PipelineTimeline(item domain.PipelineItem, events []domain.PipelineEvent) [
 			break
 		}
 	}
-	if currentIndex < 0 && len(steps) > 0 {
-		currentIndex = len(steps) - 1
-	}
 
 	for index := range steps {
-		steps[index].Current = index == currentIndex
+		steps[index].Current = currentIndex >= 0 && index == currentIndex
 		steps[index].Planned = !steps[index].Completed && !steps[index].Current
 	}
 
@@ -319,8 +353,12 @@ func inferPipelineStepCompletion(key string, item domain.PipelineItem) bool {
 		return item.ContractStatus == "sent" || item.ContractStatus == "partially_signed" || PipelineIsSigned(item)
 	case "contract_signed":
 		return PipelineIsSigned(item)
-	case "evidence_finalized":
-		return false
+	case "activation_data":
+		return item.ActivationStatus == "completed" || item.ActivationStatus == "under_internal_setup" || PipelineIsActivated(item)
+	case "internal_setup":
+		return PipelineIsActivated(item)
+	case "activated":
+		return PipelineIsActivated(item)
 	default:
 		return false
 	}
@@ -334,6 +372,10 @@ func inferPipelineStepTime(key string, item domain.PipelineItem) *time.Time {
 		return item.SubmittedAt
 	case "contract_signed":
 		return item.FullySignedAt
+	case "activation_data":
+		return item.ActivationSubmittedAt
+	case "activated":
+		return item.ActivatedAt
 	default:
 		return nil
 	}
@@ -351,12 +393,14 @@ func inferredPipelineActor(key string, item domain.PipelineItem) string {
 			return item.CommercialName
 		}
 		return "Equipe ViaGate"
-	case "proposal_accepted", "document_uploaded", "onboarding_submitted":
+	case "proposal_accepted", "document_uploaded", "onboarding_submitted", "activation_data":
 		return customer
-	case "onboarding_approved", "contract_sent", "evidence_finalized":
+	case "onboarding_approved", "contract_sent":
 		return "Sistema ViaGate"
 	case "contract_signed":
 		return PipelineSignedBy(item)
+	case "internal_setup", "activated":
+		return "Equipe ViaGate"
 	default:
 		return ""
 	}
@@ -381,6 +425,7 @@ func humanStatus(value string) string {
 		"draft":                "rascunho",
 		"published":            "publicada",
 		"accepted":             "aceita",
+		"expired":              "expirada",
 		"pending":              "pendente",
 		"in progress":          "em preenchimento",
 		"submitted":            "enviado",
@@ -391,6 +436,9 @@ func humanStatus(value string) string {
 		"sent":                 "enviado",
 		"partially signed":     "parcialmente assinado",
 		"signed":               "assinado",
+		"completed":            "dados recebidos",
+		"under internal setup": "em implantação",
+		"activated":            "operação liberada",
 		"cancelled":            "cancelado",
 	}
 	if label, ok := labels[normalized]; ok {
@@ -403,15 +451,19 @@ func EventLabel(value string) string {
 	labels := map[string]string{
 		"proposal.published":                "Proposta publicada",
 		"proposal.accepted":                 "Proposta aceita",
-		"document.uploaded":                 "Documento enviado",
-		"onboarding.submitted":              "Dados da operação enviados",
-		"onboarding.approved":               "Cadastro aprovado",
-		"onboarding.auto_approved":          "Cadastro aprovado automaticamente",
+		"document.uploaded":                 "Apólice enviada",
+		"onboarding.submitted":              "Dados para contratação enviados",
+		"onboarding.approved":               "Contratação aprovada",
+		"onboarding.auto_approved":          "Contratação aprovada automaticamente",
 		"contract.sent":                     "Contrato enviado para assinatura",
 		"contract.signed":                   "Contrato assinado",
 		"contract.generation_failed":        "Falha na geração do contrato",
-		"contract.evidence_finalized":       "Pacote de evidências finalizado",
+		"contract.evidence_finalized":       "Evidências da assinatura finalizadas",
 		"contract_template.version_created": "Modelo de contrato atualizado",
+		"activation.section_saved":          "Dados para ativação atualizados",
+		"activation.delegated":              "Preenchimento encaminhado para a equipe do cliente",
+		"activation.submitted":              "Dados para ativação concluídos",
+		"activation.status_changed":         "Etapa de implantação atualizada",
 	}
 	if label, ok := labels[value]; ok {
 		return label
