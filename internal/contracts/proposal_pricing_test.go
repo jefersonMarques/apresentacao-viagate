@@ -79,3 +79,14 @@ func TestEnsureProposalFinancialTermsDoesNotDuplicateBoundValues(t *testing.T) {
 		t.Fatalf("financial terms already bound must remain unchanged: %s", result)
 	}
 }
+
+func TestEnsureProposalFinancialTermsPlacesValuesBeforeSignatures(t *testing.T) {
+	markdown := "# Contrato\n\nCláusulas gerais.\n\n## ASSINATURAS\n\nContratante: ______"
+	result := ensureProposalFinancialTerms(markdown)
+
+	financialIndex := strings.Index(result, "## Condições comerciais da proposta")
+	signatureIndex := strings.Index(result, "## ASSINATURAS")
+	if financialIndex < 0 || signatureIndex < 0 || financialIndex > signatureIndex {
+		t.Fatalf("financial terms must be inserted before signatures: %s", result)
+	}
+}
