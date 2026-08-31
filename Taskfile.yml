@@ -8,7 +8,12 @@ vars:
 
 tasks:
   deps:
-    desc: Resolve and normalize Go dependencies
+    desc: Download the dependencies declared by the repository
+    cmds:
+      - go mod download
+
+  tidy:
+    desc: Intentionally normalize Go module declarations
     cmds:
       - go mod tidy
 
@@ -39,7 +44,7 @@ tasks:
       - go build ./cmd/server
 
   dev:
-    desc: Prepare dependencies, generate templates, migrate and start the server
+    desc: Download dependencies, generate templates, migrate and start the server
     cmds:
       - task: deps
       - task: generate
