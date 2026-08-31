@@ -36,10 +36,20 @@ templ PipelinePage(user domain.User, items []domain.PipelineItem, all bool) {
 			<section class="panel">
 				<div class="table-wrap"><table class="table"><thead><tr><th>Cliente</th><th>Comercial</th><th>Etapa</th><th>Proposta</th><th>Última atividade</th><th></th></tr></thead><tbody>
 					for _, item := range items {
-						<tr data-pipeline-row data-search={ PipelineSearch(item) } data-stage={ PipelineStage(item) } data-commercial={ item.CommercialName }>
+						<tr class={ PipelineRowClass(item) } data-pipeline-row data-search={ PipelineSearch(item) } data-stage={ PipelineStage(item) } data-commercial={ item.CommercialName }>
 							<td><strong>{ item.ClientName }</strong></td>
 							<td>{ item.CommercialName }</td>
-							<td><span class="badge">{ PipelineStage(item) }</span></td>
+							<td>
+								<span class={ PipelineStageBadgeClass(item) }>
+									if PipelineIsSigned(item) {
+										<span class="pipeline-list-signed-dot" aria-hidden="true"></span>
+									}
+									{ PipelineStage(item) }
+								</span>
+								if PipelineIsSigned(item) && item.FullySignedAt != nil {
+									<small class="pipeline-list-signed-meta">{ item.FullySignedAt.Format("02/01/2006 15:04") }</small>
+								}
+							</td>
 							<td>{ item.ProposalTitle }</td>
 							<td>{ item.UpdatedAt.Format("02/01/2006 15:04") }</td>
 							<td><a class="btn" href={ templ.SafeURL("/admin/pipeline/" + item.ProposalID) }>Detalhes</a></td>
@@ -57,35 +67,86 @@ templ PipelinePage(user domain.User, items []domain.PipelineItem, all bool) {
 templ PipelineDetailPage(user domain.User, item domain.PipelineItem, events []domain.PipelineEvent) {
 	@AdminLayout("ViaGate — Negociação", user) {
 		<header class="header"><div><span class="step-title">NEGOCIAÇÃO</span><h1>{ item.ClientName }</h1><p>{ item.ProposalTitle } · responsável comercial: { item.CommercialName }</p></div><div class="actions"><a class="btn" href="/admin/pipeline">Voltar</a><a class="btn dark" href={ templ.SafeURL("/admin/proposals/" + item.ProposalID + "/edit") }>Abrir proposta</a></div></header>
-		<section class="panel"><div class="panel-head"><h2>Etapa atual</h2><span class="badge success">{ PipelineStage(item) }</span></div><div class="panel-body">
-			<div class="pipeline-stage">
-				<span>Proposta: { humanStatus(item.ProposalStatus) }</span>
-				if item.OnboardingStatus != "" {
-					<span>Cadastro: { humanStatus(item.OnboardingStatus) }</span>
+		<section class="panel pipeline-current-panel">
+			<div class="panel-head"><h2>Etapa atual</h2><span class={ PipelineStageBadgeClass(item) }>{ PipelineStage(item) }</span></div>
+			<div class="panel-body">
+				if PipelineIsSigned(item) {
+					<div class="pipeline-current-card signed">
+						<div class="pipeline-current-main">
+							<span class="pipeline-radar" aria-hidden="true"></span>
+							<div>
+								<span class="pipeline-current-label">CONTRATAÇÃO FORMALIZADA</span>
+								<h3>Contrato assinado</h3>
+								<p>{ PipelineStageDescription(item) }</p>
+							</div>
+						</div>
+						if item.FullySignedAt != nil {
+							<div class="pipeline-signed-highlight">
+								<span>ASSINATURA CONCLUÍDA</span>
+								<strong>{ item.FullySignedAt.Format("31/01/2006 15:04") }</strong>
+								<small>Assinado por { PipelineSignedBy(item) }</small>
+							</div>
+						}
+					</div>
+				} else {
+					<div class="pipeline-current-card">
+						<div class="pipeline-current-main">
+							<span class="pipeline-radar" aria-hidden="true"></span>
+							<div>
+								<span class="pipeline-current-label">ETAPA ATUAL</span>
+								<h3>{ PipelineStage(item) }</h3>
+								<p>{ PipelineStageDescription(item) }</p>
+							</div>
+						</div>
+					</div>
 				}
-				if item.ContractStatus != "" {
-					<span>Contrato: { humanStatus(item.ContractStatus) }</span>
+				<div class="pipeline-stage" style="margin-top:18px">
+					<span>Proposta: { humanStatus(item.ProposalStatus) }</span>
+					if item.OnboardingStatus != "" {
+						<span>Cadastro: { humanStatus(item.OnboardingStatus) }</span>
+					}
+					if item.ContractStatus != "" {
+						<span>Contrato: { humanStatus(item.ContractStatus) }</span>
+					}
+				</div>
+				<div class="grid pipeline-date-grid" style="margin-top:18px">
+					if item.AcceptedAt != nil {
+						<div><small>Proposta aceita</small><strong>{ item.AcceptedAt.Format("02/01/2006 15:04") }</strong></div>
+					}
+					if item.SubmittedAt != nil {
+						<div><small>Cadastro enviado</small><strong>{ item.SubmittedAt.Format("02/01/2006 15:04") }</strong></div>
+					}
+					if item.FullySignedAt != nil {
+						<div class="signed"><small>Contrato assinado</small><strong>{ item.FullySignedAt.Format("02/01/2006 15:04") }</strong><span>por { PipelineSignedBy(item) }</span></div>
+					}
+				</div>
+			</div>
+		</section>
+		<section class="panel">
+			<div class="panel-head"><div><h2>Histórico da contratação</h2><small class="pipeline-history-help">Veja o que já foi concluído, quem realizou cada ação e quais etapas ainda faltam.</small></div></div>
+			<div class="panel-body pipeline-timeline">
+				for _, step := range PipelineTimeline(item, events) {
+					<article class={ PipelineTimelineStepClass(step) }>
+						<div class="pipeline-timeline-marker">
+							if step.Current {
+								<span class="pipeline-radar" aria-hidden="true"></span>
+							} else if step.Completed {
+								<span class="pipeline-timeline-dot completed" aria-hidden="true"></span>
+							} else {
+								<span class="pipeline-timeline-dot pending" aria-hidden="true"></span>
+							}
+						</div>
+						<div class="pipeline-timeline-content">
+							<div class="pipeline-timeline-head">
+								<strong>{ step.Title }</strong>
+								<span class={ PipelineTimelineStatusClass(step) }>{ PipelineTimelineStatus(step) }</span>
+							</div>
+							<p>{ step.Description }</p>
+							<small>{ PipelineTimelineMeta(step) }</small>
+						</div>
+					</article>
 				}
 			</div>
-			<div class="grid" style="margin-top:18px">
-				if item.AcceptedAt != nil {
-					<div><small>Proposta aceita</small><strong style="display:block;margin-top:4px">{ item.AcceptedAt.Format("02/01/2006 15:04") }</strong></div>
-				}
-				if item.SubmittedAt != nil {
-					<div><small>Cadastro enviado</small><strong style="display:block;margin-top:4px">{ item.SubmittedAt.Format("02/01/2006 15:04") }</strong></div>
-				}
-				if item.FullySignedAt != nil {
-					<div><small>Contrato assinado</small><strong style="display:block;margin-top:4px">{ item.FullySignedAt.Format("02/01/2006 15:04") }</strong></div>
-				}
-			</div>
-		</div></section>
-		<section class="panel"><div class="panel-head"><h2>Histórico</h2></div><div class="panel-body timeline">
-			for _, event := range events {
-				<article class="timeline-item"><strong>{ EventLabel(event.EventType) }</strong><small style="display:block;margin-top:5px">{ event.CreatedAt.Format("02/01/2006 15:04:05") } · { EventActor(event) }</small></article>
-			}
-			if len(events) == 0 {
-				<p>Nenhum evento de auditoria registrado ainda.</p>
-			}
-		</div></section>
+		</section>
 	}
 }
