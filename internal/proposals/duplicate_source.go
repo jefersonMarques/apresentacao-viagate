@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 )
 
-// DuplicateSourceByID returns the reusable commercial content of a proposal.
-// Accepted proposals are always copied from the immutable version that was accepted.
 func (s *Store) DuplicateSourceByID(ctx context.Context, userID, proposalID string, allowAll bool) (EditorInput, error) {
 	input, _, err := s.EditorByID(ctx, userID, proposalID, allowAll)
 	if err != nil {
