@@ -20,14 +20,16 @@ templ SignatureContractPage(access contracts.SignerAccess, token string, message
 				if errorMessage != "" {
 					<div class="notice error">{ errorMessage }</div>
 				}
-				<article class="document-view">
-					@templ.Raw(access.HTML)
+				<article class="document-view" style="padding:0;overflow:hidden;background:#e9edf0">
+					<iframe title="Contrato em PDF" src={ templ.SafeURL("/sign/" + token + "/document") } style="display:block;width:100%;height:min(78vh,920px);min-height:620px;border:0;background:#fff"></iframe>
+					<noscript><p style="padding:16px"><a href={ templ.SafeURL("/sign/" + token + "/document") }>Abrir o contrato em PDF</a></p></noscript>
 				</article>
+				<p style="margin:10px 0 0;color:var(--muted);font-size:12px">O PDF acima é o próprio arquivo cuja impressão digital fica vinculada à assinatura. Não é uma reprodução separada do contrato.</p>
 				if access.Signer.Status != "signed" {
 					<section class="accept-box">
 						<span class="step-title">CONFIRMAÇÃO DE IDENTIDADE</span>
 						<h2>Assinar este documento</h2>
-						<p>Enviaremos um código para o e-mail informado no aceite da proposta. Depois da confirmação, sua assinatura ficará vinculada exatamente a esta versão do contrato.</p>
+						<p>Enviaremos um código para o e-mail informado no aceite da proposta. Depois da confirmação, sua assinatura ficará vinculada exatamente ao PDF exibido acima.</p>
 						<div class="actions" style="align-items:center;margin-bottom:18px">
 							<form method="post" action={ templ.SafeURL("/sign/" + token + "/otp") }>
 								<button class="btn dark" type="submit" data-processing="Enviando código...">Enviar código por e-mail</button>
@@ -56,10 +58,14 @@ templ SignatureContractPage(access contracts.SignerAccess, token string, message
 					<section class="accept-box">
 						<span class="step-title">CONTRATO ASSINADO</span>
 						<h2>Assinatura registrada com sucesso.</h2>
-						<p>Esta versão do contrato foi registrada como assinada. O próprio PDF contém um QR Code para consultar a autenticidade e conferir o arquivo quando necessário.</p>
+						<p>A contratação foi concluída. O próprio PDF contém um QR Code para consultar a autenticidade e conferir o arquivo quando necessário.</p>
 						<div class="actions">
-							<a class="btn dark" href={ templ.SafeURL("/sign/" + token + "/contract") }>Baixar contrato assinado</a>
+							<a class="btn ghost" href={ templ.SafeURL("/sign/" + token + "/contract") }>Baixar contrato assinado</a>
+							<form method="post" action={ templ.SafeURL("/sign/" + token + "/activation") }>
+								<button class="btn primary" type="submit" data-processing="Preparando próximo passo...">Continuar para dados de ativação</button>
+							</form>
 						</div>
+						<p style="margin-top:12px;color:var(--muted)">Os dados para ativação são uma etapa separada do contrato. Você poderá preencher agora ou encaminhar para alguém da sua equipe.</p>
 					</section>
 				}
 
