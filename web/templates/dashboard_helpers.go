@@ -24,43 +24,61 @@ type DashboardRecord struct {
 	PublicURL    string
 }
 
-func DashboardRecords(proposalItems []domain.Proposal,presentationItems []presentations.Presentation) []DashboardRecord {
-	items:=make([]DashboardRecord,0,len(proposalItems)+len(presentationItems))
-	for _,item:=range proposalItems{
-		publicURL:=""
-		if item.PublicToken!=""{publicURL="/p/"+item.PublicToken}
-		items=append(items,DashboardRecord{
-			ID:item.ID,Kind:"proposal",KindLabel:"Proposta",ClientName:item.ClientName,Title:item.Title,
-			OwnerName:item.CreatedByName,Status:item.Status,Version:item.CurrentVersion,ValidUntil:item.ValidUntil,
-			UpdatedAt:item.UpdatedAt,EditURL:"/admin/proposals/"+item.ID+"/edit",PublicURL:publicURL,
+func DashboardRecords(proposalItems []domain.Proposal, presentationItems []presentations.Presentation) []DashboardRecord {
+	items := make([]DashboardRecord, 0, len(proposalItems)+len(presentationItems))
+	for _, item := range proposalItems {
+		publicURL := ""
+		if item.PublicToken != "" {
+			publicURL = "/p/" + item.PublicToken
+		}
+		editURL := ""
+		if item.Status != "accepted" && item.Status != "cancelled" {
+			editURL = "/admin/proposals/" + item.ID + "/edit"
+		}
+		items = append(items, DashboardRecord{
+			ID: item.ID, Kind: "proposal", KindLabel: "Proposta", ClientName: item.ClientName, Title: item.Title,
+			OwnerName: item.CreatedByName, Status: item.Status, Version: item.CurrentVersion, ValidUntil: item.ValidUntil,
+			UpdatedAt: item.UpdatedAt, EditURL: editURL, PublicURL: publicURL,
 		})
 	}
-	for _,item:=range presentationItems{
-		publicURL:=""
-		if item.PublicToken!=""{publicURL="/a/"+item.PublicToken}
-		items=append(items,DashboardRecord{
-			ID:item.ID,Kind:"presentation",KindLabel:"Apresentação",ClientName:item.ClientName,Title:item.Title,
-			OwnerName:item.CreatedByName,Status:item.Status,Version:item.CurrentVersion,UpdatedAt:item.UpdatedAt,
-			EditURL:"/admin/presentations/"+item.ID+"/edit",PublicURL:publicURL,
+	for _, item := range presentationItems {
+		publicURL := ""
+		if item.PublicToken != "" {
+			publicURL = "/a/" + item.PublicToken
+		}
+		items = append(items, DashboardRecord{
+			ID: item.ID, Kind: "presentation", KindLabel: "Apresentação", ClientName: item.ClientName, Title: item.Title,
+			OwnerName: item.CreatedByName, Status: item.Status, Version: item.CurrentVersion, UpdatedAt: item.UpdatedAt,
+			EditURL: "/admin/presentations/" + item.ID + "/edit", PublicURL: publicURL,
 		})
 	}
-	sort.SliceStable(items,func(i,j int)bool{return items[i].UpdatedAt.After(items[j].UpdatedAt)})
+	sort.SliceStable(items, func(i, j int) bool { return items[i].UpdatedAt.After(items[j].UpdatedAt) })
 	return items
 }
 
 func DashboardVersionLabel(item DashboardRecord) string {
-	if item.Version<=0{return "Rascunho"}
-	return fmt.Sprintf("v%d",item.Version)
+	if item.Version <= 0 {
+		return "Rascunho"
+	}
+	return fmt.Sprintf("v%d", item.Version)
 }
 
-func DashboardCountByKind(items []DashboardRecord,kind string) int {
-	count:=0
-	for _,item:=range items{if item.Kind==kind{count++}}
+func DashboardCountByKind(items []DashboardRecord, kind string) int {
+	count := 0
+	for _, item := range items {
+		if item.Kind == kind {
+			count++
+		}
+	}
 	return count
 }
 
 func DashboardActiveCount(items []DashboardRecord) int {
-	count:=0
-	for _,item:=range items{if item.Status=="published"||item.Status=="accepted"{count++}}
+	count := 0
+	for _, item := range items {
+		if item.Status == "published" || item.Status == "accepted" {
+			count++
+		}
+	}
 	return count
 }
