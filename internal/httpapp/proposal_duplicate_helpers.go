@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
+	"regexp"
 	"strings"
 	"time"
 
@@ -21,7 +22,18 @@ func (a *App) prepareDuplicatedProposalInput(ctx context.Context, source proposa
 		}
 	}
 
-	title := strings.TrimSpace(source.Title)
+	sensitiveValues := []string{
+		source.ClientLegalName,
+		source.ClientTradeName,
+		source.ClientCNPJ,
+		source.ClientEmail,
+		source.ClientPhone,
+		source.ContactName,
+		source.ContactEmail,
+		source.ContactPhone,
+	}
+
+	title := scrubDuplicatedProposalText(strings.TrimSpace(source.Title), sensitiveValues)
 	if title == "" {
 		title = "Proposta Comercial ViaGate"
 	}
@@ -29,15 +41,28 @@ func (a *App) prepareDuplicatedProposalInput(ctx context.Context, source proposa
 		title += " (cópia)"
 	}
 
+	solutionScope := make([]string, 0, len(source.SolutionScope))
+	for _, value := range source.SolutionScope {
+		if cleaned := scrubDuplicatedProposalText(value, sensitiveValues); cleaned != "" {
+			solutionScope = append(solutionScope, cleaned)
+		}
+	}
+	conditions := make([]string, 0, len(source.Conditions))
+	for _, value := range source.Conditions {
+		if cleaned := scrubDuplicatedProposalText(value, sensitiveValues); cleaned != "" {
+			conditions = append(conditions, cleaned)
+		}
+	}
+
 	input := proposals.EditorInput{
 		Title:          title,
 		ValidUntil:     &validUntil,
-		SolutionTitle:  source.SolutionTitle,
-		SolutionScope:  append([]string(nil), source.SolutionScope...),
+		SolutionTitle:  scrubDuplicatedProposalText(source.SolutionTitle, sensitiveValues),
+		SolutionScope:  solutionScope,
 		PricingModel:   source.PricingModel,
 		MinimumInvoice: source.MinimumInvoice,
 		SetupFee:       source.SetupFee,
-		Conditions:     append([]string(nil), source.Conditions...),
+		Conditions:     conditions,
 		Items:          append([]proposals.EditorItem(nil), source.Items...),
 	}
 	if input.PricingModel == "" {
@@ -79,4 +104,22 @@ func (a *App) prepareDuplicatedProposalInput(ctx context.Context, source proposa
 	hash := sha256.Sum256(encoded)
 	input.ContentHash = hash[:]
 	return input
+}
+
+func scrubDuplicatedProposalText(value string, sensitiveValues []string) string {
+	cleaned := strings.TrimSpace(value)
+	for _, sensitive := range sensitiveValues {
+		sensitive = strings.TrimSpace(sensitive)
+		if sensitive == "" {
+			continue
+		}
+		pattern, err := regexp.Compile(`(?i)` + regexp.QuoteMeta(sensitive))
+		if err != nil {
+			continue
+		}
+		cleaned = pattern.ReplaceAllString(cleaned, "")
+	}
+	cleaned = strings.Join(strings.Fields(cleaned), " ")
+	cleaned = strings.Trim(cleaned, " -–—·,;:/")
+	return strings.TrimSpace(cleaned)
 }
