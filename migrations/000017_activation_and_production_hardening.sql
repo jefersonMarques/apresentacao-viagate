@@ -125,3 +125,10 @@ from roles r
 join permissions p on p.code in ('activation.read_all','activation.manage')
 where r.code='operations'
 on conflict do nothing;
+
+insert into role_permissions(role_id,permission_id)
+select r.id,p.id
+from roles r
+join permissions p on p.code='audit.read'
+where r.code='legal'
+on conflict do nothing;
