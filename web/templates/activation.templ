@@ -1,0 +1,174 @@
+package templates
+
+import (
+	"fmt"
+
+	"github.com/jefersonMarques/apresentacao-viagate/internal/activation"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/brfields"
+)
+
+templ ActivationPage(access activation.Access, token, message, errorMessage string) {
+	@Base("ViaGate — Dados para ativação") {
+		<div class="public activation-public">
+			<main class="proposal-page activation-page">
+				<header class="activation-hero">
+					<span class="step-title">DADOS PARA ATIVAÇÃO</span>
+					<h1>Vamos preparar sua operação.</h1>
+					<p>O contrato já está separado desta etapa. Agora precisamos apenas das informações operacionais para configurar a ViaGate para sua equipe.</p>
+					<div class="activation-status-line"><strong>{ ActivationStatusLabel(access.Profile.Status) }</strong> · { access.Profile.LegalName }</div>
+				</header>
+
+				if message != "" {
+					<div class="notice">{ message }</div>
+				}
+				if errorMessage != "" {
+					<div class="notice error">{ errorMessage }</div>
+				}
+
+				<section class="activation-progress">
+					<div class={ "activation-progress-item " + activationDoneClass(access.Profile.FinanceResponsibleName != "") }><span></span><strong>Financeiro</strong></div>
+					<div class={ "activation-progress-item " + activationDoneClass(len(access.Profile.Goods) > 0) }><span></span><strong>Mercadorias</strong></div>
+					<div class={ "activation-progress-item " + activationDoneClass(len(access.Profile.SystemUsers) > 0) }><span></span><strong>Usuários</strong></div>
+				</section>
+
+				<section class="accept-box activation-readonly">
+					<span class="step-title">DADOS JÁ CONFIRMADOS</span>
+					<h2>Não é necessário preencher novamente</h2>
+					<div class="activation-summary-grid">
+						<div><small>Empresa</small><strong>{ access.Profile.LegalName }</strong><span>{ brfields.FormatCNPJ(access.Profile.CNPJ) }</span></div>
+						<div><small>Endereço</small><strong>{ ActivationAddress(access.Profile) }</strong></div>
+						<div><small>Operação</small><strong>{ humanOperationType(access.Profile.OperationType) }</strong><span>{ access.Profile.Insurer }</span></div>
+						<div><small>Responsável pela empresa</small><strong>{ access.Profile.CompanyResponsibleName }</strong><span>{ access.Profile.CompanyResponsibleEmail } · { brfields.FormatPhone(access.Profile.CompanyResponsiblePhone) }</span></div>
+					</div>
+					<p class="activation-lock-note">Esses dados vieram da contratação e permanecem vinculados ao contrato assinado. Alterações operacionais futuras não modificam o documento já assinado.</p>
+				</section>
+
+				<section class="accept-box" id="financeiro">
+					<span class="step-title">1 · FINANCEIRO</span>
+					<h2>Quem será o contato financeiro?</h2>
+					<p>Essa pessoa receberá os contatos relacionados a faturamento e assuntos financeiros da operação.</p>
+					if ActivationCanEdit(access, "finance") {
+						<form method="post" action={ templ.SafeURL("/activation/" + token + "/finance") } class="grid">
+							<div class="field"><label>Nome</label><input name="finance_name" value={ access.Profile.FinanceResponsibleName } required/></div>
+							<div class="field"><label>Telefone</label><input name="finance_phone" value={ brfields.FormatPhone(access.Profile.FinanceResponsiblePhone) } inputmode="tel" required/></div>
+							<div class="field full"><label>E-mail</label><input type="email" name="finance_email" value={ access.Profile.FinanceResponsibleEmail } required/></div>
+							<div class="field full"><button class="btn dark" type="submit" data-processing="Salvando...">Salvar contato financeiro</button></div>
+						</form>
+					} else {
+						<div class="activation-answer"><strong>{ access.Profile.FinanceResponsibleName }</strong><span>{ access.Profile.FinanceResponsibleEmail } · { brfields.FormatPhone(access.Profile.FinanceResponsiblePhone) }</span></div>
+					}
+				</section>
+
+				<section class="accept-box" id="mercadorias">
+					<span class="step-title">2 · OPERAÇÃO</span>
+					<h2>Quais mercadorias vocês transportam?</h2>
+					<p>Liste os principais tipos. Você pode adicionar quantos forem necessários.</p>
+					if ActivationCanEdit(access, "goods") {
+						<form method="post" action={ templ.SafeURL("/activation/" + token + "/goods") }>
+							<div data-activation-goods>
+								if len(access.Profile.Goods) == 0 {
+									<div class="activation-repeat-row"><input name="goods" placeholder="Ex.: Queijos frescos" required/><button type="button" class="btn ghost activation-remove" aria-label="Remover">×</button></div>
+								}
+								for _, good := range access.Profile.Goods {
+									<div class="activation-repeat-row"><input name="goods" value={ good } required/><button type="button" class="btn ghost activation-remove" aria-label="Remover">×</button></div>
+								}
+							</div>
+							<div class="actions"><button type="button" class="btn ghost" data-add-activation-good>+ Adicionar mercadoria</button><button class="btn dark" type="submit" data-processing="Salvando...">Salvar mercadorias</button></div>
+						</form>
+					} else {
+						<div class="activation-tags">
+							for _, good := range access.Profile.Goods { <span>{ good }</span> }
+						</div>
+					}
+				</section>
+
+				<section class="accept-box" id="usuarios">
+					<span class="step-title">3 · ACESSOS</span>
+					<h2>Quem utilizará o sistema?</h2>
+					<p>Informe apenas quem precisa receber acesso inicialmente. Outros usuários poderão ser cadastrados depois.</p>
+					if ActivationCanEdit(access, "users") {
+						<form method="post" action={ templ.SafeURL("/activation/" + token + "/users") }>
+							<div data-activation-users>
+								if len(access.Profile.SystemUsers) == 0 {
+									<div class="activation-user-row"><input name="system_user_name" placeholder="Nome" required/><input name="system_user_phone" placeholder="Telefone"/><input type="email" name="system_user_email" placeholder="E-mail" required/><button type="button" class="btn ghost activation-remove" aria-label="Remover">×</button></div>
+								}
+								for _, systemUser := range access.Profile.SystemUsers {
+									<div class="activation-user-row"><input name="system_user_name" value={ systemUser.Name } required/><input name="system_user_phone" value={ brfields.FormatPhone(systemUser.Phone) }/><input type="email" name="system_user_email" value={ systemUser.Email } required/><button type="button" class="btn ghost activation-remove" aria-label="Remover">×</button></div>
+								}
+							</div>
+							<div class="actions"><button type="button" class="btn ghost" data-add-activation-user>+ Adicionar usuário</button><button class="btn dark" type="submit" data-processing="Salvando...">Salvar usuários</button></div>
+						</form>
+					} else {
+						<div class="activation-user-list">
+							for _, systemUser := range access.Profile.SystemUsers {
+								<div><strong>{ systemUser.Name }</strong><span>{ systemUser.Email } · { brfields.FormatPhone(systemUser.Phone) }</span></div>
+							}
+						</div>
+					}
+				</section>
+
+				if access.AccessType == "owner" && access.Section == "all" && access.Profile.Status != "completed" && access.Profile.Status != "under_internal_setup" && access.Profile.Status != "activated" {
+					<section class="accept-box activation-delegate">
+						<span class="step-title">PREFERE ENCAMINHAR?</span>
+						<h2>Envie para alguém da sua equipe</h2>
+						<p>Você pode continuar aqui ou enviar um link individual para outra pessoa preencher tudo ou apenas uma parte.</p>
+						<form method="post" action={ templ.SafeURL("/activation/" + token + "/delegate") } class="grid">
+							<div class="field"><label>Nome</label><input name="delegate_name" required/></div>
+							<div class="field"><label>E-mail</label><input type="email" name="delegate_email" required/></div>
+							<div class="field full"><label>O que essa pessoa deve preencher?</label><select name="delegate_section"><option value="all">Todos os dados para ativação</option><option value="finance">Dados financeiros</option><option value="goods">Mercadorias transportadas</option><option value="users">Usuários do sistema</option></select></div>
+							<div class="field full"><button class="btn ghost" type="submit" data-processing="Enviando convite...">Enviar convite</button></div>
+						</form>
+					</section>
+				}
+
+				if access.Profile.Status == "completed" || access.Profile.Status == "under_internal_setup" || access.Profile.Status == "activated" {
+					<section class="accept-box activation-complete-box">
+						<span class="step-title">DADOS RECEBIDOS</span>
+						<h2>A ViaGate já pode prosseguir.</h2>
+						<p>As informações necessárias para a implantação foram recebidas. Se a equipe precisar de algum complemento, entraremos em contato.</p>
+					</section>
+				} else if ActivationComplete(access.Profile) {
+					<section class="accept-box activation-submit-box">
+						<span class="step-title">ÚLTIMO PASSO</span>
+						<h2>Todos os dados necessários estão preenchidos.</h2>
+						<p>Revise as informações acima e envie para a ViaGate iniciar a implantação.</p>
+						<form method="post" action={ templ.SafeURL("/activation/" + token + "/submit") }><button class="btn primary" type="submit" data-processing="Enviando dados...">Concluir e enviar para a ViaGate</button></form>
+					</section>
+				}
+			</main>
+			<script src="/assets/activation.js" defer></script>
+		</div>
+	}
+}
+
+templ ActivationsAdminPage(user domain.User, items []activation.AdminItem) {
+	@AdminLayout("Ativações", user) {
+		<section class="page-head"><div><span class="eyebrow">IMPLANTAÇÃO</span><h1>Dados para ativação</h1><p>Acompanhe o que ainda depende do cliente e o que já está pronto para implantação.</p></div></section>
+		<div class="panel table-wrap">
+			<table><thead><tr><th>Cliente</th><th>Comercial</th><th>Status</th><th>Dados</th><th>Contrato</th><th></th></tr></thead><tbody>
+				for _, item := range items {
+					<tr><td><strong>{ item.ClientName }</strong></td><td>{ item.CommercialName }</td><td><span class="badge">{ ActivationStatusLabel(item.Status) }</span></td><td>{ fmt.Sprintf("%d mercadorias · %d usuários", item.GoodsCount, item.SystemUserCount) }</td><td>if item.FullySignedAt != nil { { item.FullySignedAt.Format("02/01/2006 15:04") } }</td><td><a class="btn ghost" href={ templ.SafeURL("/admin/activations/" + item.ProfileID) }>Abrir</a></td></tr>
+				}
+			</tbody></table>
+		</div>
+	}
+}
+
+templ ActivationAdminDetailPage(user domain.User, profile activation.Profile) {
+	@AdminLayout("Ativação", user) {
+		<section class="page-head"><div><span class="eyebrow">DADOS PARA ATIVAÇÃO</span><h1>{ profile.LegalName }</h1><p>{ ActivationStatusLabel(profile.Status) }</p></div><div class="actions"><a class="btn ghost" href={ templ.SafeURL("/admin/contracts/" + profile.ContractID + "/document") }>Contrato assinado</a></div></section>
+		<div class="grid cols-2">
+			<section class="panel"><h2>Empresa e contratação</h2><dl class="data-list"><dt>CNPJ</dt><dd>{ brfields.FormatCNPJ(profile.CNPJ) }</dd><dt>Endereço</dt><dd>{ ActivationAddress(profile) }</dd><dt>Operação</dt><dd>{ humanOperationType(profile.OperationType) }</dd><dt>Seguradora</dt><dd>{ profile.Insurer }</dd><dt>Responsável</dt><dd>{ profile.CompanyResponsibleName } · { profile.CompanyResponsibleEmail }</dd></dl></section>
+			<section class="panel"><h2>Financeiro</h2><dl class="data-list"><dt>Responsável</dt><dd>{ profile.FinanceResponsibleName }</dd><dt>E-mail</dt><dd>{ profile.FinanceResponsibleEmail }</dd><dt>Telefone</dt><dd>{ brfields.FormatPhone(profile.FinanceResponsiblePhone) }</dd></dl></section>
+			<section class="panel"><h2>Mercadorias</h2><div class="activation-tags">for _, good := range profile.Goods { <span>{ good }</span> }</div></section>
+			<section class="panel"><h2>Usuários iniciais</h2><div class="activation-user-list">for _, systemUser := range profile.SystemUsers { <div><strong>{ systemUser.Name }</strong><span>{ systemUser.Email } · { brfields.FormatPhone(systemUser.Phone) }</span></div> }</div></section>
+		</div>
+		if profile.Status == "completed" || profile.Status == "under_internal_setup" {
+			<section class="panel" style="margin-top:18px"><h2>Implantação interna</h2><p>Os dados do cliente já foram concluídos. Atualize o estágio conforme a preparação interna avançar.</p><div class="actions">
+				if profile.Status == "completed" { <form method="post" action={ templ.SafeURL("/admin/activations/" + profile.ID + "/status") }><input type="hidden" name="status" value="under_internal_setup"/><button class="btn dark" type="submit">Iniciar implantação</button></form> }
+				if profile.Status == "under_internal_setup" { <form method="post" action={ templ.SafeURL("/admin/activations/" + profile.ID + "/status") }><input type="hidden" name="status" value="activated"/><button class="btn primary" type="submit">Marcar operação como liberada</button></form> }
+			</div></section>
+		}
+	}
+}
