@@ -187,7 +187,6 @@ func (f *Finalizer) Finalize(ctx context.Context, contractID string) error {
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		cleanupArtifacts()
 		return fmt.Errorf("commit evidence finalization: %w", err)
 	}
 	return nil
