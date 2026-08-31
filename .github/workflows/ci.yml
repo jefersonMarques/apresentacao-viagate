@@ -36,7 +36,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24.x'
-          cache: true
+          cache: false
 
       - name: Download dependencies
         run: go mod download
@@ -49,6 +49,9 @@ jobs:
           cp go.mod /tmp/go.mod.before
           go mod tidy
           diff -u /tmp/go.mod.before go.mod
+          echo '--- GO_SUM_BEGIN ---'
+          cat go.sum
+          echo '--- GO_SUM_END ---'
 
       - name: Vet
         run: go vet ./...
