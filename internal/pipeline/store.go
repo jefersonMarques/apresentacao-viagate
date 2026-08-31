@@ -17,7 +17,7 @@ func NewStore(pool *pgxpool.Pool) *Store { return &Store{pool: pool} }
 func (s *Store) List(ctx context.Context, userID string, all bool) ([]domain.PipelineItem, error) {
 	query := `
 		select p.id::text,p.title,coalesce(nullif(cl.trade_name,''),nullif(cl.legal_name,''),'Cliente não identificado'),u.name,
-		       coalesce(a.name,''),coalesce(ct.signed_by_name,''),p.status::text,
+		       coalesce(a.accepted_by_name,''),coalesce(ct.signed_by_name,''),p.status::text,
 		       coalesce(o.id::text,''),coalesce(o.status::text,''),
 		       coalesce(ct.id::text,''),coalesce(ct.status::text,''),
 		       a.accepted_at,o.submitted_at,ct.fully_signed_at,
@@ -26,7 +26,7 @@ func (s *Store) List(ctx context.Context, userID string, all bool) ([]domain.Pip
 		join clients cl on cl.id=p.client_id
 		join users u on u.id=p.created_by
 		left join lateral (
-			select pa.id,pa.name,pa.accepted_at
+			select pa.id,pa.accepted_by_name,pa.accepted_at
 			from proposal_acceptances pa
 			where pa.proposal_id=p.id
 			order by pa.accepted_at desc limit 1
