@@ -22,7 +22,7 @@ func (a *App) downloadCustomerSignatureReceipt(w http.ResponseWriter, r *http.Re
 	}
 
 	w.Header().Set("Content-Type", "application/pdf")
-	w.Header().Set("Content-Disposition", `attachment; filename="comprovante-assinatura-viagate.pdf"`)
+	w.Header().Set("Content-Disposition", "attachment; filename=\"comprovante-assinatura-viagate.pdf\"")
 	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(pdf)
