@@ -142,6 +142,26 @@ func buildPricingTable(items []proposalPricingItem) string {
 	return strings.TrimSpace(builder.String())
 }
 
+func ensureProposalFinancialTerms(markdown string) string {
+	text := strings.TrimSpace(markdown)
+	sections := make([]string, 0, 3)
+
+	if !strings.Contains(text, "{proposal.pricing_table}") && !strings.Contains(text, "{pricing.") {
+		sections = append(sections, "{proposal.pricing_table}")
+	}
+	if !strings.Contains(text, "{proposal.minimum_invoice}") {
+		sections = append(sections, "**Fatura mínima mensal:** {proposal.minimum_invoice}")
+	}
+	if !strings.Contains(text, "{proposal.setup_fee}") {
+		sections = append(sections, "**Taxa de implantação:** {proposal.setup_fee}")
+	}
+	if len(sections) == 0 {
+		return text
+	}
+
+	return text + "\n\n## Condições comerciais da proposta\n\n" + strings.Join(sections, "\n\n")
+}
+
 func pricingVariableKey(catalogID string) string {
 	return strings.ReplaceAll(strings.TrimSpace(catalogID), "-", "_")
 }
