@@ -59,3 +59,23 @@ func TestFormatBRL(t *testing.T) {
 		}
 	}
 }
+
+func TestEnsureProposalFinancialTermsAppendsMissingProposalValues(t *testing.T) {
+	markdown := "# Contrato\n\nCláusulas gerais."
+	result := ensureProposalFinancialTerms(markdown)
+
+	for _, token := range []string{"{proposal.pricing_table}", "{proposal.minimum_invoice}", "{proposal.setup_fee}"} {
+		if !strings.Contains(result, token) {
+			t.Fatalf("expected %s in generated financial terms: %s", token, result)
+		}
+	}
+}
+
+func TestEnsureProposalFinancialTermsDoesNotDuplicateBoundValues(t *testing.T) {
+	markdown := "{proposal.pricing_table}\n\n{proposal.minimum_invoice}\n\n{proposal.setup_fee}"
+	result := ensureProposalFinancialTerms(markdown)
+
+	if result != markdown {
+		t.Fatalf("financial terms already bound must remain unchanged: %s", result)
+	}
+}
