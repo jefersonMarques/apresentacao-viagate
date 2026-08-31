@@ -27,7 +27,7 @@ templ ContractsAdminPage(user domain.User, items []contracts.AdminContractItem) 
 					</thead>
 					<tbody>
 						for _, item := range items {
-							<tr class={ templ.KV("pipeline-row-signed", item.Status == "signed") }>
+							<tr class={ ContractAdminRowClass(item) }>
 								<td><strong>{ item.ClientName }</strong></td>
 								<td>{ item.ProposalTitle }</td>
 								<td>{ item.CommercialName }</td>
