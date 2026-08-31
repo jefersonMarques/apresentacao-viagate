@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/catalog"
 	appconfig "github.com/jefersonMarques/apresentacao-viagate/internal/config"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/brfields"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/storage"
@@ -123,7 +124,7 @@ func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID stri
 			"role":  repRole,
 		},
 		"proposal": map[string]any{
-			"pricing_model":   pricingModel,
+			"pricing_model":   contractPricingModelLabel(pricingModel),
 			"pricing_table":   pricingData.PricingTable,
 			"minimum_invoice": formatBRL(minimumInvoice),
 			"setup_fee":       formatBRL(setupFee),
@@ -132,7 +133,7 @@ func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID stri
 		},
 		"pricing": pricingData.Prices,
 		"operation": map[string]any{
-			"type": operationType,
+			"type": contractOperationTypeLabel(operationType),
 		},
 		"insurance": map[string]any{
 			"insurer":           insurer,
@@ -218,6 +219,34 @@ func contractDate(value string) string {
 		return value
 	}
 	return parsed.Format("02/01/2006")
+}
+
+func contractPricingModelLabel(value string) string {
+	for _, model := range catalog.PricingModels {
+		if model.ID == value {
+			return model.Title
+		}
+	}
+	if strings.TrimSpace(value) == "" {
+		return "Não informado"
+	}
+	return "Condição comercial personalizada"
+}
+
+func contractOperationTypeLabel(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "normal":
+		return "Normal"
+	case "avulsa":
+		return "Avulsa"
+	case "avulso":
+		return "Avulsa"
+	default:
+		if strings.TrimSpace(value) == "" {
+			return "Não informada"
+		}
+		return strings.TrimSpace(value)
+	}
 }
 
 func nonEmpty(values ...string) []string {
