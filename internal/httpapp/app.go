@@ -156,11 +156,16 @@ func (a *App) Routes() http.Handler {
 		admin.With(a.permission("onboarding.review")).Post("/admin/onboardings/{id}/contract/retry", a.retryOnboardingContract)
 		admin.With(a.permission("onboarding.review")).Get("/admin/onboardings/{id}/documents/{documentID}", a.adminOnboardingDocument)
 
+		admin.Get("/admin/contracts/{contractID}/document", a.adminContractDocument)
+		admin.Get("/admin/contracts/{contractID}/evidence", a.adminContractEvidence)
+		admin.Get("/admin/contracts/{contractID}/package", a.adminContractPackage)
+		admin.With(a.permission("contract.read_all")).Get("/admin/contracts", a.adminContracts)
+		admin.With(a.permission("contract.template.manage")).Get("/admin/contracts/templates", a.contractTemplatesPage)
+		admin.With(a.permission("contract.template.manage")).Post("/admin/contracts/templates", a.saveContractTemplate)
+
 		admin.With(a.permission("user.manage")).Get("/admin/users", a.usersPage)
 		admin.With(a.permission("user.manage")).Post("/admin/users/invite", a.inviteUser)
 		admin.With(a.permission("user.manage")).Post("/admin/users/{id}/access", a.updateUserAccess)
-		admin.With(a.permission("contract.template.manage")).Get("/admin/contracts/templates", a.contractTemplatesPage)
-		admin.With(a.permission("contract.template.manage")).Post("/admin/contracts/templates", a.saveContractTemplate)
 	})
 
 	return router
