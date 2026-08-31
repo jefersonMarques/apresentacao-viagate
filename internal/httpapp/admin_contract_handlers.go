@@ -50,10 +50,10 @@ func (a *App) adminContractArtifact(w http.ResponseWriter, r *http.Request, arti
 		a.redirectPrivateArtifact(w, r, keys.ContractKey, "contrato-viagate.pdf")
 	case "evidence":
 		if !keys.Finalized || keys.EvidenceKey == "" {
-			http.Error(w, "O comprovante da assinatura ainda está sendo preparado.", http.StatusConflict)
+			http.Error(w, "O relatório técnico da assinatura ainda está sendo preparado.", http.StatusConflict)
 			return
 		}
-		a.redirectPrivateArtifact(w, r, keys.EvidenceKey, "comprovante-assinatura-viagate.pdf")
+		a.redirectPrivateArtifact(w, r, keys.EvidenceKey, "relatorio-tecnico-assinatura-viagate.pdf")
 	case "package":
 		if !keys.Finalized || keys.PackageKey == "" {
 			http.Error(w, "Os documentos finais da assinatura ainda estão sendo preparados.", http.StatusConflict)
