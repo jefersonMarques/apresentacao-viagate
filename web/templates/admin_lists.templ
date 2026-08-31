@@ -7,123 +7,97 @@ import (
 
 templ ProposalListPage(user domain.User, items []domain.Proposal) {
 	@AdminLayout("ViaGate — Propostas", user) {
-		<header class="header">
-			<div>
-				<span class="step-title">PROPOSTAS</span>
-				<h1>Propostas comerciais</h1>
-				<p>Propostas aceitas são imutáveis. Para reaproveitar estrutura, produtos e condições, duplique a proposta e crie uma nova negociação sem os dados do cliente anterior.</p>
-			</div>
-			<div class="actions">
-				<a class="btn primary" href="/admin/proposals/new">Nova proposta</a>
-			</div>
-		</header>
-		<section class="panel">
-			<div class="table-wrap">
-				<table class="table">
-					<thead>
-						<tr><th>Cliente</th><th>Proposta</th><th>Status</th><th>Versão</th><th>Validade</th><th>Atualizada</th><th>Ações</th></tr>
-					</thead>
-					<tbody>
-						for _, item := range items {
-							<tr>
-								<td><strong>{ item.ClientName }</strong></td>
-								<td>{ item.Title }</td>
-								<td>
-									if item.Status == "accepted" {
-										<span class="badge success">Aceita · bloqueada</span>
-									} else {
-										<span class="badge">{ humanStatus(item.Status) }</span>
+		@AdminPageHeader("PROPOSTAS", "Propostas comerciais", "Propostas aceitas são imutáveis. Para reaproveitar estrutura, produtos e condições, duplique a proposta e crie uma nova negociação sem os dados do cliente anterior.") {
+			<a class="btn primary" href="/admin/proposals/new">Nova proposta</a>
+		}
+		<div class="admin-list-root" data-admin-list>
+			@AdminListToolbar(len(items), "proposta(s)") {
+				@AdminListSearch("Buscar cliente ou proposta...")
+				@AdminListFilter("Status", "status") {
+					<option value="">Todos os status</option>
+					<option value="draft">Rascunho</option>
+					<option value="published">Publicada</option>
+					<option value="accepted">Aceita</option>
+					<option value="expired">Expirada</option>
+					<option value="cancelled">Cancelada</option>
+				}
+			}
+			@AdminDataTable([]string{"Cliente", "Proposta", "Status", "Versão", "Validade", "Atualizada", "Ações"}, len(items), "Nenhuma proposta encontrada.") {
+				for _, item := range items {
+					<tr data-admin-list-row data-search={ item.ClientName + " " + item.Title } data-filter-status={ item.Status }>
+						<td data-label="Cliente" data-primary="true"><strong>{ item.ClientName }</strong></td>
+						<td data-label="Proposta">{ item.Title }</td>
+						<td data-label="Status">
+							if item.Status == "accepted" {
+								<span class="badge status-badge status-success">Aceita · bloqueada</span>
+							} else {
+								<span class={ "badge status-badge " + AdminStatusBadgeClass(item.Status) }>{ humanStatus(item.Status) }</span>
+							}
+						</td>
+						<td data-label="Versão">v{ item.CurrentVersion }</td>
+						<td data-label="Validade">{ Date(item.ValidUntil) }</td>
+						<td data-label="Atualizada">{ item.UpdatedAt.Format("02/01/2006 15:04") }</td>
+						<td data-label="Ações" data-actions="true">
+							<div class="admin-list-actions">
+								if item.Status != "accepted" && item.Status != "cancelled" {
+									<a class="btn" href={ templ.SafeURL("/admin/proposals/" + item.ID + "/edit") }>Editar</a>
+								} else if item.PublicToken != "" {
+									<a class="btn dark" target="_blank" rel="noopener" href={ templ.SafeURL("/p/" + item.PublicToken) }>Abrir</a>
+								}
+								@AdminActionMenu("Mais ações da proposta") {
+									<a href={ templ.SafeURL("/admin/proposals/new?duplicate=" + item.ID) }>Duplicar proposta</a>
+									if item.PublicToken != "" {
+										<a target="_blank" rel="noopener" href={ templ.SafeURL("/p/" + item.PublicToken) }>Abrir versão pública</a>
+										<button type="button" data-copy-path={ "/p/" + item.PublicToken }>Copiar link público</button>
 									}
-								</td>
-								<td>v{ item.CurrentVersion }</td>
-								<td>{ Date(item.ValidUntil) }</td>
-								<td>{ item.UpdatedAt.Format("02/01/2006 15:04") }</td>
-								<td>
-									<div class="actions compact">
-										if item.Status != "accepted" && item.Status != "cancelled" {
-											<a class="btn" href={ templ.SafeURL("/admin/proposals/" + item.ID + "/edit") }>
-												@IconEdit()
-												<span>Editar</span>
-											</a>
-										}
-										<a class="btn" href={ templ.SafeURL("/admin/proposals/new?duplicate=" + item.ID) }>
-											@IconCopy()
-											<span>Duplicar</span>
-										</a>
-										if item.PublicToken != "" {
-											<a class="btn dark" target="_blank" rel="noopener" href={ templ.SafeURL("/p/" + item.PublicToken) }>
-												@IconOpen()
-												<span>Abrir</span>
-											</a>
-											<button class="btn" type="button" data-copy-path={ "/p/" + item.PublicToken }>
-												@IconCopy()
-												<span>Copiar link</span>
-											</button>
-										}
-									</div>
-								</td>
-							</tr>
-						}
-						if len(items) == 0 {
-							<tr><td colspan="7">Nenhuma proposta encontrada.</td></tr>
-						}
-					</tbody></table>
-			</div>
-		</section>
+								}
+							</div>
+						</td>
+					</tr>
+				}
+			}
+		</div>
 	}
 }
 
 templ PresentationListPage(user domain.User, items []presentations.Presentation) {
 	@AdminLayout("ViaGate — Apresentações", user) {
-		<header class="header">
-			<div>
-				<span class="step-title">APRESENTAÇÕES</span>
-				<h1>Materiais institucionais</h1>
-				<p>Super Admin visualiza todos os materiais; o comercial visualiza apenas os próprios.</p>
-			</div>
-			<div class="actions">
-				<a class="btn primary" href="/admin/presentations/new">Nova apresentação</a>
-			</div>
-		</header>
-		<section class="panel">
-			<div class="table-wrap">
-				<table class="table">
-					<thead>
-						<tr><th>Cliente</th><th>Título</th><th>Status</th><th>Versão</th><th>Atualizada</th><th>Ações</th></tr>
-					</thead>
-					<tbody>
-						for _, item := range items {
-							<tr>
-								<td>{ item.ClientName }</td>
-								<td><strong>{ item.Title }</strong></td>
-								<td><span class="badge">{ humanStatus(item.Status) }</span></td>
-								<td>v{ item.CurrentVersion }</td>
-								<td>{ item.UpdatedAt.Format("02/01/2006 15:04") }</td>
-								<td>
-									<div class="actions compact">
-										<a class="btn" href={ templ.SafeURL("/admin/presentations/" + item.ID + "/edit") }>
-											@IconEdit()
-											<span>Editar</span>
-										</a>
-										if item.PublicToken != "" {
-											<a class="btn dark" target="_blank" rel="noopener" href={ templ.SafeURL("/a/" + item.PublicToken) }>
-												@IconOpen()
-												<span>Abrir</span>
-											</a>
-											<button class="btn" type="button" data-copy-path={ "/a/" + item.PublicToken }>
-												@IconCopy()
-												<span>Copiar link</span>
-											</button>
-										}
-									</div>
-								</td>
-							</tr>
-						}
-						if len(items) == 0 {
-							<tr><td colspan="6">Nenhuma apresentação encontrada.</td></tr>
-						}
-					</tbody></table>
-			</div>
-		</section>
+		@AdminPageHeader("APRESENTAÇÕES", "Materiais institucionais", "Super Admin visualiza todos os materiais; o comercial visualiza apenas os próprios.") {
+			<a class="btn primary" href="/admin/presentations/new">Nova apresentação</a>
+		}
+		<div class="admin-list-root" data-admin-list>
+			@AdminListToolbar(len(items), "apresentação(ões)") {
+				@AdminListSearch("Buscar cliente ou apresentação...")
+				@AdminListFilter("Status", "status") {
+					<option value="">Todos os status</option>
+					<option value="draft">Rascunho</option>
+					<option value="published">Publicada</option>
+					<option value="expired">Expirada</option>
+					<option value="cancelled">Cancelada</option>
+				}
+			}
+			@AdminDataTable([]string{"Cliente", "Título", "Status", "Versão", "Atualizada", "Ações"}, len(items), "Nenhuma apresentação encontrada.") {
+				for _, item := range items {
+					<tr data-admin-list-row data-search={ item.ClientName + " " + item.Title } data-filter-status={ item.Status }>
+						<td data-label="Cliente" data-primary="true"><strong>{ item.ClientName }</strong></td>
+						<td data-label="Título">{ item.Title }</td>
+						<td data-label="Status"><span class={ "badge status-badge " + AdminStatusBadgeClass(item.Status) }>{ humanStatus(item.Status) }</span></td>
+						<td data-label="Versão">v{ item.CurrentVersion }</td>
+						<td data-label="Atualizada">{ item.UpdatedAt.Format("02/01/2006 15:04") }</td>
+						<td data-label="Ações" data-actions="true">
+							<div class="admin-list-actions">
+								<a class="btn" href={ templ.SafeURL("/admin/presentations/" + item.ID + "/edit") }>Editar</a>
+								if item.PublicToken != "" {
+									@AdminActionMenu("Mais ações da apresentação") {
+										<a target="_blank" rel="noopener" href={ templ.SafeURL("/a/" + item.PublicToken) }>Abrir versão pública</a>
+										<button type="button" data-copy-path={ "/a/" + item.PublicToken }>Copiar link público</button>
+									}
+								}
+							</div>
+						</td>
+					</tr>
+				}
+			}
+		</div>
 	}
 }
