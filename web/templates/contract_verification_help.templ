@@ -1,0 +1,13 @@
+package templates
+
+templ ContractVerificationHelp() {
+	<details style="margin-top:14px;padding:14px 16px;border:1px solid var(--line);background:#fbfcfd">
+		<summary style="cursor:pointer;font-weight:800">Como funciona a verificação deste contrato?</summary>
+		<div style="margin-top:10px;color:var(--muted);line-height:1.55">
+			<p style="margin-top:0">O PDF final é gerado já com um QR Code. Antes da assinatura, o sistema calcula uma impressão digital criptográfica única do arquivo completo e registra esse valor no processo de contratação.</p>
+			<p>Quando o cliente assina, a assinatura fica vinculada àquela versão exata. O PDF registrado não é alterado depois disso.</p>
+			<p>O QR Code leva à página pública de verificação. Nela, qualquer pessoa pode consultar a situação da assinatura e comparar uma cópia do PDF com o arquivo registrado. Se qualquer byte tiver sido alterado, a comparação não coincide.</p>
+			<p style="margin-bottom:0"><strong>Importante:</strong> o QR Code apenas dá acesso à consulta. A integridade é comprovada pela comparação da impressão digital SHA-256 do documento.</p>
+		</div>
+	</details>
+}
