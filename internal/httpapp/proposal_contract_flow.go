@@ -18,7 +18,7 @@ import (
 
 func (a *App) acceptProposalContractFlow(w http.ResponseWriter, r *http.Request, proposal proposals.PublicProposal) {
 	if proposalSnapshotString(proposal.Content, "proposal", "contract_template_version_id") == "" {
-		a.proposalContractFlowError(w, r, proposal, http.StatusConflict, "Esta proposta ainda não possui um modelo de contrato atribuído. Solicite uma nova versão ao comercial.")
+		a.proposalContractFlowError(w, r, proposal, http.StatusConflict, "Esta proposta ainda não está pronta para contratação. Solicite uma nova versão ao responsável comercial.")
 		return
 	}
 
@@ -29,7 +29,7 @@ func (a *App) acceptProposalContractFlow(w http.ResponseWriter, r *http.Request,
 
 	cpf, err := cleanCPF(r.FormValue("responsible_cpf"))
 	if err != nil {
-		a.proposalContractFlowError(w, r, proposal, http.StatusBadRequest, err.Error())
+		a.proposalContractFlowError(w, r, proposal, http.StatusBadRequest, "Informe um CPF válido para o responsável.")
 		return
 	}
 	emailAddress, err := cleanEmail(r.FormValue("responsible_email"), true)
@@ -99,7 +99,7 @@ func (a *App) acceptProposalContractFlow(w http.ResponseWriter, r *http.Request,
 
 	cnpj, err := cleanCNPJ(r.FormValue("cnpj"))
 	if err != nil {
-		a.proposalContractFlowError(w, r, proposal, http.StatusBadRequest, err.Error())
+		a.proposalContractFlowError(w, r, proposal, http.StatusBadRequest, "Informe um CNPJ válido.")
 		return
 	}
 	postalCode, err := cleanPostalCode(r.FormValue("postal_code"), true)
@@ -165,7 +165,8 @@ func (a *App) acceptProposalContractFlow(w http.ResponseWriter, r *http.Request,
 	}
 
 	if err := a.onboardingStore.Submit(r.Context(), current.ID); err != nil {
-		a.proposalContractFlowError(w, r, proposal, http.StatusBadRequest, err.Error())
+		a.logger.Error("submit inline onboarding failed", "onboarding_id", current.ID, "error", err)
+		a.proposalContractFlowError(w, r, proposal, http.StatusBadRequest, "Não foi possível concluir o envio dos dados. Confira as informações e tente novamente.")
 		return
 	}
 	a.queueOnboardingSubmittedNotification(r, current.ID)
