@@ -175,6 +175,7 @@ type PipelineItem struct {
 	AcceptedAt              *time.Time
 	SubmittedAt             *time.Time
 	FullySignedAt           *time.Time
+	ContractFinalizedAt     *time.Time
 	UpdatedAt               time.Time
 }
 
