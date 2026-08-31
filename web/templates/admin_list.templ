@@ -1,0 +1,82 @@
+package templates
+
+import "fmt"
+
+templ AdminPageHeader(eyebrow, title, description string) {
+	<header class="admin-page-header admin-list-page-header">
+		<div>
+			<span class="eyebrow">{ eyebrow }</span>
+			<h1>{ title }</h1>
+			if description != "" {
+				<p>{ description }</p>
+			}
+		</div>
+		<div class="admin-list-page-actions">
+			{ children... }
+		</div>
+	</header>
+}
+
+templ AdminListToolbar(total int, noun string) {
+	<div class="admin-list-toolbar">
+		<div class="admin-list-filters">
+			{ children... }
+		</div>
+		<div class="admin-list-meta">
+			<span><strong data-admin-list-count>{ fmt.Sprintf("%d", total) }</strong> { noun }</span>
+			<button class="admin-list-clear" type="button" data-admin-list-clear hidden>Limpar filtros</button>
+		</div>
+	</div>
+}
+
+templ AdminListSearch(placeholder string) {
+	<label class="admin-list-control admin-list-search">
+		<span>Buscar</span>
+		<div class="admin-list-search-field">
+			<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+			<input type="search" placeholder={ placeholder } autocomplete="off" data-admin-list-search/>
+		</div>
+	</label>
+}
+
+templ AdminListFilter(label, key string) {
+	<label class="admin-list-control">
+		<span>{ label }</span>
+		<select data-admin-list-filter={ key }>
+			{ children... }
+		</select>
+	</label>
+}
+
+templ AdminDataTable(headers []string, total int, emptyMessage string) {
+	<section class="admin-list-panel">
+		<div class="admin-list-table-wrap">
+			<table class="admin-data-table">
+				<thead>
+					<tr>
+						for _, header := range headers {
+							<th>{ header }</th>
+						}
+					</tr>
+				</thead>
+				<tbody>
+					{ children... }
+					<tr class="admin-list-empty" data-admin-list-empty hidden?={ total > 0 }>
+						<td colspan={ fmt.Sprintf("%d", len(headers)) }>{ emptyMessage }</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+	</section>
+}
+
+templ AdminActionMenu(label string) {
+	<details class="admin-action-menu">
+		<summary aria-label={ label } title={ label }>
+			<span aria-hidden="true">•••</span>
+		</summary>
+		<div class="admin-action-menu-popover">
+			{ children... }
+		</div>
+	</details>
+}
