@@ -159,7 +159,24 @@ func ensureProposalFinancialTerms(markdown string) string {
 		return text
 	}
 
-	return text + "\n\n## Condições comerciais da proposta\n\n" + strings.Join(sections, "\n\n")
+	financialSection := "## Condições comerciais da proposta\n\n" + strings.Join(sections, "\n\n")
+	if index := contractSignatureSectionIndex(text); index >= 0 {
+		before := strings.TrimSpace(text[:index])
+		after := strings.TrimSpace(text[index:])
+		return before + "\n\n" + financialSection + "\n\n" + after
+	}
+
+	return text + "\n\n" + financialSection
+}
+
+func contractSignatureSectionIndex(markdown string) int {
+	lower := strings.ToLower(markdown)
+	for _, heading := range []string{"\n## assinaturas", "\n## assinatura"} {
+		if index := strings.Index(lower, heading); index >= 0 {
+			return index + 1
+		}
+	}
+	return -1
 }
 
 func pricingVariableKey(catalogID string) string {
