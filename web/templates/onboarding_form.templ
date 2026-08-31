@@ -3,17 +3,17 @@ package templates
 import "github.com/jefersonMarques/apresentacao-viagate/internal/domain"
 
 templ OnboardingFormPage(onboarding domain.Onboarding, message, errorMessage string, requireReview bool) {
-	@Base("ViaGate — Dados da operação") {
+	@Base("ViaGate — Dados para contratação") {
 		<header class="topbar">
-			<span class="brand">VIAGATE · IMPLANTAÇÃO</span>
+			<span class="brand">VIAGATE · CONTRATAÇÃO</span>
 			<span>{ onboarding.LegalName }</span>
 		</header>
 		<main class="shell">
 			<header class="header">
 				<div>
-					<span class="step-title">DADOS DA OPERAÇÃO</span>
-					<h1>Informações para implantação</h1>
-					<p>Revise os dados da empresa e complete as informações operacionais, responsáveis, apólice e usuários do sistema.</p>
+					<span class="step-title">DADOS PARA CONTRATAÇÃO</span>
+					<h1>Somente o necessário para preparar o contrato</h1>
+					<p>Revise os dados da empresa, da apólice e do responsável pela contratação. Informações de faturamento, mercadorias e usuários serão solicitadas somente depois da assinatura.</p>
 				</div>
 			</header>
 			if message != "" {
@@ -59,7 +59,7 @@ templ OnboardingFormPage(onboarding domain.Onboarding, message, errorMessage str
 					</div>
 				</section>
 				<section class="panel">
-					<div class="panel-head"><h2>Responsável pela empresa</h2></div>
+					<div class="panel-head"><h2>Responsável pela contratação</h2></div>
 					<div class="panel-body grid">
 						<div class="field"><label>Nome completo</label><input name="responsible_name" value={ onboarding.CompanyResponsibleName } required/></div>
 						<div class="field"><label>CPF</label><input name="responsible_cpf" data-mask="cpf" autocomplete="off" value={ onboarding.CompanyResponsibleCPF } required/></div>
@@ -69,44 +69,9 @@ templ OnboardingFormPage(onboarding domain.Onboarding, message, errorMessage str
 						<div class="field full"><label><input type="checkbox" name="responsible_authority" value="1" checked?={ onboarding.AuthorityDeclared } required/> Declaro possuir poderes ou autorização para representar a empresa nesta contratação.</label></div>
 					</div>
 				</section>
-				<section class="panel">
-					<div class="panel-head"><h2>Responsável financeiro</h2></div>
-					<div class="panel-body grid">
-						<div class="field"><label>Nome</label><input name="finance_name" value={ onboarding.FinanceResponsibleName }/></div>
-						<div class="field"><label>Telefone</label><input name="finance_phone" data-mask="phone" autocomplete="tel" value={ onboarding.FinanceResponsiblePhone }/></div>
-						<div class="field"><label>E-mail</label><input name="finance_email" type="email" value={ onboarding.FinanceResponsibleEmail }/></div>
-					</div>
-				</section>
-				<section class="panel">
-					<div class="panel-head"><h2>Mercadorias transportadas</h2></div>
-					<div class="panel-body" id="goods-list">
-						for _, good := range onboarding.Goods {
-							<div class="field" style="margin-bottom:8px"><input name="goods" value={ good }/></div>
-						}
-						<div class="field"><input name="goods" placeholder="Ex.: Queijos frescos"/></div>
-						<button class="btn" type="button" onclick="addGood()" style="margin-top:10px">Adicionar mercadoria</button>
-					</div>
-				</section>
-				<section class="panel">
-					<div class="panel-head"><h2>Usuários que utilizarão o sistema</h2></div>
-					<div class="panel-body" id="users-list">
-						for _, systemUser := range onboarding.SystemUsers {
-							<div class="repeat-row">
-								<input name="system_user_name" placeholder="Nome" value={ systemUser.Name }/>
-								<input name="system_user_phone" data-mask="phone" autocomplete="tel" placeholder="Telefone" value={ systemUser.Phone }/>
-								<input name="system_user_email" type="email" placeholder="E-mail" value={ systemUser.Email }/>
-								<button class="btn danger" type="button" onclick="this.parentElement.remove()">Remover</button>
-							</div>
-						}
-						<div class="repeat-row">
-							<input name="system_user_name" placeholder="Nome"/>
-							<input name="system_user_phone" data-mask="phone" autocomplete="tel" placeholder="Telefone"/>
-							<input name="system_user_email" type="email" placeholder="E-mail"/>
-							<button class="btn danger" type="button" onclick="this.parentElement.remove()">Remover</button>
-						</div>
-						<button class="btn" type="button" onclick="addSystemUser()">Adicionar usuário</button>
-					</div>
-				</section>
+				<div class="notice" style="margin:18px 0">
+					<strong>Depois da assinatura:</strong> solicitaremos em uma etapa separada o responsável financeiro, as mercadorias transportadas e os usuários iniciais do sistema. Você poderá preencher ou encaminhar essa etapa para alguém da sua equipe.
+				</div>
 				<div class="actions"><button class="btn dark" type="submit">Salvar dados</button></div>
 			</form>
 			<section class="panel" style="margin-top:18px">
@@ -139,8 +104,6 @@ templ OnboardingFormPage(onboarding domain.Onboarding, message, errorMessage str
 			</section>
 			<script>
 			async function lookupCNPJ(){const input=document.getElementById('cnpj');const cnpj=(input.value||'').toUpperCase().replace(/[^0-9A-Z]/g,'');if(!/^[0-9A-Z]{12}[0-9]{2}$/.test(cnpj)){alert('Informe um CNPJ válido, numérico ou alfanumérico.');return;}const r=await fetch('/api/cnpj/'+encodeURIComponent(cnpj));if(!r.ok){alert('Não foi possível consultar o CNPJ. Você pode preencher os dados manualmente.');return;}const d=await r.json();input.value=d.cnpj||cnpj;input.dispatchEvent(new Event('input',{bubbles:true}));for(const [id,key] of Object.entries({legal_name:'legal_name',trade_name:'trade_name',postal_code:'postal_code',street:'street',street_number:'number',complement:'complement',district:'district',city:'city',state:'state'})){const e=document.getElementById(id);if(e&&d[key]){e.value=d[key];e.dispatchEvent(new Event('input',{bubbles:true}));}}}
-			function addGood(){const root=document.getElementById('goods-list');const wrapper=document.createElement('div');wrapper.className='field';wrapper.style.marginBottom='8px';wrapper.innerHTML='<input name="goods" placeholder="Mercadoria"/>';root.insertBefore(wrapper,root.lastElementChild);}
-			function addSystemUser(){const root=document.getElementById('users-list');const row=document.createElement('div');row.className='repeat-row';row.innerHTML='<input name="system_user_name" placeholder="Nome"/><input name="system_user_phone" data-mask="phone" autocomplete="tel" placeholder="Telefone"/><input name="system_user_email" type="email" placeholder="E-mail"/><button class="btn danger" type="button" onclick="this.parentElement.remove()">Remover</button>';root.insertBefore(row,root.lastElementChild);}
 			</script>
 		</main>
 	}
