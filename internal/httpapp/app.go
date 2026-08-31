@@ -280,6 +280,7 @@ func (a *App) sameOriginWrites(next http.Handler) http.Handler {
 				http.Error(w, "origem da requisição não permitida", http.StatusForbidden)
 				return
 			}
+		}
 		next.ServeHTTP(w, r)
 	})
 }
