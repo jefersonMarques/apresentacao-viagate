@@ -16,7 +16,8 @@ func NewStore(pool *pgxpool.Pool) *Store { return &Store{pool: pool} }
 
 func (s *Store) List(ctx context.Context, userID string, all bool) ([]domain.PipelineItem, error) {
 	query := `
-		select p.id::text,p.title,coalesce(nullif(cl.trade_name,''),nullif(cl.legal_name,''),'Cliente não identificado'),u.name,p.status::text,
+		select p.id::text,p.title,coalesce(nullif(cl.trade_name,''),nullif(cl.legal_name,''),'Cliente não identificado'),u.name,
+		       coalesce(a.name,''),coalesce(ct.signed_by_name,''),p.status::text,
 		       coalesce(o.id::text,''),coalesce(o.status::text,''),
 		       coalesce(ct.id::text,''),coalesce(ct.status::text,''),
 		       a.accepted_at,o.submitted_at,ct.fully_signed_at,
@@ -25,14 +26,21 @@ func (s *Store) List(ctx context.Context, userID string, all bool) ([]domain.Pip
 		join clients cl on cl.id=p.client_id
 		join users u on u.id=p.created_by
 		left join lateral (
-			select pa.id,pa.accepted_at
+			select pa.id,pa.name,pa.accepted_at
 			from proposal_acceptances pa
 			where pa.proposal_id=p.id
 			order by pa.accepted_at desc limit 1
 		) a on true
 		left join onboardings o on o.proposal_acceptance_id=a.id
 		left join lateral (
-			select c.id,c.status,c.fully_signed_at,c.updated_at
+			select c.id,c.status,c.fully_signed_at,c.updated_at,
+			       coalesce((
+			           select cs.name
+			           from contract_signers cs
+			           where cs.contract_id=c.id and cs.status='signed'
+			           order by cs.sign_order,cs.signed_at
+			           limit 1
+			       ),'') as signed_by_name
 			from contracts c
 			where c.onboarding_id=o.id
 			order by c.created_at desc limit 1
@@ -54,7 +62,8 @@ func (s *Store) List(ctx context.Context, userID string, all bool) ([]domain.Pip
 	for rows.Next() {
 		var item domain.PipelineItem
 		if err := rows.Scan(
-			&item.ProposalID,&item.ProposalTitle,&item.ClientName,&item.CommercialName,&item.ProposalStatus,
+			&item.ProposalID,&item.ProposalTitle,&item.ClientName,&item.CommercialName,
+			&item.CustomerResponsibleName,&item.SignedByName,&item.ProposalStatus,
 			&item.OnboardingID,&item.OnboardingStatus,&item.ContractID,&item.ContractStatus,
 			&item.AcceptedAt,&item.SubmittedAt,&item.FullySignedAt,&item.UpdatedAt,
 		); err != nil {
