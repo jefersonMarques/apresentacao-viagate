@@ -87,7 +87,13 @@ templ AdminDashboardPage(user domain.User, items []DashboardRecord) {
 								<td><span class={ "badge kind-badge "+item.Kind }>{ item.KindLabel }</span></td>
 								<td><strong>{ item.ClientName }</strong></td>
 								<td><span class="record-title">{ item.Title }</span></td>
-								<td><span class={ "badge status-badge status-"+item.Status }>{ humanStatus(item.Status) }</span></td>
+								<td>
+									if item.Kind == "proposal" && item.Status == "accepted" {
+										<span class="badge success">Aceita · bloqueada</span>
+									} else {
+										<span class={ "badge status-badge status-"+item.Status }>{ humanStatus(item.Status) }</span>
+									}
+								</td>
 								<td>{ item.OwnerName }</td>
 								<td>
 									<span class="record-meta">{ DashboardVersionLabel(item) }</span>
@@ -98,7 +104,12 @@ templ AdminDashboardPage(user domain.User, items []DashboardRecord) {
 								<td><span class="record-meta">{ item.UpdatedAt.Format("02/01/2006") }</span><small>{ item.UpdatedAt.Format("15:04") }</small></td>
 								<td>
 									<div class="actions compact row-actions">
-										<a class="btn" href={ templ.SafeURL(item.EditURL) }>@IconEdit()<span>Editar</span></a>
+										if item.EditURL != "" {
+											<a class="btn" href={ templ.SafeURL(item.EditURL) }>@IconEdit()<span>Editar</span></a>
+										}
+										if item.Kind == "proposal" {
+											<a class="btn" href={ templ.SafeURL("/admin/proposals/new?duplicate=" + item.ID) }>@IconCopy()<span>Duplicar</span></a>
+										}
 										if item.PublicURL != "" {
 											<a class="btn dark" target="_blank" rel="noopener" href={ templ.SafeURL(item.PublicURL) }>@IconOpen()<span>Abrir</span></a>
 										}
