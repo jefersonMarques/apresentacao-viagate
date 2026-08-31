@@ -78,7 +78,9 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
 						</form>
 					} else {
 						<div class="activation-tags">
-							for _, good := range access.Profile.Goods { <span>{ good }</span> }
+							for _, good := range access.Profile.Goods {
+								<span>{ good }</span>
+							}
 						</div>
 					}
 				</section>
@@ -146,29 +148,71 @@ templ ActivationsAdminPage(user domain.User, items []activation.AdminItem) {
 	@AdminLayout("Ativações", user) {
 		<section class="page-head"><div><span class="eyebrow">IMPLANTAÇÃO</span><h1>Dados para ativação</h1><p>Acompanhe o que ainda depende do cliente e o que já está pronto para implantação.</p></div></section>
 		<div class="panel table-wrap">
-			<table><thead><tr><th>Cliente</th><th>Comercial</th><th>Status</th><th>Dados</th><th>Contrato</th><th></th></tr></thead><tbody>
-				for _, item := range items {
-					<tr><td><strong>{ item.ClientName }</strong></td><td>{ item.CommercialName }</td><td><span class="badge">{ ActivationStatusLabel(item.Status) }</span></td><td>{ fmt.Sprintf("%d mercadorias · %d usuários", item.GoodsCount, item.SystemUserCount) }</td><td>if item.FullySignedAt != nil { { item.FullySignedAt.Format("02/01/2006 15:04") } }</td><td><a class="btn ghost" href={ templ.SafeURL("/admin/activations/" + item.ProfileID) }>Abrir</a></td></tr>
-				}
-			</tbody></table>
+			<table>
+				<thead><tr><th>Cliente</th><th>Comercial</th><th>Status</th><th>Dados</th><th>Contrato</th><th></th></tr></thead>
+				<tbody>
+					for _, item := range items {
+						<tr>
+							<td><strong>{ item.ClientName }</strong></td>
+							<td>{ item.CommercialName }</td>
+							<td><span class="badge">{ ActivationStatusLabel(item.Status) }</span></td>
+							<td>{ fmt.Sprintf("%d mercadorias · %d usuários", item.GoodsCount, item.SystemUserCount) }</td>
+							<td>
+								if item.FullySignedAt != nil {
+									{ item.FullySignedAt.Format("02/01/2006 15:04") }
+								}
+							</td>
+							<td><a class="btn ghost" href={ templ.SafeURL("/admin/activations/" + item.ProfileID) }>Abrir</a></td>
+						</tr>
+					}
+					if len(items) == 0 {
+						<tr><td colspan="6">Nenhuma ativação encontrada.</td></tr>
+					}
+				</tbody>
+			</table>
 		</div>
 	}
 }
 
 templ ActivationAdminDetailPage(user domain.User, profile activation.Profile) {
 	@AdminLayout("Ativação", user) {
-		<section class="page-head"><div><span class="eyebrow">DADOS PARA ATIVAÇÃO</span><h1>{ profile.LegalName }</h1><p>{ ActivationStatusLabel(profile.Status) }</p></div><div class="actions"><a class="btn ghost" href={ templ.SafeURL("/admin/contracts/" + profile.ContractID + "/document") }>Contrato assinado</a></div></section>
+		<section class="page-head">
+			<div><span class="eyebrow">DADOS PARA ATIVAÇÃO</span><h1>{ profile.LegalName }</h1><p>{ ActivationStatusLabel(profile.Status) }</p></div>
+			<div class="actions"><a class="btn ghost" href={ templ.SafeURL("/admin/contracts/" + profile.ContractID + "/document") }>Contrato assinado</a></div>
+		</section>
 		<div class="grid cols-2">
 			<section class="panel"><h2>Empresa e contratação</h2><dl class="data-list"><dt>CNPJ</dt><dd>{ brfields.FormatCNPJ(profile.CNPJ) }</dd><dt>Endereço</dt><dd>{ ActivationAddress(profile) }</dd><dt>Operação</dt><dd>{ humanOperationType(profile.OperationType) }</dd><dt>Seguradora</dt><dd>{ profile.Insurer }</dd><dt>Responsável</dt><dd>{ profile.CompanyResponsibleName } · { profile.CompanyResponsibleEmail }</dd></dl></section>
 			<section class="panel"><h2>Financeiro</h2><dl class="data-list"><dt>Responsável</dt><dd>{ profile.FinanceResponsibleName }</dd><dt>E-mail</dt><dd>{ profile.FinanceResponsibleEmail }</dd><dt>Telefone</dt><dd>{ brfields.FormatPhone(profile.FinanceResponsiblePhone) }</dd></dl></section>
-			<section class="panel"><h2>Mercadorias</h2><div class="activation-tags">for _, good := range profile.Goods { <span>{ good }</span> }</div></section>
-			<section class="panel"><h2>Usuários iniciais</h2><div class="activation-user-list">for _, systemUser := range profile.SystemUsers { <div><strong>{ systemUser.Name }</strong><span>{ systemUser.Email } · { brfields.FormatPhone(systemUser.Phone) }</span></div> }</div></section>
+			<section class="panel">
+				<h2>Mercadorias</h2>
+				<div class="activation-tags">
+					for _, good := range profile.Goods {
+						<span>{ good }</span>
+					}
+				</div>
+			</section>
+			<section class="panel">
+				<h2>Usuários iniciais</h2>
+				<div class="activation-user-list">
+					for _, systemUser := range profile.SystemUsers {
+						<div><strong>{ systemUser.Name }</strong><span>{ systemUser.Email } · { brfields.FormatPhone(systemUser.Phone) }</span></div>
+					}
+				</div>
+			</section>
 		</div>
 		if profile.Status == "completed" || profile.Status == "under_internal_setup" {
-			<section class="panel" style="margin-top:18px"><h2>Implantação interna</h2><p>Os dados do cliente já foram concluídos. Atualize o estágio conforme a preparação interna avançar.</p><div class="actions">
-				if profile.Status == "completed" { <form method="post" action={ templ.SafeURL("/admin/activations/" + profile.ID + "/status") }><input type="hidden" name="status" value="under_internal_setup"/><button class="btn dark" type="submit">Iniciar implantação</button></form> }
-				if profile.Status == "under_internal_setup" { <form method="post" action={ templ.SafeURL("/admin/activations/" + profile.ID + "/status") }><input type="hidden" name="status" value="activated"/><button class="btn primary" type="submit">Marcar operação como liberada</button></form> }
-			</div></section>
+			<section class="panel" style="margin-top:18px">
+				<h2>Implantação interna</h2>
+				<p>Os dados do cliente já foram concluídos. Atualize o estágio conforme a preparação interna avançar.</p>
+				<div class="actions">
+					if profile.Status == "completed" {
+						<form method="post" action={ templ.SafeURL("/admin/activations/" + profile.ID + "/status") }><input type="hidden" name="status" value="under_internal_setup"/><button class="btn dark" type="submit">Iniciar implantação</button></form>
+					}
+					if profile.Status == "under_internal_setup" {
+						<form method="post" action={ templ.SafeURL("/admin/activations/" + profile.ID + "/status") }><input type="hidden" name="status" value="activated"/><button class="btn primary" type="submit">Marcar operação como liberada</button></form>
+					}
+				</div>
+			</section>
 		}
 	}
 }
