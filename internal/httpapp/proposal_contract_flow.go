@@ -54,15 +54,15 @@ func (a *App) acceptProposalContractFlow(w http.ResponseWriter, r *http.Request,
 		return
 	}
 	acceptance := proposals.AcceptanceInput{
-		Name: responsibleName,
-		Email: emailAddress,
-		CPF: cpf,
-		Phone: phone,
-		Role: strings.TrimSpace(r.FormValue("responsible_role")),
+		Name:              responsibleName,
+		Email:             emailAddress,
+		CPF:               cpf,
+		Phone:             phone,
+		Role:              strings.TrimSpace(r.FormValue("responsible_role")),
 		AuthorityDeclared: true,
-		IPAddress: requestIP(r),
-		UserAgent: r.UserAgent(),
-		SessionID: sessionID,
+		IPAddress:         requestIP(r),
+		UserAgent:         r.UserAgent(),
+		SessionID:         sessionID,
 	}
 	result, err := a.proposalStore.Accept(r.Context(), proposal, acceptance)
 	if err != nil {
@@ -225,7 +225,15 @@ func (a *App) storeInlineInsurancePolicy(r *http.Request, onboardingID string, f
 	}
 	_, _ = a.pool.Exec(r.Context(), `
 		insert into audit_events(actor_type,event_type,resource_type,resource_id,ip_address,user_agent,metadata)
-		values('customer','document.uploaded','onboarding',$1,$2,$3,jsonb_build_object('type','insurance_policy','sha256',$4,'filename',$5,'source','proposal_modal'))
+		values(
+			'customer','document.uploaded','onboarding',$1,$2,$3,
+			jsonb_build_object(
+				'type','insurance_policy',
+				'sha256',$4::text,
+				'filename',$5::text,
+				'source','proposal_modal'
+			)
+		)
 	`, onboardingID, requestIP(r), r.UserAgent(), fmt.Sprintf("%x", hash[:]), filename)
 	return nil
 }
