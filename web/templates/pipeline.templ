@@ -83,7 +83,7 @@ templ PipelineDetailPage(user domain.User, item domain.PipelineItem, events []do
 						if item.FullySignedAt != nil {
 							<div class="pipeline-signed-highlight">
 								<span>ASSINATURA CONCLUÍDA</span>
-								<strong>{ item.FullySignedAt.Format("31/01/2006 15:04") }</strong>
+								<strong>{ item.FullySignedAt.Format("02/01/2006 15:04") }</strong>
 								<small>Assinado por { PipelineSignedBy(item) }</small>
 							</div>
 						}
