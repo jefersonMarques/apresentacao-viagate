@@ -8,18 +8,26 @@ import (
 templ AuditPage(user domain.User, entries []auditlog.Entry, query string) {
 	@AdminLayout("Auditoria", user) {
 		<section class="page-head">
-			<div><span class="eyebrow">AUDITORIA</span><h1>Histórico técnico e de acesso</h1><p>Consulte ações administrativas, eventos de assinatura e visualizações registradas pela plataforma.</p></div>
+			<div>
+				<span class="eyebrow">AUDITORIA</span>
+				<h1>Histórico técnico e de acesso</h1>
+				<p>Consulte ações administrativas, eventos de assinatura e visualizações registradas pela plataforma.</p>
+			</div>
 		</section>
 		<section class="panel" style="margin-bottom:18px">
 			<form method="get" action="/admin/audit" class="actions">
 				<input name="q" value={ query } placeholder="Buscar evento, usuário, IP ou identificador" style="min-width:min(520px,100%);min-height:42px;padding:9px 11px;border:1px solid #cfd9df"/>
 				<button class="btn dark" type="submit">Buscar</button>
-				if query != "" { <a class="btn ghost" href="/admin/audit">Limpar</a> }
+				if query != "" {
+					<a class="btn ghost" href="/admin/audit">Limpar</a>
+				}
 			</form>
 		</section>
 		<div class="panel table-wrap">
 			<table>
-				<thead><tr><th>Quando</th><th>Evento</th><th>Responsável</th><th>Recurso</th><th>IP</th></tr></thead>
+				<thead>
+					<tr><th>Quando</th><th>Evento</th><th>Responsável</th><th>Recurso</th><th>IP</th></tr>
+				</thead>
 				<tbody>
 					for _, entry := range entries {
 						<tr>
@@ -30,7 +38,9 @@ templ AuditPage(user domain.User, entries []auditlog.Entry, query string) {
 							<td>{ entry.IPAddress }</td>
 						</tr>
 					}
-					if len(entries) == 0 { <tr><td colspan="5">Nenhum evento encontrado.</td></tr> }
+					if len(entries) == 0 {
+						<tr><td colspan="5">Nenhum evento encontrado.</td></tr>
+					}
 				</tbody>
 			</table>
 		</div>
