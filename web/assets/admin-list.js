@@ -106,21 +106,22 @@
   }
 
   function openMenu(root) {
-    const trigger = root.querySelector('[data-admin-action-trigger]');
-    const popover = root.querySelector('[data-admin-action-popover]');
-    if (!trigger || !popover) return;
-
     if (openActionMenu?.root === root) {
       closeActionMenu({ restoreFocus: true });
       return;
     }
 
     closeActionMenu();
+    const trigger = root.querySelector('[data-admin-action-trigger]');
+    const popover = root.querySelector('[data-admin-action-popover]');
+    if (!trigger || !popover) return;
+
     const placeholder = document.createComment('admin-action-menu');
     popover.parentNode.insertBefore(placeholder, popover);
     document.body.appendChild(popover);
     root.classList.add('is-open');
     trigger.setAttribute('aria-expanded', 'true');
+    popover.querySelectorAll('a,button').forEach((action) => action.setAttribute('role', 'menuitem'));
     openActionMenu = { root, trigger, popover, placeholder };
     positionActionMenu(trigger, popover);
 
