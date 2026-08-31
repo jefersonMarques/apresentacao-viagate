@@ -58,15 +58,25 @@ templ Dashboard(user domain.User) {
 				<div class="panel-body"><span class="step-title">INSTITUCIONAL</span><h2>Apresentações</h2><p>Materiais personalizados por comercial e cliente.</p></div>
 			</a>
 			if HasRole(user, "super_admin") || HasRole(user, "operations") {
-				<a class="panel" href="/admin/onboardings" style="text-decoration:none"><div class="panel-body"><span class="step-title">OPERAÇÕES</span><h2>Cadastros</h2><p>Revisão dos dados necessários para gerar o contrato.</p></div></a>
-				<a class="panel" href="/admin/activations" style="text-decoration:none"><div class="panel-body"><span class="step-title">IMPLANTAÇÃO</span><h2>Dados para ativação</h2><p>Financeiro, mercadorias, usuários e liberação da operação.</p></div></a>
+				<a class="panel" href="/admin/onboardings" style="text-decoration:none">
+					<div class="panel-body"><span class="step-title">OPERAÇÕES</span><h2>Cadastros</h2><p>Revisão dos dados necessários para gerar o contrato.</p></div>
+				</a>
+				<a class="panel" href="/admin/activations" style="text-decoration:none">
+					<div class="panel-body"><span class="step-title">IMPLANTAÇÃO</span><h2>Dados para ativação</h2><p>Financeiro, mercadorias, usuários e liberação da operação.</p></div>
+				</a>
 			}
 			if HasRole(user, "super_admin") || HasRole(user, "legal") {
-				<a class="panel" href="/admin/contracts/templates" style="text-decoration:none"><div class="panel-body"><span class="step-title">JURÍDICO</span><h2>Modelos de contrato</h2><p>Markdown versionado, validação e prévia em PDF.</p></div></a>
-				<a class="panel" href="/admin/audit" style="text-decoration:none"><div class="panel-body"><span class="step-title">AUDITORIA</span><h2>Histórico técnico</h2><p>Assinaturas, acessos e eventos críticos registrados.</p></div></a>
+				<a class="panel" href="/admin/contracts/templates" style="text-decoration:none">
+					<div class="panel-body"><span class="step-title">JURÍDICO</span><h2>Modelos de contrato</h2><p>Markdown versionado, validação e prévia em PDF.</p></div>
+				</a>
+				<a class="panel" href="/admin/audit" style="text-decoration:none">
+					<div class="panel-body"><span class="step-title">AUDITORIA</span><h2>Histórico técnico</h2><p>Assinaturas, acessos e eventos críticos registrados.</p></div>
+				</a>
 			}
 			if HasRole(user, "super_admin") {
-				<a class="panel" href="/admin/users" style="text-decoration:none"><div class="panel-body"><span class="step-title">ADMINISTRAÇÃO</span><h2>Usuários</h2><p>Convites, funções e permissões.</p></div></a>
+				<a class="panel" href="/admin/users" style="text-decoration:none">
+					<div class="panel-body"><span class="step-title">ADMINISTRAÇÃO</span><h2>Usuários</h2><p>Convites, funções e permissões.</p></div>
+				</a>
 			}
 		</section>
 	}
@@ -85,7 +95,9 @@ templ InvitationPage(name, email, token, errorMessage string) {
 					<span class="step-title">CRIAR SENHA</span>
 					<h1>{ name }</h1>
 					<p>{ email }</p>
-					if errorMessage != "" { <div class="notice error">{ errorMessage }</div> }
+					if errorMessage != "" {
+						<div class="notice error">{ errorMessage }</div>
+					}
 					<div class="field"><label>Senha</label><input name="password" type="password" minlength="10" autocomplete="new-password" required/></div>
 					<div class="field" style="margin-top:12px"><label>Confirmar senha</label><input name="confirm_password" type="password" minlength="10" autocomplete="new-password" required/></div>
 					<div class="actions" style="margin-top:18px"><button class="btn primary" type="submit">Ativar acesso</button></div>
@@ -107,23 +119,42 @@ templ ContractTemplatesPage(user domain.User, items []domain.ContractTemplate, v
 				</div>
 				<div class="v1-actions"><a class="v1-button primary" href="/admin/contracts/templates">Novo modelo</a></div>
 			</header>
-			if message != "" { <div class="v1-message">{ message }</div> }
+			if message != "" {
+				<div class="v1-message">{ message }</div>
+			}
 			<div class="v1-contract-layout">
 				<aside class="v1-contract-list">
 					<div class="v1-contract-list-head"><h2>Modelos disponíveis</h2><div class="v1-help" style="margin-top:5px">Selecione um modelo para criar a próxima versão.</div></div>
 					for _, item := range items {
 						<a class="v1-contract-item" href={ templ.SafeURL("/admin/contracts/templates?template=" + item.ID) }>
-							<strong>{ item.Name }</strong><span>v{ item.CurrentVersion }</span>
-							if item.IsActive { <span>Ativo</span> } else { <span>Inativo</span> }
-							if item.Description != "" { <span>{ item.Description }</span> }
-							if selectedID == item.ID { <span style="color:#ff6b18;font-weight:800">EDITANDO ESTE MODELO</span> }
+							<strong>{ item.Name }</strong>
+							<span>v{ item.CurrentVersion }</span>
+							if item.IsActive {
+								<span>Ativo</span>
+							} else {
+								<span>Inativo</span>
+							}
+							if item.Description != "" {
+								<span>{ item.Description }</span>
+							}
+							if selectedID == item.ID {
+								<span style="color:#ff6b18;font-weight:800">EDITANDO ESTE MODELO</span>
+							}
 						</a>
 					}
-					if len(items) == 0 { <div class="v1-contract-item"><strong>Nenhum modelo cadastrado</strong><span>Crie o primeiro modelo no editor.</span></div> }
+					if len(items) == 0 {
+						<div class="v1-contract-item"><strong>Nenhum modelo cadastrado</strong><span>Crie o primeiro modelo no editor.</span></div>
+					}
 				</aside>
 				<section class="v1-contract-editor">
 					<div class="v1-contract-editor-head">
-						if selectedID == "" { <h2>Novo modelo</h2><div class="v1-help" style="margin-top:5px">Crie a versão inicial de um novo contrato.</div> } else { <h2>Nova versão de { selectedName }</h2><div class="v1-help" style="margin-top:5px">O conteúdo abaixo é uma cópia da versão atual. Ao salvar, uma nova versão imutável será criada.</div> }
+						if selectedID == "" {
+							<h2>Novo modelo</h2>
+							<div class="v1-help" style="margin-top:5px">Crie a versão inicial de um novo contrato.</div>
+						} else {
+							<h2>Nova versão de { selectedName }</h2>
+							<div class="v1-help" style="margin-top:5px">O conteúdo abaixo é uma cópia da versão atual. Ao salvar, uma nova versão imutável será criada.</div>
+						}
 					</div>
 					<div class="v1-contract-editor-body">
 						<form method="post" action="/admin/contracts/templates">
@@ -133,7 +164,15 @@ templ ContractTemplatesPage(user domain.User, items []domain.ContractTemplate, v
 								<div class="v1-field"><label>Descrição</label><input name="description" value={ selectedDescription } placeholder="Quando este modelo deve ser usado"/></div>
 								<div class="v1-field full"><label>Conteúdo Markdown</label><textarea class="v1-contract-markdown" name="markdown" data-contract-markdown required placeholder="# CONTRATO\n\nCONTRATANTE: {client.legal_name} ...">{ selectedMarkdown }</textarea></div>
 							</div>
-							<div style="margin-top:18px"><div class="v1-label" style="margin-bottom:8px">Inserir variável</div><div class="v1-variable-cloud">for _, variable := range variables { <button class="v1-variable-chip" type="button" data-contract-variable={ "{" + variable + "}" }>{ "{" + variable + "}" }</button> }</div><div class="v1-help" style="margin-top:8px">Clique em uma variável para inseri-la na posição atual do cursor.</div></div>
+							<div style="margin-top:18px">
+								<div class="v1-label" style="margin-bottom:8px">Inserir variável</div>
+								<div class="v1-variable-cloud">
+									for _, variable := range variables {
+										<button class="v1-variable-chip" type="button" data-contract-variable={ "{" + variable + "}" }>{ "{" + variable + "}" }</button>
+									}
+								</div>
+								<div class="v1-help" style="margin-top:8px">Clique em uma variável para inseri-la na posição atual do cursor.</div>
+							</div>
 							<label class="v1-option-card" style="margin-top:18px"><span class="v1-switch"><input type="checkbox" name="make_default" value="1"/><span class="v1-switch-track"></span></span><span><strong>Usar como modelo padrão</strong><small>Novos contratos utilizarão este modelo quando não houver outra regra específica.</small></span></label>
 							<div class="v1-actions" style="margin-top:18px">
 								<button class="v1-button" type="submit" formaction="/admin/contracts/templates/preview" formtarget="_blank" data-processing="Gerando prévia...">Validar e visualizar PDF</button>
