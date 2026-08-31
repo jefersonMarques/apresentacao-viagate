@@ -1,0 +1,68 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - feature/go-commercial-platform
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: viagate_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d viagate_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/viagate_test?sslmode=disable
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.x'
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Generate templ components
+        run: go run github.com/a-h/templ/cmd/templ@v0.3.943 generate
+
+      - name: Ensure go.mod is already tidy
+        run: |
+          cp go.mod /tmp/go.mod.before
+          go mod tidy
+          diff -u /tmp/go.mod.before go.mod
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test ./...
+
+      - name: Build binaries
+        run: |
+          go build ./cmd/migrate
+          go build ./cmd/server
+
+      - name: Apply migrations
+        run: go run ./cmd/migrate up
+
+      - name: Verify migrations are idempotent
+        run: go run ./cmd/migrate up
