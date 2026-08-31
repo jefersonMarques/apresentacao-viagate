@@ -88,7 +88,7 @@ func (a *App) contractTemplatesPage(w http.ResponseWriter, r *http.Request) {
 
 	message := ""
 	if r.URL.Query().Get("saved") == "1" {
-		message = "Nova versão do modelo salva."
+		message = "Nova versão do modelo salva após validação completa."
 	}
 	render(r.Context(), w, http.StatusOK, templates.ContractTemplatesPage(
 		user,
@@ -114,6 +114,14 @@ func (a *App) saveContractTemplate(w http.ResponseWriter, r *http.Request) {
 	markdown := strings.TrimSpace(r.FormValue("markdown"))
 	if name == "" || markdown == "" {
 		http.Error(w, "nome e conteúdo são obrigatórios", http.StatusBadRequest)
+		return
+	}
+
+	// A mesma cadeia Renderer -> Chromium usada em contratos reais precisa
+	// conseguir produzir um PDF antes de uma nova versão jurídica ser criada.
+	if err := a.contractGenerator.ValidateTemplate(r.Context(), markdown); err != nil {
+		a.logger.Warn("contract template validation failed", "error", err, "user_id", user.ID)
+		http.Error(w, "O modelo não pode ser salvo porque a prévia falhou: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
