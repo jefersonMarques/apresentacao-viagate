@@ -95,6 +95,8 @@ func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID stri
 		}
 	}
 
+	templateMarkdown = ensureProposalFinancialTerms(templateMarkdown)
+
 	pricingData, err := loadProposalPricing(ctx, g.pool, proposalVersionID)
 	if err != nil {
 		return Generated{}, err
