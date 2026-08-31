@@ -53,6 +53,9 @@ func (s *Store) DuplicateSourceByID(ctx context.Context, userID, proposalID stri
 
 	if len(contentJSON) > 0 {
 		_ = json.Unmarshal(contentJSON, &input.Content)
+		if title := contentString(input.Content, "proposal", "title"); title != "" {
+			input.Title = title
+		}
 		input.ClientLogoURL = contentString(input.Content, "client", "logo_url")
 		input.ContactName = contentString(input.Content, "contact", "name")
 		input.ContactRole = contentString(input.Content, "contact", "role")
