@@ -14,7 +14,7 @@ templ SignatureContractPage(access contracts.SignerAccess, token string, message
 					<h1>Contrato para assinatura</h1>
 					<p>Responsável: { access.Signer.Name } · { access.Signer.Email }</p>
 				</header>
-				if message != "" {
+				if access.Signer.Status == "signed" && message != "" {
 					<div class="notice">{ message }</div>
 				}
 				if errorMessage != "" {
@@ -28,10 +28,13 @@ templ SignatureContractPage(access contracts.SignerAccess, token string, message
 						<span class="step-title">CONFIRMAÇÃO DE IDENTIDADE</span>
 						<h2>Assinar este documento</h2>
 						<p>O código é enviado para o e-mail informado pelo responsável durante o aceite da proposta. O documento acima é identificado por hash SHA-256 e não pode ser substituído após a assinatura.</p>
-						<div class="actions" style="margin-bottom:18px">
+						<div class="actions" style="align-items:center;margin-bottom:18px">
 							<form method="post" action={ templ.SafeURL("/sign/" + token + "/otp") }>
 								<button class="btn dark" type="submit" data-processing="Enviando código...">Enviar código por e-mail</button>
 							</form>
+							if message != "" {
+								<div class="notice" style="margin:0">{ message }</div>
+							}
 						</div>
 						<form method="post" action={ templ.SafeURL("/sign/" + token + "/confirm") } class="grid">
 							<div class="field">
@@ -39,7 +42,10 @@ templ SignatureContractPage(access contracts.SignerAccess, token string, message
 								<input name="otp" inputmode="numeric" maxlength="6" autocomplete="one-time-code" required/>
 							</div>
 							<div class="field full">
-								<label><input type="checkbox" name="consent" value="1" required/> { legaltext.SignatureConsentText }</label>
+								<label style="display:flex;align-items:flex-start;gap:10px;text-transform:none;letter-spacing:0;font-size:12px;line-height:1.5">
+									<input type="checkbox" name="consent" value="1" required style="width:18px;min-width:18px;height:18px;min-height:18px;padding:0;margin:1px 0 0;flex:0 0 18px"/>
+									<span>{ legaltext.SignatureConsentText }</span>
+								</label>
 							</div>
 							<div class="field full">
 								<button class="btn primary" type="submit" data-processing="Registrando assinatura...">Assinar contrato</button>
