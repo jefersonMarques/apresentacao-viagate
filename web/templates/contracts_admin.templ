@@ -1,0 +1,78 @@
+package templates
+
+import (
+	"github.com/jefersonMarques/apresentacao-viagate/internal/contracts"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
+)
+
+templ ContractsAdminPage(user domain.User, items []contracts.AdminContractItem) {
+	@AdminLayout("ViaGate — Contratos", user) {
+		<header class="header">
+			<div>
+				<span class="step-title">CONTRATOS</span>
+				<h1>Contratos da operação</h1>
+				<p>Acesse contratos gerados, assinaturas concluídas e os documentos comprobatórios da contratação.</p>
+			</div>
+			<div class="actions">
+				if HasRole(user, "super_admin") || HasRole(user, "legal") {
+					<a class="btn" href="/admin/contracts/templates">Modelos de contrato</a>
+				}
+			</div>
+		</header>
+		<section class="panel">
+			<div class="table-wrap">
+				<table class="table">
+					<thead>
+						<tr><th>Cliente</th><th>Proposta</th><th>Comercial</th><th>Situação</th><th>Assinatura</th><th>Documentos</th></tr>
+					</thead>
+					<tbody>
+						for _, item := range items {
+							<tr class={ templ.KV("pipeline-row-signed", item.Status == "signed") }>
+								<td><strong>{ item.ClientName }</strong></td>
+								<td>{ item.ProposalTitle }</td>
+								<td>{ item.CommercialName }</td>
+								<td>
+									if item.Status == "signed" {
+										<span class="badge success">Contrato assinado</span>
+									} else {
+										<span class="badge">{ humanStatus(item.Status) }</span>
+									}
+								</td>
+								<td>
+									if item.FullySignedAt != nil {
+										<strong>{ item.FullySignedAt.Format("02/01/2006 15:04") }</strong>
+										if item.SignerName != "" {
+											<br/><small>por { item.SignerName }</small>
+										}
+									} else if item.SentAt != nil {
+										<span>Aguardando assinatura</span>
+									} else {
+										<span>Contrato preparado</span>
+									}
+								</td>
+								<td>
+									<div class="actions compact">
+										<a class="btn" target="_blank" rel="noopener" href={ templ.SafeURL("/admin/contracts/" + item.ID + "/document") }>
+											if item.Status == "signed" {
+												<span>Contrato assinado</span>
+											} else {
+												<span>Contrato</span>
+											}
+										</a>
+										if item.FinalizedAt != nil {
+											<a class="btn" target="_blank" rel="noopener" href={ templ.SafeURL("/admin/contracts/" + item.ID + "/evidence") }>Comprovante da assinatura</a>
+											<a class="btn dark" target="_blank" rel="noopener" href={ templ.SafeURL("/admin/contracts/" + item.ID + "/package") }>Documentos da assinatura</a>
+										}
+									</div>
+								</td>
+							</tr>
+						}
+						if len(items) == 0 {
+							<tr><td colspan="6">Nenhum contrato encontrado.</td></tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		</section>
+	}
+}
