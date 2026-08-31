@@ -30,9 +30,17 @@ func AdminRoleLabel(role string) string {
 	}
 }
 
-func AdminListNoun(total int, singular, plural string) string {
+func AdminListSingular(noun string) string {
+	return strings.NewReplacer("(ões)", "", "(s)", "").Replace(strings.TrimSpace(noun))
+}
+
+func AdminListPlural(noun string) string {
+	return strings.NewReplacer("(ões)", "ões", "(s)", "s").Replace(strings.TrimSpace(noun))
+}
+
+func AdminListNoun(total int, noun string) string {
 	if total == 1 {
-		return singular
+		return AdminListSingular(noun)
 	}
-	return plural
+	return AdminListPlural(noun)
 }
