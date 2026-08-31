@@ -20,7 +20,7 @@ templ OnboardingAdminListPage(user domain.User, items []onboardingpkg.AdminItem)
 					<thead><tr><th>Cliente</th><th>Comercial</th><th>Status</th><th>Contrato</th><th>Enviado</th><th></th></tr></thead>
 					<tbody>
 						for _, item := range items {
-							<tr class={ templ.KV("pipeline-row-signed", item.ContractStatus == "signed") }>
+							<tr class={ OnboardingAdminRowClass(item) }>
 								<td><strong>{ item.LegalName }</strong><br/><small>{ CNPJ(item.CNPJ) }</small></td>
 								<td>{ item.CommercialName }</td>
 								<td><span class="badge">{ humanStatus(item.Status) }</span></td>
