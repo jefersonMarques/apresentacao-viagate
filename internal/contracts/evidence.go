@@ -92,21 +92,35 @@ func NewFinalizer(pool *pgxpool.Pool, pdf *PDFRenderer, storageClient *storage.S
 
 func (f *Finalizer) Finalize(ctx context.Context, contractID string) error {
 	report, contractKey, err := f.loadReport(ctx, contractID)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 
 	evidenceJSON, err := json.MarshalIndent(report, "", "  ")
-	if err != nil { return fmt.Errorf("marshal evidence report: %w", err) }
+	if err != nil {
+		return fmt.Errorf("marshal evidence report: %w", err)
+	}
 	evidenceHTML, err := renderEvidenceHTML(report)
-	if err != nil { return fmt.Errorf("render evidence report: %w", err) }
+	if err != nil {
+		return fmt.Errorf("render evidence report: %w", err)
+	}
 	evidencePDF, err := f.pdf.Render(ctx, evidenceHTML)
-	if err != nil { return fmt.Errorf("render evidence PDF: %w", err) }
+	if err != nil {
+		return fmt.Errorf("render evidence PDF: %w", err)
+	}
 
 	contractReader, _, _, err := f.storage.Get(ctx, contractKey)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	contractPDF, err := io.ReadAll(contractReader)
 	_ = contractReader.Close()
-	if err != nil { return fmt.Errorf("read contract PDF: %w", err) }
-	if sha256Hex(contractPDF)!=report.DocumentSHA256{return fmt.Errorf("stored contract PDF hash does not match signed document hash")}
+	if err != nil {
+		return fmt.Errorf("read contract PDF: %w", err)
+	}
+	if sha256Hex(contractPDF) != report.DocumentSHA256 {
+		return fmt.Errorf("stored contract PDF hash does not match signed document hash")
+	}
 
 	manifest := map[string]string{
 		"contract.pdf":  sha256Hex(contractPDF),
@@ -114,46 +128,74 @@ func (f *Finalizer) Finalize(ctx context.Context, contractID string) error {
 		"evidence.json": sha256Hex(evidenceJSON),
 	}
 	manifestJSON, err := json.MarshalIndent(manifest, "", "  ")
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 
 	packageBytes, err := zipEvidencePackage(contractPDF, evidencePDF, evidenceJSON, manifestJSON)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	evidenceHash := sha256.Sum256(evidencePDF)
 	packageHash := sha256.Sum256(packageBytes)
 	baseKey := fmt.Sprintf("contracts/%s/final", contractID)
 	evidenceKey := baseKey + "/evidence.pdf"
 	packageKey := baseKey + "/signed-package.zip"
 
-	if err := f.storage.Put(ctx, evidenceKey, "application/pdf", bytes.NewReader(evidencePDF), int64(len(evidencePDF))); err != nil { return err }
+	if err := f.storage.Put(ctx, evidenceKey, "application/pdf", bytes.NewReader(evidencePDF), int64(len(evidencePDF))); err != nil {
+		return err
+	}
 	if err := f.storage.Put(ctx, packageKey, "application/zip", bytes.NewReader(packageBytes), int64(len(packageBytes))); err != nil {
 		_ = f.storage.Delete(ctx, evidenceKey)
 		return err
 	}
 
-	command, err := f.pool.Exec(ctx, `
+	cleanupArtifacts := func() {
+		_ = f.storage.Delete(ctx, evidenceKey)
+		_ = f.storage.Delete(ctx, packageKey)
+	}
+
+	tx, err := f.pool.Begin(ctx)
+	if err != nil {
+		cleanupArtifacts()
+		return fmt.Errorf("begin evidence finalization transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	command, err := tx.Exec(ctx, `
 		update contracts
 		set evidence_report_storage_key=$2,evidence_report_sha256=$3,
 		    final_package_storage_key=$4,final_package_sha256=$5,finalized_at=now(),updated_at=now()
 		where id=$1 and status='signed' and finalized_at is null
 	`, contractID, evidenceKey, evidenceHash[:], packageKey, packageHash[:])
-	if err != nil { return fmt.Errorf("persist evidence artifacts: %w", err) }
+	if err != nil {
+		cleanupArtifacts()
+		return fmt.Errorf("persist evidence artifacts: %w", err)
+	}
 	if command.RowsAffected() == 0 {
-		_ = f.storage.Delete(ctx, evidenceKey)
-		_ = f.storage.Delete(ctx, packageKey)
+		cleanupArtifacts()
 		return nil
 	}
 
-	_, _ = f.pool.Exec(ctx, `
+	if _, err := tx.Exec(ctx, `
 		insert into audit_events(actor_type,event_type,resource_type,resource_id,metadata)
 		values('system','contract.evidence_finalized','contract',$1,
-		       jsonb_build_object('evidence_sha256',$2,'package_sha256',$3))
-	`, contractID, hex.EncodeToString(evidenceHash[:]), hex.EncodeToString(packageHash[:]))
+		       jsonb_build_object('evidence_sha256',$2::text,'package_sha256',$3::text))
+	`, contractID, hex.EncodeToString(evidenceHash[:]), hex.EncodeToString(packageHash[:])); err != nil {
+		cleanupArtifacts()
+		return fmt.Errorf("record evidence finalization audit: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		cleanupArtifacts()
+		return fmt.Errorf("commit evidence finalization: %w", err)
+	}
 	return nil
 }
 
 func (f *Finalizer) loadReport(ctx context.Context, contractID string) (EvidenceReport, string, error) {
 	var report EvidenceReport
-	var documentHash,acceptanceTextHash,proposalHash []byte
+	var documentHash, acceptanceTextHash, proposalHash []byte
 	var contractKey string
 	err := f.pool.QueryRow(ctx, `
 		select c.id::text,o.legal_name,o.cnpj,pv.version_number,tv.version_number,
@@ -168,17 +210,35 @@ func (f *Finalizer) loadReport(ctx context.Context, contractID string) (Evidence
 		join contract_template_versions tv on tv.id=c.template_version_id
 		where c.id=$1 and c.status='signed' and c.fully_signed_at is not null
 	`, contractID).Scan(
-		&report.ContractID,&report.ClientLegalName,&report.ClientCNPJ,&report.ProposalVersion,&report.TemplateVersion,
-		&documentHash,&contractKey,&report.GeneratedAt,&report.FullySignedAt,
-		&report.Acceptance.Name,&report.Acceptance.Email,&report.Acceptance.CPF,&report.Acceptance.Role,
-		&report.Acceptance.AcceptedAt,&report.Acceptance.IPAddress,&report.Acceptance.UserAgent,&report.Acceptance.SessionID,
-		&report.Acceptance.TextVersion,&report.Acceptance.Text,&acceptanceTextHash,&proposalHash,
+		&report.ContractID,
+		&report.ClientLegalName,
+		&report.ClientCNPJ,
+		&report.ProposalVersion,
+		&report.TemplateVersion,
+		&documentHash,
+		&contractKey,
+		&report.GeneratedAt,
+		&report.FullySignedAt,
+		&report.Acceptance.Name,
+		&report.Acceptance.Email,
+		&report.Acceptance.CPF,
+		&report.Acceptance.Role,
+		&report.Acceptance.AcceptedAt,
+		&report.Acceptance.IPAddress,
+		&report.Acceptance.UserAgent,
+		&report.Acceptance.SessionID,
+		&report.Acceptance.TextVersion,
+		&report.Acceptance.Text,
+		&acceptanceTextHash,
+		&proposalHash,
 	)
-	if err != nil { return EvidenceReport{}, "", fmt.Errorf("load signed contract: %w", err) }
+	if err != nil {
+		return EvidenceReport{}, "", fmt.Errorf("load signed contract: %w", err)
+	}
 	report.Version = "viagate-signature-evidence-v1"
 	report.DocumentSHA256 = hex.EncodeToString(documentHash)
-	report.Acceptance.TextSHA256=hex.EncodeToString(acceptanceTextHash)
-	report.Acceptance.ProposalSHA256=hex.EncodeToString(proposalHash)
+	report.Acceptance.TextSHA256 = hex.EncodeToString(acceptanceTextHash)
+	report.Acceptance.ProposalSHA256 = hex.EncodeToString(proposalHash)
 	report.IssuedAt = time.Now().UTC()
 	report.CompanyLegalName = f.company.LegalName
 	report.CompanyCNPJ = f.company.CNPJ
@@ -192,17 +252,39 @@ func (f *Finalizer) loadReport(ctx context.Context, contractID string) (Evidence
 		       exists(select 1 from identity_verifications i where i.contract_signer_id=s.id and i.mode='liveness' and i.status='verified')
 		from contract_signers s where s.contract_id=$1 order by s.sign_order,s.id
 	`, contractID)
-	if err != nil { return EvidenceReport{}, "", err }
+	if err != nil {
+		return EvidenceReport{}, "", err
+	}
 	for rows.Next() {
 		var signer EvidenceSigner
 		var consentHash []byte
-		if err := rows.Scan(&signer.ID,&signer.Type,&signer.Name,&signer.Email,&signer.CPF,&signer.Role,&signer.Status,&signer.SignedAt,&signer.SessionID,&signer.ConsentVersion,&signer.ConsentText,&consentHash,&signer.OTP,&signer.Face,&signer.Liveness); err != nil {
-			rows.Close();return EvidenceReport{}, "", err
+		if err := rows.Scan(
+			&signer.ID,
+			&signer.Type,
+			&signer.Name,
+			&signer.Email,
+			&signer.CPF,
+			&signer.Role,
+			&signer.Status,
+			&signer.SignedAt,
+			&signer.SessionID,
+			&signer.ConsentVersion,
+			&signer.ConsentText,
+			&consentHash,
+			&signer.OTP,
+			&signer.Face,
+			&signer.Liveness,
+		); err != nil {
+			rows.Close()
+			return EvidenceReport{}, "", err
 		}
-		signer.ConsentSHA256=hex.EncodeToString(consentHash)
+		signer.ConsentSHA256 = hex.EncodeToString(consentHash)
 		report.Signers = append(report.Signers, signer)
 	}
-	if err := rows.Err(); err != nil { rows.Close();return EvidenceReport{}, "", err }
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return EvidenceReport{}, "", err
+	}
 	rows.Close()
 
 	events, err := f.pool.Query(ctx, `
@@ -210,12 +292,16 @@ func (f *Finalizer) loadReport(ctx context.Context, contractID string) (Evidence
 		       coalesce(e.user_agent,''),coalesce(e.session_id::text,''),e.created_at,e.metadata
 		from signature_events e where e.contract_id=$1 order by e.created_at,e.id
 	`, contractID)
-	if err != nil { return EvidenceReport{}, "", err }
+	if err != nil {
+		return EvidenceReport{}, "", err
+	}
 	defer events.Close()
 	for events.Next() {
 		var event EvidenceEvent
 		var metadataJSON []byte
-		if err := events.Scan(&event.Type,&event.SignerID,&event.IPAddress,&event.UserAgent,&event.SessionID,&event.OccurredAt,&metadataJSON); err != nil { return EvidenceReport{}, "", err }
+		if err := events.Scan(&event.Type, &event.SignerID, &event.IPAddress, &event.UserAgent, &event.SessionID, &event.OccurredAt, &metadataJSON); err != nil {
+			return EvidenceReport{}, "", err
+		}
 		_ = json.Unmarshal(metadataJSON, &event.Metadata)
 		report.Events = append(report.Events, event)
 	}
@@ -248,22 +334,36 @@ func renderEvidenceHTML(report EvidenceReport) (string, error) {
 	<p>Relatório emitido em {{time .IssuedAt}} por {{.CompanyLegalName}} · CNPJ {{cnpj .CompanyCNPJ}}.</p>`
 
 	functions := template.FuncMap{
-		"time": func(value time.Time) string { return value.UTC().Format("02/01/2006 15:04:05 MST") },
-		"timePtr": func(value *time.Time) string { if value == nil { return "—" };return value.UTC().Format("02/01/2006 15:04:05 MST") },
-		"cpf": brfields.FormatCPF,
+		"time": func(value time.Time) string {
+			return value.UTC().Format("02/01/2006 15:04:05 MST")
+		},
+		"timePtr": func(value *time.Time) string {
+			if value == nil {
+				return "—"
+			}
+			return value.UTC().Format("02/01/2006 15:04:05 MST")
+		},
+		"cpf":  brfields.FormatCPF,
 		"cnpj": brfields.FormatCNPJ,
 	}
 	parsed, err := template.New("evidence").Funcs(functions).Parse(page)
-	if err != nil { return "", err }
+	if err != nil {
+		return "", err
+	}
 	var output bytes.Buffer
-	if err := parsed.Execute(&output, report); err != nil { return "", err }
+	if err := parsed.Execute(&output, report); err != nil {
+		return "", err
+	}
 	return output.String(), nil
 }
 
 func zipEvidencePackage(contractPDF, evidencePDF, evidenceJSON, manifestJSON []byte) ([]byte, error) {
 	var output bytes.Buffer
 	writer := zip.NewWriter(&output)
-	files := []struct { name string; data []byte }{
+	files := []struct {
+		name string
+		data []byte
+	}{
 		{name: "contract.pdf", data: contractPDF},
 		{name: "evidence.pdf", data: evidencePDF},
 		{name: "evidence.json", data: evidenceJSON},
@@ -271,10 +371,18 @@ func zipEvidencePackage(contractPDF, evidencePDF, evidenceJSON, manifestJSON []b
 	}
 	for _, file := range files {
 		entry, err := writer.Create(file.name)
-		if err != nil { _ = writer.Close();return nil, err }
-		if _, err := entry.Write(file.data); err != nil { _ = writer.Close();return nil, err }
+		if err != nil {
+			_ = writer.Close()
+			return nil, err
+		}
+		if _, err := entry.Write(file.data); err != nil {
+			_ = writer.Close()
+			return nil, err
+		}
 	}
-	if err := writer.Close(); err != nil { return nil, err }
+	if err := writer.Close(); err != nil {
+		return nil, err
+	}
 	return output.Bytes(), nil
 }
 
