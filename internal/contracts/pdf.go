@@ -3,9 +3,12 @@ package contracts
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
+	"strings"
 )
 
 type PDFRenderer struct {
@@ -17,6 +20,11 @@ func NewPDFRenderer(chromiumPath string) *PDFRenderer {
 }
 
 func (r *PDFRenderer) Render(ctx context.Context, html string) ([]byte, error) {
+	browserPath, err := resolveBrowserExecutable(r.chromiumPath)
+	if err != nil {
+		return nil, err
+	}
+
 	dir, err := os.MkdirTemp("", "viagate-contract-*")
 	if err != nil {
 		return nil, fmt.Errorf("create contract temp dir: %w", err)
@@ -34,15 +42,15 @@ func (r *PDFRenderer) Render(ctx context.Context, html string) ([]byte, error) {
 		return nil, fmt.Errorf("write contract html: %w", err)
 	}
 
-	command := exec.CommandContext(ctx, r.chromiumPath,
+	command := exec.CommandContext(ctx, browserPath,
 		"--headless",
 		"--disable-gpu",
 		"--no-pdf-header-footer",
 		"--print-to-pdf="+pdfPath,
-		"file://"+htmlPath,
+		fileURL(htmlPath),
 	)
 	if output, err := command.CombinedOutput(); err != nil {
-		return nil, fmt.Errorf("render contract PDF: %w: %s", err, string(output))
+		return nil, fmt.Errorf("render contract PDF with %q: %w: %s", browserPath, err, string(output))
 	}
 
 	pdf, err := os.ReadFile(pdfPath)
@@ -53,4 +61,81 @@ func (r *PDFRenderer) Render(ctx context.Context, html string) ([]byte, error) {
 		return nil, fmt.Errorf("generated contract PDF is empty")
 	}
 	return pdf, nil
+}
+
+func resolveBrowserExecutable(configuredPath string) (string, error) {
+	configuredPath = strings.Trim(strings.TrimSpace(configuredPath), `"'`)
+	candidates := browserCandidates(configuredPath)
+
+	for _, candidate := range candidates {
+		candidate = strings.TrimSpace(candidate)
+		if candidate == "" {
+			continue
+		}
+
+		if filepath.IsAbs(candidate) || strings.ContainsAny(candidate, `/\\`) {
+			if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
+				return candidate, nil
+			}
+			continue
+		}
+
+		if resolved, err := exec.LookPath(candidate); err == nil {
+			return resolved, nil
+		}
+	}
+
+	return "", fmt.Errorf(
+		"browser executable not found; CHROMIUM_PATH=%q. Install Chrome, Edge or Chromium, or configure CHROMIUM_PATH with a valid executable path",
+		configuredPath,
+	)
+}
+
+func browserCandidates(configuredPath string) []string {
+	candidates := []string{configuredPath}
+
+	switch runtime.GOOS {
+	case "windows":
+		programFiles := os.Getenv("ProgramFiles")
+		programFilesX86 := os.Getenv("ProgramFiles(x86)")
+		localAppData := os.Getenv("LOCALAPPDATA")
+
+		candidates = append(candidates,
+			filepath.Join(programFiles, "Google", "Chrome", "Application", "chrome.exe"),
+			filepath.Join(programFilesX86, "Google", "Chrome", "Application", "chrome.exe"),
+			filepath.Join(localAppData, "Google", "Chrome", "Application", "chrome.exe"),
+			filepath.Join(programFiles, "Microsoft", "Edge", "Application", "msedge.exe"),
+			filepath.Join(programFilesX86, "Microsoft", "Edge", "Application", "msedge.exe"),
+			"chrome.exe",
+			"msedge.exe",
+			"chromium.exe",
+		)
+	case "darwin":
+		candidates = append(candidates,
+			"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+			"/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+			"/Applications/Chromium.app/Contents/MacOS/Chromium",
+			"google-chrome",
+			"chromium",
+		)
+	default:
+		candidates = append(candidates,
+			"chromium",
+			"chromium-browser",
+			"google-chrome",
+			"google-chrome-stable",
+			"microsoft-edge",
+			"microsoft-edge-stable",
+		)
+	}
+
+	return candidates
+}
+
+func fileURL(path string) string {
+	urlPath := filepath.ToSlash(path)
+	if runtime.GOOS == "windows" && !strings.HasPrefix(urlPath, "/") {
+		urlPath = "/" + urlPath
+	}
+	return (&url.URL{Scheme: "file", Path: urlPath}).String()
 }
