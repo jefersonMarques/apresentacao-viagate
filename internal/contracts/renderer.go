@@ -84,7 +84,11 @@ func (r *Renderer) Render(markdown string, data Data) (renderedMarkdown string, 
 		return "", "", fmt.Errorf("render markdown: %w", err)
 	}
 
-	page := template.HTML(htmlBuffer.String() + "\n" + contractVerificationMarker)
+	nonce, err := newVerificationNonce()
+	if err != nil {
+		return "", "", err
+	}
+	page := template.HTML(htmlBuffer.String() + "\n<!-- VIAGATE_CONTRACT_NONCE:" + nonce + " -->\n" + contractVerificationMarker)
 	return text, string(page), nil
 }
 
