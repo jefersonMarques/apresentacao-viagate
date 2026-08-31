@@ -3,8 +3,6 @@ package proposals
 import (
 	"context"
 	"encoding/json"
-
-	"github.com/jackc/pgx/v5"
 )
 
 // DuplicateSourceByID returns the reusable commercial content of a proposal.
@@ -88,7 +86,7 @@ func (s *Store) DuplicateSourceByID(ctx context.Context, userID, proposalID stri
 		}
 		input.Items = append(input.Items, item)
 	}
-	if err := rows.Err(); err != nil && err != pgx.ErrNoRows {
+	if err := rows.Err(); err != nil {
 		return EditorInput{}, err
 	}
 	return input, nil
