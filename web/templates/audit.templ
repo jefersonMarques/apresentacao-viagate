@@ -7,42 +7,20 @@ import (
 
 templ AuditPage(user domain.User, entries []auditlog.Entry, query string) {
 	@AdminLayout("Auditoria", user) {
-		<section class="page-head">
-			<div>
-				<span class="eyebrow">AUDITORIA</span>
-				<h1>Histórico técnico e de acesso</h1>
-				<p>Consulte ações administrativas, eventos de assinatura e visualizações registradas pela plataforma.</p>
-			</div>
-		</section>
-		<section class="panel" style="margin-bottom:18px">
-			<form method="get" action="/admin/audit" class="actions">
-				<input name="q" value={ query } placeholder="Buscar evento, usuário, IP ou identificador" style="min-width:min(520px,100%);min-height:42px;padding:9px 11px;border:1px solid #cfd9df"/>
-				<button class="btn dark" type="submit">Buscar</button>
-				if query != "" {
-					<a class="btn ghost" href="/admin/audit">Limpar</a>
+		@AdminPageHeader("AUDITORIA", "Histórico técnico e de acesso", "Consulte ações administrativas, eventos de assinatura e visualizações registradas pela plataforma.")
+		<div class="admin-list-root">
+			@AdminServerSearchToolbar("/admin/audit", query, "Buscar evento, usuário, IP ou identificador...", len(entries), "evento(s)")
+			@AdminDataTable([]string{"Quando", "Evento", "Responsável", "Recurso", "IP"}, len(entries), "Nenhum evento encontrado.") {
+				for _, entry := range entries {
+					<tr data-admin-list-row>
+						<td data-label="Quando" data-primary="true"><strong>{ entry.OccurredAt.Format("02/01/2006 15:04:05") }</strong></td>
+						<td data-label="Evento"><strong>{ AuditEventLabel(entry.EventType) }</strong><small>{ entry.EventType }</small></td>
+						<td data-label="Responsável">{ entry.Actor }</td>
+						<td data-label="Recurso">{ AuditResourceLabel(entry.ResourceType) }<small style="word-break:break-all">{ entry.ResourceID }</small></td>
+						<td data-label="IP">{ entry.IPAddress }</td>
+					</tr>
 				}
-			</form>
-		</section>
-		<div class="panel table-wrap">
-			<table>
-				<thead>
-					<tr><th>Quando</th><th>Evento</th><th>Responsável</th><th>Recurso</th><th>IP</th></tr>
-				</thead>
-				<tbody>
-					for _, entry := range entries {
-						<tr>
-							<td>{ entry.OccurredAt.Format("02/01/2006 15:04:05") }</td>
-							<td><strong>{ AuditEventLabel(entry.EventType) }</strong><small style="display:block;color:var(--muted)">{ entry.EventType }</small></td>
-							<td>{ entry.Actor }</td>
-							<td>{ AuditResourceLabel(entry.ResourceType) }<small style="display:block;color:var(--muted);word-break:break-all">{ entry.ResourceID }</small></td>
-							<td>{ entry.IPAddress }</td>
-						</tr>
-					}
-					if len(entries) == 0 {
-						<tr><td colspan="5">Nenhum evento encontrado.</td></tr>
-					}
-				</tbody>
-			</table>
+			}
 		</div>
 	}
 }
