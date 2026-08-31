@@ -36,7 +36,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24.x'
-          cache: false
+          cache: true
 
       - name: Download dependencies
         run: go mod download
@@ -44,14 +44,13 @@ jobs:
       - name: Generate templ components
         run: go run github.com/a-h/templ/cmd/templ@v0.3.943 generate
 
-      - name: Ensure go.mod is already tidy
+      - name: Ensure module files are already tidy
         run: |
           cp go.mod /tmp/go.mod.before
+          cp go.sum /tmp/go.sum.before
           go mod tidy
           diff -u /tmp/go.mod.before go.mod
-          echo '--- GO_SUM_BEGIN ---'
-          cat go.sum
-          echo '--- GO_SUM_END ---'
+          diff -u /tmp/go.sum.before go.sum
 
       - name: Vet
         run: go vet ./...
