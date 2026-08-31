@@ -148,7 +148,7 @@ func ensureProposalFinancialTerms(markdown string) string {
 	text := strings.TrimSpace(markdown)
 	sections := make([]string, 0, 3)
 
-	if !strings.Contains(text, "{proposal.pricing_table}") && !strings.Contains(text, "{pricing.") {
+	if !strings.Contains(text, "{proposal.pricing_table}") {
 		sections = append(sections, "{proposal.pricing_table}")
 	}
 	if !strings.Contains(text, "{proposal.minimum_invoice}") {
