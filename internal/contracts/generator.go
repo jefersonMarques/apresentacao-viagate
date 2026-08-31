@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -166,14 +167,19 @@ func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID stri
 		_ = g.storage.Delete(ctx, storageKey)
 		return Generated{}, err
 	}
+
 	signer, err := g.store.AddSigner(ctx, contract.ID, "client", repName, repEmail, repCPF, repRole, 1)
 	if err != nil {
-		return Generated{}, err
+		cleanupErr := g.cleanupGeneratedContract(ctx, contract.ID, storageKey)
+		return Generated{}, joinGenerationError("add contract signer", err, cleanupErr)
 	}
+
 	token, err := g.store.SignerPublicToken(ctx, signer.ID)
 	if err != nil {
-		return Generated{}, err
+		cleanupErr := g.cleanupGeneratedContract(ctx, contract.ID, storageKey)
+		return Generated{}, joinGenerationError("load contract signer token", err, cleanupErr)
 	}
+
 	return Generated{
 		ContractID:     contract.ID,
 		SignerID:       signer.ID,
@@ -182,6 +188,25 @@ func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID stri
 		SignerEmail:    repEmail,
 		DocumentSHA256: documentHash[:],
 	}, nil
+}
+
+func (g *Generator) cleanupGeneratedContract(ctx context.Context, contractID, storageKey string) error {
+	var cleanupErrors []error
+	if _, err := g.pool.Exec(ctx, `delete from contracts where id=$1 and status='generated'`, contractID); err != nil {
+		cleanupErrors = append(cleanupErrors, fmt.Errorf("delete generated contract: %w", err))
+	}
+	if err := g.storage.Delete(ctx, storageKey); err != nil {
+		cleanupErrors = append(cleanupErrors, fmt.Errorf("delete generated contract PDF: %w", err))
+	}
+	return errors.Join(cleanupErrors...)
+}
+
+func joinGenerationError(operation string, err, cleanupErr error) error {
+	primary := fmt.Errorf("%s: %w", operation, err)
+	if cleanupErr == nil {
+		return primary
+	}
+	return errors.Join(primary, cleanupErr)
 }
 
 func contractDate(value string) string {
