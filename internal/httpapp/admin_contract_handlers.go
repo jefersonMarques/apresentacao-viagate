@@ -47,22 +47,32 @@ func (a *App) adminContractArtifact(w http.ResponseWriter, r *http.Request, arti
 
 	switch artifact {
 	case "contract":
+		a.auditContractArtifactAccess(r, user.ID, contractID, artifact)
 		a.redirectPrivateArtifact(w, r, keys.ContractKey, "contrato-viagate.pdf")
 	case "evidence":
 		if !keys.Finalized || keys.EvidenceKey == "" {
 			http.Error(w, "O relatório técnico da assinatura ainda está sendo preparado.", http.StatusConflict)
 			return
 		}
+		a.auditContractArtifactAccess(r, user.ID, contractID, artifact)
 		a.redirectPrivateArtifact(w, r, keys.EvidenceKey, "relatorio-tecnico-assinatura-viagate.pdf")
 	case "package":
 		if !keys.Finalized || keys.PackageKey == "" {
 			http.Error(w, "Os documentos finais da assinatura ainda estão sendo preparados.", http.StatusConflict)
 			return
 		}
+		a.auditContractArtifactAccess(r, user.ID, contractID, artifact)
 		a.redirectPrivateArtifact(w, r, keys.PackageKey, "documentos-assinatura-viagate.zip")
 	default:
 		http.NotFound(w, r)
 	}
+}
+
+func (a *App) auditContractArtifactAccess(r *http.Request, userID, contractID, artifact string) {
+	_, _ = a.pool.Exec(r.Context(), `
+		insert into audit_events(actor_user_id,actor_type,event_type,resource_type,resource_id,ip_address,user_agent,metadata)
+		values($1,'user','contract.artifact_downloaded','contract',$2,$3,$4,jsonb_build_object('artifact',$5::text))
+	`, userID, contractID, requestIP(r), r.UserAgent(), artifact)
 }
 
 func (a *App) canAccessContract(ctx context.Context, userID, contractID string) bool {
