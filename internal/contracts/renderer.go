@@ -84,7 +84,7 @@ func (r *Renderer) Render(markdown string, data Data) (renderedMarkdown string, 
 		return "", "", fmt.Errorf("render markdown: %w", err)
 	}
 
-	page := template.HTML(htmlBuffer.String())
+	page := template.HTML(htmlBuffer.String() + "\n" + contractVerificationMarker)
 	return text, string(page), nil
 }
 
