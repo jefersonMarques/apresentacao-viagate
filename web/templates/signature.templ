@@ -56,17 +56,10 @@ templ SignatureContractPage(access contracts.SignerAccess, token string, message
 					<section class="accept-box">
 						<span class="step-title">CONTRATO ASSINADO</span>
 						<h2>Assinatura registrada com sucesso.</h2>
-						<p>A ViaGate mantém os registros necessários para comprovar a autenticidade da assinatura e preservar a versão do documento que foi aceita.</p>
+						<p>Esta versão do contrato foi registrada como assinada. A ViaGate mantém de forma segura os registros necessários para comprovar a assinatura quando necessário.</p>
 						<div class="actions">
 							<a class="btn dark" href={ templ.SafeURL("/sign/" + token + "/contract") }>Baixar contrato assinado</a>
-							if access.Contract.FinalizedAt != nil {
-								<a class="btn" href={ templ.SafeURL("/sign/" + token + "/evidence") }>Comprovante da assinatura</a>
-								<a class="btn primary" href={ templ.SafeURL("/sign/" + token + "/package") }>Baixar documentos da assinatura</a>
-							}
 						</div>
-						if access.Contract.FinalizedAt == nil {
-							<div class="notice" style="margin-top:16px">Os documentos finais da assinatura estão sendo preparados. Recarregue esta página em instantes.</div>
-						}
 					</section>
 				}
 			</main>
