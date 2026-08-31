@@ -29,3 +29,10 @@ func AdminRoleLabel(role string) string {
 		return role
 	}
 }
+
+func AdminListNoun(total int, singular, plural string) string {
+	if total == 1 {
+		return singular
+	}
+	return plural
+}
