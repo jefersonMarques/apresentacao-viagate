@@ -17,7 +17,7 @@ templ AdminPageHeader(eyebrow, title, description string) {
 	</header>
 }
 
-templ AdminListToolbar(total int, singular, plural string) {
+templ AdminListToolbar(total int, noun string) {
 	<div class="admin-list-toolbar">
 		<div class="admin-list-filters">
 			{ children... }
@@ -25,14 +25,14 @@ templ AdminListToolbar(total int, singular, plural string) {
 		<div class="admin-list-meta">
 			<span>
 				<strong data-admin-list-count>{ fmt.Sprintf("%d", total) }</strong>
-				<span data-admin-list-noun data-singular={ singular } data-plural={ plural }>{ AdminListNoun(total, singular, plural) }</span>
+				<span data-admin-list-noun data-singular={ AdminListSingular(noun) } data-plural={ AdminListPlural(noun) }>{ AdminListNoun(total, noun) }</span>
 			</span>
 			<button class="admin-list-clear" type="button" data-admin-list-clear hidden>Limpar filtros</button>
 		</div>
 	</div>
 }
 
-templ AdminServerSearchToolbar(action, query, placeholder string, total int, singular, plural string) {
+templ AdminServerSearchToolbar(action, query, placeholder string, total int, noun string) {
 	<form method="get" action={ templ.SafeURL(action) } class="admin-list-toolbar">
 		<div class="admin-list-filters">
 			<label class="admin-list-control admin-list-search">
@@ -47,7 +47,7 @@ templ AdminServerSearchToolbar(action, query, placeholder string, total int, sin
 				<a class="btn" href={ templ.SafeURL(action) }>Limpar</a>
 			}
 		</div>
-		<div class="admin-list-meta"><span><strong>{ fmt.Sprintf("%d", total) }</strong> { AdminListNoun(total, singular, plural) }</span></div>
+		<div class="admin-list-meta"><span><strong>{ fmt.Sprintf("%d", total) }</strong> { AdminListNoun(total, noun) }</span></div>
 	</form>
 }
 
