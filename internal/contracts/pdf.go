@@ -25,6 +25,11 @@ func (r *PDFRenderer) Render(ctx context.Context, html string) ([]byte, error) {
 		return nil, err
 	}
 
+	html, err = InjectVerificationBlock(html)
+	if err != nil {
+		return nil, err
+	}
+
 	dir, err := os.MkdirTemp("", "viagate-contract-*")
 	if err != nil {
 		return nil, fmt.Errorf("create contract temp dir: %w", err)
@@ -36,6 +41,7 @@ func (r *PDFRenderer) Render(ctx context.Context, html string) ([]byte, error) {
 
 	document := `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><style>
 		@page{size:A4;margin:18mm 16mm}body{font-family:Arial,sans-serif;color:#18212a;font-size:11pt;line-height:1.55}h1,h2,h3{color:#071827;page-break-after:avoid}h1{font-size:20pt}h2{font-size:15pt;margin-top:22pt}p,li{orphans:3;widows:3}table{width:100%;border-collapse:collapse}td,th{border:1px solid #d8dee3;padding:6px;text-align:left}.signature-evidence{page-break-before:always}
+		.contract-verification{margin-top:28pt;padding-top:16pt;border-top:1px solid #cfd9df;display:flex;align-items:center;justify-content:space-between;gap:18pt;page-break-inside:avoid}.contract-verification-copy{flex:1;min-width:0}.contract-verification-copy h2{margin:0 0 6pt;font-size:13pt}.contract-verification-copy p{margin:4pt 0;font-size:9pt;color:#526773}.contract-verification-url{word-break:break-all}.contract-verification-qr{width:34mm;height:34mm;object-fit:contain;flex:0 0 34mm}
 	</style></head><body>` + html + `</body></html>`
 
 	if err := os.WriteFile(htmlPath, []byte(document), 0o600); err != nil {
