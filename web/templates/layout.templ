@@ -65,7 +65,7 @@ templ AdminLayout(title string, user domain.User) {
 						</a>
 					}
 					if HasRole(user,"super_admin") || HasRole(user,"legal") {
-						<a href="/admin/contracts/templates" data-admin-nav>
+						<a href="/admin/contracts" data-admin-nav>
 							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6z"/><path d="M14 3v4h4"/><path d="M9 12h6M9 16h6"/></svg>
 							<span>Contratos</span>
 						</a>
