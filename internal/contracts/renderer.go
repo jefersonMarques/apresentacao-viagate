@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/extension"
 )
 
 var placeholderPattern = regexp.MustCompile(`\{([a-zA-Z0-9_.-]+)\}`)
@@ -33,12 +34,14 @@ var markdownSpecialCharacters = strings.NewReplacer(
 
 type Data map[string]any
 
+type RawMarkdown string
+
 type Renderer struct {
 	markdown goldmark.Markdown
 }
 
 func NewRenderer() *Renderer {
-	return &Renderer{markdown: goldmark.New()}
+	return &Renderer{markdown: goldmark.New(goldmark.WithExtensions(extension.Table))}
 }
 
 func (r *Renderer) Render(markdown string, data Data) (renderedMarkdown string, renderedHTML string, err error) {
@@ -86,17 +89,23 @@ func (r *Renderer) Render(markdown string, data Data) (renderedMarkdown string, 
 }
 
 func markdownLiteral(value any) string {
-	text:=fmt.Sprint(value)
-	text=strings.Map(func(r rune)rune{
-		switch r{
-		case '\r','\n','\t':
+	if raw, ok := value.(RawMarkdown); ok {
+		return string(raw)
+	}
+
+	text := fmt.Sprint(value)
+	text = strings.Map(func(r rune) rune {
+		switch r {
+		case '\r', '\n', '\t':
 			return ' '
 		default:
-			if r<32||r==127{return -1}
+			if r < 32 || r == 127 {
+				return -1
+			}
 			return r
 		}
-	},text)
-	text=html.EscapeString(text)
+	}, text)
+	text = html.EscapeString(text)
 	return markdownSpecialCharacters.Replace(text)
 }
 
@@ -122,6 +131,8 @@ func truthy(value any) bool {
 		return typed
 	case string:
 		return strings.TrimSpace(typed) != ""
+	case RawMarkdown:
+		return strings.TrimSpace(string(typed)) != ""
 	case nil:
 		return false
 	default:
@@ -130,7 +141,7 @@ func truthy(value any) bool {
 }
 
 func AllowedVariables() []string {
-	return []string{
+	variables := []string{
 		"client.legal_name",
 		"client.trade_name",
 		"client.cnpj",
@@ -142,6 +153,8 @@ func AllowedVariables() []string {
 		"representative.email",
 		"representative.phone",
 		"representative.role",
+		"proposal.pricing_model",
+		"proposal.pricing_table",
 		"proposal.minimum_invoice",
 		"proposal.setup_fee",
 		"proposal.accepted_at",
@@ -159,4 +172,5 @@ func AllowedVariables() []string {
 		"products.prevention",
 		"products.monitoring",
 	}
+	return append(variables, pricingVariableNames()...)
 }
