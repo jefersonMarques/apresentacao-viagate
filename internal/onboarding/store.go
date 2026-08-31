@@ -76,6 +76,10 @@ func (s *Store) Save(ctx context.Context, o domain.Onboarding) error {
 	if err != nil { return err }
 	defer tx.Rollback(ctx)
 
+	// This phase only persists information required to review and generate the
+	// contract. Financial contacts, transported goods and system users belong to
+	// the post-signature activation flow. Legacy values are deliberately left
+	// untouched so in-flight customers can have them carried forward later.
 	command, err := tx.Exec(ctx, `
 		update onboardings set
 		  status=case when status='pending' then 'in_progress' else status end,
@@ -85,28 +89,14 @@ func (s *Store) Save(ctx context.Context, o domain.Onboarding) error {
 		  broker_company=nullif($16,''),broker_producer=nullif($17,''),
 		  company_responsible_name=$18,company_responsible_cpf=$19,company_responsible_phone=$20,
 		  company_responsible_email=$21,company_responsible_role=nullif($22,''),company_responsible_authority_declared=$23,
-		  finance_responsible_name=nullif($24,''),finance_responsible_phone=nullif($25,''),finance_responsible_email=nullif($26,'')::citext,
 		  updated_at=now()
 		where id=$1 and status in ('pending','in_progress','correction_requested')
 	`,o.ID,o.CNPJ,o.LegalName,o.TradeName,o.Street,o.StreetNumber,o.Complement,o.District,o.City,o.State,o.PostalCode,
 		o.OperationType,o.Insurer,o.PolicyStartDate,o.PolicyEndDate,o.BrokerCompany,o.BrokerProducer,
-		o.CompanyResponsibleName,o.CompanyResponsibleCPF,o.CompanyResponsiblePhone,o.CompanyResponsibleEmail,o.CompanyResponsibleRole,o.AuthorityDeclared,
-		o.FinanceResponsibleName,o.FinanceResponsiblePhone,o.FinanceResponsibleEmail)
+		o.CompanyResponsibleName,o.CompanyResponsibleCPF,o.CompanyResponsiblePhone,o.CompanyResponsibleEmail,o.CompanyResponsibleRole,o.AuthorityDeclared)
 	if err != nil { return err }
 	if command.RowsAffected() != 1 {
 		return fmt.Errorf("onboarding is not editable in its current state")
-	}
-
-	if _, err := tx.Exec(ctx, `delete from onboarding_goods where onboarding_id=$1`,o.ID); err != nil { return err }
-	for index, description := range o.Goods {
-		if description == "" { continue }
-		if _, err := tx.Exec(ctx, `insert into onboarding_goods(onboarding_id,description,sort_order) values ($1,$2,$3)`,o.ID,description,index); err != nil { return err }
-	}
-
-	if _, err := tx.Exec(ctx, `delete from onboarding_system_users where onboarding_id=$1`,o.ID); err != nil { return err }
-	for index, user := range o.SystemUsers {
-		if user.Name == "" || user.Email == "" { continue }
-		if _, err := tx.Exec(ctx, `insert into onboarding_system_users(onboarding_id,name,phone,email,sort_order) values ($1,$2,nullif($3,''),$4,$5)`,o.ID,user.Name,user.Phone,user.Email,index); err != nil { return err }
 	}
 
 	return tx.Commit(ctx)
