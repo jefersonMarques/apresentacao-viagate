@@ -56,13 +56,25 @@ templ SignatureContractPage(access contracts.SignerAccess, token string, message
 					<section class="accept-box">
 						<span class="step-title">CONTRATO ASSINADO</span>
 						<h2>Assinatura registrada com sucesso.</h2>
-						<p>Esta versão do contrato foi registrada como assinada. A ViaGate mantém de forma segura os registros necessários para comprovar a assinatura quando necessário.</p>
+						<p>Esta versão do contrato foi registrada como assinada. O próprio PDF contém um QR Code para consultar a autenticidade e conferir o arquivo quando necessário.</p>
 						<div class="actions">
 							<a class="btn dark" href={ templ.SafeURL("/sign/" + token + "/contract") }>Baixar contrato assinado</a>
-							<a class="btn" href={ templ.SafeURL("/sign/" + token + "/receipt") }>Comprovante da assinatura</a>
 						</div>
 					</section>
 				}
+
+				<section class="accept-box" style="margin-top:18px">
+					<span class="step-title">SEGURANÇA DO DOCUMENTO</span>
+					<h2>Como sabemos que este é o mesmo contrato?</h2>
+					<p>Antes da assinatura, a ViaGate gera o PDF final já com o QR Code e cria uma impressão digital única daquele arquivo. Essa impressão digital fica registrada junto ao processo de assinatura.</p>
+					<p>No momento da assinatura, a confirmação é vinculada exatamente àquela versão. Depois disso, o arquivo registrado não é alterado.</p>
+					<p>Se qualquer parte do PDF for modificada posteriormente, mesmo uma alteração mínima, a impressão digital muda. Ao escanear o QR Code, é possível consultar o registro e também comparar uma cópia do PDF com o documento original.</p>
+					<p><strong>O QR Code não é a assinatura.</strong> Ele é o caminho para consultar a verificação mantida pela ViaGate.</p>
+					<details style="margin-top:14px">
+						<summary style="cursor:pointer;font-weight:800">Como funciona tecnicamente?</summary>
+						<p style="margin-top:10px;color:var(--muted)">A ViaGate calcula uma impressão digital SHA-256 sobre os bytes do PDF final. O valor é registrado antes da assinatura e comparado quando alguém deseja confirmar se outra cópia é exatamente o mesmo arquivo.</p>
+					</details>
+				</section>
 			</main>
 		</div>
 	}
