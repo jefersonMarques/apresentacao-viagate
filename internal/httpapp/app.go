@@ -127,6 +127,7 @@ func (a *App) Routes() http.Handler {
 	router.Post("/sign/{token}/otp", a.sendSignatureOTP)
 	router.Post("/sign/{token}/confirm", a.confirmSignature)
 	router.Get("/sign/{token}/contract", a.downloadSignedContract)
+	router.Get("/sign/{token}/receipt", a.downloadCustomerSignatureReceipt)
 
 	router.Group(func(admin chi.Router) {
 		admin.Use(a.authenticated)
