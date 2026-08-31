@@ -68,16 +68,18 @@ func buildProposalPricingData(items []proposalPricingItem) proposalPricingData {
 	}
 
 	for _, item := range items {
-		groupID := proposalItemGroupID(item)
-		switch groupID {
-		case "score":
-			products["cargo_score"] = true
-		case "logistics":
-			products["cargo_truck"] = true
-		case "prevention":
-			products["prevention"] = true
-		case "monitoring":
-			products["monitoring"] = true
+		if !item.IsOptional {
+			groupID := proposalItemGroupID(item)
+			switch groupID {
+			case "score":
+				products["cargo_score"] = true
+			case "logistics":
+				products["cargo_truck"] = true
+			case "prevention":
+				products["prevention"] = true
+			case "monitoring":
+				products["monitoring"] = true
+			}
 		}
 
 		if item.CatalogID != "" {
