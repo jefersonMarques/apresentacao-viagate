@@ -4,13 +4,7 @@ import "github.com/jefersonMarques/apresentacao-viagate/internal/domain"
 
 templ UsersManagementPage(current domain.User, users []domain.User, message, errorMessage string) {
 	@AdminLayout("ViaGate — Usuários", current) {
-		<header class="header">
-			<div>
-				<span class="step-title">SUPER ADMIN</span>
-				<h1>Usuários e acessos</h1>
-				<p>Convide novos usuários, altere o perfil e desative acessos sem apagar o histórico comercial.</p>
-			</div>
-		</header>
+		@AdminPageHeader("SUPER ADMIN", "Usuários e acessos", "Convide novos usuários, altere o perfil e desative acessos sem apagar o histórico comercial.")
 		if message != "" {
 			<div class="notice">{ message }</div>
 		}
@@ -36,49 +30,56 @@ templ UsersManagementPage(current domain.User, users []domain.User, message, err
 				</form>
 			</div>
 		</section>
-		<section class="panel">
-			<div class="panel-head"><h2>Lista de usuários</h2></div>
-			<div class="table-wrap">
-				<table class="table">
-					<thead><tr><th>Usuário</th><th>Status</th><th>Perfil</th><th>Criado</th><th>Ações</th></tr></thead>
-					<tbody>
-						for _, item := range users {
-							<tr>
-								<td><strong>{ item.Name }</strong><br/><small>{ item.Email }</small></td>
-								<td><span class="badge">{ humanStatus(item.Status) }</span></td>
-								<td>{ PrimaryRole(item) }</td>
-								<td>{ item.CreatedAt.Format("02/01/2006 15:04") }</td>
-								<td>
-									if item.ID == current.ID {
-										<span class="badge success">Seu acesso</span>
-									} else {
-										<form method="post" action={ templ.SafeURL("/admin/users/" + item.ID + "/access") } class="actions">
-											<select name="role" aria-label="Perfil">
-												<option value="commercial" selected?={ PrimaryRole(item) == "commercial" }>Comercial</option>
-												<option value="operations" selected?={ PrimaryRole(item) == "operations" }>Operações</option>
-												<option value="legal" selected?={ PrimaryRole(item) == "legal" }>Jurídico</option>
-												<option value="super_admin" selected?={ PrimaryRole(item) == "super_admin" }>Super Admin</option>
-											</select>
-											<select name="status" aria-label="Status">
-												if item.Status == "invited" {
-													<option value="invited" selected>Convidado</option>
-												} else {
-													<option value="active" selected?={ item.Status == "active" }>Ativo</option>
-												}
-												<option value="disabled" selected?={ item.Status == "disabled" }>Desativado</option>
-											</select>
-											<button class="btn" type="submit">Salvar</button>
-										</form>
-									}
-								</td>
-							</tr>
-						}
-						if len(users) == 0 {
-							<tr><td colspan="5">Nenhum usuário encontrado.</td></tr>
-						}
-					</tbody>
-				</table>
-			</div>
-		</section>
+		<div class="admin-list-root" data-admin-list>
+			@AdminListToolbar(len(users), "usuário(s)") {
+				@AdminListSearch("Buscar nome ou e-mail...")
+				@AdminListFilter("Perfil", "role") {
+					<option value="">Todos os perfis</option>
+					<option value="commercial">Comercial</option>
+					<option value="operations">Operações</option>
+					<option value="legal">Jurídico</option>
+					<option value="super_admin">Super Admin</option>
+				}
+				@AdminListFilter("Status", "status") {
+					<option value="">Todos os status</option>
+					<option value="invited">Convidado</option>
+					<option value="active">Ativo</option>
+					<option value="disabled">Desativado</option>
+				}
+			}
+			@AdminDataTable([]string{"Usuário", "Status", "Perfil", "Criado", "Ações"}, len(users), "Nenhum usuário encontrado.") {
+				for _, item := range users {
+					<tr data-admin-list-row data-search={ item.Name + " " + item.Email } data-filter-role={ PrimaryRole(item) } data-filter-status={ item.Status }>
+						<td data-label="Usuário" data-primary="true"><strong>{ item.Name }</strong><small>{ item.Email }</small></td>
+						<td data-label="Status"><span class={ "badge status-badge " + AdminStatusBadgeClass(item.Status) }>{ humanStatus(item.Status) }</span></td>
+						<td data-label="Perfil">{ AdminRoleLabel(PrimaryRole(item)) }</td>
+						<td data-label="Criado">{ item.CreatedAt.Format("02/01/2006 15:04") }</td>
+						<td data-label="Ações" data-actions="true">
+							if item.ID == current.ID {
+								<span class="badge status-badge status-success">Seu acesso</span>
+							} else {
+								<form method="post" action={ templ.SafeURL("/admin/users/" + item.ID + "/access") } class="admin-list-inline-form">
+									<select name="role" aria-label="Perfil">
+										<option value="commercial" selected?={ PrimaryRole(item) == "commercial" }>Comercial</option>
+										<option value="operations" selected?={ PrimaryRole(item) == "operations" }>Operações</option>
+										<option value="legal" selected?={ PrimaryRole(item) == "legal" }>Jurídico</option>
+										<option value="super_admin" selected?={ PrimaryRole(item) == "super_admin" }>Super Admin</option>
+									</select>
+									<select name="status" aria-label="Status">
+										if item.Status == "invited" {
+											<option value="invited" selected>Convidado</option>
+										} else {
+											<option value="active" selected?={ item.Status == "active" }>Ativo</option>
+										}
+										<option value="disabled" selected?={ item.Status == "disabled" }>Desativado</option>
+									</select>
+									<button class="btn" type="submit">Salvar</button>
+								</form>
+							}
+						</td>
+					</tr>
+				}
+			}
+		</div>
 	}
 }
