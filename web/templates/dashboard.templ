@@ -4,17 +4,10 @@ import "github.com/jefersonMarques/apresentacao-viagate/internal/domain"
 
 templ AdminDashboardPage(user domain.User, items []DashboardRecord) {
 	@AdminLayout("ViaGate — Visão geral", user) {
-		<header class="admin-page-header">
-			<div>
-				<span class="eyebrow">VISÃO GERAL</span>
-				<h1>Registros comerciais</h1>
-				<p>Propostas e apresentações em uma única visão, organizadas por tipo e status.</p>
-			</div>
-			<div class="actions">
-				<a class="btn" href="/admin/presentations/new">Nova apresentação</a>
-				<a class="btn primary" href="/admin/proposals/new">Nova proposta</a>
-			</div>
-		</header>
+		@AdminPageHeader("VISÃO GERAL", "Registros comerciais", "Propostas e apresentações em uma única visão, organizadas por tipo e status.") {
+			<a class="btn" href="/admin/presentations/new">Nova apresentação</a>
+			<a class="btn primary" href="/admin/proposals/new">Nova proposta</a>
+		}
 
 		<section class="metric-grid" aria-label="Resumo">
 			<article class="metric-card">
@@ -35,95 +28,66 @@ templ AdminDashboardPage(user domain.User, items []DashboardRecord) {
 			</article>
 		</section>
 
-		<section class="data-panel" data-dashboard>
-			<div class="data-panel-head">
-				<div>
-					<h2>Todos os registros</h2>
-					<p><span data-dashboard-count>{ len(items) }</span> registros encontrados</p>
-				</div>
-				<div class="table-filters">
-					<label class="filter-search">
-						<span>Buscar</span>
-						<input type="search" placeholder="Cliente, título ou comercial" data-dashboard-search/>
-					</label>
-					<label>
-						<span>Tipo</span>
-						<select data-dashboard-type>
-							<option value="">Todos</option>
-							<option value="proposal">Propostas</option>
-							<option value="presentation">Apresentações</option>
-						</select>
-					</label>
-					<label>
-						<span>Status</span>
-						<select data-dashboard-status>
-							<option value="">Todos</option>
-							<option value="draft">Rascunho</option>
-							<option value="published">Publicado</option>
-							<option value="accepted">Aceito</option>
-							<option value="expired">Expirado</option>
-							<option value="cancelled">Cancelado</option>
-						</select>
-					</label>
-				</div>
-			</div>
-			<div class="table-wrap">
-				<table class="table admin-records-table">
-					<thead>
-						<tr>
-							<th>Tipo</th>
-							<th>Cliente</th>
-							<th>Registro</th>
-							<th>Status</th>
-							<th>Comercial</th>
-							<th>Versão / validade</th>
-							<th>Atualizado</th>
-							<th></th>
-						</tr>
-					</thead>
-					<tbody>
-						for _, item := range items {
-							<tr data-dashboard-row data-kind={ item.Kind } data-status={ item.Status } data-search={ item.ClientName+" "+item.Title+" "+item.OwnerName }>
-								<td><span class={ "badge kind-badge "+item.Kind }>{ item.KindLabel }</span></td>
-								<td><strong>{ item.ClientName }</strong></td>
-								<td><span class="record-title">{ item.Title }</span></td>
-								<td>
-									if item.Kind == "proposal" && item.Status == "accepted" {
-										<span class="badge success">Aceita · bloqueada</span>
-									} else {
-										<span class={ "badge status-badge status-"+item.Status }>{ humanStatus(item.Status) }</span>
-									}
-								</td>
-								<td>{ item.OwnerName }</td>
-								<td>
-									<span class="record-meta">{ DashboardVersionLabel(item) }</span>
-									if item.ValidUntil != nil {
-										<small>até { Date(item.ValidUntil) }</small>
-									}
-								</td>
-								<td><span class="record-meta">{ item.UpdatedAt.Format("02/01/2006") }</span><small>{ item.UpdatedAt.Format("15:04") }</small></td>
-								<td>
-									<div class="actions compact row-actions">
-										if item.EditURL != "" {
-											<a class="btn" href={ templ.SafeURL(item.EditURL) }>@IconEdit()<span>Editar</span></a>
-										}
+		<div class="admin-list-root" data-admin-list>
+			@AdminListToolbar(len(items), "registro(s)") {
+				@AdminListSearch("Buscar cliente, título ou comercial...")
+				@AdminListFilter("Tipo", "kind") {
+					<option value="">Todos os tipos</option>
+					<option value="proposal">Propostas</option>
+					<option value="presentation">Apresentações</option>
+				}
+				@AdminListFilter("Status", "status") {
+					<option value="">Todos os status</option>
+					<option value="draft">Rascunho</option>
+					<option value="published">Publicado</option>
+					<option value="accepted">Aceito</option>
+					<option value="expired">Expirado</option>
+					<option value="cancelled">Cancelado</option>
+				}
+			}
+			@AdminDataTable([]string{"Tipo", "Cliente", "Registro", "Status", "Comercial", "Versão / validade", "Atualizado", "Ações"}, len(items), "Nenhum registro criado ainda.") {
+				for _, item := range items {
+					<tr data-admin-list-row data-filter-kind={ item.Kind } data-filter-status={ item.Status } data-search={ item.ClientName + " " + item.Title + " " + item.OwnerName }>
+						<td data-label="Tipo"><span class={ "badge kind-badge " + item.Kind }>{ item.KindLabel }</span></td>
+						<td data-label="Cliente" data-primary="true"><strong>{ item.ClientName }</strong></td>
+						<td data-label="Registro"><span class="record-title">{ item.Title }</span></td>
+						<td data-label="Status">
+							if item.Kind == "proposal" && item.Status == "accepted" {
+								<span class="badge status-badge status-success">Aceita · bloqueada</span>
+							} else {
+								<span class={ "badge status-badge " + AdminStatusBadgeClass(item.Status) }>{ humanStatus(item.Status) }</span>
+							}
+						</td>
+						<td data-label="Comercial">{ item.OwnerName }</td>
+						<td data-label="Versão / validade">
+							<span class="record-meta">{ DashboardVersionLabel(item) }</span>
+							if item.ValidUntil != nil {
+								<small>até { Date(item.ValidUntil) }</small>
+							}
+						</td>
+						<td data-label="Atualizado"><span class="record-meta">{ item.UpdatedAt.Format("02/01/2006") }</span><small>{ item.UpdatedAt.Format("15:04") }</small></td>
+						<td data-label="Ações" data-actions="true">
+							<div class="admin-list-actions">
+								if item.EditURL != "" {
+									<a class="btn" href={ templ.SafeURL(item.EditURL) }>Editar</a>
+								} else if item.PublicURL != "" {
+									<a class="btn dark" target="_blank" rel="noopener" href={ templ.SafeURL(item.PublicURL) }>Abrir</a>
+								}
+								if item.Kind == "proposal" || item.PublicURL != "" {
+									@AdminActionMenu("Mais ações do registro") {
 										if item.Kind == "proposal" {
-											<a class="btn" href={ templ.SafeURL("/admin/proposals/new?duplicate=" + item.ID) }>@IconCopy()<span>Duplicar</span></a>
+											<a href={ templ.SafeURL("/admin/proposals/new?duplicate=" + item.ID) }>Duplicar proposta</a>
 										}
 										if item.PublicURL != "" {
-											<a class="btn dark" target="_blank" rel="noopener" href={ templ.SafeURL(item.PublicURL) }>@IconOpen()<span>Abrir</span></a>
+											<a target="_blank" rel="noopener" href={ templ.SafeURL(item.PublicURL) }>Abrir versão pública</a>
 										}
-									</div>
-								</td>
-							</tr>
-						}
-						if len(items)==0 {
-							<tr><td colspan="8"><div class="empty-state">Nenhum registro criado ainda.</div></td></tr>
-						}
-					</tbody>
-				</table>
-			</div>
-			<div class="empty-state" data-dashboard-empty hidden>Nenhum registro corresponde aos filtros selecionados.</div>
-		</section>
+									}
+								}
+							</div>
+						</td>
+					</tr>
+				}
+			}
+		</div>
 	}
 }
