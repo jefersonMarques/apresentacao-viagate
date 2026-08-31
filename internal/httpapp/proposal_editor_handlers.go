@@ -19,6 +19,31 @@ import (
 
 func (a *App) newProposalPage(w http.ResponseWriter, r *http.Request) {
 	user, _ := currentUser(r.Context())
+	duplicateID := strings.TrimSpace(r.URL.Query().Get("duplicate"))
+	if duplicateID != "" {
+		allowAll, _ := a.authStore.HasPermission(r.Context(), user.ID, "proposal.read_all")
+		source, err := a.proposalStore.DuplicateSourceByID(r.Context(), user.ID, duplicateID, allowAll)
+		if err != nil {
+			http.Error(w, "proposta não encontrada ou acesso negado", http.StatusNotFound)
+			return
+		}
+		salesperson, profileErr := a.authStore.Profile(r.Context(), user.ID)
+		if profileErr != nil {
+			a.logger.Error("load commercial profile for proposal duplicate failed", "user_id", user.ID, "error", profileErr)
+			salesperson = user
+		}
+		input := a.prepareDuplicatedProposalInput(r.Context(), source, salesperson)
+		input = a.decorateProposalContractOptions(r.Context(), input)
+		render(r.Context(), w, http.StatusOK, templates.ProposalEditorPage(
+			user,
+			input,
+			proposals.SavedDraft{},
+			"Cópia preparada como nova proposta. Os dados do cliente, contato, contexto da operação e prioridades foram removidos. Revise e salve para criar o novo rascunho.",
+			"",
+		))
+		return
+	}
+
 	validUntil := time.Now().AddDate(0, 0, 15)
 	input := proposals.EditorInput{Title: "Proposta Comercial ViaGate", PricingModel: "per_item", ValidUntil: &validUntil}
 	input = a.decorateProposalContractOptions(r.Context(), input)
@@ -28,11 +53,39 @@ func (a *App) newProposalPage(w http.ResponseWriter, r *http.Request) {
 func (a *App) editProposalPage(w http.ResponseWriter, r *http.Request) {
 	user, _ := currentUser(r.Context())
 	allowAll, _ := a.authStore.HasPermission(r.Context(), user.ID, "proposal.read_all")
-	input, draft, err := a.proposalStore.EditorByID(r.Context(), user.ID, chi.URLParam(r, "id"), allowAll)
+	proposalID := chi.URLParam(r, "id")
+	input, draft, err := a.proposalStore.EditorByID(r.Context(), user.ID, proposalID, allowAll)
 	if err != nil {
 		http.Error(w, "proposta não encontrada ou acesso negado", http.StatusNotFound)
 		return
 	}
+
+	var status, currentPublicToken string
+	if err := a.pool.QueryRow(r.Context(), `
+		select p.status::text,coalesce(v.public_token::text,'')
+		from proposals p
+		left join proposal_versions v
+		  on v.proposal_id=p.id
+		 and v.version_number=p.current_version
+		 and v.published_at is not null
+		where p.id=$1
+	`, proposalID).Scan(&status, &currentPublicToken); err != nil {
+		http.Error(w, "não foi possível carregar a proposta", http.StatusInternalServerError)
+		return
+	}
+	if status == "accepted" {
+		if currentPublicToken != "" {
+			http.Redirect(w, r, "/p/"+currentPublicToken, http.StatusSeeOther)
+		} else {
+			http.Redirect(w, r, "/admin/proposals", http.StatusSeeOther)
+		}
+		return
+	}
+	if status == "cancelled" {
+		http.Redirect(w, r, "/admin/proposals", http.StatusSeeOther)
+		return
+	}
+
 	input = a.decorateProposalContractOptions(r.Context(), input)
 	message := ""
 	if r.URL.Query().Get("saved") == "1" {
