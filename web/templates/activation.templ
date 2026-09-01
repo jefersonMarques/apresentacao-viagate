@@ -8,9 +8,10 @@ import (
 	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/brfields"
 )
 
-templ ActivationPage(access activation.Access, token, message, errorMessage, proposalURL string) {
+templ ActivationPage(access activation.Access, token, message, errorMessage string) {
 	@PublicFlowLayout("ViaGate — Dados para ativação") {
 		<link rel="stylesheet" href="/assets/activation.css"/>
+		<link rel="stylesheet" href="/assets/activation-public.css"/>
 		<div class="public activation-public">
 			<main class="proposal-page activation-page">
 				<header class="activation-hero">
@@ -18,7 +19,7 @@ templ ActivationPage(access activation.Access, token, message, errorMessage, pro
 					<h1>Vamos preparar sua operação.</h1>
 					<p>O contrato já está separado desta etapa. Agora precisamos apenas das informações operacionais para configurar a ViaGate para sua equipe.</p>
 					<div class="activation-status-line"><strong>{ ActivationStatusLabel(access.Profile.Status) }</strong> · { access.Profile.LegalName }</div>
-					@PublicProposalLink(proposalURL)
+					@PublicProposalLink("/activation/" + token + "/proposal")
 				</header>
 
 				@PublicFlashMessages(message, errorMessage)
