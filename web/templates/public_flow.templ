@@ -1,0 +1,36 @@
+package templates
+
+templ PublicFlowHeader(eyebrow, title, description string) {
+	<header class="public-flow-header">
+		if eyebrow != "" {
+			<span class="step-title">{ eyebrow }</span>
+		}
+		<h1>{ title }</h1>
+		if description != "" {
+			<p>{ description }</p>
+		}
+		{ children... }
+	</header>
+}
+
+templ PublicFlashMessages(message, errorMessage string) {
+	if message != "" {
+		<div class="notice" role="status">{ message }</div>
+	}
+	if errorMessage != "" {
+		<div class="notice error" role="alert">{ errorMessage }</div>
+	}
+}
+
+templ PublicDataGrid() {
+	<div class="grid data-grid">
+		{ children... }
+	</div>
+}
+
+templ PublicDataField(label string) {
+	<div class="data-field">
+		<small>{ label }</small>
+		<div class="data-field-value">{ children... }</div>
+	</div>
+}
