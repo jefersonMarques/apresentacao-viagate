@@ -1,0 +1,62 @@
+package templates
+
+templ Login(errorMessage string) {
+	@AuthLayout("ViaGate — Acesso comercial") {
+		<section class="auth">
+			<div class="auth-brand">
+				<div class="brand">VIAGATE</div>
+				<div>
+					<span class="step-title">PLATAFORMA COMERCIAL</span>
+					<h1>Propostas, contratação e assinatura em um único fluxo.</h1>
+				</div>
+				<small>ViaGate · Ambiente restrito</small>
+			</div>
+			<div class="auth-form">
+				<form class="auth-card" method="post" action="/login">
+					<span class="step-title">ACESSO RESTRITO</span>
+					<h1>Entrar</h1>
+					if errorMessage != "" {
+						<div class="notice error" role="alert">{ errorMessage }</div>
+					}
+					<div class="field">
+						<label for="email">E-mail</label>
+						<input id="email" name="email" type="email" autocomplete="email" required/>
+					</div>
+					<div class="field auth-field-gap">
+						<label for="password">Senha</label>
+						<input id="password" name="password" type="password" autocomplete="current-password" required/>
+					</div>
+					<div class="actions auth-actions">
+						<button class="btn primary" type="submit">Entrar</button>
+						<a class="btn ghost" href="/forgot-password">Esqueci minha senha</a>
+					</div>
+				</form>
+			</div>
+		</section>
+	}
+}
+
+templ InvitationPage(name, email, token, errorMessage string) {
+	@AuthLayout("ViaGate — Ativar acesso") {
+		<section class="auth">
+			<div class="auth-brand">
+				<div class="brand">VIAGATE</div>
+				<div><span class="step-title">CONVITE</span><h1>Ative seu acesso comercial.</h1></div>
+				<small>O convite é individual e de uso único.</small>
+			</div>
+			<div class="auth-form">
+				<form class="auth-card" method="post" action={ templ.SafeURL("/invite/" + token) }>
+					<span class="step-title">CRIAR SENHA</span>
+					<h1>{ name }</h1>
+					<p>{ email }</p>
+					if errorMessage != "" {
+						<div class="notice error" role="alert">{ errorMessage }</div>
+					}
+					<div class="field"><label>Senha</label><input name="password" type="password" minlength="10" autocomplete="new-password" required/></div>
+					<div class="field auth-field-gap"><label>Confirmar senha</label><input name="confirm_password" type="password" minlength="10" autocomplete="new-password" required/></div>
+					<div class="actions auth-actions"><button class="btn primary" type="submit">Ativar acesso</button></div>
+				</form>
+			</div>
+		</section>
+	}
+}
