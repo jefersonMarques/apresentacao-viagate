@@ -23,7 +23,10 @@ templ OnboardingAdminListPage(user domain.User, items []onboardingpkg.AdminItem)
 			@AdminDataTable([]string{"Cliente", "Comercial", "Status", "Contrato", "Enviado", "Ações"}, len(items), "Nenhum cadastro encontrado.") {
 				for _, item := range items {
 					<tr class={ OnboardingAdminRowClass(item) } data-admin-list-row data-search={ item.LegalName + " " + item.CNPJ + " " + item.CommercialName } data-filter-status={ item.Status }>
-						<td data-label="Cliente" data-primary="true"><strong>{ item.LegalName }</strong><small>{ CNPJ(item.CNPJ) }</small></td>
+						<td data-label="Cliente" data-primary="true">
+							<strong>{ item.LegalName }</strong>
+							<small>{ CNPJ(item.CNPJ) }</small>
+						</td>
 						<td data-label="Comercial">{ item.CommercialName }</td>
 						<td data-label="Status"><span class={ "badge status-badge " + AdminStatusBadgeClass(item.Status) }>{ humanStatus(item.Status) }</span></td>
 						<td data-label="Contrato">
@@ -31,10 +34,20 @@ templ OnboardingAdminListPage(user domain.User, items []onboardingpkg.AdminItem)
 								<span class="badge status-badge status-success">Contrato assinado</span>
 							} else if item.ContractStatus != "" {
 								<span class={ "badge status-badge " + AdminStatusBadgeClass(item.ContractStatus) }>{ humanStatus(item.ContractStatus) }</span>
-							} else { <span>—</span> }
+							} else {
+								<span>—</span>
+							}
 						</td>
-						<td data-label="Enviado">if item.SubmittedAt != nil { { item.SubmittedAt.Format("02/01/2006 15:04") } } else { { item.UpdatedAt.Format("02/01/2006 15:04") } }</td>
-						<td data-label="Ações" data-actions="true"><div class="admin-list-actions"><a class="btn" href={ templ.SafeURL("/admin/onboardings/" + item.ID) }>Abrir</a></div></td>
+						<td data-label="Enviado">
+							if item.SubmittedAt != nil {
+								{ item.SubmittedAt.Format("02/01/2006 15:04") }
+							} else {
+								{ item.UpdatedAt.Format("02/01/2006 15:04") }
+							}
+						</td>
+						<td data-label="Ações" data-actions="true">
+							<div class="admin-list-actions"><a class="btn" href={ templ.SafeURL("/admin/onboardings/" + item.ID) }>Abrir</a></div>
+						</td>
 					</tr>
 				}
 			}
@@ -50,7 +63,17 @@ templ OnboardingAdminDetailPage(user domain.User, detail onboardingpkg.AdminDeta
 		@FlashMessages(message, errorMessage)
 
 		<section class="panel">
-			<div class="panel-head"><h2>Situação da contratação</h2><div class="actions"><span class="badge">Cadastro · { humanStatus(detail.Onboarding.Status) }</span>if detail.ContractStatus == "signed" { <span class="badge success">Contrato assinado</span> } else if detail.ContractStatus != "" { <span class="badge">Contrato · { humanStatus(detail.ContractStatus) }</span> }</div></div>
+			<div class="panel-head">
+				<h2>Situação da contratação</h2>
+				<div class="actions">
+					<span class="badge">Cadastro · { humanStatus(detail.Onboarding.Status) }</span>
+					if detail.ContractStatus == "signed" {
+						<span class="badge success">Contrato assinado</span>
+					} else if detail.ContractStatus != "" {
+						<span class="badge">Contrato · { humanStatus(detail.ContractStatus) }</span>
+					}
+				</div>
+			</div>
 			<div class="panel-body">
 				@PublicDataGrid() {
 					@PublicDataField("CNPJ", CNPJ(detail.Onboarding.CNPJ))
@@ -90,38 +113,79 @@ templ OnboardingAdminDetailPage(user domain.User, detail onboardingpkg.AdminDeta
 
 		<section class="panel">
 			<div class="panel-head"><h2>Mercadorias</h2></div>
-			<div class="panel-body"><ul>for _, item := range detail.Onboarding.Goods { <li>{ item }</li> } if len(detail.Onboarding.Goods) == 0 { <li>Não informado</li> }</ul></div>
+			<div class="panel-body">
+				<ul>
+					for _, item := range detail.Onboarding.Goods {
+						<li>{ item }</li>
+					}
+					if len(detail.Onboarding.Goods) == 0 {
+						<li>Não informado</li>
+					}
+				</ul>
+			</div>
 		</section>
 
 		<section class="panel">
 			<div class="panel-head"><h2>Usuários do sistema</h2></div>
-			<div class="panel-body"><ul>for _, item := range detail.Onboarding.SystemUsers { <li><strong>{ item.Name }</strong> · { item.Email } · { Phone(item.Phone) }</li> } if len(detail.Onboarding.SystemUsers) == 0 { <li>Nenhum usuário informado</li> }</ul></div>
+			<div class="panel-body">
+				<ul>
+					for _, item := range detail.Onboarding.SystemUsers {
+						<li><strong>{ item.Name }</strong> · { item.Email } · { Phone(item.Phone) }</li>
+					}
+					if len(detail.Onboarding.SystemUsers) == 0 {
+						<li>Nenhum usuário informado</li>
+					}
+				</ul>
+			</div>
 		</section>
 
 		if UserCan(user, "customer.documents.read") {
 			<section class="panel">
 				<div class="panel-head"><h2>Documentos enviados</h2></div>
-				<div class="panel-body"><div class="actions">for _, document := range detail.Documents { <a class="btn" target="_blank" rel="noopener" href={ templ.SafeURL("/admin/onboardings/" + detail.Onboarding.ID + "/documents/" + document.ID) }>{ document.OriginalFilename }</a> } if len(detail.Documents) == 0 { <span>Nenhum documento enviado.</span> }</div></div>
+				<div class="panel-body">
+					<div class="actions">
+						for _, document := range detail.Documents {
+							<a class="btn" target="_blank" rel="noopener" href={ templ.SafeURL("/admin/onboardings/" + detail.Onboarding.ID + "/documents/" + document.ID) }>{ document.OriginalFilename }</a>
+						}
+						if len(detail.Documents) == 0 {
+							<span>Nenhum documento enviado.</span>
+						}
+					</div>
+				</div>
 			</section>
 		}
 
 		<section class="panel">
 			<div class="panel-head"><h2>Contrato e evidências</h2></div>
 			<div class="panel-body">
-				if detail.ReviewNotes != "" { <div class="notice"><strong>Última observação:</strong> { detail.ReviewNotes }</div> }
-				if detail.ContractID != "" {
+				if detail.ReviewNotes != "" {
+					<div class="notice"><strong>Última observação:</strong> { detail.ReviewNotes }</div>
+				}
+				if detail.ContractID != "" && (UserCan(user, "contract.read_own") || UserCan(user, "contract.read_all")) {
 					<div class="admin-form-bottom-gap">
 						<div class="actions">
-							<a class="btn dark" target="_blank" rel="noopener" href={ templ.SafeURL("/admin/contracts/" + detail.ContractID + "/document") }>if detail.ContractStatus == "signed" { Baixar contrato assinado } else { Baixar contrato }</a>
+							<a class="btn dark" target="_blank" rel="noopener" href={ templ.SafeURL("/admin/contracts/" + detail.ContractID + "/document") }>
+								if detail.ContractStatus == "signed" {
+									Baixar contrato assinado
+								} else {
+									Baixar contrato
+								}
+							</a>
 							if detail.ContractFinalizedAt != nil && UserCan(user, "contract.evidence.read") {
 								<a class="btn" target="_blank" rel="noopener" href={ templ.SafeURL("/admin/contracts/" + detail.ContractID + "/evidence") }>Relatório técnico</a>
 								<a class="btn primary" target="_blank" rel="noopener" href={ templ.SafeURL("/admin/contracts/" + detail.ContractID + "/package") }>Documentos da assinatura</a>
 							}
 						</div>
-						if detail.ContractStatus == "signed" && detail.ContractFinalizedAt == nil { <div class="notice admin-form-section-gap">Os documentos comprobatórios da assinatura ainda estão sendo preparados.</div> }
+						if detail.ContractStatus == "signed" && detail.ContractFinalizedAt == nil {
+							<div class="notice admin-form-section-gap">Os documentos comprobatórios da assinatura ainda estão sendo preparados.</div>
+						}
 						@ContractVerificationHelp()
 					</div>
-				} else { <span>Nenhum contrato gerado ainda.</span> }
+				} else if detail.ContractID != "" {
+					<span>Existe um contrato vinculado, mas seu usuário não possui acesso ao documento.</span>
+				} else {
+					<span>Nenhum contrato gerado ainda.</span>
+				}
 			</div>
 		</section>
 
@@ -132,11 +196,25 @@ templ OnboardingAdminDetailPage(user domain.User, detail onboardingpkg.AdminDeta
 					if detail.ContractID == "" && (detail.Onboarding.Status == "submitted" || detail.Onboarding.Status == "under_review") {
 						<form method="post" action={ templ.SafeURL("/admin/onboardings/" + detail.Onboarding.ID + "/review") }>
 							<div class="field"><label>Observação / solicitação de correção</label><textarea name="notes" placeholder="Explique objetivamente o que precisa ser ajustado.">{ detail.ReviewNotes }</textarea></div>
-							<div class="actions admin-form-section-gap"><button class="btn" type="submit" name="status" value="under_review" data-processing="Atualizando...">Marcar em revisão</button><button class="btn danger" type="submit" name="status" value="correction_requested" data-processing="Enviando solicitação...">Solicitar correção</button><button class="btn primary" type="submit" name="status" value="approved" data-processing="Aprovando e preparando contrato...">Aprovar cadastro</button></div>
+							<div class="actions admin-form-section-gap">
+								<button class="btn" type="submit" name="status" value="under_review" data-processing="Atualizando...">Marcar em revisão</button>
+								<button class="btn danger" type="submit" name="status" value="correction_requested" data-processing="Enviando solicitação...">Solicitar correção</button>
+								<button class="btn primary" type="submit" name="status" value="approved" data-processing="Aprovando e preparando contrato...">Aprovar cadastro</button>
+							</div>
 						</form>
-					} else if detail.Onboarding.Status == "correction_requested" { <div class="notice">Aguardando o cliente corrigir e reenviar o cadastro.</div> } else if detail.Onboarding.Status == "approved" { <div class="notice">Cadastro aprovado. Os dados utilizados na geração do contrato estão bloqueados para edição pelo cliente.</div> }
+					} else if detail.Onboarding.Status == "correction_requested" {
+						<div class="notice">Aguardando o cliente corrigir e reenviar o cadastro.</div>
+					} else if detail.Onboarding.Status == "approved" {
+						<div class="notice">Cadastro aprovado. Os dados utilizados na geração do contrato estão bloqueados para edição pelo cliente.</div>
+					}
 					if detail.Onboarding.Status == "approved" && detail.ContractStatus != "signed" {
-						<div class="admin-form-section-gap"><span class="step-title">RECUPERAÇÃO</span><p>Use somente se a geração do contrato ou o envio da assinatura falhar.</p><form method="post" action={ templ.SafeURL("/admin/onboardings/" + detail.Onboarding.ID + "/contract/retry") }><button class="btn dark" type="submit" data-processing="Preparando contrato...">Gerar / reenviar contrato</button></form></div>
+						<div class="admin-form-section-gap">
+							<span class="step-title">RECUPERAÇÃO</span>
+							<p>Use somente se a geração do contrato ou o envio da assinatura falhar.</p>
+							<form method="post" action={ templ.SafeURL("/admin/onboardings/" + detail.Onboarding.ID + "/contract/retry") }>
+								<button class="btn dark" type="submit" data-processing="Preparando contrato...">Gerar / reenviar contrato</button>
+							</form>
+						</div>
 					}
 				</div>
 			</section>
