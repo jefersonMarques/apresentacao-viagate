@@ -30,6 +30,13 @@
       .filter((slide) => getComputedStyle(slide).display !== 'none');
   }
 
+  function keepDynamicMetricsActive() {
+    const metricsSlide = document.querySelector('.exec-analysis-metrics-slide');
+    if (metricsSlide instanceof HTMLElement) {
+      metricsSlide.classList.add('is-active');
+    }
+  }
+
   function forceAssetsEager(scope = document) {
     scope.querySelectorAll('img').forEach((image) => {
       image.loading = 'eager';
@@ -66,6 +73,7 @@
     document.body?.classList.add('commercial-pdf-mode');
     root.dataset.captureReady = '0';
     renumberProposal();
+    keepDynamicMetricsActive();
     forceAssetsEager();
     resetSlideHeights();
     visibleSlides().forEach(expandSlideToContents);
@@ -100,10 +108,12 @@
       forceAssetsEager(slide);
       slide.scrollIntoView({ block: 'start', inline: 'nearest' });
       window.dispatchEvent(new Event('scroll'));
+      keepDynamicMetricsActive();
       await delay(WARM_SCROLL_DELAY_MS);
     }
     window.scrollTo(0, 0);
     window.dispatchEvent(new Event('scroll'));
+    keepDynamicMetricsActive();
     await delay(300);
   }
 
@@ -162,6 +172,7 @@
       prepareLayout();
       await delay(350);
       window.scrollTo(0, 0);
+      keepDynamicMetricsActive();
       root.dataset.captureReady = '1';
     } finally {
       preparing = false;
