@@ -65,6 +65,12 @@ func main() {
 	auditStore := auditlog.NewStore(pool)
 	renderer := contracts.NewRenderer()
 	pdfRenderer := contracts.NewPDFRenderer(cfg.ChromiumPath)
+	if cfg.Environment == "production" {
+		if err := pdfRenderer.Check(); err != nil {
+			logger.Error("browser dependency unavailable", "error", err)
+			os.Exit(1)
+		}
+	}
 	generator := contracts.NewGenerator(pool, contractStore, renderer, pdfRenderer, storageClient, cfg.Company)
 	finalizer := contracts.NewFinalizer(pool, pdfRenderer, storageClient, cfg.Company)
 
