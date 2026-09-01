@@ -24,6 +24,10 @@ func (a *App) onboardingPage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Cadastro não encontrado.", http.StatusForbidden)
 		return
 	}
+	proposalURL := ""
+	if proposalPath, pathErr := a.proposalPublicPathByOnboarding(r.Context(), onboarding.ID); pathErr == nil {
+		proposalURL = proposalPath + "?view=proposal"
+	}
 
 	message := ""
 	switch {
@@ -46,7 +50,7 @@ func (a *App) onboardingPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if onboarding.Status == "submitted" || onboarding.Status == "under_review" || onboarding.Status == "approved" {
-		render(r.Context(), w, http.StatusOK, templates.OnboardingStatusPage(onboarding, message))
+		render(r.Context(), w, http.StatusOK, templates.OnboardingStatusPage(onboarding, message, proposalURL))
 		return
 	}
 	hasPolicy, err := a.onboardingStore.HasPolicy(r.Context(), onboarding.ID)
@@ -55,7 +59,7 @@ func (a *App) onboardingPage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Não foi possível carregar a contratação.", http.StatusInternalServerError)
 		return
 	}
-	render(r.Context(), w, http.StatusOK, templates.ContractingJourneyPage(onboarding, hasPolicy, message, "", a.cfg.RequireOnboardingReview))
+	render(r.Context(), w, http.StatusOK, templates.ContractingJourneyPage(onboarding, hasPolicy, message, "", a.cfg.RequireOnboardingReview, proposalURL))
 }
 
 func (a *App) saveOnboarding(w http.ResponseWriter, r *http.Request) {
@@ -72,8 +76,6 @@ func (a *App) saveOnboarding(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Backward-compatible full save for in-flight links created before the
-	// guided contracting flow was introduced.
 	current, err := a.currentOnboarding(r)
 	if err != nil {
 		http.Error(w, "acesso negado", http.StatusForbidden)
