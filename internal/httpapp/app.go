@@ -93,7 +93,7 @@ func (a *App) Routes() http.Handler {
 	router.Use(a.sameOriginWrites)
 	router.Use(a.requestBodyLimit)
 
-	router.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServer(http.Dir("web/assets"))))
+	router.Handle("/commercial-assets/*", http.StripPrefix("/commercial-assets/", http.FileServer(http.Dir("web/assets"))))
 	registerV1VisualAssets(router)
 	router.Get("/media/{id}", a.commercialAsset)
 	router.Get("/healthz", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) })
@@ -244,7 +244,7 @@ func (a *App) proxyClientIP(next http.Handler) http.Handler {
 		if ip := net.ParseIP(candidate); ip != nil {
 			r.RemoteAddr = net.JoinHostPort(ip.String(), "0")
 		}
-		next.ServeHTTP(w, r)
+		next.ServeHTTP(w, r.WithContext(r.Context()))
 	})
 }
 
