@@ -21,6 +21,17 @@ func (a *App) signaturePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if r.URL.Query().Get("continue") == "activation" && access.Signer.Status == "signed" && access.Contract.Status == "signed" {
+		path, activationErr := a.issueActivationOwnerPath(r.Context(), access)
+		if activationErr != nil {
+			a.logger.Error("resume signed journey into activation failed", "contract_id", access.Contract.ID, "error", activationErr)
+			http.Error(w, "Não foi possível continuar para a ativação.", http.StatusInternalServerError)
+			return
+		}
+		http.Redirect(w, r, path, http.StatusSeeOther)
+		return
+	}
+
 	message := ""
 	if r.URL.Query().Get("otp") == "sent" {
 		message = "Código solicitado. O envio para o e-mail do responsável pode levar alguns segundos."
@@ -106,6 +117,9 @@ func (a *App) sendSignatureOTP(w http.ResponseWriter, r *http.Request) {
 	`, access.Contract.ID, access.Signer.ID, access.Contract.DocumentSHA256, requestIP(r), r.UserAgent())
 
 	contractLink := strings.TrimRight(a.cfg.BaseURL, "/") + "/sign/" + token
+	if proposalPath, proposalErr := a.proposalPublicPathByContract(r.Context(), access.Contract.ID); proposalErr == nil {
+		contractLink = strings.TrimRight(a.cfg.BaseURL, "/") + proposalPath
+	}
 	htmlBody := fmt.Sprintf(
 		"<p>Seu código de confirmação para assinatura do contrato ViaGate é:</p><p style=\"font-size:28px;font-weight:800;letter-spacing:4px\">%s</p><p>O código expira em %s.</p><p><a href=\"%s\">Voltar ao contrato</a></p>",
 		otp,
