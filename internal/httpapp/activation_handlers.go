@@ -240,6 +240,7 @@ func (a *App) issueActivationAccess(w http.ResponseWriter, r *http.Request) {
 		html.EscapeString(access.Signer.Name), html.EscapeString(profile.LegalName), html.EscapeString(link),
 	)
 	if err := notifications.EnqueueWithOptions(r.Context(), a.pool, notifications.MessageOptions{
+		DedupeKey: "activation-access:" + access.Contract.ID,
 		Kind: "activation_access", ToName: access.Signer.Name, ToEmail: access.Signer.Email,
 		Subject: "Próximo passo: dados para ativação ViaGate",
 		HTMLBody: htmlBody, TextBody: "Continue os dados para ativação em " + link,
