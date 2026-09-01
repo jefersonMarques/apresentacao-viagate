@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/jefersonMarques/apresentacao-viagate/internal/access"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/contracts"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
 	"github.com/jefersonMarques/apresentacao-viagate/web/templates"
@@ -12,24 +13,27 @@ import (
 
 func (a *App) dashboard(w http.ResponseWriter, r *http.Request) {
 	user, _ := currentUser(r.Context())
-	proposalAll := false
-	if allowed, err := a.authStore.HasPermission(r.Context(), user.ID, "proposal.read_all"); err == nil {
-		proposalAll = allowed
+
+	proposalItems := []domain.Proposal{}
+	if proposalAll := access.Can(user, access.ProposalReadAll); proposalAll || access.Can(user, access.ProposalReadOwn) {
+		items, err := a.proposalStore.List(r.Context(), user.ID, proposalAll)
+		if err != nil {
+			http.Error(w, "não foi possível carregar os registros", http.StatusInternalServerError)
+			return
+		}
+		proposalItems = items
 	}
-	presentationAll := false
-	if allowed, err := a.authStore.HasPermission(r.Context(), user.ID, "presentation.read_all"); err == nil {
-		presentationAll = allowed
+
+	presentationItems := []domain.Presentation{}
+	if presentationAll := access.Can(user, access.PresentationReadAll); presentationAll || access.Can(user, access.PresentationReadOwn) {
+		items, err := a.presentationStore.List(r.Context(), user.ID, presentationAll)
+		if err != nil {
+			http.Error(w, "não foi possível carregar os registros", http.StatusInternalServerError)
+			return
+		}
+		presentationItems = items
 	}
-	proposalItems, err := a.proposalStore.List(r.Context(), user.ID, proposalAll)
-	if err != nil {
-		http.Error(w, "não foi possível carregar os registros", http.StatusInternalServerError)
-		return
-	}
-	presentationItems, err := a.presentationStore.List(r.Context(), user.ID, presentationAll)
-	if err != nil {
-		http.Error(w, "não foi possível carregar os registros", http.StatusInternalServerError)
-		return
-	}
+
 	records := templates.DashboardRecords(proposalItems, presentationItems)
 	render(r.Context(), w, http.StatusOK, templates.AdminDashboardPage(user, records))
 }
@@ -175,9 +179,10 @@ func (a *App) saveContractTemplate(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) adminProposals(w http.ResponseWriter, r *http.Request) {
 	user, _ := currentUser(r.Context())
-	all := false
-	if allowed, err := a.authStore.HasPermission(r.Context(), user.ID, "proposal.read_all"); err == nil {
-		all = allowed
+	all := access.Can(user, access.ProposalReadAll)
+	if !all && !access.Can(user, access.ProposalReadOwn) {
+		http.Error(w, "acesso negado", http.StatusForbidden)
+		return
 	}
 	items, err := a.proposalStore.List(r.Context(), user.ID, all)
 	if err != nil {
@@ -189,9 +194,10 @@ func (a *App) adminProposals(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) adminPresentations(w http.ResponseWriter, r *http.Request) {
 	user, _ := currentUser(r.Context())
-	all := false
-	if allowed, err := a.authStore.HasPermission(r.Context(), user.ID, "presentation.read_all"); err == nil {
-		all = allowed
+	all := access.Can(user, access.PresentationReadAll)
+	if !all && !access.Can(user, access.PresentationReadOwn) {
+		http.Error(w, "acesso negado", http.StatusForbidden)
+		return
 	}
 	items, err := a.presentationStore.List(r.Context(), user.ID, all)
 	if err != nil {
