@@ -171,7 +171,7 @@ func (a *App) Routes() http.Handler {
 		admin.Get("/admin/contracts/{contractID}/document", a.adminContractDocument)
 		admin.Get("/admin/contracts/{contractID}/evidence", a.adminContractEvidence)
 		admin.Get("/admin/contracts/{contractID}/package", a.adminContractPackage)
-		admin.With(a.permission("contract.read_all")).Get("/admin/contracts", a.adminContracts)
+		admin.Get("/admin/contracts", a.adminContracts)
 		admin.With(a.permission("contract.template.manage")).Get("/admin/contracts/templates", a.contractTemplatesPage)
 		admin.With(a.permission("contract.template.manage")).Post("/admin/contracts/templates", a.saveContractTemplate)
 		admin.With(a.permission("contract.template.manage")).Post("/admin/contracts/templates/preview", a.previewContractTemplate)
