@@ -10,14 +10,31 @@
 
 @keyframes proposal-cta-float {
   0%,100% { transform: translate(-50%,0); }
-  50% { transform: translate(-50%,-4px); }
+  50% { transform: translate(-50%,-5px); }
 }
 
+@keyframes proposal-inline-float {
+  0%,100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+.proposal-accept-inline-wrap {
+  margin-top: 28px;
+  padding: 24px 18px 4px;
+  border-top: 1px solid rgba(255,255,255,.16);
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+}
+.proposal-accept-inline-wrap > span {
+  color: rgba(255,255,255,.58);
+  font: 700 10px/1 Inter,Arial,sans-serif;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.proposal-accept-inline,
 .proposal-accept-floating {
-  position: fixed;
-  left: 50%;
-  bottom: 24px;
-  z-index: 1800;
   min-width: 270px;
   min-height: 54px;
   padding: 0 28px;
@@ -28,12 +45,26 @@
   letter-spacing: .08em;
   cursor: pointer;
   box-shadow: 0 18px 46px rgba(0,0,0,.3);
+}
+.proposal-accept-inline {
+  animation: proposal-inline-float 3.2s ease-in-out infinite;
+}
+.proposal-accept-inline:hover,
+.proposal-accept-floating:hover { background: #e95b0c; border-color: #e95b0c; }
+.proposal-accept-inline.is-success,
+.proposal-accept-floating.is-success { background: #16874d; border-color: #16874d; box-shadow: 0 18px 46px rgba(13,90,52,.34); }
+.proposal-accept-inline.is-success:hover,
+.proposal-accept-floating.is-success:hover { background: #116f3e; border-color: #116f3e; }
+.proposal-accept-inline:focus-visible,
+.proposal-accept-floating:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+
+.proposal-accept-floating {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 1800;
   animation: proposal-cta-float 3.2s ease-in-out infinite;
 }
-.proposal-accept-floating:hover { background: #e95b0c; border-color: #e95b0c; }
-.proposal-accept-floating.is-success { background: #16874d; border-color: #16874d; box-shadow: 0 18px 46px rgba(13,90,52,.34); }
-.proposal-accept-floating.is-success:hover { background: #116f3e; border-color: #116f3e; }
-.proposal-accept-floating:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
 .proposal-accept-floating[hidden] { display: none !important; }
 
 body.proposal-contract-open { overflow: hidden; }
@@ -192,7 +223,14 @@ body.proposal-contract-open { overflow: hidden; }
 }
 .proposal-contract-footer button:disabled { opacity: .58; cursor: wait; }
 
+@media(prefers-reduced-motion:reduce) {
+  .proposal-accept-inline,
+  .proposal-accept-floating { animation: none; }
+}
+
 @media(max-width:640px) {
+  .proposal-accept-inline-wrap { padding-left: 0; padding-right: 0; }
+  .proposal-accept-inline { width: 100%; min-width: 0; }
   .proposal-accept-floating { left: 14px; right: 14px; bottom: 68px; width: calc(100% - 28px); min-width: 0; transform: none; animation: none; }
   .proposal-contract-modal { padding: 0; }
   .proposal-contract-panel { width: 100%; height: 100%; max-height: 100vh; border: 0; }
