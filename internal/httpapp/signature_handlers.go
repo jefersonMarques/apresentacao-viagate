@@ -32,6 +32,7 @@ func (a *App) signaturePage(w http.ResponseWriter, r *http.Request) {
 		insert into signature_events(contract_id,contract_signer_id,event_type,document_hash,ip_address,user_agent,metadata)
 		values($1,$2,'contract.viewed',$3,$4,$5,'{}')
 	`, access.Contract.ID, access.Signer.ID, access.Contract.DocumentSHA256, requestIP(r), r.UserAgent())
+	a.publishContractEvent(r.Context(), access.Contract.ID, "contract.opened", "Contrato aberto", dailyEventDedupe(access.Contract.ID))
 
 	render(r.Context(), w, http.StatusOK, templates.SignatureContractPage(access, token, message, ""))
 }
@@ -70,9 +71,6 @@ func (a *App) sendSignatureOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Um novo desafio invalida qualquer e-mail OTP anterior deste signatário que
-	// ainda esteja aguardando envio. O corpo também é removido para não manter
-	// códigos antigos em texto puro na outbox.
 	_, _ = a.pool.Exec(r.Context(), `
 		update notification_outbox
 		set status='expired',processing_at=null,last_error='replaced by a newer OTP',
@@ -92,14 +90,9 @@ func (a *App) sendSignatureOTP(w http.ResponseWriter, r *http.Request) {
 	)
 	if err := notifications.EnqueueWithOptions(r.Context(), a.pool, notifications.MessageOptions{
 		DedupeKey: fmt.Sprintf("signature-otp:%s:%d", access.Signer.ID, time.Now().UTC().UnixNano()),
-		Kind:      "signature_otp",
-		ToName:    access.Signer.Name,
-		ToEmail:   access.Signer.Email,
-		Subject:   "Código de assinatura ViaGate",
-		HTMLBody:  htmlBody,
-		TextBody:  "Código: " + otp,
-		ExpiresAt: &expiresAt,
-		Sensitive: true,
+		Kind: "signature_otp", ToName: access.Signer.Name, ToEmail: access.Signer.Email,
+		Subject: "Código de assinatura ViaGate", HTMLBody: htmlBody, TextBody: "Código: " + otp,
+		ExpiresAt: &expiresAt, Sensitive: true,
 	}); err != nil {
 		a.logger.Error("enqueue signature OTP failed", "signer_id", access.Signer.ID, "recipient", access.Signer.Email, "error", err)
 		http.Error(w, "não foi possível enviar o código", http.StatusInternalServerError)
@@ -141,13 +134,8 @@ func (a *App) confirmSignature(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	contractID, fullySigned, err := a.contractStore.ConfirmAndSign(
-		r.Context(),
-		access.Signer.ID,
-		security.HashToken(otp),
-		access.Contract.DocumentSHA256,
-		sessionID,
-		requestIP(r),
-		r.UserAgent(),
+		r.Context(), access.Signer.ID, security.HashToken(otp), access.Contract.DocumentSHA256,
+		sessionID, requestIP(r), r.UserAgent(),
 	)
 	if err != nil {
 		a.logger.Warn("contract confirmation failed", "signer_id", access.Signer.ID, "error", err)
@@ -170,6 +158,7 @@ func (a *App) confirmSignature(w http.ResponseWriter, r *http.Request) {
 			where c.id=$1
 			on conflict (dedupe_key) where dedupe_key is not null do nothing
 		`, contractID)
+		a.publishContractEvent(r.Context(), contractID, "contract.signed", "Contrato assinado", contractID)
 	}
 
 	http.Redirect(w, r, "/sign/"+token+"?signed=1", http.StatusSeeOther)
