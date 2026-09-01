@@ -3,11 +3,7 @@ package httpapp
 import (
 	"context"
 	"net/http"
-	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5"
-	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/security"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/proposals"
 )
 
@@ -58,47 +54,4 @@ func (a *App) proposalJourneyForRequest(ctx context.Context, r *http.Request, pr
 	default:
 		return proposalJourney{State: "contracting", Label: "CONTINUAR CONTRATAÇÃO", URL: "/onboarding/" + onboardingID, Tone: "success"}
 	}
-}
-
-func (a *App) resumeCustomerJourney(w http.ResponseWriter, r *http.Request) {
-	acceptanceID, err := a.proposalStore.CustomerJourneyAcceptance(r.Context(), hashToken(chi.URLParam(r, "token")))
-	if err != nil {
-		http.Error(w, "Este link para continuar a contratação é inválido ou expirou.", http.StatusGone)
-		return
-	}
-	onboarding, err := a.onboardingStore.ByAcceptance(r.Context(), acceptanceID)
-	if err != nil {
-		http.Error(w, "Contratação não encontrada.", http.StatusNotFound)
-		return
-	}
-
-	sessionPlain, sessionHash, err := security.RandomToken(32)
-	if err != nil {
-		http.Error(w, "não foi possível iniciar a sessão", http.StatusInternalServerError)
-		return
-	}
-	expires := time.Now().Add(7 * 24 * time.Hour)
-	if err := a.proposalStore.CreateCustomerSession(r.Context(), acceptanceID, sessionHash, requestIP(r), r.UserAgent(), expires); err != nil {
-		http.Error(w, "não foi possível iniciar a sessão", http.StatusInternalServerError)
-		return
-	}
-	setSecureCookie(w, customerSessionCookie, sessionPlain, expires, a.cfg.Environment == "production")
-
-	_, _ = a.pool.Exec(r.Context(), `
-		insert into audit_events(actor_type,event_type,resource_type,resource_id,ip_address,user_agent,metadata)
-		values('customer','customer_journey.resumed','onboarding',$1,$2,$3,jsonb_build_object('reusable_link',true))
-	`, onboarding.ID, requestIP(r), r.UserAgent())
-
-	if delivery, deliveryErr := a.contractStore.DeliveryByOnboarding(r.Context(), onboarding.ID); deliveryErr == nil {
-		target := "/sign/" + delivery.SignerToken
-		if delivery.ContractStatus == "signed" && delivery.SignerStatus == "signed" {
-			target += "?signed=1"
-		}
-		http.Redirect(w, r, target, http.StatusSeeOther)
-		return
-	} else if deliveryErr != pgx.ErrNoRows {
-		a.logger.Warn("resolve journey contract failed", "onboarding_id", onboarding.ID, "error", deliveryErr)
-	}
-
-	http.Redirect(w, r, "/onboarding/"+onboarding.ID, http.StatusSeeOther)
 }
