@@ -141,10 +141,6 @@
     });
   }
 
-  function normalizedSearch(value) {
-    return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
-  }
-
   function initAdminSidebar() {
     const shell = document.querySelector('[data-admin-shell]');
     if (!shell) return;
@@ -166,64 +162,6 @@
       const href = new URL(link.href, window.location.origin).pathname.replace(/\/$/, '') || '/';
       const active = href === '/admin' ? path === href : path === href || path.startsWith(`${href}/`);
       link.classList.toggle('is-active', active);
-    });
-  }
-
-  function initDashboardFilters() {
-    document.querySelectorAll('[data-dashboard]').forEach((dashboard) => {
-      const rows = Array.from(dashboard.querySelectorAll('[data-dashboard-row]'));
-      const search = dashboard.querySelector('[data-dashboard-search]');
-      const type = dashboard.querySelector('[data-dashboard-type]');
-      const status = dashboard.querySelector('[data-dashboard-status]');
-      const count = dashboard.querySelector('[data-dashboard-count]');
-      const empty = dashboard.querySelector('[data-dashboard-empty]');
-      const apply = () => {
-        const searchValue = normalizedSearch(search?.value);
-        const typeValue = type?.value || '';
-        const statusValue = status?.value || '';
-        let visible = 0;
-        rows.forEach((row) => {
-          const show = (!searchValue || normalizedSearch(row.dataset.search).includes(searchValue))
-            && (!typeValue || row.dataset.kind === typeValue)
-            && (!statusValue || row.dataset.status === statusValue);
-          row.hidden = !show;
-          if (show) visible += 1;
-        });
-        if (count) count.textContent = String(visible);
-        if (empty) empty.hidden = visible !== 0 || rows.length === 0;
-      };
-      search?.addEventListener('input', apply);
-      type?.addEventListener('change', apply);
-      status?.addEventListener('change', apply);
-      apply();
-    });
-  }
-
-  function initPipelineFilters() {
-    document.querySelectorAll('[data-pipeline]').forEach((root) => {
-      const rows = Array.from(root.querySelectorAll('[data-pipeline-row]'));
-      const search = root.querySelector('[data-pipeline-search]');
-      const stage = root.querySelector('[data-pipeline-stage]');
-      const commercial = root.querySelector('[data-pipeline-commercial]');
-      const count = root.querySelector('[data-pipeline-count]');
-      const apply = () => {
-        const q = normalizedSearch(search?.value);
-        const selectedStage = stage?.value || '';
-        const selectedCommercial = commercial?.value || '';
-        let visible = 0;
-        rows.forEach((row) => {
-          const show = (!q || normalizedSearch(row.dataset.search).includes(q))
-            && (!selectedStage || row.dataset.stage === selectedStage)
-            && (!selectedCommercial || row.dataset.commercial === selectedCommercial);
-          row.hidden = !show;
-          if (show) visible += 1;
-        });
-        if (count) count.textContent = String(visible);
-      };
-      search?.addEventListener('input', apply);
-      stage?.addEventListener('change', apply);
-      commercial?.addEventListener('change', apply);
-      apply();
     });
   }
 
@@ -312,10 +250,11 @@
         button.disabled = true;
         if (status) { status.textContent = 'Buscando dados na Receita...'; status.classList.remove('error'); }
         try {
-          const response = await fetch(`/admin/api/cnpj/${encodeURIComponent(raw)}`, { credentials: 'same-origin' });
+          const endpoint = button.dataset.cnpjEndpoint || '/admin/api/cnpj/';
+          const response = await fetch(`${endpoint}${encodeURIComponent(raw)}`, { credentials: 'same-origin' });
           if (!response.ok) throw new Error((await response.text()).trim() || 'CNPJ não encontrado.');
           const data = await response.json();
-          const prefix = button.dataset.cnpjPrefix || 'client_';
+          const prefix = button.hasAttribute('data-cnpj-prefix') ? (button.dataset.cnpjPrefix || '') : 'client_';
           fillInput(form, `${prefix}legal_name`, data.legal_name);
           fillInput(form, `${prefix}trade_name`, data.trade_name);
           fillInput(form, `${prefix}email`, data.email);
@@ -455,8 +394,6 @@
   document.addEventListener('DOMContentLoaded', () => {
     configureMaskedInputs();
     initAdminSidebar();
-    initDashboardFilters();
-    initPipelineFilters();
     initImageUploads();
     initCNPJLookups();
     initProposalEditor();
