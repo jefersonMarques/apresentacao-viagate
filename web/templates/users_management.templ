@@ -13,7 +13,15 @@ templ UsersManagementPage(current domain.User, users []domain.User, selected dom
 		<section class="panel">
 			<div class="panel-head"><h2>Convidar usuário</h2></div>
 			<div class="panel-body">
-				<form method="post" action="/admin/users/invite" class="grid">
+				<form
+					method="post"
+					action="/admin/users/invite"
+					class="grid"
+					hx-post="/admin/users/invite"
+					hx-target="#adminContent"
+					hx-select="#adminContent"
+					hx-swap="outerHTML show:window:top"
+				>
 					<div class="field"><label>Nome</label><input name="name" required/></div>
 					<div class="field"><label>E-mail</label><input name="email" type="email" required/></div>
 					<div class="field">
@@ -59,7 +67,15 @@ templ UsersManagementPage(current domain.User, users []domain.User, selected dom
 								if item.ID == current.ID {
 									<span class="badge status-badge status-success">Seu acesso</span>
 								} else if CanManageUser(current, item) {
-									<a class="btn" href={ templ.SafeURL("/admin/users?user=" + item.ID) }>Gerenciar</a>
+									<a
+										class="btn"
+										href={ templ.SafeURL("/admin/users?user=" + item.ID) }
+										hx-get={ "/admin/users?user=" + item.ID }
+										hx-target="#adminContent"
+										hx-select="#adminContent"
+										hx-swap="outerHTML show:window:top"
+										hx-push-url="true"
+									>Gerenciar</a>
 								} else {
 									<span class="badge status-badge status-neutral">Protegido</span>
 								}
@@ -74,11 +90,20 @@ templ UsersManagementPage(current domain.User, users []domain.User, selected dom
 			<section class="panel admin-form-section-gap">
 				<div class="panel-head">
 					<div><span class="step-title">ACESSO SELECIONADO</span><h2>{ selected.Name }</h2></div>
-					<div class="actions"><a class="btn" href="/admin/users">Fechar</a></div>
+					<div class="actions">
+						<a class="btn" href="/admin/users" hx-get="/admin/users" hx-target="#adminContent" hx-select="#adminContent" hx-swap="outerHTML show:window:top" hx-push-url="true">Fechar</a>
+					</div>
 				</div>
 				<div class="panel-body">
 					if CanManageUser(current, selected) {
-						<form method="post" action={ templ.SafeURL("/admin/users/" + selected.ID + "/access") }>
+						<form
+							method="post"
+							action={ templ.SafeURL("/admin/users/" + selected.ID + "/access") }
+							hx-post={ "/admin/users/" + selected.ID + "/access" }
+							hx-target="#adminContent"
+							hx-select="#adminContent"
+							hx-swap="outerHTML show:window:top"
+						>
 							<input type="hidden" name="mode" value="access"/>
 							<div class="grid">
 								<div class="field"><label>E-mail</label><input value={ selected.Email } disabled/></div>
@@ -116,7 +141,14 @@ templ UsersManagementPage(current domain.User, users []domain.User, selected dom
 				<section class="panel">
 					<div class="panel-head"><div><h2>Permissões individuais</h2><p>Marque somente o que este usuário precisa além do perfil base. A validação também ocorre no servidor.</p></div></div>
 					<div class="panel-body">
-						<form method="post" action={ templ.SafeURL("/admin/users/" + selected.ID + "/access") }>
+						<form
+							method="post"
+							action={ templ.SafeURL("/admin/users/" + selected.ID + "/access") }
+							hx-post={ "/admin/users/" + selected.ID + "/access" }
+							hx-target="#adminContent"
+							hx-select="#adminContent"
+							hx-swap="outerHTML show:window:top"
+						>
 							<input type="hidden" name="mode" value="permissions"/>
 							for _, group := range PermissionGroups(current, settings) {
 								<div class="admin-permission-group">
@@ -142,7 +174,14 @@ templ UsersManagementPage(current domain.User, users []domain.User, selected dom
 				<section class="panel">
 					<div class="panel-head"><div><h2>Notificações</h2><p>Permissão define o que a pessoa pode ver. Aqui definimos apenas sobre quais eventos ela deseja ser avisada.</p></div></div>
 					<div class="panel-body">
-						<form method="post" action={ templ.SafeURL("/admin/users/" + selected.ID + "/access") }>
+						<form
+							method="post"
+							action={ templ.SafeURL("/admin/users/" + selected.ID + "/access") }
+							hx-post={ "/admin/users/" + selected.ID + "/access" }
+							hx-target="#adminContent"
+							hx-select="#adminContent"
+							hx-swap="outerHTML show:window:top"
+						>
 							<input type="hidden" name="mode" value="notifications"/>
 							<div class="admin-permission-grid">
 								for _, event := range notifications.EventDefinitions {
