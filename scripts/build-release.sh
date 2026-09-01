@@ -36,6 +36,7 @@ CGO_ENABLED=0 GOOS="$GOOS_VALUE" GOARCH="$GOARCH_VALUE" go build "${BUILD_FLAGS[
 cp -R migrations "$RELEASE_DIR/migrations"
 cp -R assets "$RELEASE_DIR/assets"
 cp -R proposal "$RELEASE_DIR/proposal"
+cp -R deploy "$RELEASE_DIR/deploy"
 mkdir -p "$RELEASE_DIR/web"
 cp -R web/assets "$RELEASE_DIR/web/assets"
 cp presentation-content.html "$RELEASE_DIR/presentation-content.html"
