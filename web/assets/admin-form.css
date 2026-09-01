@@ -14,6 +14,10 @@
   margin-top: 18px;
 }
 
+.admin-form-bottom-gap {
+  margin-bottom: 16px;
+}
+
 .admin-form-label-gap {
   margin-bottom: 8px;
 }
@@ -21,8 +25,4 @@
 .admin-form-current {
   color: #ff6b18;
   font-weight: 800;
-}
-
-.admin-hub-card {
-  text-decoration: none;
 }
