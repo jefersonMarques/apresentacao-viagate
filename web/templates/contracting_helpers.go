@@ -7,13 +7,6 @@ import (
 	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/brfields"
 )
 
-func BoolString(value bool) string {
-	if value {
-		return "true"
-	}
-	return "false"
-}
-
 func ContractingPolicyClass(hasPolicy bool) string {
 	if hasPolicy {
 		return "is-complete"
