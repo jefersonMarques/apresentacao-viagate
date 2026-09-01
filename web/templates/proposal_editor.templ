@@ -8,7 +8,7 @@ import (
 
 templ ProposalEditorPage(user domain.User, input proposals.EditorInput, draft proposals.SavedDraft, message, errorMessage string) {
 	@AdminEditorLayout("ViaGate — Editor de proposta", user) {
-		<link rel="stylesheet" href="/assets/proposal-editor-adjustments.css"/>
+		<link rel="stylesheet" href="/commercial-assets/proposal-editor-adjustments.css"/>
 		<div class="v1-page">
 			@AdminEditorHeader("GERADOR DE PROPOSTA", proposalEditorHeading(input), "Preencha somente o que fizer sentido para a negociação. O cliente completa os dados de contratação que estiverem faltando após o aceite.") {
 				<a class="v1-button" href="/admin/proposals">Voltar</a>
@@ -162,6 +162,6 @@ templ ProposalEditorPage(user domain.User, input proposals.EditorInput, draft pr
 				</div>
 			</form>
 		</div>
-		<script src="/assets/proposal-money.js" defer></script>
+		<script src="/commercial-assets/proposal-money.js" defer></script>
 	}
 }
