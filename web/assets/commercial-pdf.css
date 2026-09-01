@@ -100,6 +100,22 @@ html.commercial-pdf-mode body {
   transform: none !important;
 }
 
+/*
+ * The operational metrics slide owns a viewport-driven entrance animation.
+ * Its live IntersectionObserver removes .is-active as soon as the warm-up
+ * scroll moves to another slide. Raster capture uses an off-screen clip, so
+ * the PDF mode must keep these blocks visible independently of viewport state.
+ */
+.commercial-pdf-mode .exec-analysis-metrics-slide .exec-analysis-eyebrow,
+.commercial-pdf-mode .exec-analysis-metrics-slide .exec-analysis-main,
+.commercial-pdf-mode .exec-analysis-metrics-slide .exec-analysis-breakdown,
+.commercial-pdf-mode .exec-analysis-metrics-slide .exec-analysis-footnote {
+  opacity: 1 !important;
+  transform: none !important;
+  transition: none !important;
+  transition-delay: 0s !important;
+}
+
 .commercial-pdf-mode img,
 .commercial-pdf-mode svg {
   image-rendering: auto;
