@@ -23,6 +23,13 @@ func proposalTitle(value string) string {
 	return value
 }
 
+func proposalEditorHeading(input proposals.EditorInput) string {
+	if input.ProposalID == "" {
+		return "Nova proposta"
+	}
+	return "Editar proposta"
+}
+
 func editorPrice(value float64, found bool) string {
 	if !found {
 		return ""
