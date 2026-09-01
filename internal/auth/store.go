@@ -69,14 +69,29 @@ func (s *Store) SessionUser(ctx context.Context, tokenHash []byte) (domain.User,
 		select u.id::text, u.email::text, u.name, u.status::text, u.created_at,
 		       coalesce(array_agg(distinct r.code) filter (where r.code is not null), '{}'),
 		       coalesce(array(select permission_code from effective_user_permissions(u.id) order by permission_code), '{}'),
-		       (select count(*)::int from in_app_notifications n where n.recipient_user_id=u.id and n.read_at is null)
+		       (select count(*)::int from in_app_notifications n where n.recipient_user_id=u.id and n.read_at is null),
+		       case
+		         when exists(select 1 from effective_user_permissions(u.id) where permission_code='activation.manage')
+		         then (select count(*)::int from activation_profiles a where a.status='completed')
+		         else 0
+		       end
 		from sessions s
 		join users u on u.id = s.user_id
 		left join user_roles ur on ur.user_id = u.id
 		left join roles r on r.id = ur.role_id
 		where s.token_hash = $1 and s.revoked_at is null and s.expires_at > now() and u.status = 'active'
 		group by u.id
-	`, tokenHash).Scan(&user.ID, &user.Email, &user.Name, &user.Status, &user.CreatedAt, &roles, &permissions, &user.UnreadNotifications)
+	`, tokenHash).Scan(
+		&user.ID,
+		&user.Email,
+		&user.Name,
+		&user.Status,
+		&user.CreatedAt,
+		&roles,
+		&permissions,
+		&user.UnreadNotifications,
+		&user.PendingActivations,
+	)
 	if err != nil {
 		return domain.User{}, err
 	}
