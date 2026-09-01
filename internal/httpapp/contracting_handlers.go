@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
 	"github.com/jefersonMarques/apresentacao-viagate/web/templates"
 )
 
@@ -94,17 +95,7 @@ func (a *App) saveOnboardingInsurance(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/onboarding/"+current.ID+"?saved=insurance", http.StatusSeeOther)
 }
 
-func (a *App) renderContractingError(w http.ResponseWriter, r *http.Request, current interface{ GetID() string }, message string) {
-	// Kept only as a compile-time guard against accidental generic use.
-	http.Error(w, message, http.StatusBadRequest)
-}
-
-func (a *App) renderContractingPageError(w http.ResponseWriter, r *http.Request, currentOnboardingID string, message string) {
-	current, err := a.currentOnboarding(r)
-	if err != nil || current.ID != currentOnboardingID {
-		http.Error(w, message, http.StatusBadRequest)
-		return
-	}
+func (a *App) renderContractingError(w http.ResponseWriter, r *http.Request, current domain.Onboarding, message string) {
 	hasPolicy, _ := a.onboardingStore.HasPolicy(r.Context(), current.ID)
 	render(r.Context(), w, http.StatusBadRequest, templates.ContractingJourneyPage(current, hasPolicy, "", message, a.cfg.RequireOnboardingReview))
 }
