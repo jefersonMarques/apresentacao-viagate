@@ -40,7 +40,7 @@ func (a *App) downloadProposalPDF(w http.ResponseWriter, r *http.Request, items 
 		return
 	}
 
-	key := "commercial-pdf/a4-v2/proposals/" + proposal.VersionID + ".pdf"
+	key := "commercial-pdf/raster-v1/proposals/" + proposal.VersionID + ".pdf"
 	filename := commercialPDFFilename("proposta", proposal.ClientTradeName, proposal.ClientName, fmt.Sprintf("v%d", proposal.VersionNumber))
 	a.serveCommercialPDF(w, r, key, filename, func(ctx context.Context) (string, error) {
 		var buffer bytes.Buffer
@@ -71,7 +71,7 @@ func (a *App) downloadPresentationPDF(w http.ResponseWriter, r *http.Request, it
 		return
 	}
 
-	key := "commercial-pdf/a4-v2/presentations/" + presentation.VersionID + ".pdf"
+	key := "commercial-pdf/raster-v1/presentations/" + presentation.VersionID + ".pdf"
 	filename := commercialPDFFilename("apresentacao", presentationClientFilename(presentation), fmt.Sprintf("v%d", presentation.VersionNumber))
 	a.serveCommercialPDF(w, r, key, filename, func(ctx context.Context) (string, error) {
 		return a.preparePresentationPDFDocument(presentation)
@@ -99,7 +99,7 @@ func (a *App) serveCommercialPDF(w http.ResponseWriter, r *http.Request, key, fi
 	}
 
 	renderer := contracts.NewPDFRenderer(a.cfg.ChromiumPath)
-	pdf, err := renderer.RenderDocument(r.Context(), document)
+	pdf, err := renderer.RenderRasterizedDocument(r.Context(), document)
 	if err != nil {
 		a.logger.Error("render commercial PDF failed", "key", key, "error", err)
 		http.Error(w, "Não foi possível gerar o PDF. Verifique a instalação do Chrome/Edge/Chromium no servidor.", http.StatusInternalServerError)
