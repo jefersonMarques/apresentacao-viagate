@@ -41,15 +41,15 @@ type InAppStore struct {
 func NewInAppStore(pool *pgxpool.Pool) *InAppStore { return &InAppStore{pool: pool} }
 
 type Event struct {
-	OwnerUserID string
-	ActorUserID string
-	EventType   string
-	Title       string
-	Body        string
+	OwnerUserID  string
+	ActorUserID  string
+	EventType    string
+	Title        string
+	Body         string
 	ResourceType string
-	ResourceID  string
-	TargetURL   string
-	DedupeKey   string
+	ResourceID   string
+	TargetURL    string
+	DedupeKey    string
 }
 
 func (s *InAppStore) Publish(ctx context.Context, event Event) error {
@@ -89,6 +89,41 @@ func (s *InAppStore) Publish(ctx context.Context, event Event) error {
 	`, event.OwnerUserID, event.ActorUserID, event.EventType, event.Title, event.Body, event.ResourceType, event.ResourceID, event.TargetURL, event.DedupeKey)
 	if err != nil {
 		return fmt.Errorf("publish in-app notification: %w", err)
+	}
+	return nil
+}
+
+func (s *InAppStore) PublishToPermission(ctx context.Context, permission, excludedUserID string, event Event) error {
+	if event.OwnerUserID == "" || permission == "" || !IsSupportedEvent(event.EventType) {
+		return nil
+	}
+	if event.DedupeKey == "" {
+		event.DedupeKey = event.EventType + ":" + event.ResourceID
+	}
+	_, err := s.pool.Exec(ctx, `
+		with eligible as (
+			select u.id
+			from users u
+			where u.status='active'
+			  and ($10='' or u.id<>$10::uuid)
+			  and exists(select 1 from effective_user_permissions(u.id) where permission_code='notification.read')
+			  and exists(select 1 from effective_user_permissions(u.id) where permission_code=$11)
+			  and coalesce(
+				(select pref.enabled from user_notification_preferences pref
+				 where pref.user_id=u.id and pref.event_type=$3 and pref.scope='all'),
+				true
+			  )
+		)
+		insert into in_app_notifications(
+			recipient_user_id,owner_user_id,actor_user_id,event_type,title,body,
+			resource_type,resource_id,target_url,dedupe_key
+		)
+		select e.id,$1::uuid,nullif($2,'')::uuid,$3,$4,nullif($5,''),nullif($6,''),nullif($7,'')::uuid,nullif($8,''),$9
+		from eligible e
+		on conflict (recipient_user_id,dedupe_key) where dedupe_key is not null do nothing
+	`, event.OwnerUserID, event.ActorUserID, event.EventType, event.Title, event.Body, event.ResourceType, event.ResourceID, event.TargetURL, event.DedupeKey, excludedUserID, permission)
+	if err != nil {
+		return fmt.Errorf("publish permission notification: %w", err)
 	}
 	return nil
 }
