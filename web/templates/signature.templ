@@ -6,36 +6,31 @@ import (
 )
 
 templ SignatureContractPage(access contracts.SignerAccess, token string, message, errorMessage string) {
-	@Base("ViaGate — Assinatura do contrato") {
+	@PublicFlowLayout("ViaGate — Assinatura do contrato") {
 		<div class="public">
-			<main class="proposal-page">
-				<header style="margin-bottom:20px">
-					<span class="step-title">ASSINATURA ELETRÔNICA</span>
-					<h1>Contrato para assinatura</h1>
-					<p>Responsável: { access.Signer.Name } · { access.Signer.Email }</p>
-				</header>
-				if access.Signer.Status == "signed" && message != "" {
-					<div class="notice">{ message }</div>
+			<main class="proposal-page public-flow-stack">
+				@PublicFlowHeader("ASSINATURA ELETRÔNICA", "Contrato para assinatura", "Responsável: " + access.Signer.Name + " · " + access.Signer.Email)
+				if access.Signer.Status == "signed" {
+					@PublicFlashMessages(message, errorMessage)
+				} else {
+					@PublicFlashMessages("", errorMessage)
 				}
-				if errorMessage != "" {
-					<div class="notice error">{ errorMessage }</div>
-				}
-				<article class="document-view" style="padding:0;overflow:hidden;background:#e9edf0">
-					<iframe title="Contrato em PDF" src={ templ.SafeURL("/sign/" + token + "/document") } style="display:block;width:100%;height:min(78vh,920px);min-height:620px;border:0;background:#fff"></iframe>
-					<noscript><p style="padding:16px"><a href={ templ.SafeURL("/sign/" + token + "/document") }>Abrir o contrato em PDF</a></p></noscript>
+				<article class="document-view signature-document-view">
+					<iframe title="Contrato em PDF" src={ templ.SafeURL("/sign/" + token + "/document") } class="signature-document-frame"></iframe>
+					<noscript><p class="signature-document-fallback"><a href={ templ.SafeURL("/sign/" + token + "/document") }>Abrir o contrato em PDF</a></p></noscript>
 				</article>
-				<p style="margin:10px 0 0;color:var(--muted);font-size:12px">O PDF acima é o próprio arquivo cuja impressão digital fica vinculada à assinatura. Não é uma reprodução separada do contrato.</p>
+				<p class="public-flow-muted">O PDF acima é o próprio arquivo cuja impressão digital fica vinculada à assinatura. Não é uma reprodução separada do contrato.</p>
 				if access.Signer.Status != "signed" {
 					<section class="accept-box">
 						<span class="step-title">CONFIRMAÇÃO DE IDENTIDADE</span>
 						<h2>Assinar este documento</h2>
 						<p>Enviaremos um código para o e-mail informado no aceite da proposta. Depois da confirmação, sua assinatura ficará vinculada exatamente ao PDF exibido acima.</p>
-						<div class="actions" style="align-items:center;margin-bottom:18px">
+						<div class="actions signature-otp-actions">
 							<form method="post" action={ templ.SafeURL("/sign/" + token + "/otp") }>
 								<button class="btn dark" type="submit" data-processing="Enviando código...">Enviar código por e-mail</button>
 							</form>
 							if message != "" {
-								<div class="notice" style="margin:0">{ message }</div>
+								<div class="notice signature-inline-notice">{ message }</div>
 							}
 						</div>
 						<form method="post" action={ templ.SafeURL("/sign/" + token + "/confirm") } class="grid">
@@ -44,8 +39,8 @@ templ SignatureContractPage(access contracts.SignerAccess, token string, message
 								<input name="otp" inputmode="numeric" maxlength="6" autocomplete="one-time-code" required/>
 							</div>
 							<div class="field full">
-								<label style="display:flex;align-items:flex-start;gap:10px;text-transform:none;letter-spacing:0;font-size:12px;line-height:1.5">
-									<input type="checkbox" name="consent" value="1" required style="width:18px;min-width:18px;height:18px;min-height:18px;padding:0;margin:1px 0 0;flex:0 0 18px"/>
+								<label class="signature-consent">
+									<input type="checkbox" name="consent" value="1" required/>
 									<span>{ legaltext.SignatureConsentText }</span>
 								</label>
 							</div>
@@ -65,20 +60,19 @@ templ SignatureContractPage(access contracts.SignerAccess, token string, message
 								<button class="btn primary" type="submit" data-processing="Preparando próximo passo...">Continuar para dados de ativação</button>
 							</form>
 						</div>
-						<p style="margin-top:12px;color:var(--muted)">Os dados para ativação são uma etapa separada do contrato. Você poderá preencher agora ou encaminhar para alguém da sua equipe.</p>
+						<p class="public-flow-muted">Os dados para ativação são uma etapa separada do contrato. Você poderá preencher agora ou encaminhar para alguém da sua equipe.</p>
 					</section>
 				}
-
-				<section class="accept-box" style="margin-top:18px">
+				<section class="accept-box">
 					<span class="step-title">SEGURANÇA DO DOCUMENTO</span>
 					<h2>Como sabemos que este é o mesmo contrato?</h2>
 					<p>Antes da assinatura, a ViaGate gera o PDF final já com o QR Code e cria uma impressão digital única daquele arquivo. Essa impressão digital fica registrada junto ao processo de assinatura.</p>
 					<p>No momento da assinatura, a confirmação é vinculada exatamente àquela versão. Depois disso, o arquivo registrado não é alterado.</p>
 					<p>Se qualquer parte do PDF for modificada posteriormente, mesmo uma alteração mínima, a impressão digital muda. Ao escanear o QR Code, é possível consultar o registro e também comparar uma cópia do PDF com o documento original.</p>
 					<p><strong>O QR Code não é a assinatura.</strong> Ele é o caminho para consultar a verificação mantida pela ViaGate.</p>
-					<details style="margin-top:14px">
-						<summary style="cursor:pointer;font-weight:800">Como funciona tecnicamente?</summary>
-						<p style="margin-top:10px;color:var(--muted)">A ViaGate calcula uma impressão digital SHA-256 sobre os bytes do PDF final. O valor é registrado antes da assinatura e comparado quando alguém deseja confirmar se outra cópia é exatamente o mesmo arquivo.</p>
+					<details class="public-flow-details">
+						<summary>Como funciona tecnicamente?</summary>
+						<p>A ViaGate calcula uma impressão digital SHA-256 sobre os bytes do PDF final. O valor é registrado antes da assinatura e comparado quando alguém deseja confirmar se outra cópia é exatamente o mesmo arquivo.</p>
 					</details>
 				</section>
 			</main>
