@@ -1,0 +1,41 @@
+package templates
+
+import "github.com/jefersonMarques/apresentacao-viagate/internal/domain"
+
+templ NotificationsPage(user domain.User, items []domain.InAppNotification) {
+	@AdminLayout("ViaGate — Notificações", user) {
+		@AdminPageHeader("NOTIFICAÇÕES", "Central de notificações", "Acompanhe eventos importantes dos seus clientes e, quando autorizado, atividades de outros usuários.")
+		if len(items) > 0 {
+			<form method="post" action="/admin/notifications/read-all" class="admin-notification-read-all">
+				<button class="btn" type="submit">Marcar todas como lidas</button>
+			</form>
+		}
+		<section class="panel">
+			<div class="panel-body admin-notification-feed">
+				for _, item := range items {
+					<article class={ NotificationRowClass(item) }>
+						<div class="admin-notification-dot" aria-hidden="true"></div>
+						<div class="admin-notification-copy">
+							<strong>{ item.Title }</strong>
+							if item.Body != "" { <span>{ item.Body }</span> }
+							<small>{ item.CreatedAt.Format("02/01/2006 15:04") }</small>
+						</div>
+						<div class="admin-notification-actions">
+							if item.TargetURL != "" {
+								<form method="post" action={ templ.SafeURL("/admin/notifications/" + item.ID + "/open") }>
+									<input type="hidden" name="target" value={ item.TargetURL }/>
+									<button class="btn" type="submit">Abrir</button>
+								</form>
+							} else if item.ReadAt == nil {
+								<form method="post" action={ templ.SafeURL("/admin/notifications/" + item.ID + "/read") }><button class="btn" type="submit">Marcar como lida</button></form>
+							}
+						</div>
+					</article>
+				}
+				if len(items) == 0 {
+					<div class="admin-notification-empty"><strong>Nenhuma notificação.</strong><span>Eventos importantes aparecerão aqui.</span></div>
+				}
+			</div>
+		</section>
+	}
+}
