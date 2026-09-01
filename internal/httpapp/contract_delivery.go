@@ -40,9 +40,13 @@ func (a *App) ensureContractDelivery(ctx context.Context, onboardingID string) (
 		return access, created, fmt.Errorf("contract cannot be delivered in status %s", access.ContractStatus)
 	}
 
-	link := strings.TrimRight(a.cfg.BaseURL, "/") + "/sign/" + access.SignerToken
+	proposalPath, err := a.proposalPublicPathByOnboarding(ctx, onboardingID)
+	if err != nil {
+		return access, created, fmt.Errorf("resolve proposal journey link: %w", err)
+	}
+	link := strings.TrimRight(a.cfg.BaseURL, "/") + proposalPath
 	htmlBody := fmt.Sprintf(
-		"<p>Olá, %s.</p><p>Os dados da operação foram recebidos e o contrato está pronto para assinatura.</p><p><a href=\"%s\">Revisar e assinar contrato</a></p>",
+		"<p>Olá, %s.</p><p>Os dados da operação foram recebidos e o seu contrato ViaGate está pronto para conferência e assinatura.</p><p><a href=\"%s\">Revisar e assinar contrato</a></p><p>Este é o mesmo link da proposta. Ao abri-lo, você será levado diretamente ao contrato e verá o PDF exato que será assinado.</p>",
 		html.EscapeString(access.SignerName),
 		html.EscapeString(link),
 	)
@@ -52,9 +56,9 @@ func (a *App) ensureContractDelivery(ctx context.Context, onboardingID string) (
 		"contract-signature:"+access.ContractID+":"+access.SignerID,
 		access.SignerName,
 		access.SignerEmail,
-		"Contrato ViaGate disponível para assinatura",
+		"Seu contrato ViaGate está pronto para assinatura",
 		htmlBody,
-		"Contrato disponível em "+link,
+		"Seu contrato ViaGate está pronto. Revise e assine usando o mesmo link da proposta: "+link,
 	); err != nil {
 		return access, created, err
 	}
