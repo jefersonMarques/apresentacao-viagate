@@ -1,0 +1,103 @@
+package templates
+
+import (
+	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/brfields"
+)
+
+templ ContractingJourneyPage(onboarding domain.Onboarding, hasPolicy bool, message, errorMessage string, requireReview bool) {
+	@PublicFlowLayout("ViaGate — Continuar contratação") {
+		<link rel="stylesheet" href="/assets/contracting.css"/>
+		<div class="public contracting-public">
+			<main class="shell public-flow-stack contracting-page" data-contracting-wizard data-policy-present={ BoolString(hasPolicy) }>
+				@PublicFlowHeader("CONTRATAÇÃO", "Prepare o contrato em poucos passos", "A proposta já foi aceita. Agora confirme os dados da empresa e do seguro para gerarmos o contrato.")
+				@PublicFlashMessages(message, errorMessage)
+
+				<nav class="contracting-progress" aria-label="Etapas da contratação">
+					<button type="button" data-contracting-step-link="company"><span>1</span><strong>Empresa</strong></button>
+					<button type="button" data-contracting-step-link="insurance"><span>2</span><strong>Seguro</strong></button>
+					<button type="button" data-contracting-step-link="review"><span>3</span><strong>Revisar</strong></button>
+				</nav>
+
+				<section class="panel contracting-step" data-contracting-step="company">
+					<div class="panel-head">
+						<div><span class="step-title">ETAPA 1 DE 3</span><h2>Empresa contratante</h2><p>Use o CNPJ para preencher os dados públicos e revise antes de continuar.</p></div>
+						<button class="btn" type="button" data-cnpj-lookup data-cnpj-field="cnpj" data-cnpj-prefix="" data-cnpj-endpoint="/api/cnpj/">Preencher pelo CNPJ</button>
+					</div>
+					<div class="panel-body">
+						<form method="post" action={ templ.SafeURL("/onboarding/" + onboarding.ID + "/company") } class="grid">
+							<div class="field"><label>CNPJ</label><input name="cnpj" data-mask="cnpj" value={ onboarding.CNPJ } autocomplete="off" required/><div class="public-cnpj-status" data-cnpj-status></div></div>
+							<div class="field"><label>Razão social</label><input name="legal_name" value={ onboarding.LegalName } required/></div>
+							<div class="field"><label>Nome fantasia</label><input name="trade_name" value={ onboarding.TradeName }/></div>
+							<div class="field"><label>CEP</label><input name="postal_code" data-mask="postal-code" autocomplete="postal-code" value={ onboarding.PostalCode } required/></div>
+							<div class="field"><label>Logradouro</label><input name="street" value={ onboarding.Street } required/></div>
+							<div class="field"><label>Número</label><input name="street_number" value={ onboarding.StreetNumber } required/></div>
+							<div class="field"><label>Complemento</label><input name="complement" value={ onboarding.Complement }/></div>
+							<div class="field"><label>Bairro</label><input name="district" value={ onboarding.District }/></div>
+							<div class="field"><label>Cidade</label><input name="city" value={ onboarding.City } required/></div>
+							<div class="field"><label>UF</label><input name="state" maxlength="2" value={ onboarding.State } required/></div>
+							<div class="field full contracting-actions"><span>Os dados desta etapa serão salvos antes de avançar.</span><button class="btn primary" type="submit" data-processing="Salvando empresa...">Salvar e continuar</button></div>
+						</form>
+					</div>
+				</section>
+
+				<section class="panel contracting-step" data-contracting-step="insurance" hidden>
+					<div class="panel-head"><div><span class="step-title">ETAPA 2 DE 3</span><h2>Operação e seguro</h2><p>Esses dados serão usados na geração do contrato.</p></div></div>
+					<div class="panel-body public-flow-stack">
+						<form method="post" action={ templ.SafeURL("/onboarding/" + onboarding.ID + "/insurance") } class="grid">
+							<div class="field"><label>Tipo de operação</label><select name="operation_type"><option value="normal" selected?={ onboarding.OperationType == "normal" || onboarding.OperationType == "" }>Normal</option><option value="avulsa" selected?={ onboarding.OperationType == "avulsa" }>Avulsa</option></select></div>
+							<div class="field"><label>Seguradora</label><input name="insurer" value={ onboarding.Insurer } required/></div>
+							<div class="field"><label>Início da vigência</label><input name="policy_start_date" type="date" value={ onboarding.PolicyStartDate } required/></div>
+							<div class="field"><label>Fim da vigência</label><input name="policy_end_date" type="date" value={ onboarding.PolicyEndDate } required/></div>
+							<div class="field"><label>Corretor parceiro</label><input name="broker_company" value={ onboarding.BrokerCompany }/></div>
+							<div class="field"><label>Produtor do corretor</label><input name="broker_producer" value={ onboarding.BrokerProducer }/></div>
+							<div class="field full contracting-actions"><button class="btn ghost" type="button" data-contracting-previous="company">Voltar</button><button class="btn dark" type="submit" data-processing="Salvando seguro...">Salvar dados do seguro</button></div>
+						</form>
+
+						<div class={ "contracting-policy " + ContractingPolicyClass(hasPolicy) }>
+							<div><span class="step-title">APÓLICE</span><strong>{ ContractingPolicyTitle(hasPolicy) }</strong><small>{ ContractingPolicyDescription(hasPolicy) }</small></div>
+							<form method="post" action={ templ.SafeURL("/onboarding/" + onboarding.ID + "/documents") } enctype="multipart/form-data">
+								<input name="document" type="file" accept="application/pdf,image/jpeg,image/png" required/>
+								<button class="btn primary" type="submit" data-processing="Enviando apólice...">{ ContractingPolicyButton(hasPolicy) }</button>
+							</form>
+						</div>
+						if hasPolicy {
+							<div class="actions contracting-next"><button class="btn primary" type="button" data-contracting-next="review">Revisar contratação</button></div>
+						}
+					</div>
+				</section>
+
+				<section class="panel contracting-step" data-contracting-step="review" hidden>
+					<div class="panel-head"><div><span class="step-title">ETAPA 3 DE 3</span><h2>Revise antes de gerar o contrato</h2><p>O responsável abaixo foi identificado no aceite da proposta e não precisa preencher seus dados novamente.</p></div></div>
+					<div class="panel-body public-flow-stack">
+						@PublicDataGrid() {
+							@PublicDataField("Empresa") { <strong>{ onboarding.LegalName }</strong><span>{ brfields.FormatCNPJ(onboarding.CNPJ) }</span> }
+							@PublicDataField("Endereço") { <strong>{ ContractingAddress(onboarding) }</strong> }
+							@PublicDataField("Seguro") { <strong>{ onboarding.Insurer }</strong><span>{ onboarding.PolicyStartDate } a { onboarding.PolicyEndDate }</span> }
+							@PublicDataField("Responsável") { <strong>{ onboarding.CompanyResponsibleName }</strong><span>{ onboarding.CompanyResponsibleEmail } · { brfields.FormatPhone(onboarding.CompanyResponsiblePhone) }</span> }
+						}
+						<div class="notice public-flow-note"><strong>Apólice:</strong> { ContractingPolicyTitle(hasPolicy) }</div>
+						if requireReview {
+							<p class="public-flow-muted">Depois do envio, a ViaGate fará uma revisão rápida. Se houver qualquer ajuste, você receberá um link seguro por e-mail.</p>
+						} else {
+							<p class="public-flow-muted">Depois do envio, o contrato será preparado e você seguirá diretamente para a assinatura.</p>
+						}
+						<div class="actions contracting-review-actions">
+							<button class="btn ghost" type="button" data-contracting-previous="insurance">Voltar</button>
+							<form method="post" action={ templ.SafeURL("/onboarding/" + onboarding.ID + "/submit") }>
+								if requireReview {
+									<button class="btn primary" type="submit" data-processing="Enviando para revisão..." disabled?={ !hasPolicy }>Enviar dados para revisão</button>
+								} else {
+									<button class="btn primary" type="submit" data-processing="Preparando contrato..." disabled?={ !hasPolicy }>Gerar contrato para assinatura</button>
+								}
+							</form>
+						</div>
+					</div>
+				</section>
+
+				<p class="contracting-resume-note">Você pode fechar esta página e continuar depois pelo link seguro enviado ao e-mail do responsável.</p>
+			</main>
+			<script src="/assets/contracting.js" defer></script>
+		</div>
+	}
+}
