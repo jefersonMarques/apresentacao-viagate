@@ -13,28 +13,7 @@ templ NotificationsPage(user domain.User, items []domain.InAppNotification) {
 		<section class="panel">
 			<div class="panel-body admin-notification-feed">
 				for _, item := range items {
-					<article class={ NotificationRowClass(item) }>
-						<div class="admin-notification-dot" aria-hidden="true"></div>
-						<div class="admin-notification-copy">
-							<strong>{ item.Title }</strong>
-							if item.Body != "" {
-								<span>{ item.Body }</span>
-							}
-							<small>{ item.CreatedAt.Format("02/01/2006 15:04") }</small>
-						</div>
-						<div class="admin-notification-actions">
-							if item.TargetURL != "" {
-								<form method="post" action={ templ.SafeURL("/admin/notifications/" + item.ID + "/open") }>
-									<input type="hidden" name="target" value={ item.TargetURL }/>
-									<button class="btn" type="submit">Abrir</button>
-								</form>
-							} else if item.ReadAt == nil {
-								<form method="post" action={ templ.SafeURL("/admin/notifications/" + item.ID + "/read") }>
-									<button class="btn" type="submit">Marcar como lida</button>
-								</form>
-							}
-						</div>
-					</article>
+					@NotificationFeedItem(item, false)
 				}
 				if len(items) == 0 {
 					<div class="admin-notification-empty">
@@ -45,4 +24,54 @@ templ NotificationsPage(user domain.User, items []domain.InAppNotification) {
 			</div>
 		</section>
 	}
+}
+
+templ NotificationPopover(items []domain.InAppNotification) {
+	<section class="notification-popover-card" aria-label="Notificações recentes">
+		<header class="notification-popover-header">
+			<div><small>ATIVIDADE</small><strong>Notificações</strong></div>
+			<span>{ NotificationUnreadLabel(items) }</span>
+		</header>
+		<div class="notification-popover-feed">
+			for _, item := range items {
+				@NotificationFeedItem(item, true)
+			}
+			if len(items) == 0 {
+				<div class="admin-notification-empty"><strong>Nenhuma notificação.</strong><span>Novos eventos aparecerão aqui.</span></div>
+			}
+		</div>
+		<a class="notification-popover-all" href="/admin/notifications">Ver todas as notificações <span>→</span></a>
+	</section>
+}
+
+templ NotificationFeedItem(item domain.InAppNotification, compact bool) {
+	<article class={ NotificationRowClass(item) + NotificationCompactClass(compact) }>
+		<div class="admin-notification-dot" aria-hidden="true"></div>
+		<div class="admin-notification-copy">
+			<strong>{ item.Title }</strong>
+			if item.Body != "" {
+				<span>{ item.Body }</span>
+			}
+			<small>{ NotificationTime(item.CreatedAt) }</small>
+		</div>
+		if !compact {
+			<div class="admin-notification-actions">
+				if item.TargetURL != "" {
+					<form method="post" action={ templ.SafeURL("/admin/notifications/" + item.ID + "/open") }>
+						<input type="hidden" name="target" value={ item.TargetURL }/>
+						<button class="btn" type="submit">Abrir</button>
+					</form>
+				} else if item.ReadAt == nil {
+					<form method="post" action={ templ.SafeURL("/admin/notifications/" + item.ID + "/read") }>
+						<button class="btn" type="submit">Marcar como lida</button>
+					</form>
+				}
+			</div>
+		} else if item.TargetURL != "" {
+			<form class="notification-popover-open" method="post" action={ templ.SafeURL("/admin/notifications/" + item.ID + "/open") }>
+				<input type="hidden" name="target" value={ item.TargetURL }/>
+				<button type="submit" aria-label="Abrir notificação">→</button>
+			</form>
+		}
+	</article>
 }
