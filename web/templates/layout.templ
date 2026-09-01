@@ -7,8 +7,8 @@ templ Base(title string) {
 	<html lang="pt-BR">
 		<head>
 			<meta charset="utf-8"/>
-			<meta name="viewport" content="width=device-width, initial-scale=1"/>
-			<meta name="theme-color" content="#071827"/>
+			<meta name="viewport" content="width=device-width,initial-scale=1"/>
+			<meta name="robots" content="noindex,nofollow,noarchive"/>
 			<title>{ title }</title>
 			<link rel="preconnect" href="https://fonts.googleapis.com"/>
 			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -25,14 +25,13 @@ templ Base(title string) {
 
 templ AuthLayout(title string) {
 	@Base(title) {
-		<link rel="stylesheet" href="/assets/auth.css"/>
 		{ children... }
 	}
 }
 
 templ PublicFlowLayout(title string) {
 	@Base(title) {
-		<link rel="stylesheet" href="/assets/public-flow.css"/>
+		<link rel="stylesheet" href="/assets/activation.css"/>
 		{ children... }
 	}
 }
@@ -41,37 +40,90 @@ templ AdminLayout(title string, user domain.User) {
 	@Base(title) {
 		<link rel="stylesheet" href="/assets/admin-enhancements.css"/>
 		<link rel="stylesheet" href="/assets/admin-list.css"/>
-		<div class="admin-shell">
-			<aside class="admin-sidebar">
-				<a class="admin-brand" href="/admin">VIAGATE</a>
-				<nav class="admin-nav">
-					<a href="/admin">Visão geral</a>
-					<a href="/admin/pipeline">Pipeline</a>
-					<a href="/admin/proposals">Propostas</a>
-					<a href="/admin/presentations">Apresentações</a>
-					if HasRole(user, "super_admin") || HasRole(user, "operations") {
-						<a href="/admin/onboardings">Cadastros</a>
-						<a href="/admin/activations">Ativações</a>
+		<div class="admin-app" data-admin-shell>
+			<aside class="admin-sidebar" data-admin-sidebar>
+				<div class="sidebar-brand-row">
+					<a class="sidebar-brand" href="/admin" aria-label="ViaGate Comercial">
+						<span class="brand-mark">VG</span>
+						<span class="brand-copy"><strong>VIAGATE</strong><small>Comercial</small></span>
+					</a>
+					<button class="sidebar-collapse" type="button" data-sidebar-toggle aria-label="Recolher menu">
+						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+					</button>
+				</div>
+				<nav class="sidebar-nav" aria-label="Navegação principal">
+					<span class="sidebar-section">Geral</span>
+					<a href="/admin" data-admin-nav>
+						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
+						<span>Visão geral</span>
+					</a>
+					<a href="/admin/pipeline" data-admin-nav>
+						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h6v5H4z"/><path d="M14 13h6v5h-6z"/><path d="M10 8h4v8"/></svg>
+						<span>Pipeline</span>
+					</a>
+					<span class="sidebar-section">Comercial</span>
+					<a href="/admin/proposals" data-admin-nav>
+						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6z"/><path d="M9 10h6M9 14h6M9 18h4"/></svg>
+						<span>Propostas</span>
+					</a>
+					<a href="/admin/presentations" data-admin-nav>
+						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H4z"/><path d="M9 20h6M12 16v4"/><path d="m8 12 3-3 2 2 3-3"/></svg>
+						<span>Apresentações</span>
+					</a>
+					if HasRole(user,"super_admin") || HasRole(user,"operations") {
+						<span class="sidebar-section">Operação</span>
+						<a href="/admin/onboardings" data-admin-nav>
+							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v15H4z"/><path d="M8 3v4M16 3v4M8 11h8M8 15h5"/></svg>
+							<span>Cadastros</span>
+						</a>
+						<a href="/admin/activations" data-admin-nav>
+							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16"/><path d="m14 6 6 6-6 6"/><path d="M4 6h6M4 18h6"/></svg>
+							<span>Ativações</span>
+						</a>
 					}
-					if HasRole(user, "super_admin") || HasRole(user, "legal") {
-						<a href="/admin/contracts">Contratos</a>
-						<a href="/admin/contracts/templates">Modelos de contrato</a>
-						<a href="/admin/audit">Auditoria</a>
+					if HasRole(user,"super_admin") || HasRole(user,"legal") {
+						<a href="/admin/contracts" data-admin-nav>
+							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6z"/><path d="M14 3v4h4"/><path d="M9 12h6M9 16h6"/></svg>
+							<span>Contratos</span>
+						</a>
+						<a href="/admin/audit" data-admin-nav>
+							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.4 8 8 9 4.6-1 8-4 8-9V6z"/><path d="M9 12h6M12 9v6"/></svg>
+							<span>Auditoria</span>
+						</a>
 					}
-					if HasRole(user, "super_admin") {
-						<a href="/admin/users">Usuários</a>
+					if HasRole(user,"super_admin") {
+						<span class="sidebar-section">Administração</span>
+						<a href="/admin/users" data-admin-nav>
+							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/><path d="M18 8v6M15 11h6"/></svg>
+							<span>Usuários</span>
+						</a>
 					}
 				</nav>
-				<div class="admin-sidebar-footer">
-					<a href="/admin/profile">Meu perfil</a>
-					<form method="post" action="/logout"><button type="submit">Sair</button></form>
+				<div class="sidebar-user">
+					<a class="sidebar-profile" href="/admin/profile" data-admin-nav>
+						<span class="profile-avatar">{ UserInitials(user.Name) }</span>
+						<span class="sidebar-user-copy"><strong>{ user.Name }</strong><small>{ user.Email }</small></span>
+					</a>
+					<form method="post" action="/logout">
+						<button class="sidebar-logout" type="submit" aria-label="Sair">
+							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3"/><path d="M14 4h6v16h-6"/></svg>
+							<span>Sair</span>
+						</button>
+					</form>
 				</div>
 			</aside>
+			<button class="sidebar-backdrop" type="button" data-sidebar-backdrop aria-label="Fechar menu"></button>
 			<div class="admin-main">
 				<header class="admin-topbar">
-					<div><strong>{ user.Name }</strong><span>{ user.Email }</span></div>
+					<button class="mobile-menu-toggle" type="button" data-sidebar-mobile-toggle aria-label="Abrir menu">
+						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+					</button>
+					<div class="admin-topbar-copy"><span>ViaGate</span><strong>Plataforma comercial</strong></div>
+					<a class="topbar-profile" href="/admin/profile"><span class="profile-avatar small">{ UserInitials(user.Name) }</span><span>{ user.Name }</span></a>
 				</header>
-				<main class="admin-content">{ children... }</main>
+				<main class="admin-content">
+					{ children... }
+				</main>
 			</div>
 		</div>
 		<script src="/assets/admin-list.js" defer></script>
