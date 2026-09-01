@@ -19,6 +19,11 @@ func NewPDFRenderer(chromiumPath string) *PDFRenderer {
 	return &PDFRenderer{chromiumPath: chromiumPath}
 }
 
+func (r *PDFRenderer) Check() error {
+	_, err := resolveBrowserExecutable(r.chromiumPath)
+	return err
+}
+
 func (r *PDFRenderer) Render(ctx context.Context, html string) ([]byte, error) {
 	browserPath, err := resolveBrowserExecutable(r.chromiumPath)
 	if err != nil {
