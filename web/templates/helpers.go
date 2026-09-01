@@ -45,6 +45,16 @@ func Date(value *time.Time) string {
 	return value.Format("02/01/2006")
 }
 
+func DateTime(value *time.Time) string {
+	if value == nil { return "—" }
+	return value.Format("02/01/2006 15:04")
+}
+
+func DateTimeSeconds(value *time.Time) string {
+	if value == nil { return "—" }
+	return value.Format("02/01/2006 15:04:05")
+}
+
 func CPF(value string) string { return brfields.FormatCPF(value) }
 func CNPJ(value string) string { return brfields.FormatCNPJ(value) }
 func Phone(value string) string { return brfields.FormatPhone(value) }
