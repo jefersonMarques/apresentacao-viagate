@@ -40,7 +40,7 @@ func (a *App) downloadProposalPDF(w http.ResponseWriter, r *http.Request, items 
 		return
 	}
 
-	key := "commercial-pdf/raster-v2/proposals/" + proposal.VersionID + ".pdf"
+	key := "commercial-pdf/raster-v3/proposals/" + proposal.VersionID + ".pdf"
 	filename := commercialPDFFilename("proposta", proposal.ClientTradeName, proposal.ClientName, fmt.Sprintf("v%d", proposal.VersionNumber))
 	a.serveCommercialPDF(w, r, key, filename, func(ctx context.Context) (string, error) {
 		var buffer bytes.Buffer
@@ -71,7 +71,7 @@ func (a *App) downloadPresentationPDF(w http.ResponseWriter, r *http.Request, it
 		return
 	}
 
-	key := "commercial-pdf/raster-v2/presentations/" + presentation.VersionID + ".pdf"
+	key := "commercial-pdf/raster-v3/presentations/" + presentation.VersionID + ".pdf"
 	filename := commercialPDFFilename("apresentacao", presentationClientFilename(presentation), fmt.Sprintf("v%d", presentation.VersionNumber))
 	a.serveCommercialPDF(w, r, key, filename, func(ctx context.Context) (string, error) {
 		return a.preparePresentationPDFDocument(presentation)
