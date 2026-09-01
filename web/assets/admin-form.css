@@ -26,3 +26,71 @@
   color: #ff6b18;
   font-weight: 800;
 }
+
+.admin-form-align-end {
+  align-content: end;
+}
+
+.admin-permission-group + .admin-permission-group {
+  margin-top: 22px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+}
+
+.admin-permission-group > strong {
+  display: block;
+  margin-bottom: 10px;
+}
+
+.admin-permission-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-permission-item,
+.admin-notification-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface, #fff);
+}
+
+.admin-permission-item input,
+.admin-notification-item input {
+  margin-top: 2px;
+}
+
+.admin-permission-item span,
+.admin-notification-item > div {
+  display: grid;
+  gap: 3px;
+}
+
+.admin-permission-item small,
+.admin-notification-item small {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.admin-notification-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+}
+
+.admin-notification-item label {
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .admin-permission-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-notification-item {
+    grid-template-columns: 1fr;
+  }
+}
