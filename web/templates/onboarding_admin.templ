@@ -7,7 +7,7 @@ import (
 
 templ OnboardingAdminListPage(user domain.User, items []onboardingpkg.AdminItem) {
 	@AdminLayout("ViaGate — Cadastros", user) {
-		@AdminPageHeader("ONBOARDING", "Cadastros de contratação", "Revise documentos e dados enviados, acompanhe falhas de geração de contrato e solicite correções quando necessário.")
+		@AdminPageHeader("DADOS DO CLIENTE", "Cadastros de contratação", "Consulte de forma organizada as respostas enviadas pelo cliente. Ações de revisão aparecem somente para usuários autorizados.")
 		<div class="admin-list-root" data-admin-list>
 			@AdminListToolbar(len(items), "cadastro(s)") {
 				@AdminListSearch("Buscar cliente, CNPJ ou comercial...")
@@ -31,18 +31,10 @@ templ OnboardingAdminListPage(user domain.User, items []onboardingpkg.AdminItem)
 								<span class="badge status-badge status-success">Contrato assinado</span>
 							} else if item.ContractStatus != "" {
 								<span class={ "badge status-badge " + AdminStatusBadgeClass(item.ContractStatus) }>{ humanStatus(item.ContractStatus) }</span>
-							} else {
-								<span>—</span>
-							}
+							} else { <span>—</span> }
 						</td>
-						<td data-label="Enviado">
-							if item.SubmittedAt != nil {
-								{ item.SubmittedAt.Format("02/01/2006 15:04") }
-							} else {
-								{ item.UpdatedAt.Format("02/01/2006 15:04") }
-							}
-						</td>
-						<td data-label="Ações" data-actions="true"><div class="admin-list-actions"><a class="btn" href={ templ.SafeURL("/admin/onboardings/" + item.ID) }>Revisar</a></div></td>
+						<td data-label="Enviado">if item.SubmittedAt != nil { { item.SubmittedAt.Format("02/01/2006 15:04") } } else { { item.UpdatedAt.Format("02/01/2006 15:04") } }</td>
+						<td data-label="Ações" data-actions="true"><div class="admin-list-actions"><a class="btn" href={ templ.SafeURL("/admin/onboardings/" + item.ID) }>Abrir</a></div></td>
 					</tr>
 				}
 			}
@@ -51,159 +43,103 @@ templ OnboardingAdminListPage(user domain.User, items []onboardingpkg.AdminItem)
 }
 
 templ OnboardingAdminDetailPage(user domain.User, detail onboardingpkg.AdminDetail, message, errorMessage string) {
-	@AdminLayout("ViaGate — Revisar cadastro", user) {
-		<header class="header">
-			<div>
-				<span class="step-title">REVISÃO DE CADASTRO</span>
-				<h1>{ detail.Onboarding.LegalName }</h1>
-				<p>{ detail.ProposalTitle } · comercial: { detail.CommercialName }</p>
-			</div>
-			<div class="actions"><a class="btn" href="/admin/onboardings">Voltar</a></div>
-		</header>
-		if message != "" {
-			<div class="notice">{ message }</div>
+	@AdminLayout("ViaGate — Dados do cliente", user) {
+		@AdminPageHeader("DOSSIÊ DO CLIENTE", detail.Onboarding.LegalName, detail.ProposalTitle + " · comercial: " + detail.CommercialName) {
+			<a class="btn" href="/admin/onboardings">Voltar</a>
 		}
-		if errorMessage != "" {
-			<div class="notice error">{ errorMessage }</div>
-		}
+		@FlashMessages(message, errorMessage)
+
 		<section class="panel">
-			<div class="panel-head">
-				<h2>Situação</h2>
-				<div class="actions">
-					<span class="badge">Cadastro · { humanStatus(detail.Onboarding.Status) }</span>
-					if detail.ContractStatus == "signed" {
-						<span class="badge success">Contrato assinado</span>
-					} else if detail.ContractStatus != "" {
-						<span class="badge">Contrato · { humanStatus(detail.ContractStatus) }</span>
-					}
-				</div>
-			</div>
-			<div class="panel-body grid">
-				<div><small>CNPJ</small><strong style="display:block;margin-top:4px">{ CNPJ(detail.Onboarding.CNPJ) }</strong></div>
-				<div><small>Operação</small><strong style="display:block;margin-top:4px">{ detail.Onboarding.OperationType }</strong></div>
-				<div><small>Seguradora</small><strong style="display:block;margin-top:4px">{ detail.Onboarding.Insurer }</strong></div>
-				<div><small>Vigência</small><strong style="display:block;margin-top:4px">{ detail.Onboarding.PolicyStartDate } — { detail.Onboarding.PolicyEndDate }</strong></div>
+			<div class="panel-head"><h2>Situação da contratação</h2><div class="actions"><span class="badge">Cadastro · { humanStatus(detail.Onboarding.Status) }</span>if detail.ContractStatus == "signed" { <span class="badge success">Contrato assinado</span> } else if detail.ContractStatus != "" { <span class="badge">Contrato · { humanStatus(detail.ContractStatus) }</span> }</div></div>
+			<div class="panel-body">
+				@PublicDataGrid() {
+					@PublicDataField("CNPJ", CNPJ(detail.Onboarding.CNPJ))
+					@PublicDataField("Tipo de operação", detail.Onboarding.OperationType)
+					@PublicDataField("Seguradora", detail.Onboarding.Insurer)
+					@PublicDataField("Vigência", detail.Onboarding.PolicyStartDate + " — " + detail.Onboarding.PolicyEndDate)
+				}
 			</div>
 		</section>
+
+		<section class="panel">
+			<div class="panel-head"><h2>Empresa e endereço</h2></div>
+			<div class="panel-body">
+				@PublicDataGrid() {
+					@PublicDataField("Razão social", detail.Onboarding.LegalName)
+					@PublicDataField("Nome fantasia", detail.Onboarding.TradeName)
+					@PublicDataField("Corretora", detail.Onboarding.BrokerCompany)
+					@PublicDataField("Produtor", detail.Onboarding.BrokerProducer)
+					@PublicDataField("Endereço", detail.Onboarding.Street + ", " + detail.Onboarding.StreetNumber + " · " + detail.Onboarding.District + " · " + detail.Onboarding.City + "/" + detail.Onboarding.State + " · CEP " + PostalCode(detail.Onboarding.PostalCode))
+				}
+			</div>
+		</section>
+
 		<section class="panel">
 			<div class="panel-head"><h2>Responsáveis</h2></div>
-			<div class="panel-body grid">
-				<div>
-					<small>Responsável pela empresa</small>
-					<strong style="display:block;margin-top:4px">{ detail.Onboarding.CompanyResponsibleName }</strong>
-					<span>{ detail.Onboarding.CompanyResponsibleEmail } · { Phone(detail.Onboarding.CompanyResponsiblePhone) }</span><br/>
-					<small>CPF { CPF(detail.Onboarding.CompanyResponsibleCPF) } · { detail.Onboarding.CompanyResponsibleRole }</small>
-				</div>
-				<div>
-					<small>Financeiro</small>
-					<strong style="display:block;margin-top:4px">{ detail.Onboarding.FinanceResponsibleName }</strong>
-					<span>{ detail.Onboarding.FinanceResponsibleEmail } · { Phone(detail.Onboarding.FinanceResponsiblePhone) }</span>
-				</div>
-				<div class="field full">
-					<small>Endereço</small>
-					<strong>{ detail.Onboarding.Street }, { detail.Onboarding.StreetNumber } · { detail.Onboarding.District } · { detail.Onboarding.City }/{ detail.Onboarding.State } · CEP { PostalCode(detail.Onboarding.PostalCode) }</strong>
-				</div>
-			</div>
-		</section>
-		<section class="panel">
-			<div class="panel-head"><h2>Mercadorias e usuários</h2></div>
-			<div class="panel-body grid">
-				<div>
-					<span class="step-title">MERCADORIAS</span>
-					<ul>
-						for _, item := range detail.Onboarding.Goods {
-							<li>{ item }</li>
-						}
-						if len(detail.Onboarding.Goods) == 0 {
-							<li>Não informado</li>
-						}
-					</ul>
-				</div>
-				<div>
-					<span class="step-title">USUÁRIOS DO SISTEMA</span>
-					<ul>
-						for _, item := range detail.Onboarding.SystemUsers {
-							<li><strong>{ item.Name }</strong> · { item.Email } · { Phone(item.Phone) }</li>
-						}
-						if len(detail.Onboarding.SystemUsers) == 0 {
-							<li>Nenhum usuário informado</li>
-						}
-					</ul>
-				</div>
-			</div>
-		</section>
-		<section class="panel">
-			<div class="panel-head"><h2>Documentos</h2></div>
 			<div class="panel-body">
-				<div class="actions">
-					for _, document := range detail.Documents {
-						<a class="btn" target="_blank" rel="noopener" href={ templ.SafeURL("/admin/onboardings/" + detail.Onboarding.ID + "/documents/" + document.ID) }>{ document.OriginalFilename }</a>
-					}
-					if len(detail.Documents) == 0 {
-						<span>Nenhum documento enviado.</span>
-					}
-				</div>
-			</div>
-		</section>
-		<section class="panel">
-			<div class="panel-head"><h2>Revisão e contrato</h2></div>
-			<div class="panel-body">
-				if detail.ReviewNotes != "" {
-					<div class="notice"><strong>Última observação:</strong> { detail.ReviewNotes }</div>
+				@PublicDataGrid() {
+					@PublicDataField("Responsável pela empresa", detail.Onboarding.CompanyResponsibleName)
+					@PublicDataField("CPF", CustomerCPF(user, detail.Onboarding.CompanyResponsibleCPF))
+					@PublicDataField("Cargo", detail.Onboarding.CompanyResponsibleRole)
+					@PublicDataField("Contato", detail.Onboarding.CompanyResponsibleEmail + " · " + Phone(detail.Onboarding.CompanyResponsiblePhone))
+					@PublicDataField("Responsável financeiro", detail.Onboarding.FinanceResponsibleName)
+					@PublicDataField("Contato financeiro", detail.Onboarding.FinanceResponsibleEmail + " · " + Phone(detail.Onboarding.FinanceResponsiblePhone))
 				}
+			</div>
+		</section>
+
+		<section class="panel">
+			<div class="panel-head"><h2>Mercadorias</h2></div>
+			<div class="panel-body"><ul>for _, item := range detail.Onboarding.Goods { <li>{ item }</li> } if len(detail.Onboarding.Goods) == 0 { <li>Não informado</li> }</ul></div>
+		</section>
+
+		<section class="panel">
+			<div class="panel-head"><h2>Usuários do sistema</h2></div>
+			<div class="panel-body"><ul>for _, item := range detail.Onboarding.SystemUsers { <li><strong>{ item.Name }</strong> · { item.Email } · { Phone(item.Phone) }</li> } if len(detail.Onboarding.SystemUsers) == 0 { <li>Nenhum usuário informado</li> }</ul></div>
+		</section>
+
+		if UserCan(user, "customer.documents.read") {
+			<section class="panel">
+				<div class="panel-head"><h2>Documentos enviados</h2></div>
+				<div class="panel-body"><div class="actions">for _, document := range detail.Documents { <a class="btn" target="_blank" rel="noopener" href={ templ.SafeURL("/admin/onboardings/" + detail.Onboarding.ID + "/documents/" + document.ID) }>{ document.OriginalFilename }</a> } if len(detail.Documents) == 0 { <span>Nenhum documento enviado.</span> }</div></div>
+			</section>
+		}
+
+		<section class="panel">
+			<div class="panel-head"><h2>Contrato e evidências</h2></div>
+			<div class="panel-body">
+				if detail.ReviewNotes != "" { <div class="notice"><strong>Última observação:</strong> { detail.ReviewNotes }</div> }
 				if detail.ContractID != "" {
-					<div style="margin-bottom:18px">
-						<span class="step-title">DOCUMENTOS DA CONTRATAÇÃO</span>
-						<p>
-							if detail.ContractStatus == "signed" {
-								O contrato foi assinado e está disponível para consulta pela ViaGate.
-							} else {
-								O contrato gerado está disponível para consulta pela ViaGate.
-							}
-						</p>
+					<div class="admin-form-bottom-gap">
 						<div class="actions">
-							<a class="btn dark" target="_blank" rel="noopener" href={ templ.SafeURL("/admin/contracts/" + detail.ContractID + "/document") }>
-								if detail.ContractStatus == "signed" {
-									Baixar contrato assinado
-								} else {
-									Baixar contrato
-								}
-							</a>
-							if detail.ContractFinalizedAt != nil {
-								<a class="btn" target="_blank" rel="noopener" href={ templ.SafeURL("/admin/contracts/" + detail.ContractID + "/evidence") }>Relatório técnico da assinatura</a>
+							<a class="btn dark" target="_blank" rel="noopener" href={ templ.SafeURL("/admin/contracts/" + detail.ContractID + "/document") }>if detail.ContractStatus == "signed" { Baixar contrato assinado } else { Baixar contrato }</a>
+							if detail.ContractFinalizedAt != nil && UserCan(user, "contract.evidence.read") {
+								<a class="btn" target="_blank" rel="noopener" href={ templ.SafeURL("/admin/contracts/" + detail.ContractID + "/evidence") }>Relatório técnico</a>
 								<a class="btn primary" target="_blank" rel="noopener" href={ templ.SafeURL("/admin/contracts/" + detail.ContractID + "/package") }>Documentos da assinatura</a>
 							}
 						</div>
-						if detail.ContractStatus == "signed" && detail.ContractFinalizedAt == nil {
-							<div class="notice" style="margin-top:12px">Os documentos comprobatórios da assinatura ainda estão sendo preparados.</div>
-						}
+						if detail.ContractStatus == "signed" && detail.ContractFinalizedAt == nil { <div class="notice admin-form-section-gap">Os documentos comprobatórios da assinatura ainda estão sendo preparados.</div> }
 						@ContractVerificationHelp()
 					</div>
-				}
-				if detail.ContractID == "" && (detail.Onboarding.Status == "submitted" || detail.Onboarding.Status == "under_review") {
-					<form method="post" action={ templ.SafeURL("/admin/onboardings/" + detail.Onboarding.ID + "/review") }>
-						<div class="field"><label>Observação / solicitação de correção</label><textarea name="notes" placeholder="Explique objetivamente o que precisa ser ajustado.">{ detail.ReviewNotes }</textarea></div>
-						<div class="actions" style="margin-top:14px">
-							<button class="btn" type="submit" name="status" value="under_review" data-processing="Atualizando...">Marcar em revisão</button>
-							<button class="btn danger" type="submit" name="status" value="correction_requested" data-processing="Enviando solicitação...">Solicitar correção</button>
-							<button class="btn primary" type="submit" name="status" value="approved" data-processing="Aprovando e preparando contrato...">Aprovar cadastro</button>
-						</div>
-					</form>
-				} else if detail.Onboarding.Status == "correction_requested" {
-					<div class="notice">Aguardando o cliente corrigir e reenviar o cadastro. Um novo contrato não pode ser gerado enquanto houver correção pendente.</div>
-				} else if detail.Onboarding.Status == "approved" {
-					<div class="notice">Cadastro aprovado. Os dados utilizados na geração do contrato estão bloqueados para edição pelo cliente.</div>
-				}
-				if detail.Onboarding.Status == "approved" && detail.ContractStatus != "signed" {
-					<div style="margin-top:18px;border-top:1px solid var(--line);padding-top:18px">
-						<span class="step-title">RECUPERAÇÃO</span>
-						<p>Use se a geração do contrato ou a preparação do e-mail de assinatura falhar. A operação pode ser repetida sem criar um segundo contrato ativo.</p>
-						<form method="post" action={ templ.SafeURL("/admin/onboardings/" + detail.Onboarding.ID + "/contract/retry") }>
-							<button class="btn dark" type="submit" data-processing="Preparando contrato...">Gerar / reenviar contrato</button>
-						</form>
-					</div>
-				}
+				} else { <span>Nenhum contrato gerado ainda.</span> }
 			</div>
 		</section>
+
+		if UserCan(user, "onboarding.review") {
+			<section class="panel">
+				<div class="panel-head"><h2>Revisão interna</h2></div>
+				<div class="panel-body">
+					if detail.ContractID == "" && (detail.Onboarding.Status == "submitted" || detail.Onboarding.Status == "under_review") {
+						<form method="post" action={ templ.SafeURL("/admin/onboardings/" + detail.Onboarding.ID + "/review") }>
+							<div class="field"><label>Observação / solicitação de correção</label><textarea name="notes" placeholder="Explique objetivamente o que precisa ser ajustado.">{ detail.ReviewNotes }</textarea></div>
+							<div class="actions admin-form-section-gap"><button class="btn" type="submit" name="status" value="under_review" data-processing="Atualizando...">Marcar em revisão</button><button class="btn danger" type="submit" name="status" value="correction_requested" data-processing="Enviando solicitação...">Solicitar correção</button><button class="btn primary" type="submit" name="status" value="approved" data-processing="Aprovando e preparando contrato...">Aprovar cadastro</button></div>
+						</form>
+					} else if detail.Onboarding.Status == "correction_requested" { <div class="notice">Aguardando o cliente corrigir e reenviar o cadastro.</div> } else if detail.Onboarding.Status == "approved" { <div class="notice">Cadastro aprovado. Os dados utilizados na geração do contrato estão bloqueados para edição pelo cliente.</div> }
+					if detail.Onboarding.Status == "approved" && detail.ContractStatus != "signed" {
+						<div class="admin-form-section-gap"><span class="step-title">RECUPERAÇÃO</span><p>Use somente se a geração do contrato ou o envio da assinatura falhar.</p><form method="post" action={ templ.SafeURL("/admin/onboardings/" + detail.Onboarding.ID + "/contract/retry") }><button class="btn dark" type="submit" data-processing="Preparando contrato...">Gerar / reenviar contrato</button></form></div>
+					}
+				</div>
+			</section>
+		}
 	}
 }
