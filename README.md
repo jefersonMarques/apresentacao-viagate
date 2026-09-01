@@ -292,18 +292,16 @@ make check
 
 ## Produção
 
-Antes de produção, no mínimo:
+A V1 está preparada como release candidate de produção. O procedimento operacional completo está em [`docs/production.md`](docs/production.md).
 
-- HTTPS obrigatório;
-- PostgreSQL não exposto publicamente;
-- bucket privado com criptografia server-side;
-- `APP_ENV=production`;
-- credenciais e segredos fora do repositório;
-- backups testados do PostgreSQL e política de retenção/versionamento do S3;
-- `TRUST_PROXY_HEADERS=true` somente se o backend estiver isolado atrás de proxy confiável;
-- razão social e CNPJ oficiais da ViaGate configurados;
-- sender do Brevo validado;
-- revisão jurídica do texto de aceite, consentimento e fluxo de assinatura;
-- testes de restauração e uma rodada de segurança antes de habilitar clientes reais.
+A release inclui:
 
-A branch `feature/go-commercial-platform` ainda está em estabilização e não deve ser tratada como release de produção até passar por `templ generate`, `go test ./...`, testes integrados com PostgreSQL/S3/Brevo e validação funcional do fluxo completo.
+- bundle Linux reproduzível com binários e assets de runtime;
+- checksum SHA-256 do bundle;
+- comando `preflight` para validar configuração, PostgreSQL, S3 e Chromium;
+- template de ambiente de produção em `deploy/viagate.env.example`;
+- unit systemd em `deploy/viagate-commercial.service`;
+- geração automática do bundle pelo GitHub Actions após o CI;
+- procedimento documentado de migration, healthcheck, smoke test e rollback.
+
+Antes de liberar clientes reais, ainda é obrigatório executar no ambiente de produção o preflight, backup do PostgreSQL, migrations, healthchecks e o smoke test funcional descrito no documento de produção. O deploy deve usar exatamente o SHA que passou no CI.
