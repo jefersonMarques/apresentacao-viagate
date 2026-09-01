@@ -68,20 +68,22 @@ func (s *Store) PermissionSettings(ctx context.Context, userID string) ([]domain
 	return settings, nil
 }
 
-func (s *Store) ReplacePermissionOverrides(ctx context.Context, targetUserID, actorUserID string, values map[string]bool) error {
+// SetPermissionOverrides changes only the supplied permission codes. This lets
+// an Admin manage the permitted subset of a User account without erasing
+// technical or migrated overrides that only a Superadmin may control.
+func (s *Store) SetPermissionOverrides(ctx context.Context, targetUserID, actorUserID string, values map[string]bool) error {
 	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.Serializable})
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback(ctx)
 
-	if _, err := tx.Exec(ctx, `delete from user_permission_overrides where user_id=$1`, targetUserID); err != nil {
-		return err
-	}
 	for code, allowed := range values {
 		command, err := tx.Exec(ctx, `
 			insert into user_permission_overrides(user_id,permission_id,allowed,updated_by,updated_at)
 			select $1,p.id,$3,$2,now() from permissions p where p.code=$4
+			on conflict(user_id,permission_id) do update
+			set allowed=excluded.allowed,updated_by=excluded.updated_by,updated_at=excluded.updated_at
 		`, targetUserID, actorUserID, allowed, code)
 		if err != nil {
 			return err
