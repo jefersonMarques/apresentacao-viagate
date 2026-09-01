@@ -28,3 +28,65 @@
 .public-flow-hash {
   word-break: break-all;
 }
+
+.signature-document-view {
+  padding: 0;
+  overflow: hidden;
+  background: #e9edf0;
+}
+
+.signature-document-frame {
+  display: block;
+  width: 100%;
+  height: min(78vh, 920px);
+  min-height: 620px;
+  border: 0;
+  background: #fff;
+}
+
+.signature-document-fallback {
+  padding: 16px;
+}
+
+.signature-otp-actions {
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.signature-inline-notice {
+  margin: 0;
+}
+
+.signature-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.signature-consent input {
+  width: 18px;
+  min-width: 18px;
+  height: 18px;
+  min-height: 18px;
+  padding: 0;
+  margin: 1px 0 0;
+  flex: 0 0 18px;
+}
+
+.public-flow-details {
+  margin-top: 14px;
+}
+
+.public-flow-details summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.public-flow-details p {
+  margin-top: 10px;
+  color: var(--muted);
+}
