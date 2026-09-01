@@ -35,6 +35,10 @@
       const active = href === '/admin' ? path === href : path === href || path.startsWith(`${href}/`);
       link.classList.toggle('is-active', active);
     });
+
+    if (document.querySelector('.topbar-notification')) {
+      import('/assets/admin-notifications.js').catch(() => {});
+    }
   }
 
   document.addEventListener('DOMContentLoaded', initAdminSidebar);
