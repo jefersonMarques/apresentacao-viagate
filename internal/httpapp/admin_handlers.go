@@ -8,6 +8,7 @@ import (
 	"github.com/jefersonMarques/apresentacao-viagate/internal/access"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/contracts"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/presentations"
 	"github.com/jefersonMarques/apresentacao-viagate/web/templates"
 )
 
@@ -24,7 +25,7 @@ func (a *App) dashboard(w http.ResponseWriter, r *http.Request) {
 		proposalItems = items
 	}
 
-	presentationItems := []domain.Presentation{}
+	presentationItems := []presentations.Presentation{}
 	if presentationAll := access.Can(user, access.PresentationReadAll); presentationAll || access.Can(user, access.PresentationReadOwn) {
 		items, err := a.presentationStore.List(r.Context(), user.ID, presentationAll)
 		if err != nil {
