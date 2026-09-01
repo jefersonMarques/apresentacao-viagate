@@ -2,6 +2,7 @@ package httpapp
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"strings"
 	"time"
@@ -48,6 +49,8 @@ func (a *App) acceptProposal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if strings.HasPrefix(strings.ToLower(r.Header.Get("Content-Type")), "multipart/form-data") {
+		// Compatibility for proposal links already open during rollout. New viewers
+		// use the short acceptance flow below and collect contracting data afterward.
 		a.acceptProposalContractFlow(w, r, proposal)
 		return
 	}
@@ -107,6 +110,9 @@ func (a *App) acceptProposal(w http.ResponseWriter, r *http.Request) {
 	}
 	setSecureCookie(w, customerSessionCookie, plain, expires, a.cfg.Environment == "production")
 
+	if err := a.queueCustomerJourneyEmail(r.Context(), result.AcceptanceID, input.Name, input.Email); err != nil {
+		a.logger.Error("queue customer contracting journey email failed", "acceptance_id", result.AcceptanceID, "error", err)
+	}
 	_, _ = a.pool.Exec(r.Context(), `
 		insert into notification_outbox(recipient,recipient_name,subject,html_body,text_body)
 		select u.email,u.name,'Proposta aceita: '||p.title,
@@ -115,7 +121,15 @@ func (a *App) acceptProposal(w http.ResponseWriter, r *http.Request) {
 		from proposals p join clients c on c.id=p.client_id join users u on u.id=p.created_by where p.id=$1
 	`, proposal.ProposalID, input.Name)
 	a.publishProposalEvent(r.Context(), proposal.ProposalID, "proposal.accepted", "Proposta aceita", "Aceita por "+input.Name, proposal.VersionID)
-	http.Redirect(w, r, "/onboarding/"+result.OnboardingID, http.StatusSeeOther)
+
+	nextURL := "/onboarding/" + result.OnboardingID + "?accepted=1"
+	if wantsJSON(r) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-Control", "no-store")
+		_ = json.NewEncoder(w).Encode(map[string]string{"next_url": nextURL})
+		return
+	}
+	http.Redirect(w, r, nextURL, http.StatusSeeOther)
 }
 
 func (a *App) customerSessionRequired(next http.Handler) http.Handler {
