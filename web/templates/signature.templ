@@ -10,7 +10,9 @@ templ SignatureContractPage(access contracts.SignerAccess, token string, message
 		<link rel="stylesheet" href="/assets/signature.css"/>
 		<div class="public">
 			<main class="proposal-page public-flow-stack">
-				@PublicFlowHeader("ASSINATURA ELETRÔNICA", "Contrato para assinatura", "Responsável: " + access.Signer.Name + " · " + access.Signer.Email)
+				@PublicFlowHeader("ASSINATURA ELETRÔNICA", "Contrato para assinatura", "Responsável: " + access.Signer.Name + " · " + access.Signer.Email) {
+					@PublicProposalLink("/sign/" + token + "/proposal")
+				}
 				if access.Signer.Status == "signed" {
 					@PublicFlashMessages(message, errorMessage)
 				} else {
@@ -55,14 +57,14 @@ templ SignatureContractPage(access contracts.SignerAccess, token string, message
 					<section class="accept-box signature-complete-box">
 						<span class="step-title">CONTRATO ASSINADO</span>
 						<h2>Assinatura registrada com sucesso.</h2>
-						<p>A contratação foi concluída. Enviamos também para seu e-mail um link com os próximos passos para preparar a operação.</p>
+						<p>A contratação foi concluída. Enviamos também para seu e-mail os próximos passos para preparar a operação.</p>
 						<div class="actions">
 							<form method="post" action={ templ.SafeURL("/sign/" + token + "/activation") }>
 								<button class="btn primary" type="submit" data-processing="Abrindo dados de ativação...">Preencher dados para ativação agora</button>
 							</form>
 							<a class="btn ghost" href={ templ.SafeURL("/sign/" + token + "/contract") }>Baixar contrato assinado</a>
 						</div>
-						<p class="public-flow-muted">Você não precisa concluir a ativação agora. O link enviado ao seu e-mail permite retomar e também encaminhar partes do preenchimento para alguém da sua equipe.</p>
+						<p class="public-flow-muted">Você não precisa concluir a ativação agora. O link recebido por e-mail permite retomar o processo depois.</p>
 					</section>
 				}
 				<section class="accept-box">
