@@ -292,9 +292,18 @@
     const form = document.querySelector('[data-proposal-editor]');
     if (!(form instanceof HTMLFormElement)) return;
     const products = Array.from(form.querySelectorAll('[data-proposal-product]'));
+    const pricingRadios = Array.from(form.querySelectorAll('[name="pricing_model"]'));
     const summaryCount = form.querySelector('[data-proposal-summary-count]');
     const summaryOptional = form.querySelector('[data-proposal-summary-optional]');
     const summaryTotal = form.querySelector('[data-proposal-summary-total]');
+
+    const syncModelVisibility = () => {
+      const model = form.querySelector('[name="pricing_model"]:checked')?.value || 'per_item';
+      products.forEach((row) => {
+        const models = String(row.dataset.models || '').split(',').filter(Boolean);
+        row.hidden = models.length > 0 && !models.includes(model);
+      });
+    };
 
     const refreshSummary = () => {
       let included = 0;
@@ -333,6 +342,13 @@
       updateProposalProduct(row);
     });
 
+    pricingRadios.forEach((radio) => {
+      radio.addEventListener('change', () => {
+        syncModelVisibility();
+        refreshSummary();
+      });
+    });
+
     form.querySelectorAll('[data-proposal-preset]').forEach((button) => {
       button.addEventListener('click', () => {
         const model = button.dataset.model || 'per_item';
@@ -355,6 +371,7 @@
           }
           updateProposalProduct(row);
         });
+        syncModelVisibility();
         refreshSummary();
       });
     });
@@ -371,6 +388,7 @@
       });
     }, { capture: true });
 
+    syncModelVisibility();
     refreshSummary();
   }
 
