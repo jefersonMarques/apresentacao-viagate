@@ -1,0 +1,27 @@
+.activation-public {
+  min-height: 100vh;
+  background: #f5f7f8;
+  color: var(--ink);
+}
+
+.activation-public .activation-hero {
+  position: relative;
+  color: var(--ink);
+}
+
+.activation-public .activation-hero h1 {
+  color: var(--ink);
+}
+
+.activation-public .activation-hero p,
+.activation-public .activation-status-line {
+  color: var(--muted);
+}
+
+.activation-public .activation-progress-item {
+  color: var(--ink);
+}
+
+.activation-public .activation-progress-item.is-current {
+  color: #fff;
+}
