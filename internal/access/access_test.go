@@ -60,3 +60,12 @@ func TestCanUsesEffectivePermissions(t *testing.T) {
 		t.Fatal("missing permission must remain denied")
 	}
 }
+
+func TestLastActiveSuperAdminCannotBeRemoved(t *testing.T) {
+	if CanRemoveActiveSuperAdmin(1) {
+		t.Fatal("the last active superadmin must remain protected")
+	}
+	if !CanRemoveActiveSuperAdmin(2) {
+		t.Fatal("one superadmin may be removed when another active superadmin remains")
+	}
+}
