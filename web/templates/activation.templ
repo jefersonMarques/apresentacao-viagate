@@ -8,7 +8,7 @@ import (
 	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/brfields"
 )
 
-templ ActivationPage(access activation.Access, token, message, errorMessage string) {
+templ ActivationPage(access activation.Access, token, message, errorMessage, proposalURL string) {
 	@PublicFlowLayout("ViaGate — Dados para ativação") {
 		<link rel="stylesheet" href="/assets/activation.css"/>
 		<div class="public activation-public">
@@ -18,6 +18,7 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
 					<h1>Vamos preparar sua operação.</h1>
 					<p>O contrato já está separado desta etapa. Agora precisamos apenas das informações operacionais para configurar a ViaGate para sua equipe.</p>
 					<div class="activation-status-line"><strong>{ ActivationStatusLabel(access.Profile.Status) }</strong> · { access.Profile.LegalName }</div>
+					@PublicProposalLink(proposalURL)
 				</header>
 
 				@PublicFlashMessages(message, errorMessage)
@@ -105,20 +106,6 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
 						</div>
 					}
 				</section>
-
-				if access.AccessType == "owner" && access.Section == "all" && access.Profile.Status != "completed" && access.Profile.Status != "under_internal_setup" && access.Profile.Status != "activated" {
-					<section class="accept-box activation-delegate">
-						<span class="step-title">PREFERE ENCAMINHAR?</span>
-						<h2>Envie para alguém da sua equipe</h2>
-						<p>Você pode continuar aqui ou enviar um link individual para outra pessoa preencher tudo ou apenas uma parte.</p>
-						<form method="post" action={ templ.SafeURL("/activation/" + token + "/delegate") } class="grid">
-							<div class="field"><label>Nome</label><input name="delegate_name" required/></div>
-							<div class="field"><label>E-mail</label><input type="email" name="delegate_email" required/></div>
-							<div class="field full"><label>O que essa pessoa deve preencher?</label><select name="delegate_section"><option value="all">Todos os dados para ativação</option><option value="finance">Dados financeiros</option><option value="goods">Mercadorias transportadas</option><option value="users">Usuários do sistema</option></select></div>
-							<div class="field full"><button class="btn ghost" type="submit" data-processing="Enviando convite...">Enviar convite</button></div>
-						</form>
-					</section>
-				}
 
 				if access.Profile.Status == "completed" || access.Profile.Status == "under_internal_setup" || access.Profile.Status == "activated" {
 					<section class="accept-box activation-complete-box">
