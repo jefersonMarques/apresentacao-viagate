@@ -18,13 +18,17 @@ func AdminStatusBadgeClass(status string) string {
 func AdminRoleLabel(role string) string {
 	switch strings.TrimSpace(role) {
 	case "super_admin":
-		return "Super Admin"
+		return "Superadmin"
+	case "admin":
+		return "Admin"
+	case "user":
+		return "Usuário"
 	case "commercial":
-		return "Comercial"
+		return "Usuário · legado comercial"
 	case "operations":
-		return "Operações"
+		return "Usuário · legado operações"
 	case "legal":
-		return "Jurídico"
+		return "Usuário · legado jurídico"
 	default:
 		return role
 	}
