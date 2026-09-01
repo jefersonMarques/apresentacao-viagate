@@ -16,6 +16,8 @@ Esta branch substitui a arquitetura do protótipo estático/Supabase por um back
 
 O navegador nunca possui credenciais do banco ou do S3. Toda autorização e regra de negócio passa pelo backend Go.
 
+As convenções de manutenção, layouts, componentes canônicos, módulos JavaScript e a fronteira do renderer V1 ainda ativo estão documentados em [`docs/architecture.md`](docs/architecture.md). Antes de criar um segundo mecanismo de formulário, lista, upload ou comportamento de navegador, use esse documento como referência.
+
 ## Fluxo comercial
 
 ```text
@@ -43,7 +45,11 @@ OTP por e-mail / Brevo
        ↓
 Assinatura eletrônica
        ↓
-Relatório de evidências + pacote final no S3
+Dados para ativação
+       ↓
+Implantação interna
+       ↓
+Operação liberada
 ```
 
 A biometria facial e a prova de vida já existem como modos previstos no domínio de verificação de identidade, mas não estão habilitadas nesta versão.
@@ -281,7 +287,8 @@ make check
 9. preencher onboarding e enviar a apólice;
 10. revisar e aprovar no painel administrativo;
 11. abrir o link recebido via Brevo e assinar com OTP;
-12. validar `contract.pdf`, `evidence.pdf` e `signed-package.zip`.
+12. complementar os dados para ativação;
+13. validar `contract.pdf`, `evidence.pdf` e `signed-package.zip`.
 
 ## Produção
 
