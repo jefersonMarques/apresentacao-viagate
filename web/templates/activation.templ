@@ -9,7 +9,8 @@ import (
 )
 
 templ ActivationPage(access activation.Access, token, message, errorMessage string) {
-	@Base("ViaGate — Dados para ativação") {
+	@PublicFlowLayout("ViaGate — Dados para ativação") {
+		<link rel="stylesheet" href="/assets/activation.css"/>
 		<div class="public activation-public">
 			<main class="proposal-page activation-page">
 				<header class="activation-hero">
@@ -19,12 +20,7 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
 					<div class="activation-status-line"><strong>{ ActivationStatusLabel(access.Profile.Status) }</strong> · { access.Profile.LegalName }</div>
 				</header>
 
-				if message != "" {
-					<div class="notice">{ message }</div>
-				}
-				if errorMessage != "" {
-					<div class="notice error">{ errorMessage }</div>
-				}
+				@PublicFlashMessages(message, errorMessage)
 
 				<section class="activation-progress">
 					<div class={ "activation-progress-item " + activationDoneClass(access.Profile.FinanceResponsibleName != "") }><span></span><strong>Financeiro</strong></div>
@@ -166,13 +162,7 @@ templ ActivationsAdminPage(user domain.User, items []activation.AdminItem) {
 						<td data-label="Comercial">{ item.CommercialName }</td>
 						<td data-label="Status"><span class={ "badge status-badge " + AdminStatusBadgeClass(item.Status) }>{ ActivationStatusLabel(item.Status) }</span></td>
 						<td data-label="Dados">{ fmt.Sprintf("%d mercadorias · %d usuários", item.GoodsCount, item.SystemUserCount) }</td>
-						<td data-label="Contrato">
-							if item.FullySignedAt != nil {
-								{ item.FullySignedAt.Format("02/01/2006 15:04") }
-							} else {
-								<span>—</span>
-							}
-						</td>
+						<td data-label="Contrato">{ DateTime(item.FullySignedAt) }</td>
 						<td data-label="Ações" data-actions="true"><div class="admin-list-actions"><a class="btn" href={ templ.SafeURL("/admin/activations/" + item.ProfileID) }>Abrir</a></div></td>
 					</tr>
 				}
@@ -183,10 +173,9 @@ templ ActivationsAdminPage(user domain.User, items []activation.AdminItem) {
 
 templ ActivationAdminDetailPage(user domain.User, profile activation.Profile) {
 	@AdminLayout("Ativação", user) {
-		<section class="page-head">
-			<div><span class="eyebrow">DADOS PARA ATIVAÇÃO</span><h1>{ profile.LegalName }</h1><p>{ ActivationStatusLabel(profile.Status) }</p></div>
-			<div class="actions"><a class="btn ghost" href={ templ.SafeURL("/admin/contracts/" + profile.ContractID + "/document") }>Contrato assinado</a></div>
-		</section>
+		@AdminPageHeader("DADOS PARA ATIVAÇÃO", profile.LegalName, ActivationStatusLabel(profile.Status)) {
+			<a class="btn ghost" href={ templ.SafeURL("/admin/contracts/" + profile.ContractID + "/document") }>Contrato assinado</a>
+		}
 		<div class="grid cols-2">
 			<section class="panel"><h2>Empresa e contratação</h2><dl class="data-list"><dt>CNPJ</dt><dd>{ brfields.FormatCNPJ(profile.CNPJ) }</dd><dt>Endereço</dt><dd>{ ActivationAddress(profile) }</dd><dt>Operação</dt><dd>{ humanOperationType(profile.OperationType) }</dd><dt>Seguradora</dt><dd>{ profile.Insurer }</dd><dt>Responsável</dt><dd>{ profile.CompanyResponsibleName } · { profile.CompanyResponsibleEmail }</dd></dl></section>
 			<section class="panel"><h2>Financeiro</h2><dl class="data-list"><dt>Responsável</dt><dd>{ profile.FinanceResponsibleName }</dd><dt>E-mail</dt><dd>{ profile.FinanceResponsibleEmail }</dd><dt>Telefone</dt><dd>{ brfields.FormatPhone(profile.FinanceResponsiblePhone) }</dd></dl></section>
@@ -208,7 +197,7 @@ templ ActivationAdminDetailPage(user domain.User, profile activation.Profile) {
 			</section>
 		</div>
 		if profile.Status == "completed" || profile.Status == "under_internal_setup" {
-			<section class="panel" style="margin-top:18px">
+			<section class="panel admin-page-section-gap">
 				<h2>Implantação interna</h2>
 				<p>Os dados do cliente já foram concluídos. Atualize o estágio conforme a preparação interna avançar.</p>
 				<div class="actions">
