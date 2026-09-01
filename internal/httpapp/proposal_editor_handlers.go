@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/access"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/catalog"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/proposals"
@@ -21,7 +22,11 @@ func (a *App) newProposalPage(w http.ResponseWriter, r *http.Request) {
 	user, _ := currentUser(r.Context())
 	duplicateID := strings.TrimSpace(r.URL.Query().Get("duplicate"))
 	if duplicateID != "" {
-		allowAll, _ := a.authStore.HasPermission(r.Context(), user.ID, "proposal.read_all")
+		if !access.Can(user, access.ProposalDuplicate) {
+			http.Error(w, "acesso negado", http.StatusForbidden)
+			return
+		}
+		allowAll := access.Can(user, access.ProposalReadAll)
 		source, err := a.proposalStore.DuplicateSourceByID(r.Context(), user.ID, duplicateID, allowAll)
 		if err != nil {
 			http.Error(w, "proposta não encontrada ou acesso negado", http.StatusNotFound)
@@ -33,12 +38,19 @@ func (a *App) newProposalPage(w http.ResponseWriter, r *http.Request) {
 			salesperson = user
 		}
 		input := a.prepareDuplicatedProposalInput(r.Context(), source, salesperson)
+		if !access.Can(user, access.ProposalPriceEdit) {
+			clearProposalPrices(&input)
+		}
+		if !access.Can(user, access.ProposalConditionsEdit) {
+			input.Conditions = nil
+		}
+		input = rehashProposalInput(input)
 		input = a.decorateProposalContractOptions(r.Context(), input)
 		render(r.Context(), w, http.StatusOK, templates.ProposalEditorPage(
 			user,
 			input,
 			proposals.SavedDraft{},
-			"Cópia preparada como nova proposta. Os dados do cliente, contato, contexto da operação e prioridades foram removidos. Revise e salve para criar o novo rascunho.",
+			"Cópia preparada como nova proposta. Os dados do cliente e os campos protegidos pela sua permissão foram ajustados. Revise e salve para criar o novo rascunho.",
 			"",
 		))
 		return
@@ -52,7 +64,7 @@ func (a *App) newProposalPage(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) editProposalPage(w http.ResponseWriter, r *http.Request) {
 	user, _ := currentUser(r.Context())
-	allowAll, _ := a.authStore.HasPermission(r.Context(), user.ID, "proposal.read_all")
+	allowAll := access.Can(user, access.ProposalReadAll)
 	proposalID := chi.URLParam(r, "id")
 	input, draft, err := a.proposalStore.EditorByID(r.Context(), user.ID, proposalID, allowAll)
 	if err != nil {
@@ -99,7 +111,7 @@ func (a *App) editProposalPage(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) saveProposal(w http.ResponseWriter, r *http.Request) {
 	user, _ := currentUser(r.Context())
-	allowAll, _ := a.authStore.HasPermission(r.Context(), user.ID, "proposal.read_all")
+	allowAll := access.Can(user, access.ProposalReadAll)
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "dados inválidos", http.StatusBadRequest)
 		return
@@ -116,6 +128,10 @@ func (a *App) saveProposal(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "ação inválida", http.StatusBadRequest)
 		return
 	}
+	if action == "publish" && !access.Can(user, access.ProposalPublish) {
+		http.Error(w, "você não tem permissão para publicar propostas", http.StatusForbidden)
+		return
+	}
 
 	salesperson, profileErr := a.authStore.Profile(r.Context(), user.ID)
 	if profileErr != nil {
@@ -128,6 +144,12 @@ func (a *App) saveProposal(w http.ResponseWriter, r *http.Request) {
 		render(r.Context(), w, http.StatusBadRequest, templates.ProposalEditorPage(user, input, proposals.SavedDraft{}, "", err.Error()))
 		return
 	}
+	if err := a.enforceProposalProtectedFields(r, user, allowAll, &input); err != nil {
+		input = a.decorateProposalContractOptions(r.Context(), input)
+		render(r.Context(), w, http.StatusForbidden, templates.ProposalEditorPage(user, input, proposals.SavedDraft{}, "", err.Error()))
+		return
+	}
+	input = rehashProposalInput(input)
 
 	draft, err := a.proposalStore.SaveDraft(r.Context(), user.ID, allowAll, input)
 	if err != nil {
@@ -177,13 +199,66 @@ func validateProposalForPublish(input proposals.EditorInput) error {
 	if strings.TrimSpace(input.ClientLegalName) == "" && strings.TrimSpace(input.ClientTradeName) == "" {
 		return fmt.Errorf("Informe a razão social ou o nome fantasia do cliente antes de publicar.")
 	}
-	if len(input.Items) == 0 {
-		return fmt.Errorf("Informe o valor de ao menos um produto antes de publicar.")
+	priced := false
+	for _, item := range input.Items {
+		if item.Price > 0 {
+			priced = true
+			break
+		}
+	}
+	if !priced {
+		return fmt.Errorf("A proposta precisa ter ao menos um produto com valor antes de ser publicada.")
 	}
 	if proposalContentString(input.Content, "proposal", "contract_template_version_id") == "" {
 		return fmt.Errorf("Selecione o modelo de contrato desta proposta antes de publicar.")
 	}
 	return nil
+}
+
+func (a *App) enforceProposalProtectedFields(r *http.Request, user domain.User, allowAll bool, input *proposals.EditorInput) error {
+	canEditPrices := access.Can(user, access.ProposalPriceEdit)
+	canEditConditions := access.Can(user, access.ProposalConditionsEdit)
+	if canEditPrices && canEditConditions {
+		return nil
+	}
+
+	if input.ProposalID == "" {
+		if !canEditPrices {
+			clearProposalPrices(input)
+		}
+		if !canEditConditions {
+			input.Conditions = nil
+		}
+		return nil
+	}
+
+	existing, _, err := a.proposalStore.EditorByID(r.Context(), user.ID, input.ProposalID, allowAll)
+	if err != nil {
+		return fmt.Errorf("Não foi possível validar os campos protegidos desta proposta.")
+	}
+	if !canEditPrices {
+		input.MinimumInvoice = existing.MinimumInvoice
+		input.SetupFee = existing.SetupFee
+		prices := map[string]float64{}
+		for _, item := range existing.Items {
+			prices[item.CatalogID] = item.Price
+		}
+		for index := range input.Items {
+			input.Items[index].Price = prices[input.Items[index].CatalogID]
+		}
+	}
+	if !canEditConditions {
+		input.Conditions = append([]string(nil), existing.Conditions...)
+	}
+	return nil
+}
+
+func clearProposalPrices(input *proposals.EditorInput) {
+	input.MinimumInvoice = 0
+	input.SetupFee = 0
+	for index := range input.Items {
+		input.Items[index].Price = 0
+	}
 }
 
 func (a *App) proposalInputFromForm(r *http.Request, salesperson domain.User) (proposals.EditorInput, error) {
@@ -315,11 +390,7 @@ func (a *App) proposalInputFromForm(r *http.Request, salesperson domain.User) (p
 		if status != "off" && status != "included" && status != "optional" {
 			return input, fmt.Errorf("Status de item inválido.")
 		}
-		priceValue := ""
-		if index < len(prices) {
-			priceValue = strings.TrimSpace(prices[index])
-		}
-		if status == "off" || priceValue == "" {
+		if status == "off" {
 			continue
 		}
 		group, item, ok := catalog.ItemByID(id)
@@ -328,6 +399,10 @@ func (a *App) proposalInputFromForm(r *http.Request, salesperson domain.User) (p
 		}
 		if !catalog.ModelAllows(item, input.PricingModel) {
 			continue
+		}
+		priceValue := ""
+		if index < len(prices) {
+			priceValue = strings.TrimSpace(prices[index])
 		}
 		price, err := parseMoney(priceValue)
 		if err != nil {
@@ -364,6 +439,10 @@ func (a *App) proposalInputFromForm(r *http.Request, salesperson domain.User) (p
 			"linkedin": salesperson.LinkedInURL, "instagram": salesperson.InstagramURL,
 		},
 	}
+	return rehashProposalInput(input), nil
+}
+
+func rehashProposalInput(input proposals.EditorInput) proposals.EditorInput {
 	canonical := struct {
 		Content        map[string]any         `json:"content"`
 		PricingModel   string                 `json:"pricing_model"`
@@ -375,7 +454,7 @@ func (a *App) proposalInputFromForm(r *http.Request, salesperson domain.User) (p
 	encoded, _ := json.Marshal(canonical)
 	hash := sha256.Sum256(encoded)
 	input.ContentHash = hash[:]
-	return input, nil
+	return input
 }
 
 func proposalContentString(content map[string]any, section, key string) string {
