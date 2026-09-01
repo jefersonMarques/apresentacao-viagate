@@ -1,10 +1,14 @@
 html.commercial-pdf-mode,
 html.commercial-pdf-mode body {
-  width: 13.333333in !important;
+  width: auto !important;
+  min-width: 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
   margin: 0 !important;
   padding: 0 !important;
   overflow: visible !important;
-  background: #071827 !important;
+  scroll-snap-type: none !important;
+  background: #fff !important;
 }
 
 .commercial-pdf-mode *,
@@ -14,6 +18,7 @@ html.commercial-pdf-mode body {
   print-color-adjust: exact !important;
   animation: none !important;
   transition: none !important;
+  scroll-behavior: auto !important;
 }
 
 .commercial-pdf-mode .proposal-view-gate,
@@ -32,7 +37,8 @@ html.commercial-pdf-mode body {
 
 .commercial-pdf-mode #proposalPresentation,
 .commercial-pdf-mode #presentation {
-  width: 13.333333in !important;
+  width: 100% !important;
+  min-width: 0 !important;
   margin: 0 !important;
   padding: 0 !important;
   filter: none !important;
@@ -44,69 +50,178 @@ html.commercial-pdf-mode body {
 .commercial-pdf-mode body.presentation-shell,
 .commercial-pdf-mode body.presentation-paused,
 .commercial-pdf-mode body.presentation-host-active {
+  width: auto !important;
   height: auto !important;
   min-height: 0 !important;
   overflow: visible !important;
   filter: none !important;
 }
 
+/*
+ * Commercial PDFs are portable A4 documents. Each original slide starts on a
+ * fresh page, but it is allowed to continue naturally when its responsive
+ * content needs more than one sheet. No fixed-height clipping is used.
+ */
 .commercial-pdf-mode .proposal-slide,
 .commercial-pdf-mode #presentation > .slide {
   position: relative !important;
-  width: 13.333333in !important;
-  height: 7.5in !important;
-  min-height: 7.5in !important;
-  max-height: 7.5in !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
   margin: 0 !important;
-  overflow: hidden !important;
+  overflow: visible !important;
   scroll-snap-align: none !important;
-  break-inside: avoid !important;
-  page-break-inside: avoid !important;
-  break-after: page !important;
-  page-break-after: always !important;
+  break-inside: auto !important;
+  page-break-inside: auto !important;
+  break-before: page !important;
+  page-break-before: always !important;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
 }
 
-.commercial-pdf-mode .proposal-slide:last-child,
-.commercial-pdf-mode #presentation > .slide:last-child {
-  break-after: auto !important;
-  page-break-after: auto !important;
+.commercial-pdf-mode .proposal-slide:first-child,
+.commercial-pdf-mode #presentation > .slide:first-child {
+  break-before: auto !important;
+  page-break-before: auto !important;
 }
 
 .commercial-pdf-mode .proposal-slide-inner,
 .commercial-pdf-mode #presentation > .slide > .slide-inner,
 .commercial-pdf-mode #presentation > .slide > [class$="-layout"] {
-  min-height: 7.5in !important;
-  height: 7.5in !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+  margin: 0 auto !important;
+  padding-top: 10mm !important;
+  padding-bottom: 10mm !important;
+  transform: none !important;
   transform-origin: top center !important;
+}
+
+/* Let the responsive rules win on portrait A4 instead of preserving desktop
+ * widths that were tuned for a 16:9 viewport. */
+.commercial-pdf-mode .proposal-cover-grid,
+.commercial-pdf-mode .hero-grid,
+.commercial-pdf-mode .market-layout,
+.commercial-pdf-mode .proof-layout,
+.commercial-pdf-mode .people-layout,
+.commercial-pdf-mode .integration-layout,
+.commercial-pdf-mode .operation-layout,
+.commercial-pdf-mode .score-overview-layout,
+.commercial-pdf-mode .ecosystem-layout,
+.commercial-pdf-mode .fraud-layout,
+.commercial-pdf-mode .score-data-layout,
+.commercial-pdf-mode .exec-market-layout,
+.commercial-pdf-mode .exec-decision-layout,
+.commercial-pdf-mode .exec-source-layout,
+.commercial-pdf-mode .exec-consultations-layout,
+.commercial-pdf-mode .exec-operation-layout,
+.commercial-pdf-mode .exec-integration-layout,
+.commercial-pdf-mode .presentation-contact-layout,
+.commercial-pdf-mode .presentation-use-case-layout {
+  grid-template-columns: 1fr !important;
+}
+
+.commercial-pdf-mode .proposal-content-grid,
+.commercial-pdf-mode .proposal-model-grid,
+.commercial-pdf-mode .proposal-highlight-grid,
+.commercial-pdf-mode .market-grid,
+.commercial-pdf-mode .people-grid,
+.commercial-pdf-mode .metric-wall,
+.commercial-pdf-mode .exec-portfolio-list,
+.commercial-pdf-mode .exec-consultation-table,
+.commercial-pdf-mode .exec-timeline,
+.commercial-pdf-mode .presentation-use-case-flow {
+  max-width: 100% !important;
+}
+
+/* Protect semantic units. A card/table row/image is moved as a whole whenever
+ * it fits on one A4 page. JS marks genuinely oversized units with
+ * .pdf-allow-break so they can continue rather than being clipped. */
+.commercial-pdf-mode article:not(.pdf-allow-break),
+.commercial-pdf-mode figure:not(.pdf-allow-break),
+.commercial-pdf-mode .proposal-price-group:not(.pdf-allow-break),
+.commercial-pdf-mode .proposal-highlight:not(.pdf-allow-break),
+.commercial-pdf-mode .proposal-person-card:not(.pdf-allow-break),
+.commercial-pdf-mode .presentation-contact-card:not(.pdf-allow-break),
+.commercial-pdf-mode .presentation-use-case-context:not(.pdf-allow-break),
+.commercial-pdf-mode .presentation-use-case-outcomes > div:not(.pdf-allow-break),
+.commercial-pdf-mode tr:not(.pdf-allow-break) {
+  break-inside: avoid-page !important;
+  page-break-inside: avoid !important;
+}
+
+.commercial-pdf-mode .pdf-allow-break {
+  break-inside: auto !important;
+  page-break-inside: auto !important;
+}
+
+.commercial-pdf-mode table {
+  width: 100% !important;
+  max-width: 100% !important;
+  table-layout: auto !important;
+}
+
+.commercial-pdf-mode thead {
+  display: table-header-group;
+}
+
+.commercial-pdf-mode h1,
+.commercial-pdf-mode h2,
+.commercial-pdf-mode h3,
+.commercial-pdf-mode .proposal-kicker,
+.commercial-pdf-mode .kicker {
+  break-after: avoid-page !important;
+  page-break-after: avoid !important;
+}
+
+.commercial-pdf-mode p,
+.commercial-pdf-mode li {
+  orphans: 3;
+  widows: 3;
+}
+
+.commercial-pdf-mode img,
+.commercial-pdf-mode svg {
+  max-width: 100% !important;
+}
+
+/* Footers were absolute in the interactive slide viewer. Static positioning
+ * prevents them from overlapping content when a section spans multiple pages. */
+.commercial-pdf-mode .proposal-slide-footer,
+.commercial-pdf-mode #presentation .slide-footer {
+  position: static !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  margin-top: 8mm !important;
+  padding-top: 3mm !important;
+  break-inside: avoid-page !important;
+  page-break-inside: avoid !important;
 }
 
 .commercial-pdf-mode .fade-up,
 .commercial-pdf-mode .exec-animate,
 .commercial-pdf-mode .is-visible {
   opacity: 1 !important;
-  transform: none;
+  transform: none !important;
 }
 
 @media print {
   @page {
-    size: 13.333333in 7.5in;
-    margin: 0;
+    size: A4 portrait;
+    margin: 10mm 12mm;
   }
 
   html.commercial-pdf-mode,
   html.commercial-pdf-mode body {
-    width: 13.333333in !important;
+    width: auto !important;
     height: auto !important;
     margin: 0 !important;
     padding: 0 !important;
     overflow: visible !important;
-  }
-
-  .commercial-pdf-mode .proposal-slide,
-  .commercial-pdf-mode #presentation > .slide {
-    width: 13.333333in !important;
-    height: 7.5in !important;
-    min-height: 7.5in !important;
-    max-height: 7.5in !important;
   }
 }
