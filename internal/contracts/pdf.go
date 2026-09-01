@@ -73,15 +73,30 @@ func (r *PDFRenderer) Render(ctx context.Context, html string) ([]byte, error) {
 // is responsible for its own @page rules; commercial slides use a fixed 16:9
 // page while contracts continue to use Render and the A4 document model above.
 func (r *PDFRenderer) RenderURL(ctx context.Context, sourceURL string) ([]byte, error) {
-	browserPath, err := resolveBrowserExecutable(r.chromiumPath)
-	if err != nil {
-		return nil, err
-	}
 	if strings.TrimSpace(sourceURL) == "" {
 		return nil, fmt.Errorf("PDF source URL is required")
 	}
 	if _, err := url.ParseRequestURI(sourceURL); err != nil {
 		return nil, fmt.Errorf("invalid PDF source URL: %w", err)
+	}
+	return r.renderBrowserSource(ctx, sourceURL, "")
+}
+
+// RenderDocument renders a complete HTML document from a temporary local file.
+// Absolute-path assets can still resolve through an HTTP <base> element, which
+// lets the commercial platform reuse its canonical CSS, images and scripts
+// without exposing a special public PDF-render route.
+func (r *PDFRenderer) RenderDocument(ctx context.Context, document string) ([]byte, error) {
+	if strings.TrimSpace(document) == "" {
+		return nil, fmt.Errorf("PDF HTML document is required")
+	}
+	return r.renderBrowserSource(ctx, "", document)
+}
+
+func (r *PDFRenderer) renderBrowserSource(ctx context.Context, sourceURL, document string) ([]byte, error) {
+	browserPath, err := resolveBrowserExecutable(r.chromiumPath)
+	if err != nil {
+		return nil, err
 	}
 
 	dir, err := os.MkdirTemp("", "viagate-commercial-pdf-*")
@@ -90,6 +105,14 @@ func (r *PDFRenderer) RenderURL(ctx context.Context, sourceURL string) ([]byte, 
 	}
 	defer os.RemoveAll(dir)
 	pdfPath := filepath.Join(dir, "document.pdf")
+
+	if document != "" {
+		htmlPath := filepath.Join(dir, "document.html")
+		if err := os.WriteFile(htmlPath, []byte(document), 0o600); err != nil {
+			return nil, fmt.Errorf("write commercial PDF html: %w", err)
+		}
+		sourceURL = fileURL(htmlPath)
+	}
 
 	command := exec.CommandContext(ctx, browserPath,
 		"--headless",
@@ -103,14 +126,14 @@ func (r *PDFRenderer) RenderURL(ctx context.Context, sourceURL string) ([]byte, 
 		sourceURL,
 	)
 	if output, err := command.CombinedOutput(); err != nil {
-		return nil, fmt.Errorf("render URL PDF with %q: %w: %s", browserPath, err, string(output))
+		return nil, fmt.Errorf("render browser PDF with %q: %w: %s", browserPath, err, string(output))
 	}
 	pdf, err := os.ReadFile(pdfPath)
 	if err != nil {
-		return nil, fmt.Errorf("read generated URL PDF: %w", err)
+		return nil, fmt.Errorf("read generated browser PDF: %w", err)
 	}
 	if len(pdf) == 0 {
-		return nil, fmt.Errorf("generated URL PDF is empty")
+		return nil, fmt.Errorf("generated browser PDF is empty")
 	}
 	return pdf, nil
 }
