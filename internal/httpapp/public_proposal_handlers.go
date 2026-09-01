@@ -32,6 +32,25 @@ func (a *App) publicProposalPage(w http.ResponseWriter, r *http.Request) {
 		a.writeProposalContractData(w, r, proposal)
 		return
 	}
+
+	// O link público da proposta é a única porta de entrada da jornada do
+	// cliente. Depois do aceite, abrir o mesmo link retoma automaticamente o
+	// ponto correto. ?view=proposal é a saída explícita para consultar a
+	// proposta original sem avançar a jornada.
+	if proposal.Status == "accepted" && r.URL.Query().Get("view") != "proposal" {
+		if acceptanceID, acceptanceErr := a.proposalAcceptanceForVersion(r.Context(), proposal.VersionID); acceptanceErr == nil {
+			if journey, ok := a.proposalJourneyForAcceptance(r.Context(), acceptanceID, proposal); ok && journey.URL != "" {
+				if sessionErr := a.startCustomerSession(w, r, acceptanceID); sessionErr != nil {
+					a.logger.Error("start customer journey session from proposal failed", "proposal_id", proposal.ProposalID, "error", sessionErr)
+					http.Error(w, "Não foi possível retomar a contratação.", http.StatusInternalServerError)
+					return
+				}
+				http.Redirect(w, r, journey.URL, http.StatusSeeOther)
+				return
+			}
+		}
+	}
+
 	sessionID, _ := newUUID()
 	_, _ = a.pool.Exec(r.Context(), `
 		insert into document_events(document_kind,document_version_id,event_type,viewer_session,ip_address,user_agent)
@@ -94,7 +113,7 @@ func (a *App) acceptProposal(w http.ResponseWriter, r *http.Request) {
 	result, err := a.proposalStore.Accept(r.Context(), proposal, input)
 	if err != nil {
 		a.logger.Error("proposal acceptance failed", "error", err)
-		render(r.Context(), w, http.StatusBadRequest, templates.PublicProposalViewerPage(proposal, "Não foi possível registrar o aceite. Se esta proposta já foi aceita, utilize os mesmos dados do responsável para retomar o cadastro."))
+		render(r.Context(), w, http.StatusBadRequest, templates.PublicProposalViewerPage(proposal, "Não foi possível registrar o aceite. Se esta proposta já foi aceita, abra novamente o mesmo link da proposta para continuar."))
 		return
 	}
 
@@ -122,7 +141,9 @@ func (a *App) acceptProposal(w http.ResponseWriter, r *http.Request) {
 	`, proposal.ProposalID, input.Name)
 	a.publishProposalEvent(r.Context(), proposal.ProposalID, "proposal.accepted", "Proposta aceita", "Aceita por "+input.Name, proposal.VersionID)
 
-	nextURL := "/onboarding/" + result.OnboardingID + "?accepted=1"
+	// Retorna ao mesmo link que o cliente recebeu originalmente. O GET decide
+	// a etapa correta no servidor e cria uma nova sessão quando necessário.
+	nextURL := "/p/" + proposal.PublicToken
 	if wantsJSON(r) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-Control", "no-store")
@@ -142,7 +163,7 @@ func (a *App) customerSessionRequired(next http.Handler) http.Handler {
 		acceptanceID, err := a.proposalStore.CustomerSessionAcceptance(r.Context(), hashToken(cookie.Value))
 		if err != nil {
 			clearCookie(w, customerSessionCookie)
-			http.Error(w, "Sessão do cliente expirada.", http.StatusUnauthorized)
+			http.Error(w, "Sessão do cliente expirada. Abra novamente o link da proposta.", http.StatusUnauthorized)
 			return
 		}
 		ctx := context.WithValue(r.Context(), customerAcceptanceContextKey, acceptanceID)
