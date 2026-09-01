@@ -3,16 +3,44 @@ package domain
 import "time"
 
 type User struct {
+	ID                  string
+	Email               string
+	Name                string
+	Phone               string
+	JobTitle            string
+	PhotoURL            string
+	LinkedInURL         string
+	InstagramURL        string
+	Status              string
+	Roles               []string
+	Permissions         []string
+	UnreadNotifications int
+	CreatedAt           time.Time
+}
+
+type PermissionSetting struct {
+	Code      string
+	Name      string
+	Group     string
+	Effective bool
+	Override  *bool
+}
+
+type NotificationPreference struct {
+	EventType string
+	Scope     string
+	Enabled   bool
+}
+
+type InAppNotification struct {
 	ID           string
-	Email        string
-	Name         string
-	Phone        string
-	JobTitle     string
-	PhotoURL     string
-	LinkedInURL  string
-	InstagramURL string
-	Status       string
-	Roles        []string
+	EventType    string
+	Title        string
+	Body         string
+	ResourceType string
+	ResourceID   string
+	TargetURL    string
+	ReadAt       *time.Time
 	CreatedAt    time.Time
 }
 
