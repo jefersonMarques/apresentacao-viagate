@@ -18,7 +18,7 @@ templ Base(title string) {
 		</head>
 		<body>
 			{ children... }
-			<script src="/assets/app.js" defer></script>
+			<script src="/assets/core.js" defer></script>
 		</body>
 	</html>
 }
@@ -34,6 +34,7 @@ templ PublicFlowLayout(title string) {
 	@Base(title) {
 		<link rel="stylesheet" href="/assets/public-flow.css"/>
 		{ children... }
+		<script src="/assets/form-controls.js" defer></script>
 	}
 }
 
@@ -129,6 +130,7 @@ templ AdminLayout(title string, user domain.User) {
 				</main>
 			</div>
 		</div>
+		<script src="/assets/admin-shell.js" defer></script>
 		<script src="/assets/admin-list.js" defer></script>
 	}
 }
@@ -138,5 +140,6 @@ templ AdminEditorLayout(title string, user domain.User) {
 		<link rel="stylesheet" href="/assets/v1-admin-forms.css"/>
 		<link rel="stylesheet" href="/assets/admin-form.css"/>
 		{ children... }
+		<script src="/assets/form-controls.js" defer></script>
 	}
 }
