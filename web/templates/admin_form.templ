@@ -1,0 +1,75 @@
+package templates
+
+templ AdminEditorHeader(eyebrow, title, description string) {
+	<header class="v1-editor-header">
+		<div>
+			if eyebrow != "" {
+				<span class="v1-eyebrow">{ eyebrow }</span>
+			}
+			<h1>{ title }</h1>
+			if description != "" {
+				<p>{ description }</p>
+			}
+		</div>
+		<div class="v1-actions">
+			{ children... }
+		</div>
+	</header>
+}
+
+templ FlashMessages(message, errorMessage string) {
+	if message != "" {
+		<div class="v1-message" role="status">{ message }</div>
+	}
+	if errorMessage != "" {
+		<div class="v1-message error" role="alert">{ errorMessage }</div>
+	}
+}
+
+templ AdminFormSection(title, description string) {
+	<section class="v1-section">
+		<header class="v1-section-head">
+			<div>
+				<h2>{ title }</h2>
+				if description != "" {
+					<p>{ description }</p>
+				}
+			</div>
+			<div class="v1-actions">{ children... }</div>
+		</header>
+		<div class="v1-section-body">
+			{ children... }
+		</div>
+	</section>
+}
+
+templ AdminImageUpload(name, value, category, emptyText, altText string) {
+	<div class="v1-upload" data-image-upload={ category }>
+		<input type="hidden" name={ name } value={ value } data-image-value/>
+		<div class="v1-upload-preview">
+			<img src={ templ.SafeURL(value) } alt={ altText } data-image-preview hidden?={ value == "" }/>
+			<div class="v1-upload-empty" data-image-empty hidden?={ value != "" }>{ emptyText }</div>
+		</div>
+		<div class="v1-upload-controls">
+			<div class="v1-upload-row">
+				<label class="v1-button dark small">Selecionar imagem<input type="file" accept="image/jpeg,image/png,image/webp" data-image-file hidden/></label>
+				<button class="v1-button ghost small" type="button" data-image-remove hidden>Remover</button>
+			</div>
+			<div class="v1-help">JPG, PNG ou WEBP · máximo 2 MB.</div>
+			<div class="v1-upload-status" data-image-status></div>
+		</div>
+	</div>
+}
+
+templ DataGrid() {
+	<div class="grid data-grid">
+		{ children... }
+	</div>
+}
+
+templ DataField(label string) {
+	<div class="data-field">
+		<small>{ label }</small>
+		<div class="data-field-value">{ children... }</div>
+	</div>
+}
