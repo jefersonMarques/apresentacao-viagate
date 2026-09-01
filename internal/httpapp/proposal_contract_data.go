@@ -62,6 +62,7 @@ func (a *App) writeProposalContractData(w http.ResponseWriter, r *http.Request, 
 		"contract_assigned": templateVersionID != "",
 		"contract_label": contractLabel,
 		"acceptance_text": legaltext.ProposalAcceptanceText,
+		"journey": a.proposalJourneyForRequest(r.Context(), r, proposal),
 		"company": map[string]string{
 			"cnpj": proposal.ClientCNPJ,
 			"legal_name": proposalSnapshotString(proposal.Content, "client", "legal_name"),
