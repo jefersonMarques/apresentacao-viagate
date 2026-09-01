@@ -1,0 +1,30 @@
+.public-flow-header {
+  margin-bottom: 20px;
+}
+
+.public-flow-stack > * + * {
+  margin-top: 18px;
+}
+
+.data-grid {
+  margin-top: 24px;
+}
+
+.data-field small {
+  display: block;
+}
+
+.data-field-value {
+  margin-top: 4px;
+  font-weight: 700;
+}
+
+.public-flow-muted {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.public-flow-hash {
+  word-break: break-all;
+}
