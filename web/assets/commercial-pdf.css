@@ -1,0 +1,112 @@
+html.commercial-pdf-mode,
+html.commercial-pdf-mode body {
+  width: 13.333333in !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  background: #071827 !important;
+}
+
+.commercial-pdf-mode *,
+.commercial-pdf-mode *::before,
+.commercial-pdf-mode *::after {
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+  animation: none !important;
+  transition: none !important;
+}
+
+.commercial-pdf-mode .proposal-view-gate,
+.commercial-pdf-mode .proposal-view-navigation,
+.commercial-pdf-mode .proposal-accept-inline-wrap,
+.commercial-pdf-mode .proposal-accept-floating,
+.commercial-pdf-mode .proposal-contract-modal,
+.commercial-pdf-mode .presentation-header,
+.commercial-pdf-mode .presentation-progress,
+.commercial-pdf-mode .next-slide,
+.commercial-pdf-mode .contact-whatsapp,
+.commercial-pdf-mode .presentation-gate,
+.commercial-pdf-mode .presentation-controls {
+  display: none !important;
+}
+
+.commercial-pdf-mode #proposalPresentation,
+.commercial-pdf-mode #presentation {
+  width: 13.333333in !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  filter: none !important;
+  transform: none !important;
+  opacity: 1 !important;
+}
+
+.commercial-pdf-mode body.public-proposal,
+.commercial-pdf-mode body.presentation-shell,
+.commercial-pdf-mode body.presentation-paused,
+.commercial-pdf-mode body.presentation-host-active {
+  height: auto !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+  filter: none !important;
+}
+
+.commercial-pdf-mode .proposal-slide,
+.commercial-pdf-mode #presentation > .slide {
+  position: relative !important;
+  width: 13.333333in !important;
+  height: 7.5in !important;
+  min-height: 7.5in !important;
+  max-height: 7.5in !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  scroll-snap-align: none !important;
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
+  break-after: page !important;
+  page-break-after: always !important;
+}
+
+.commercial-pdf-mode .proposal-slide:last-child,
+.commercial-pdf-mode #presentation > .slide:last-child {
+  break-after: auto !important;
+  page-break-after: auto !important;
+}
+
+.commercial-pdf-mode .proposal-slide-inner,
+.commercial-pdf-mode #presentation > .slide > .slide-inner,
+.commercial-pdf-mode #presentation > .slide > [class$="-layout"] {
+  min-height: 7.5in !important;
+  height: 7.5in !important;
+  transform-origin: top center !important;
+}
+
+.commercial-pdf-mode .fade-up,
+.commercial-pdf-mode .exec-animate,
+.commercial-pdf-mode .is-visible {
+  opacity: 1 !important;
+  transform: none;
+}
+
+@media print {
+  @page {
+    size: 13.333333in 7.5in;
+    margin: 0;
+  }
+
+  html.commercial-pdf-mode,
+  html.commercial-pdf-mode body {
+    width: 13.333333in !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .commercial-pdf-mode .proposal-slide,
+  .commercial-pdf-mode #presentation > .slide {
+    width: 13.333333in !important;
+    height: 7.5in !important;
+    min-height: 7.5in !important;
+    max-height: 7.5in !important;
+  }
+}
