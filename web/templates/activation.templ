@@ -10,8 +10,8 @@ import (
 
 templ ActivationPage(access activation.Access, token, message, errorMessage string) {
 	@PublicFlowLayout("ViaGate — Dados para ativação") {
-		<link rel="stylesheet" href="/assets/activation.css"/>
-		<link rel="stylesheet" href="/assets/activation-public.css"/>
+		<link rel="stylesheet" href="/commercial-assets/activation.css"/>
+		<link rel="stylesheet" href="/commercial-assets/activation-public.css"/>
 		<div class="public activation-public">
 			<main class="proposal-page activation-page">
 				<header class="activation-hero">
@@ -123,7 +123,7 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
 					</section>
 				}
 			</main>
-			<script src="/assets/activation.js" defer></script>
+			<script src="/commercial-assets/activation.js" defer></script>
 		</div>
 	}
 }
