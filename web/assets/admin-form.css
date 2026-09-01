@@ -1,0 +1,28 @@
+.admin-form-actions {
+  margin-top: 18px;
+}
+
+.admin-form-help-tight {
+  margin-top: 5px;
+}
+
+.admin-form-help {
+  margin-top: 8px;
+}
+
+.admin-form-section-gap {
+  margin-top: 18px;
+}
+
+.admin-form-label-gap {
+  margin-bottom: 8px;
+}
+
+.admin-form-current {
+  color: #ff6b18;
+  font-weight: 800;
+}
+
+.admin-hub-card {
+  text-decoration: none;
+}
