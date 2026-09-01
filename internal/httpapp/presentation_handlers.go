@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/access"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/catalog"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/presentations"
@@ -22,24 +23,17 @@ func (a *App) newPresentationPage(w http.ResponseWriter, r *http.Request) {
 		profile = user
 	}
 	input := presentations.EditorInput{
-		Title:                  "Apresentação Institucional ViaGate",
-		ShowClientIdentity:     true,
-		ShowContactSlide:       true,
-		SelectedModules:        defaultPresentationModules(),
-		SalespersonName:        profile.Name,
-		SalespersonEmail:       profile.Email,
-		SalespersonPhone:       profile.Phone,
-		SalespersonJobTitle:    profile.JobTitle,
-		SalespersonPhotoURL:    profile.PhotoURL,
-		SalespersonLinkedIn:    profile.LinkedInURL,
-		SalespersonInstagram:   profile.InstagramURL,
+		Title: "Apresentação Institucional ViaGate", ShowClientIdentity: true, ShowContactSlide: true,
+		SelectedModules: defaultPresentationModules(), SalespersonName: profile.Name, SalespersonEmail: profile.Email,
+		SalespersonPhone: profile.Phone, SalespersonJobTitle: profile.JobTitle, SalespersonPhotoURL: profile.PhotoURL,
+		SalespersonLinkedIn: profile.LinkedInURL, SalespersonInstagram: profile.InstagramURL,
 	}
 	render(r.Context(), w, http.StatusOK, templates.PresentationEditorPage(user, input, presentations.SavedDraft{}, "", ""))
 }
 
 func (a *App) editPresentationPage(w http.ResponseWriter, r *http.Request) {
 	user, _ := currentUser(r.Context())
-	allowAll, _ := a.authStore.HasPermission(r.Context(), user.ID, "presentation.read_all")
+	allowAll := access.Can(user, access.PresentationReadAll)
 	input, draft, err := a.presentationStore.EditorByID(r.Context(), user.ID, chi.URLParam(r, "id"), allowAll)
 	if err != nil {
 		http.Error(w, "apresentação não encontrada ou acesso negado", http.StatusNotFound)
@@ -57,7 +51,7 @@ func (a *App) editPresentationPage(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) savePresentation(w http.ResponseWriter, r *http.Request) {
 	user, _ := currentUser(r.Context())
-	allowAll, _ := a.authStore.HasPermission(r.Context(), user.ID, "presentation.read_all")
+	allowAll := access.Can(user, access.PresentationReadAll)
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "dados inválidos", http.StatusBadRequest)
 		return
@@ -72,6 +66,10 @@ func (a *App) savePresentation(w http.ResponseWriter, r *http.Request) {
 	}
 	if action != "save" && action != "publish" {
 		http.Error(w, "ação inválida", http.StatusBadRequest)
+		return
+	}
+	if action == "publish" && !access.Can(user, access.PresentationPublish) {
+		http.Error(w, "você não tem permissão para publicar apresentações", http.StatusForbidden)
 		return
 	}
 
@@ -130,28 +128,20 @@ func (a *App) publicPresentationPage(w http.ResponseWriter, r *http.Request) {
 		insert into document_events(document_kind,document_version_id,event_type,viewer_session,ip_address,user_agent)
 		values('presentation',$1,'open',$2,$3,$4)
 	`, presentation.VersionID, nullableUUID(sessionID), requestIP(r), r.UserAgent())
+	a.publishPresentationEvent(r.Context(), presentation.PresentationID, "presentation.opened", dailyEventDedupe(presentation.VersionID))
 	render(r.Context(), w, http.StatusOK, templates.PublicPresentationPage(presentation))
 }
 
 func presentationInputFromForm(r *http.Request, salesperson domain.User) (presentations.EditorInput, error) {
 	contactEmail, err := cleanEmail(r.FormValue("contact_email"), false)
 	input := presentations.EditorInput{
-		PresentationID:         strings.TrimSpace(r.FormValue("presentation_id")),
-		ClientLegalName:        strings.TrimSpace(r.FormValue("client_legal_name")),
-		ClientTradeName:        strings.TrimSpace(r.FormValue("client_trade_name")),
-		Title:                  strings.TrimSpace(r.FormValue("title")),
-		ContactName:            strings.TrimSpace(r.FormValue("contact_name")),
-		ContactRole:            strings.TrimSpace(r.FormValue("contact_role")),
-		ContactEmail:           contactEmail,
-		ShowClientIdentity:     r.FormValue("show_client_identity") == "1",
-		ShowContactSlide:       r.FormValue("show_contact_slide") == "1",
-		SalespersonName:        salesperson.Name,
-		SalespersonEmail:       salesperson.Email,
-		SalespersonPhone:       salesperson.Phone,
-		SalespersonJobTitle:    salesperson.JobTitle,
-		SalespersonPhotoURL:    salesperson.PhotoURL,
-		SalespersonLinkedIn:    salesperson.LinkedInURL,
-		SalespersonInstagram:   salesperson.InstagramURL,
+		PresentationID: strings.TrimSpace(r.FormValue("presentation_id")), ClientLegalName: strings.TrimSpace(r.FormValue("client_legal_name")),
+		ClientTradeName: strings.TrimSpace(r.FormValue("client_trade_name")), Title: strings.TrimSpace(r.FormValue("title")),
+		ContactName: strings.TrimSpace(r.FormValue("contact_name")), ContactRole: strings.TrimSpace(r.FormValue("contact_role")),
+		ContactEmail: contactEmail, ShowClientIdentity: r.FormValue("show_client_identity") == "1", ShowContactSlide: r.FormValue("show_contact_slide") == "1",
+		SalespersonName: salesperson.Name, SalespersonEmail: salesperson.Email, SalespersonPhone: salesperson.Phone,
+		SalespersonJobTitle: salesperson.JobTitle, SalespersonPhotoURL: salesperson.PhotoURL,
+		SalespersonLinkedIn: salesperson.LinkedInURL, SalespersonInstagram: salesperson.InstagramURL,
 	}
 	if err != nil {
 		return input, fmt.Errorf("E-mail do contato inválido.")
@@ -190,43 +180,29 @@ func presentationInputFromForm(r *http.Request, salesperson domain.User) (presen
 	}
 
 	canonical := struct {
-		ClientLegalName        string   `json:"client_legal_name"`
-		ClientTradeName        string   `json:"client_trade_name"`
-		ClientCNPJ             string   `json:"client_cnpj"`
-		ClientLogoURL          string   `json:"client_logo_url"`
-		Title                  string   `json:"title"`
-		ContactName            string   `json:"contact_name"`
-		ContactRole            string   `json:"contact_role"`
-		ContactEmail           string   `json:"contact_email"`
-		ShowClientIdentity     bool     `json:"show_client_identity"`
-		ShowContactSlide       bool     `json:"show_contact_slide"`
-		SelectedModules        []string `json:"selected_modules"`
-		SalespersonName        string   `json:"salesperson_name"`
-		SalespersonEmail       string   `json:"salesperson_email"`
-		SalespersonPhone       string   `json:"salesperson_phone"`
-		SalespersonJobTitle    string   `json:"salesperson_job_title"`
-		SalespersonPhotoURL    string   `json:"salesperson_photo_url"`
-		SalespersonLinkedIn    string   `json:"salesperson_linkedin"`
-		SalespersonInstagram   string   `json:"salesperson_instagram"`
+		ClientLegalName      string   `json:"client_legal_name"`
+		ClientTradeName      string   `json:"client_trade_name"`
+		ClientCNPJ           string   `json:"client_cnpj"`
+		ClientLogoURL        string   `json:"client_logo_url"`
+		Title                string   `json:"title"`
+		ContactName          string   `json:"contact_name"`
+		ContactRole          string   `json:"contact_role"`
+		ContactEmail         string   `json:"contact_email"`
+		ShowClientIdentity   bool     `json:"show_client_identity"`
+		ShowContactSlide     bool     `json:"show_contact_slide"`
+		SelectedModules      []string `json:"selected_modules"`
+		SalespersonName      string   `json:"salesperson_name"`
+		SalespersonEmail     string   `json:"salesperson_email"`
+		SalespersonPhone     string   `json:"salesperson_phone"`
+		SalespersonJobTitle  string   `json:"salesperson_job_title"`
+		SalespersonPhotoURL  string   `json:"salesperson_photo_url"`
+		SalespersonLinkedIn  string   `json:"salesperson_linkedin"`
+		SalespersonInstagram string   `json:"salesperson_instagram"`
 	}{
-		input.ClientLegalName,
-		input.ClientTradeName,
-		input.ClientCNPJ,
-		input.ClientLogoURL,
-		input.Title,
-		input.ContactName,
-		input.ContactRole,
-		input.ContactEmail,
-		input.ShowClientIdentity,
-		input.ShowContactSlide,
-		input.SelectedModules,
-		input.SalespersonName,
-		input.SalespersonEmail,
-		input.SalespersonPhone,
-		input.SalespersonJobTitle,
-		input.SalespersonPhotoURL,
-		input.SalespersonLinkedIn,
-		input.SalespersonInstagram,
+		input.ClientLegalName, input.ClientTradeName, input.ClientCNPJ, input.ClientLogoURL, input.Title,
+		input.ContactName, input.ContactRole, input.ContactEmail, input.ShowClientIdentity, input.ShowContactSlide,
+		input.SelectedModules, input.SalespersonName, input.SalespersonEmail, input.SalespersonPhone,
+		input.SalespersonJobTitle, input.SalespersonPhotoURL, input.SalespersonLinkedIn, input.SalespersonInstagram,
 	}
 	encoded, _ := json.Marshal(canonical)
 	hash := sha256.Sum256(encoded)
