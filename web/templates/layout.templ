@@ -27,12 +27,14 @@ templ Base(title string) {
 
 templ AuthLayout(title string) {
 	@Base(title) {
+		<link rel="stylesheet" href="/assets/auth.css"/>
 		{ children... }
 	}
 }
 
 templ PublicFlowLayout(title string) {
 	@Base(title) {
+		<link rel="stylesheet" href="/assets/public-flow.css"/>
 		{ children... }
 	}
 }
