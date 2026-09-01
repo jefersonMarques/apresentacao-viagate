@@ -51,7 +51,7 @@ templ PipelinePage(user domain.User, items []domain.PipelineItem, all bool) {
 
 templ PipelineDetailPage(user domain.User, item domain.PipelineItem, events []domain.PipelineEvent) {
 	@AdminLayout("ViaGate — Negociação", user) {
-		<link rel="stylesheet" href="/assets/pipeline-timeline.css"/>
+		<link rel="stylesheet" href="/commercial-assets/pipeline-timeline.css"/>
 		<header class="header"><div><span class="step-title">NEGOCIAÇÃO</span><h1>{ item.ClientName }</h1><p>{ item.ProposalTitle } · responsável comercial: { item.CommercialName }</p></div><div class="actions"><a class="btn" href="/admin/pipeline">Voltar</a><a class="btn dark" href={ templ.SafeURL("/admin/proposals/" + item.ProposalID + "/edit") }>Abrir proposta</a></div></header>
 		<section class="panel pipeline-current-panel">
 			<div class="panel-head"><h2>Etapa atual</h2><span class={ PipelineStageBadgeClass(item) }>{ PipelineStage(item) }</span></div>
