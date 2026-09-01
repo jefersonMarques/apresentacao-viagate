@@ -64,7 +64,7 @@ func (a *App) proposalJourneyForAcceptance(ctx context.Context, acceptanceID str
 
 	if delivery, deliveryErr := a.contractStore.DeliveryByOnboarding(ctx, onboardingID); deliveryErr == nil {
 		if delivery.ContractStatus == "signed" && delivery.SignerStatus == "signed" {
-			return proposalJourney{State: "signed", Label: "CONTINUAR PARA ATIVAÇÃO", URL: "/sign/" + delivery.SignerToken + "?signed=1", Tone: "success"}, true
+			return proposalJourney{State: "signed", Label: "CONTINUAR PARA ATIVAÇÃO", URL: "/sign/" + delivery.SignerToken + "?continue=activation", Tone: "success"}, true
 		}
 		return proposalJourney{State: "signature", Label: "REVISAR E ASSINAR CONTRATO", URL: "/sign/" + delivery.SignerToken, Tone: "success"}, true
 	} else if deliveryErr != pgx.ErrNoRows {
