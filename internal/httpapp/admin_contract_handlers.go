@@ -5,12 +5,18 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/access"
 	"github.com/jefersonMarques/apresentacao-viagate/web/templates"
 )
 
 func (a *App) adminContracts(w http.ResponseWriter, r *http.Request) {
 	user, _ := currentUser(r.Context())
-	items, err := a.contractStore.ListAdminContracts(r.Context())
+	allowAll := access.Can(user, access.ContractReadAll)
+	if !allowAll && !access.Can(user, access.ContractReadOwn) {
+		http.Error(w, "acesso negado", http.StatusForbidden)
+		return
+	}
+	items, err := a.contractStore.ListVisibleContracts(r.Context(), user.ID, allowAll)
 	if err != nil {
 		a.logger.Error("load contracts failed", "error", err)
 		http.Error(w, "não foi possível carregar os contratos", http.StatusInternalServerError)
