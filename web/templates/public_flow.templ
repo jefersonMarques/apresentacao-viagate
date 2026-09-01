@@ -13,6 +13,14 @@ templ PublicFlowHeader(eyebrow, title, description string) {
 	</header>
 }
 
+templ PublicProposalLink(url string) {
+	if url != "" {
+		<div class="public-flow-proposal-link">
+			<a href={ templ.SafeURL(url) }>Ver proposta</a>
+		</div>
+	}
+}
+
 templ PublicFlashMessages(message, errorMessage string) {
 	if message != "" {
 		<div class="notice" role="status">{ message }</div>
