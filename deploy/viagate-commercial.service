@@ -1,0 +1,23 @@
+[Unit]
+Description=ViaGate Commercial Platform
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=viagate
+Group=viagate
+WorkingDirectory=/opt/viagate-commercial/current
+EnvironmentFile=/etc/viagate-commercial/viagate.env
+Environment=HOME=/var/lib/viagate-commercial
+ExecStart=/opt/viagate-commercial/current/server
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=20s
+KillSignal=SIGTERM
+PrivateTmp=true
+UMask=0077
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
