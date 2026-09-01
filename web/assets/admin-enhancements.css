@@ -40,10 +40,11 @@
 .sidebar-nav{flex:1;padding:18px 12px;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:#29404f transparent}
 .sidebar-section{display:block;margin:15px 10px 7px;color:#647b89;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.14em;white-space:nowrap}
 .sidebar-section:first-child{margin-top:2px}
-.sidebar-nav a{height:44px;display:flex;align-items:center;gap:12px;padding:0 12px;margin:2px 0;color:#9fb0ba;text-decoration:none;font-size:12px;font-weight:650;white-space:nowrap;border-left:2px solid transparent;transition:background .16s ease,color .16s ease,border-color .16s ease}
+.sidebar-nav a{position:relative;height:44px;display:flex;align-items:center;gap:12px;padding:0 12px;margin:2px 0;color:#9fb0ba;text-decoration:none;font-size:12px;font-weight:650;white-space:nowrap;border-left:2px solid transparent;transition:background .16s ease,color .16s ease,border-color .16s ease}
 .sidebar-nav a svg{flex:none}
 .sidebar-nav a:hover{background:rgba(255,255,255,.055);color:#fff}
 .sidebar-nav a.is-active{background:rgba(255,107,24,.11);color:#fff;border-left-color:var(--admin-orange)}
+.sidebar-nav-alert{margin-left:auto;min-width:18px;height:18px;padding:0 5px;display:grid;place-items:center;flex:none;border-radius:999px!important;background:var(--admin-orange);color:#fff;font-size:9px;font-style:normal;font-weight:800;line-height:1;box-shadow:0 0 0 3px rgba(255,107,24,.11)}
 .sidebar-user{padding:13px 12px;border-top:1px solid rgba(255,255,255,.08);display:grid;gap:7px}
 .sidebar-profile{display:flex;align-items:center;gap:10px;min-width:0;padding:7px;text-decoration:none;color:#fff}
 .profile-avatar{width:36px;height:36px;display:grid;place-items:center;flex:none;background:#173141;color:#fff;font-size:11px;font-weight:800;letter-spacing:.04em;border:1px solid rgba(255,255,255,.1)}
@@ -79,6 +80,7 @@
 .admin-app.sidebar-collapsed .sidebar-nav{padding-left:8px;padding-right:8px}
 .admin-app.sidebar-collapsed .sidebar-nav a{justify-content:center;padding:0;border-left:0;border-bottom:2px solid transparent}
 .admin-app.sidebar-collapsed .sidebar-nav a.is-active{border-bottom-color:var(--admin-orange)}
+.admin-app.sidebar-collapsed .sidebar-nav a .sidebar-nav-alert{position:absolute;top:4px;right:4px;min-width:14px;height:14px;padding:0 3px;display:grid;font-size:8px;box-shadow:0 0 0 2px var(--admin-sidebar)}
 .admin-app.sidebar-collapsed .sidebar-user{padding-left:8px;padding-right:8px}
 .admin-app.sidebar-collapsed .sidebar-profile{justify-content:center;padding:5px}
 .admin-app.sidebar-collapsed .sidebar-logout{justify-content:center;padding:0}
@@ -166,6 +168,7 @@
   .admin-app.sidebar-collapsed .sidebar-nav a span,
   .admin-app.sidebar-collapsed .sidebar-user-copy,
   .admin-app.sidebar-collapsed .sidebar-logout span{display:initial}
+  .admin-app.sidebar-collapsed .sidebar-nav a .sidebar-nav-alert{position:static;min-width:18px;height:18px;margin-left:auto;padding:0 5px;display:grid;font-size:9px;box-shadow:0 0 0 3px rgba(255,107,24,.11)}
   .admin-app.sidebar-collapsed .sidebar-nav a{justify-content:flex-start;padding:0 12px;border-left:2px solid transparent;border-bottom:0}
   .admin-app.sidebar-collapsed .sidebar-nav a.is-active{border-left-color:var(--admin-orange)}
   .admin-app.sidebar-collapsed .sidebar-profile{justify-content:flex-start}
