@@ -52,7 +52,11 @@ templ NotificationFeedItem(item domain.InAppNotification, compact bool) {
 			if item.Body != "" {
 				<span>{ item.Body }</span>
 			}
-			<small>{ NotificationTime(item.CreatedAt) }</small>
+			if compact {
+				<small>{ item.CreatedAt.Format("02/01 15:04") }</small>
+			} else {
+				<small>{ item.CreatedAt.Format("02/01/2006 15:04") }</small>
+			}
 		</div>
 		if !compact {
 			<div class="admin-notification-actions">
