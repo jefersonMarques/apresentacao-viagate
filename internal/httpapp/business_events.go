@@ -156,6 +156,36 @@ func (a *App) publishActivationEvent(ctx context.Context, activationID, eventTyp
 	}
 }
 
+func (a *App) publishActivationActionRequired(ctx context.Context, activationID string) {
+	var ownerID, clientName string
+	if err := a.pool.QueryRow(ctx, `
+		select p.created_by::text,coalesce(nullif(o.trade_name,''),o.legal_name)
+		from activation_profiles a
+		join contracts c on c.id=a.contract_id
+		join onboardings o on o.id=c.onboarding_id
+		join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
+		join proposals p on p.id=pa.proposal_id
+		where a.id=$1
+	`, activationID).Scan(&ownerID, &clientName); err != nil {
+		a.logger.Warn("load activation action recipients failed", "activation_id", activationID, "error", err)
+		return
+	}
+
+	store := notifications.NewInAppStore(a.pool)
+	if err := store.PublishToPermission(ctx, "activation.manage", ownerID, notifications.Event{
+		OwnerUserID: ownerID,
+		EventType: "activation.submitted",
+		Title: "Ativação aguardando ação interna",
+		Body: clientName + " · dados concluídos pelo cliente",
+		ResourceType: "activation",
+		ResourceID: activationID,
+		TargetURL: "/admin/activations/" + activationID,
+		DedupeKey: "activation.action-required:" + activationID,
+	}); err != nil {
+		a.logger.Warn("publish activation action notification failed", "activation_id", activationID, "error", err)
+	}
+}
+
 func dailyEventDedupe(resourceID string) string {
 	return fmt.Sprintf("%s:%s", resourceID, time.Now().UTC().Format("2006-01-02"))
 }
