@@ -130,6 +130,7 @@ func (a *App) submitOnboarding(w http.ResponseWriter,r *http.Request) {
 		values('customer','onboarding.submitted','onboarding',$1,$2,$3,jsonb_build_object('review_required',$4))
 	`,current.ID,requestIP(r),r.UserAgent(),a.cfg.RequireOnboardingReview)
 	a.queueOnboardingSubmittedNotification(r,current.ID)
+	a.publishOnboardingEvent(r.Context(), current.ID)
 
 	if a.cfg.RequireOnboardingReview{
 		http.Redirect(w,r,"/onboarding/"+current.ID+"?submitted=1",http.StatusSeeOther)
