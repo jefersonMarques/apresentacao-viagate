@@ -1,0 +1,75 @@
+package templates
+
+import "github.com/jefersonMarques/apresentacao-viagate/internal/domain"
+
+templ ContractTemplatesPage(user domain.User, items []domain.ContractTemplate, variables []string, message, selectedID, selectedName, selectedDescription, selectedMarkdown string) {
+	@AdminEditorLayout("ViaGate — Modelos de contrato", user) {
+		<div class="v1-page">
+			@AdminEditorHeader("CONTRATOS", "Modelos versionados", "Edite o conteúdo em Markdown com variáveis controladas. Cada salvamento cria uma nova versão e nunca altera contratos já gerados.") {
+				<a class="v1-button primary" href="/admin/contracts/templates">Novo modelo</a>
+			}
+			@FlashMessages(message, "")
+			<div class="v1-contract-layout">
+				<aside class="v1-contract-list">
+					<div class="v1-contract-list-head"><h2>Modelos disponíveis</h2><div class="v1-help admin-form-help-tight">Selecione um modelo para criar a próxima versão.</div></div>
+					for _, item := range items {
+						<a class="v1-contract-item" href={ templ.SafeURL("/admin/contracts/templates?template=" + item.ID) }>
+							<strong>{ item.Name }</strong>
+							<span>v{ item.CurrentVersion }</span>
+							if item.IsActive {
+								<span>Ativo</span>
+							} else {
+								<span>Inativo</span>
+							}
+							if item.Description != "" {
+								<span>{ item.Description }</span>
+							}
+							if selectedID == item.ID {
+								<span class="admin-form-current">EDITANDO ESTE MODELO</span>
+							}
+						</a>
+					}
+					if len(items) == 0 {
+						<div class="v1-contract-item"><strong>Nenhum modelo cadastrado</strong><span>Crie o primeiro modelo no editor.</span></div>
+					}
+				</aside>
+				<section class="v1-contract-editor">
+					<div class="v1-contract-editor-head">
+						if selectedID == "" {
+							<h2>Novo modelo</h2>
+							<div class="v1-help admin-form-help-tight">Crie a versão inicial de um novo contrato.</div>
+						} else {
+							<h2>Nova versão de { selectedName }</h2>
+							<div class="v1-help admin-form-help-tight">O conteúdo abaixo é uma cópia da versão atual. Ao salvar, uma nova versão imutável será criada.</div>
+						}
+					</div>
+					<div class="v1-contract-editor-body">
+						<form method="post" action="/admin/contracts/templates">
+							<input type="hidden" name="template_id" value={ selectedID }/>
+							<div class="v1-form-grid">
+								<div class="v1-field"><label>Nome do modelo</label><input name="name" value={ selectedName } placeholder="Contrato padrão ViaGate" required/></div>
+								<div class="v1-field"><label>Descrição</label><input name="description" value={ selectedDescription } placeholder="Quando este modelo deve ser usado"/></div>
+								<div class="v1-field full"><label>Conteúdo Markdown</label><textarea class="v1-contract-markdown" name="markdown" data-contract-markdown required placeholder="# CONTRATO\n\nCONTRATANTE: {client.legal_name} ...">{ selectedMarkdown }</textarea></div>
+							</div>
+							<div class="admin-form-section-gap">
+								<div class="v1-label admin-form-label-gap">Inserir variável</div>
+								<div class="v1-variable-cloud">
+									for _, variable := range variables {
+										<button class="v1-variable-chip" type="button" data-contract-variable={ "{" + variable + "}" }>{ "{" + variable + "}" }</button>
+									}
+								</div>
+								<div class="v1-help admin-form-help">Clique em uma variável para inseri-la na posição atual do cursor.</div>
+							</div>
+							<label class="v1-option-card admin-form-section-gap"><span class="v1-switch"><input type="checkbox" name="make_default" value="1"/><span class="v1-switch-track"></span></span><span><strong>Usar como modelo padrão</strong><small>Novos contratos utilizarão este modelo quando não houver outra regra específica.</small></span></label>
+							<div class="v1-actions admin-form-actions">
+								<button class="v1-button" type="submit" formaction="/admin/contracts/templates/preview" formtarget="_blank" data-processing="Gerando prévia...">Validar e visualizar PDF</button>
+								<button class="v1-button primary" type="submit" data-processing="Validando e salvando nova versão...">Salvar nova versão</button>
+							</div>
+							<div class="v1-help admin-form-help">Salvar também executa a validação completa. Uma versão só é criada se o PDF de teste puder ser gerado com sucesso.</div>
+						</form>
+					</div>
+				</section>
+			</div>
+		</div>
+	}
+}
