@@ -61,7 +61,7 @@ func (a *App) publishPresentationEvent(ctx context.Context, presentationID, even
 		Body: clientName + " · " + title,
 		ResourceType: "presentation",
 		ResourceID: presentationID,
-		TargetURL: "/admin/presentations/" + presentationID + "/edit",
+		TargetURL: "/admin/pipeline",
 		DedupeKey: eventType + ":" + dedupeSuffix,
 	}); err != nil {
 		a.logger.Warn("publish presentation notification failed", "presentation_id", presentationID, "event_type", eventType, "error", err)
