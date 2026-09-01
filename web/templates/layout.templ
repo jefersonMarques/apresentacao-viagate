@@ -46,6 +46,8 @@ templ AdminLayout(title string, user domain.User) {
 		<link rel="stylesheet" href="/assets/admin-form.css"/>
 		<link rel="stylesheet" href="/assets/admin-notifications.css"/>
 		<link rel="stylesheet" href="/assets/activation.css"/>
+		<script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.10/dist/htmx.min.js" integrity="sha384-H5SrcfygHmAuTDZphMHqBJLc3FhssKjG7w/CeCpFReSfwBWDTKpkzPP8c+cLsK+V" crossorigin="anonymous" defer></script>
+		<script src="/assets/htmx-config.js" defer></script>
 		<div data-user-permissions={ Join(user.Permissions) } hidden></div>
 		<div class="admin-app" data-admin-shell>
 			<aside class="admin-sidebar" data-admin-sidebar>
@@ -56,7 +58,7 @@ templ AdminLayout(title string, user domain.User) {
 					</a>
 					<button class="sidebar-collapse" type="button" data-sidebar-toggle aria-label="Recolher menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
 				</div>
-				<nav class="sidebar-nav" aria-label="Navegação principal">
+				<nav class="sidebar-nav" aria-label="Navegação principal" hx-boost="true" hx-target="#adminContent" hx-select="#adminContent" hx-swap="outerHTML show:window:top" hx-push-url="true">
 					<span class="sidebar-section">Geral</span>
 					<a href="/admin" data-admin-nav><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg><span>Visão geral</span></a>
 					if UserCan(user, "proposal.read_own") || UserCan(user, "proposal.read_all") {
@@ -99,7 +101,7 @@ templ AdminLayout(title string, user domain.User) {
 						<a href="/admin/users" data-admin-nav><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/><path d="M18 8v6M15 11h6"/></svg><span>Usuários</span></a>
 					}
 					if UserCan(user, "contract.template.manage") {
-						<a href="/admin/contracts/templates" data-admin-nav><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span>Modelos de contrato</span></a>
+						<a href="/admin/contracts/templates" data-admin-nav hx-boost="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span>Modelos de contrato</span></a>
 					}
 					if UserCan(user, "audit.read") {
 						<a href="/admin/audit" data-admin-nav><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.4 8 8 9 4.6-1 8-4 8-9V6z"/><path d="M9 12h6M12 9v6"/></svg><span>Auditoria</span></a>
@@ -117,21 +119,21 @@ templ AdminLayout(title string, user domain.User) {
 					<div class="admin-topbar-copy"><span>ViaGate</span><strong>Plataforma comercial</strong></div>
 					<div class="admin-topbar-actions">
 						if UserCan(user, "notification.read") {
-							<a class="topbar-notification" href="/admin/notifications" aria-label="Notificações">
+							<a class="topbar-notification" href="/admin/notifications" aria-label="Notificações" hx-get="/admin/notifications?preview=1" hx-target="#notificationPopover" hx-trigger="notification:load" hx-swap="innerHTML">
 								<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
-								if user.UnreadNotifications > 0 {
-									<span class="topbar-notification-count">{ NotificationCount(user.UnreadNotifications) }</span>
-								}
+								@NotificationTopbarCount(user.UnreadNotifications, false)
 							</a>
+							<div id="notificationPopover" class="notification-popover-host" hidden></div>
 						}
 						<a class="topbar-profile" href="/admin/profile"><span class="profile-avatar small">{ UserInitials(user.Name) }</span><span>{ user.Name }</span></a>
 					</div>
 				</header>
-				<main class="admin-content">{ children... }</main>
+				<main id="adminContent" class="admin-content">{ children... }</main>
 			</div>
 		</div>
 		<script src="/assets/admin-shell.js" defer></script>
 		<script src="/assets/admin-list.js" defer></script>
+		<script src="/assets/admin-notifications.js" defer></script>
 	}
 }
 

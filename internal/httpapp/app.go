@@ -93,7 +93,8 @@ func (a *App) Routes() http.Handler {
 	router.Use(a.sameOriginWrites)
 	router.Use(a.requestBodyLimit)
 
-	router.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServer(http.Dir("web/assets"))))
+	assets := http.StripPrefix("/assets/", http.FileServer(http.Dir("web/assets")))
+	router.Handle("/assets/*", revalidatedAssetHandler(assets))
 	registerV1VisualAssets(router)
 	router.Get("/media/{id}", a.commercialAsset)
 	router.Get("/healthz", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) })
@@ -191,7 +192,8 @@ func (a *App) Routes() http.Handler {
 }
 
 func registerV1VisualAssets(router chi.Router) {
-	router.Handle("/v1/assets/*", http.StripPrefix("/v1/assets/", http.FileServer(http.Dir("assets"))))
+	v1Assets := http.StripPrefix("/v1/assets/", http.FileServer(http.Dir("assets")))
+	router.Handle("/v1/assets/*", revalidatedAssetHandler(v1Assets))
 	router.Get("/v1/presentation-content.html", serveV1PresentationContent)
 	files := map[string]string{
 		"/v1/styles.css": "styles.css", "/v1/script.js": "script.js", "/v1/enhancements.css": "enhancements.css",
@@ -221,11 +223,22 @@ func serveV1PresentationContent(w http.ResponseWriter, r *http.Request) {
 	html = strings.Replace(html, `<base href="/apresentacao/" />`, "", 1)
 	html = strings.Replace(html, `<base href="/apresentacao/">`, "", 1)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "public, max-age=0, must-revalidate")
 	_, _ = w.Write([]byte(html))
 }
 
 func serveProjectFile(path string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) { http.ServeFile(w, r, path) }
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "public, max-age=0, must-revalidate")
+		http.ServeFile(w, r, path)
+	}
+}
+
+func revalidatedAssetHandler(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "public, max-age=0, must-revalidate")
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (a *App) proxyClientIP(next http.Handler) http.Handler {
@@ -258,7 +271,7 @@ func (a *App) securityHeaders(next http.Handler) http.Handler {
 			w.Header().Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://unpkg.com; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'")
 		} else {
 			w.Header().Set("X-Frame-Options", "DENY")
-			w.Header().Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; frame-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
+			w.Header().Set("Content-Security-Policy", "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; connect-src 'self'; frame-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
 		}
 		if a.cfg.Environment == "production" {
 			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")

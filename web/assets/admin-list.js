@@ -1,5 +1,6 @@
 (() => {
   let openActionMenu = null;
+  let actionMenusInitialized = false;
 
   function normalize(value) {
     return String(value || '')
@@ -16,6 +17,9 @@
   }
 
   function initList(root) {
+    if (!(root instanceof Element) || root.dataset.adminListReady === 'true') return;
+    root.dataset.adminListReady = 'true';
+
     const rows = Array.from(root.querySelectorAll('[data-admin-list-row]'));
     const search = root.querySelector('[data-admin-list-search]');
     const filters = Array.from(root.querySelectorAll('[data-admin-list-filter]'));
@@ -60,6 +64,15 @@
     apply();
   }
 
+  function initLists(scope = document) {
+    const roots = [];
+    if (scope instanceof Element && scope.matches('[data-admin-list]')) roots.push(scope);
+    if ('querySelectorAll' in scope) {
+      scope.querySelectorAll('[data-admin-list]').forEach((root) => roots.push(root));
+    }
+    roots.forEach(initList);
+  }
+
   function resetPopoverPosition(popover) {
     popover.style.position = '';
     popover.style.left = '';
@@ -79,7 +92,7 @@
     trigger.setAttribute('aria-expanded', 'false');
     root.classList.remove('is-open');
     openActionMenu = null;
-    if (restoreFocus) trigger.focus();
+    if (restoreFocus && document.contains(trigger)) trigger.focus();
   }
 
   function positionActionMenu(trigger, popover) {
@@ -130,6 +143,9 @@
   }
 
   function initActionMenus() {
+    if (actionMenusInitialized) return;
+    actionMenusInitialized = true;
+
     document.addEventListener('click', (event) => {
       const trigger = event.target.closest('[data-admin-action-trigger]');
       if (trigger) {
@@ -173,10 +189,15 @@
       if (openActionMenu) positionActionMenu(openActionMenu.trigger, openActionMenu.popover);
     });
     window.addEventListener('scroll', () => closeActionMenu(), true);
+    document.addEventListener('htmx:beforeSwap', closeActionMenu);
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('[data-admin-list]').forEach(initList);
+    initLists(document);
     initActionMenus();
+  });
+
+  document.addEventListener('htmx:load', (event) => {
+    initLists(event.detail?.elt || document);
   });
 })();

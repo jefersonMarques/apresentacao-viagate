@@ -5,8 +5,14 @@ import "github.com/jefersonMarques/apresentacao-viagate/internal/domain"
 templ NotificationsPage(user domain.User, items []domain.InAppNotification) {
 	@AdminLayout("ViaGate — Notificações", user) {
 		@AdminPageHeader("NOTIFICAÇÕES", "Central de notificações", "Acompanhe eventos importantes dos seus clientes e, quando autorizado, atividades de outros usuários.")
+		@NotificationFeed(items)
+	}
+}
+
+templ NotificationFeed(items []domain.InAppNotification) {
+	<div id="notificationFeed">
 		if len(items) > 0 {
-			<form method="post" action="/admin/notifications/read-all" class="admin-notification-read-all">
+			<form method="post" action="/admin/notifications/read-all" class="admin-notification-read-all" hx-post="/admin/notifications/read-all" hx-target="#notificationFeed" hx-swap="outerHTML">
 				<button class="btn" type="submit">Marcar todas como lidas</button>
 			</form>
 		}
@@ -23,6 +29,27 @@ templ NotificationsPage(user domain.User, items []domain.InAppNotification) {
 				}
 			</div>
 		</section>
+	</div>
+}
+
+templ NotificationFeedResponse(items []domain.InAppNotification, unread int) {
+	@NotificationFeed(items)
+	@NotificationTopbarCount(unread, true)
+}
+
+templ NotificationTopbarCount(total int, oob bool) {
+	if oob {
+		if total > 0 {
+			<span id="notificationCount" class="topbar-notification-count" hx-swap-oob="outerHTML">{ NotificationCount(total) }</span>
+		} else {
+			<span id="notificationCount" class="topbar-notification-count" hx-swap-oob="outerHTML" hidden></span>
+		}
+	} else {
+		if total > 0 {
+			<span id="notificationCount" class="topbar-notification-count">{ NotificationCount(total) }</span>
+		} else {
+			<span id="notificationCount" class="topbar-notification-count" hidden></span>
+		}
 	}
 }
 
@@ -40,7 +67,7 @@ templ NotificationPopover(items []domain.InAppNotification) {
 				<div class="admin-notification-empty"><strong>Nenhuma notificação.</strong><span>Novos eventos aparecerão aqui.</span></div>
 			}
 		</div>
-		<a class="notification-popover-all" href="/admin/notifications">Ver todas as notificações <span>→</span></a>
+		<a class="notification-popover-all" href="/admin/notifications" hx-get="/admin/notifications" hx-target="#adminContent" hx-select="#adminContent" hx-swap="outerHTML show:window:top" hx-push-url="true">Ver todas as notificações <span>→</span></a>
 	</section>
 }
 
@@ -61,18 +88,18 @@ templ NotificationFeedItem(item domain.InAppNotification, compact bool) {
 		if !compact {
 			<div class="admin-notification-actions">
 				if item.TargetURL != "" {
-					<form method="post" action={ templ.SafeURL("/admin/notifications/" + item.ID + "/open") }>
+					<form method="post" action={ templ.SafeURL("/admin/notifications/" + item.ID + "/open") } hx-post={ "/admin/notifications/" + item.ID + "/open" } hx-swap="none">
 						<input type="hidden" name="target" value={ item.TargetURL }/>
 						<button class="btn" type="submit">Abrir</button>
 					</form>
 				} else if item.ReadAt == nil {
-					<form method="post" action={ templ.SafeURL("/admin/notifications/" + item.ID + "/read") }>
+					<form method="post" action={ templ.SafeURL("/admin/notifications/" + item.ID + "/read") } hx-post={ "/admin/notifications/" + item.ID + "/read" } hx-target="#notificationFeed" hx-swap="outerHTML">
 						<button class="btn" type="submit">Marcar como lida</button>
 					</form>
 				}
 			</div>
 		} else if item.TargetURL != "" {
-			<form class="notification-popover-open" method="post" action={ templ.SafeURL("/admin/notifications/" + item.ID + "/open") }>
+			<form class="notification-popover-open" method="post" action={ templ.SafeURL("/admin/notifications/" + item.ID + "/open") } hx-post={ "/admin/notifications/" + item.ID + "/open" } hx-swap="none">
 				<input type="hidden" name="target" value={ item.TargetURL }/>
 				<button type="submit" aria-label="Abrir notificação">→</button>
 			</form>

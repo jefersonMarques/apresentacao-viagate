@@ -26,6 +26,10 @@ func render(ctx context.Context,w http.ResponseWriter,status int,component templ
 	_ = component.Render(ctx,w)
 }
 
+func isHTMXRequest(r *http.Request) bool {
+	return strings.EqualFold(strings.TrimSpace(r.Header.Get("HX-Request")), "true")
+}
+
 func hashToken(value string) []byte { return security.HashToken(value) }
 
 func setSecureCookie(w http.ResponseWriter,name,value string,expires time.Time,production bool) {
