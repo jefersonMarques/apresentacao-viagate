@@ -38,6 +38,13 @@ func (a *App) adminContractArtifact(w http.ResponseWriter, r *http.Request, arti
 		http.Error(w, "acesso negado", http.StatusForbidden)
 		return
 	}
+	if artifact == "evidence" || artifact == "package" {
+		allowed, err := a.authStore.HasPermission(r.Context(), user.ID, "contract.evidence.read")
+		if err != nil || !allowed {
+			http.Error(w, "acesso negado", http.StatusForbidden)
+			return
+		}
+	}
 
 	keys, err := a.contractStore.ArtifactKeysByContractID(r.Context(), contractID)
 	if err != nil {
@@ -88,15 +95,14 @@ func (a *App) canAccessContract(ctx context.Context, userID, contractID string) 
 	if err != nil {
 		return false
 	}
-	if ownerID == userID {
+
+	readAll, err := a.authStore.HasPermission(ctx, userID, "contract.read_all")
+	if err == nil && readAll {
 		return true
 	}
-
-	for _, permission := range []string{"contract.read_all", "proposal.read_all", "onboarding.review"} {
-		allowed, err := a.authStore.HasPermission(ctx, userID, permission)
-		if err == nil && allowed {
-			return true
-		}
+	if ownerID != userID {
+		return false
 	}
-	return false
+	readOwn, err := a.authStore.HasPermission(ctx, userID, "contract.read_own")
+	return err == nil && readOwn
 }
