@@ -47,7 +47,13 @@ templ ProposalListPage(user domain.User, items []domain.Proposal) {
 								@AdminActionMenu("Mais ações da proposta") {
 									<a href={ templ.SafeURL("/admin/proposals/new?duplicate=" + item.ID) }>Duplicar proposta</a>
 									if item.PublicToken != "" {
-										<a href={ templ.SafeURL("/admin/proposals?pdf=" + item.ID) }>Baixar PDF</a>
+										<a
+											href={ templ.SafeURL("/admin/proposals?pdf=" + item.ID) }
+											data-long-action="download"
+											data-action-title="Preparando proposta"
+											data-action-message="Estamos capturando e organizando as páginas do PDF."
+											data-action-success="A proposta foi preparada e o download começou."
+										>Baixar PDF</a>
 										<a target="_blank" rel="noopener" href={ templ.SafeURL("/p/" + item.PublicToken) }>Abrir versão pública</a>
 										<button type="button" data-copy-path={ "/p/" + item.PublicToken }>Copiar link público</button>
 									}
@@ -90,7 +96,13 @@ templ PresentationListPage(user domain.User, items []presentations.Presentation)
 								<a class="btn" href={ templ.SafeURL("/admin/presentations/" + item.ID + "/edit") }>Editar</a>
 								if item.PublicToken != "" {
 									@AdminActionMenu("Mais ações da apresentação") {
-										<a href={ templ.SafeURL("/admin/presentations?pdf=" + item.ID) }>Baixar PDF</a>
+										<a
+											href={ templ.SafeURL("/admin/presentations?pdf=" + item.ID) }
+											data-long-action="download"
+											data-action-title="Preparando apresentação"
+											data-action-message="Estamos capturando e organizando as páginas do PDF."
+											data-action-success="A apresentação foi preparada e o download começou."
+										>Baixar PDF</a>
 										<a target="_blank" rel="noopener" href={ templ.SafeURL("/a/" + item.PublicToken) }>Abrir versão pública</a>
 										<button type="button" data-copy-path={ "/a/" + item.PublicToken }>Copiar link público</button>
 									}
