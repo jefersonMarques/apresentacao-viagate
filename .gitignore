@@ -1,5 +1,6 @@
 .env
 .task/
 bin/
+dist/
 *.exe
 web/templates/*_templ.go
