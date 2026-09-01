@@ -190,6 +190,10 @@ func (a *App) adminProposals(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "não foi possível carregar as propostas", http.StatusInternalServerError)
 		return
 	}
+	if proposalID := strings.TrimSpace(r.URL.Query().Get("pdf")); proposalID != "" {
+		a.downloadProposalPDF(w, r, items, proposalID)
+		return
+	}
 	render(r.Context(), w, http.StatusOK, templates.ProposalListPage(user, items))
 }
 
@@ -203,6 +207,10 @@ func (a *App) adminPresentations(w http.ResponseWriter, r *http.Request) {
 	items, err := a.presentationStore.List(r.Context(), user.ID, all)
 	if err != nil {
 		http.Error(w, "não foi possível carregar as apresentações", http.StatusInternalServerError)
+		return
+	}
+	if presentationID := strings.TrimSpace(r.URL.Query().Get("pdf")); presentationID != "" {
+		a.downloadPresentationPDF(w, r, items, presentationID)
 		return
 	}
 	render(r.Context(), w, http.StatusOK, templates.PresentationListPage(user, items))
