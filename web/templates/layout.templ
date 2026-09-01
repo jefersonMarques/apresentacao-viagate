@@ -42,6 +42,7 @@ templ PublicFlowLayout(title string) {
 templ AdminLayout(title string, user domain.User) {
 	@Base(title) {
 		<link rel="stylesheet" href="/assets/admin-enhancements.css"/>
+		<link rel="stylesheet" href="/assets/admin-page.css"/>
 		<link rel="stylesheet" href="/assets/admin-list.css"/>
 		<div class="admin-app" data-admin-shell>
 			<aside class="admin-sidebar" data-admin-sidebar>
@@ -136,6 +137,7 @@ templ AdminLayout(title string, user domain.User) {
 templ AdminEditorLayout(title string, user domain.User) {
 	@AdminLayout(title, user) {
 		<link rel="stylesheet" href="/assets/v1-admin-forms.css"/>
+		<link rel="stylesheet" href="/assets/admin-form.css"/>
 		{ children... }
 	}
 }
