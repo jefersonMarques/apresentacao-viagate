@@ -80,7 +80,13 @@ templ AdminLayout(title string, user domain.User) {
 						<a href="/admin/onboardings" data-admin-nav><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v15H4z"/><path d="M8 3v4M16 3v4M8 11h8M8 15h5"/></svg><span>Cadastros</span></a>
 					}
 					if UserCan(user, "activation.read_all") {
-						<a href="/admin/activations" data-admin-nav><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16"/><path d="m14 6 6 6-6 6"/><path d="M4 6h6M4 18h6"/></svg><span>Ativações</span></a>
+						<a href="/admin/activations" data-admin-nav>
+							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16"/><path d="m14 6 6 6-6 6"/><path d="M4 6h6M4 18h6"/></svg>
+							<span>Ativações</span>
+							if user.PendingActivations > 0 {
+								<span class="sidebar-nav-alert" title="Ativações aguardando ação interna">{ NotificationCount(user.PendingActivations) }</span>
+							}
+						</a>
 					}
 					if UserCan(user, "contract.read_own") || UserCan(user, "contract.read_all") {
 						<a href="/admin/contracts" data-admin-nav><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6z"/><path d="M14 3v4h4"/><path d="M9 12h6M9 16h6"/></svg><span>Contratos</span></a>
