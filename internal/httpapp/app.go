@@ -125,6 +125,7 @@ func (a *App) Routes() http.Handler {
 	})
 
 	router.Get("/sign/{token}", a.signaturePage)
+	router.Get("/sign/{token}/proposal", a.proposalFromSignature)
 	router.Get("/sign/{token}/document", a.viewContractDocument)
 	router.Post("/sign/{token}/otp", a.sendSignatureOTP)
 	router.Post("/sign/{token}/confirm", a.confirmSignature)
@@ -132,8 +133,8 @@ func (a *App) Routes() http.Handler {
 	router.Get("/sign/{token}/contract", a.downloadSignedContract)
 
 	router.Get("/activation/{token}", a.activationPage)
+	router.Get("/activation/{token}/proposal", a.proposalFromActivation)
 	router.Post("/activation/{token}/{section:finance|goods|users}", a.saveActivationSection)
-	router.Post("/activation/{token}/delegate", a.delegateActivation)
 	router.Post("/activation/{token}/submit", a.submitActivation)
 
 	router.Group(func(admin chi.Router) {
@@ -156,8 +157,6 @@ func (a *App) Routes() http.Handler {
 		admin.With(a.permission("presentation.create")).Get("/admin/presentations/{id}/edit", a.editPresentationPage)
 		admin.With(a.permission("presentation.create")).Post("/admin/presentations/save", a.savePresentation)
 
-		// Read access is scoped in the handlers (own/all). Review actions remain
-		// protected by the stronger operational permission.
 		admin.Get("/admin/onboardings", a.adminOnboardings)
 		admin.Get("/admin/onboardings/{id}", a.adminOnboardingDetail)
 		admin.With(a.permission("onboarding.review")).Post("/admin/onboardings/{id}/review", a.reviewOnboarding)
