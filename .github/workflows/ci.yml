@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/go-commercial-platform
+      - feature/htmx-commercial-platform
       - main
     tags:
       - 'v*'
