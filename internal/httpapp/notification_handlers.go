@@ -11,10 +11,20 @@ import (
 
 func (a *App) notificationsPage(w http.ResponseWriter, r *http.Request) {
 	user, _ := currentUser(r.Context())
-	items, err := notifications.NewInAppStore(a.pool).List(r.Context(), user.ID, 100)
+	preview := r.URL.Query().Get("preview") == "1"
+	limit := 100
+	if preview {
+		limit = 6
+	}
+	items, err := notifications.NewInAppStore(a.pool).List(r.Context(), user.ID, limit)
 	if err != nil {
 		a.logger.Error("list in-app notifications failed", "user_id", user.ID, "error", err)
 		http.Error(w, "não foi possível carregar as notificações", http.StatusInternalServerError)
+		return
+	}
+	if preview {
+		w.Header().Set("Cache-Control", "no-store")
+		render(r.Context(), w, http.StatusOK, templates.NotificationPopover(items))
 		return
 	}
 	render(r.Context(), w, http.StatusOK, templates.NotificationsPage(user, items))
