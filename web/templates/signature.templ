@@ -7,6 +7,7 @@ import (
 
 templ SignatureContractPage(access contracts.SignerAccess, token string, message, errorMessage string) {
 	@PublicFlowLayout("ViaGate — Assinatura do contrato") {
+		<link rel="stylesheet" href="/assets/signature.css"/>
 		<div class="public">
 			<main class="proposal-page public-flow-stack">
 				@PublicFlowHeader("ASSINATURA ELETRÔNICA", "Contrato para assinatura", "Responsável: " + access.Signer.Name + " · " + access.Signer.Email)
@@ -25,10 +26,11 @@ templ SignatureContractPage(access contracts.SignerAccess, token string, message
 						<span class="step-title">CONFIRMAÇÃO DE IDENTIDADE</span>
 						<h2>Assinar este documento</h2>
 						<p>Enviaremos um código para o e-mail informado no aceite da proposta. Depois da confirmação, sua assinatura ficará vinculada exatamente ao PDF exibido acima.</p>
-						<div class="actions signature-otp-actions">
-							<form method="post" action={ templ.SafeURL("/sign/" + token + "/otp") }>
-								<button class="btn dark" type="submit" data-processing="Enviando código...">Enviar código por e-mail</button>
+						<div class="signature-otp-row">
+							<form method="post" action={ templ.SafeURL("/sign/" + token + "/otp") } data-signature-otp-form>
+								<button class="btn dark" type="submit" data-signature-otp-button>Enviar código por e-mail</button>
 							</form>
+							<div class="signature-otp-status" data-signature-otp-status hidden></div>
 							if message != "" {
 								<div class="notice signature-inline-notice">{ message }</div>
 							}
@@ -50,17 +52,17 @@ templ SignatureContractPage(access contracts.SignerAccess, token string, message
 						</form>
 					</section>
 				} else {
-					<section class="accept-box">
+					<section class="accept-box signature-complete-box">
 						<span class="step-title">CONTRATO ASSINADO</span>
 						<h2>Assinatura registrada com sucesso.</h2>
-						<p>A contratação foi concluída. O próprio PDF contém um QR Code para consultar a autenticidade e conferir o arquivo quando necessário.</p>
+						<p>A contratação foi concluída. Enviamos também para seu e-mail um link com os próximos passos para preparar a operação.</p>
 						<div class="actions">
-							<a class="btn ghost" href={ templ.SafeURL("/sign/" + token + "/contract") }>Baixar contrato assinado</a>
 							<form method="post" action={ templ.SafeURL("/sign/" + token + "/activation") }>
-								<button class="btn primary" type="submit" data-processing="Preparando próximo passo...">Continuar para dados de ativação</button>
+								<button class="btn primary" type="submit" data-processing="Abrindo dados de ativação...">Preencher dados para ativação agora</button>
 							</form>
+							<a class="btn ghost" href={ templ.SafeURL("/sign/" + token + "/contract") }>Baixar contrato assinado</a>
 						</div>
-						<p class="public-flow-muted">Os dados para ativação são uma etapa separada do contrato. Você poderá preencher agora ou encaminhar para alguém da sua equipe.</p>
+						<p class="public-flow-muted">Você não precisa concluir a ativação agora. O link enviado ao seu e-mail permite retomar e também encaminhar partes do preenchimento para alguém da sua equipe.</p>
 					</section>
 				}
 				<section class="accept-box">
@@ -76,6 +78,7 @@ templ SignatureContractPage(access contracts.SignerAccess, token string, message
 					</details>
 				</section>
 			</main>
+			<script src="/assets/signature.js" defer></script>
 		</div>
 	}
 }
