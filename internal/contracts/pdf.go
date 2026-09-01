@@ -70,8 +70,8 @@ func (r *PDFRenderer) Render(ctx context.Context, html string) ([]byte, error) {
 }
 
 // RenderURL renders a browser-accessible page entirely on the server. The page
-// is responsible for its own @page rules; commercial slides use a fixed 16:9
-// page while contracts continue to use Render and the A4 document model above.
+// owns its @page rules. Commercial documents use a responsive A4 print layout,
+// while contracts continue to use Render and the professional A4 model above.
 func (r *PDFRenderer) RenderURL(ctx context.Context, sourceURL string) ([]byte, error) {
 	if strings.TrimSpace(sourceURL) == "" {
 		return nil, fmt.Errorf("PDF source URL is required")
@@ -119,7 +119,9 @@ func (r *PDFRenderer) renderBrowserSource(ctx context.Context, sourceURL, docume
 		"--disable-gpu",
 		"--disable-dev-shm-usage",
 		"--no-pdf-header-footer",
-		"--window-size=1280,720",
+		// Portrait viewport intentionally triggers the same responsive behavior
+		// expected from the A4 commercial stylesheet before print pagination.
+		"--window-size=900,1200",
 		"--run-all-compositor-stages-before-draw",
 		"--virtual-time-budget=8000",
 		"--print-to-pdf="+pdfPath,
