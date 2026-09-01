@@ -46,7 +46,17 @@ templ OnboardingAdminListPage(user domain.User, items []onboardingpkg.AdminItem)
 							}
 						</td>
 						<td data-label="Ações" data-actions="true">
-							<div class="admin-list-actions"><a class="btn" href={ templ.SafeURL("/admin/onboardings/" + item.ID) }>Abrir</a></div>
+							<div class="admin-list-actions">
+								<a
+									class="btn"
+									href={ templ.SafeURL("/admin/onboardings/" + item.ID) }
+									hx-get={ "/admin/onboardings/" + item.ID }
+									hx-target="#adminContent"
+									hx-select="#adminContent"
+									hx-swap="outerHTML show:window:top"
+									hx-push-url="true"
+								>Abrir</a>
+							</div>
 						</td>
 					</tr>
 				}
@@ -58,7 +68,7 @@ templ OnboardingAdminListPage(user domain.User, items []onboardingpkg.AdminItem)
 templ OnboardingAdminDetailPage(user domain.User, detail onboardingpkg.AdminDetail, message, errorMessage string) {
 	@AdminLayout("ViaGate — Dados do cliente", user) {
 		@AdminPageHeader("DOSSIÊ DO CLIENTE", detail.Onboarding.LegalName, detail.ProposalTitle + " · comercial: " + detail.CommercialName) {
-			<a class="btn" href="/admin/onboardings">Voltar</a>
+			<a class="btn" href="/admin/onboardings" hx-get="/admin/onboardings" hx-target="#adminContent" hx-select="#adminContent" hx-swap="outerHTML show:window:top" hx-push-url="true">Voltar</a>
 		}
 		@FlashMessages(message, errorMessage)
 
@@ -194,7 +204,14 @@ templ OnboardingAdminDetailPage(user domain.User, detail onboardingpkg.AdminDeta
 				<div class="panel-head"><h2>Revisão interna</h2></div>
 				<div class="panel-body">
 					if detail.ContractID == "" && (detail.Onboarding.Status == "submitted" || detail.Onboarding.Status == "under_review") {
-						<form method="post" action={ templ.SafeURL("/admin/onboardings/" + detail.Onboarding.ID + "/review") }>
+						<form
+							method="post"
+							action={ templ.SafeURL("/admin/onboardings/" + detail.Onboarding.ID + "/review") }
+							hx-post={ "/admin/onboardings/" + detail.Onboarding.ID + "/review" }
+							hx-target="#adminContent"
+							hx-select="#adminContent"
+							hx-swap="outerHTML show:window:top"
+						>
 							<div class="field"><label>Observação / solicitação de correção</label><textarea name="notes" placeholder="Explique objetivamente o que precisa ser ajustado.">{ detail.ReviewNotes }</textarea></div>
 							<div class="actions admin-form-section-gap">
 								<button class="btn" type="submit" name="status" value="under_review" data-processing="Atualizando...">Marcar em revisão</button>
@@ -211,7 +228,14 @@ templ OnboardingAdminDetailPage(user domain.User, detail onboardingpkg.AdminDeta
 						<div class="admin-form-section-gap">
 							<span class="step-title">RECUPERAÇÃO</span>
 							<p>Use somente se a geração do contrato ou o envio da assinatura falhar.</p>
-							<form method="post" action={ templ.SafeURL("/admin/onboardings/" + detail.Onboarding.ID + "/contract/retry") }>
+							<form
+								method="post"
+								action={ templ.SafeURL("/admin/onboardings/" + detail.Onboarding.ID + "/contract/retry") }
+								hx-post={ "/admin/onboardings/" + detail.Onboarding.ID + "/contract/retry" }
+								hx-target="#adminContent"
+								hx-select="#adminContent"
+								hx-swap="outerHTML show:window:top"
+							>
 								<button class="btn dark" type="submit" data-processing="Preparando contrato...">Gerar / reenviar contrato</button>
 							</form>
 						</div>
