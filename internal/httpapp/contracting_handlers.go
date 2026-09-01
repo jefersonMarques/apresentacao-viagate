@@ -97,5 +97,9 @@ func (a *App) saveOnboardingInsurance(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) renderContractingError(w http.ResponseWriter, r *http.Request, current domain.Onboarding, message string) {
 	hasPolicy, _ := a.onboardingStore.HasPolicy(r.Context(), current.ID)
-	render(r.Context(), w, http.StatusBadRequest, templates.ContractingJourneyPage(current, hasPolicy, "", message, a.cfg.RequireOnboardingReview))
+	proposalURL := ""
+	if proposalPath, err := a.proposalPublicPathByOnboarding(r.Context(), current.ID); err == nil {
+		proposalURL = proposalPath + "?view=proposal"
+	}
+	render(r.Context(), w, http.StatusBadRequest, templates.ContractingJourneyPage(current, hasPolicy, "", message, a.cfg.RequireOnboardingReview, proposalURL))
 }
