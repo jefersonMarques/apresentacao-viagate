@@ -134,7 +134,9 @@ func (s *InAppStore) List(ctx context.Context, userID string, limit int) ([]doma
 	}
 	rows, err := s.pool.Query(ctx, `
 		select id::text,event_type,title,coalesce(body,''),coalesce(resource_type,''),
-		       coalesce(resource_id::text,''),coalesce(target_url,''),read_at,created_at
+		       coalesce(resource_id::text,''),
+		       case when event_type='presentation.opened' then '/admin/pipeline' else coalesce(target_url,'') end,
+		       read_at,created_at
 		from in_app_notifications
 		where recipient_user_id=$1
 		order by created_at desc
