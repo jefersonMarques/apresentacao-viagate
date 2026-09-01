@@ -119,8 +119,8 @@ cross join roles new_role
 where new_role.code='user'
   and not exists(
     select 1 from user_roles current_ur
-    join roles current_role on current_role.id=current_ur.role_id
-    where current_ur.user_id=ur.user_id and current_role.code='super_admin'
+    join roles assigned_role on assigned_role.id=current_ur.role_id
+    where current_ur.user_id=ur.user_id and assigned_role.code='super_admin'
   )
 on conflict do nothing;
 
