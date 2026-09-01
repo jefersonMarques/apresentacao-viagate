@@ -1,21 +1,11 @@
 (() => {
   if (window.__VIAGATE_PDF_MODE__ !== true) return;
 
-  const A4_CONTENT_HEIGHT_PX = 1030;
-  const MIN_COMPACT_SCALE = 0.86;
-  const protectedSelector = [
-    'article',
-    'figure',
-    '.proposal-price-group',
-    '.proposal-highlight',
-    '.proposal-person-card',
-    '.presentation-contact-card',
-    '.presentation-use-case-context',
-    '.presentation-use-case-outcomes > div',
-    'tr',
-  ].join(',');
+  const MIN_SECTION_HEIGHT = 675;
+  const slideSelector = '.proposal-slide, #presentation > .slide';
+  const root = document.documentElement;
 
-  document.documentElement.classList.add('commercial-pdf-mode');
+  root.classList.add('commercial-pdf-mode');
   document.body?.classList.add('commercial-pdf-mode');
 
   function renumberProposal() {
@@ -28,53 +18,49 @@
     });
   }
 
-  function resetUnit(unit) {
-    if (!(unit instanceof HTMLElement)) return;
-    unit.classList.remove('pdf-allow-break');
-    unit.style.removeProperty('zoom');
+  function visibleSlides() {
+    return Array.from(document.querySelectorAll(slideSelector))
+      .filter((slide) => getComputedStyle(slide).display !== 'none');
   }
 
-  function classifyUnit(unit) {
-    if (!(unit instanceof HTMLElement)) return;
-    resetUnit(unit);
-
-    const height = Math.max(unit.scrollHeight, unit.getBoundingClientRect().height);
-    if (height <= A4_CONTENT_HEIGHT_PX) return;
-
-    const scale = A4_CONTENT_HEIGHT_PX / Math.max(1, height);
-    if (scale >= MIN_COMPACT_SCALE) {
-      // Chrome supports zoom in print layout and, unlike transform, it also
-      // changes the element's layout box. Small overflows therefore stay on
-      // one sheet without leaving invisible space or clipping descendants.
-      unit.style.zoom = String(Math.min(1, scale));
-      return;
-    }
-
-    // A unit that cannot fit legibly on one sheet is explicitly allowed to
-    // fragment. The print CSS protects its smaller descendants independently.
-    unit.classList.add('pdf-allow-break');
-  }
-
-  function prepareProtectedUnits() {
-    const units = Array.from(document.querySelectorAll(protectedSelector));
-    // Work from the smallest/deepest units first. That lets a large container
-    // observe the final size of cards and rows already compacted inside it.
-    units.sort((a, b) => {
-      const depth = (element) => {
-        let value = 0;
-        for (let node = element; node?.parentElement; node = node.parentElement) value += 1;
-        return value;
-      };
-      return depth(b) - depth(a);
+  function resetSlideHeights() {
+    visibleSlides().forEach((slide) => {
+      if (!(slide instanceof HTMLElement)) return;
+      slide.style.removeProperty('height');
+      slide.style.removeProperty('min-height');
     });
-    units.forEach(classifyUnit);
   }
 
-  function prepare() {
-    document.documentElement.classList.add('commercial-pdf-mode');
+  function expandSlideToContents(slide) {
+    if (!(slide instanceof HTMLElement)) return;
+
+    const rect = slide.getBoundingClientRect();
+    let bottom = rect.top + Math.max(MIN_SECTION_HEIGHT, rect.height);
+    slide.querySelectorAll('*').forEach((element) => {
+      if (!(element instanceof HTMLElement) && !(element instanceof SVGElement)) return;
+      const elementRect = element.getBoundingClientRect();
+      if (!Number.isFinite(elementRect.bottom)) return;
+      bottom = Math.max(bottom, elementRect.bottom);
+    });
+
+    const requiredHeight = Math.ceil(Math.max(MIN_SECTION_HEIGHT, bottom - rect.top));
+    slide.style.minHeight = `${requiredHeight}px`;
+  }
+
+  function prepareLayout() {
+    root.classList.add('commercial-pdf-mode');
     document.body?.classList.add('commercial-pdf-mode');
+    root.dataset.captureReady = '0';
     renumberProposal();
-    prepareProtectedUnits();
+    resetSlideHeights();
+
+    visibleSlides().forEach(expandSlideToContents);
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        root.dataset.captureReady = '1';
+      });
+    });
   }
 
   async function waitForAssets() {
@@ -86,21 +72,29 @@
     await Promise.all(images.map((image) => new Promise((resolve) => {
       image.addEventListener('load', resolve, { once: true });
       image.addEventListener('error', resolve, { once: true });
-      window.setTimeout(resolve, 1800);
+      window.setTimeout(resolve, 2200);
     })));
   }
 
-  window.addEventListener('load', async () => {
+  async function finalizeCaptureLayout() {
     await waitForAssets();
-    prepare();
-    // Dynamic V1 presentation modules finish their DOM adjustments shortly
-    // after load. One delayed pass is enough; repeated scaling passes made the
-    // previous slide PDF unnecessarily expensive to render.
-    window.setTimeout(prepare, 1200);
+    prepareLayout();
+    window.setTimeout(prepareLayout, 180);
+  }
+
+  window.addEventListener('load', () => {
+    if (document.getElementById('proposalPresentation')) {
+      finalizeCaptureLayout();
+      return;
+    }
+
+    // Presentation V1 still performs its canonical DOM enhancements after the
+    // initial load. This is only a safety fallback; commercial-pdf-ready is the
+    // authoritative signal emitted after those modules finish.
+    window.setTimeout(finalizeCaptureLayout, 7000);
   }, { once: true });
 
   window.addEventListener('commercial-pdf-ready', () => {
-    window.setTimeout(prepare, 120);
+    finalizeCaptureLayout();
   });
-  window.addEventListener('beforeprint', prepare);
 })();
