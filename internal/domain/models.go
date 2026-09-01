@@ -15,6 +15,7 @@ type User struct {
 	Roles               []string
 	Permissions         []string
 	UnreadNotifications int
+	PendingActivations  int
 	CreatedAt           time.Time
 }
 
