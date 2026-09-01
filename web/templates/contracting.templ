@@ -25,7 +25,8 @@ templ ContractingJourneyPage(onboarding domain.Onboarding, hasPolicy bool, messa
 						<button class="btn" type="button" data-cnpj-lookup data-cnpj-field="cnpj" data-cnpj-prefix="" data-cnpj-endpoint="/api/cnpj/">Preencher pelo CNPJ</button>
 					</div>
 					<div class="panel-body">
-						<form method="post" action={ templ.SafeURL("/onboarding/" + onboarding.ID + "/company") } class="grid">
+						<form method="post" action={ templ.SafeURL("/onboarding/" + onboarding.ID) } class="grid">
+							<input type="hidden" name="step" value="company"/>
 							<div class="field"><label>CNPJ</label><input name="cnpj" data-mask="cnpj" value={ onboarding.CNPJ } autocomplete="off" required/><div class="public-cnpj-status" data-cnpj-status></div></div>
 							<div class="field"><label>Razão social</label><input name="legal_name" value={ onboarding.LegalName } required/></div>
 							<div class="field"><label>Nome fantasia</label><input name="trade_name" value={ onboarding.TradeName }/></div>
@@ -44,7 +45,8 @@ templ ContractingJourneyPage(onboarding domain.Onboarding, hasPolicy bool, messa
 				<section class="panel contracting-step" data-contracting-step="insurance" hidden>
 					<div class="panel-head"><div><span class="step-title">ETAPA 2 DE 3</span><h2>Operação e seguro</h2><p>Esses dados serão usados na geração do contrato.</p></div></div>
 					<div class="panel-body public-flow-stack">
-						<form method="post" action={ templ.SafeURL("/onboarding/" + onboarding.ID + "/insurance") } class="grid">
+						<form method="post" action={ templ.SafeURL("/onboarding/" + onboarding.ID) } class="grid">
+							<input type="hidden" name="step" value="insurance"/>
 							<div class="field"><label>Tipo de operação</label><select name="operation_type"><option value="normal" selected?={ onboarding.OperationType == "normal" || onboarding.OperationType == "" }>Normal</option><option value="avulsa" selected?={ onboarding.OperationType == "avulsa" }>Avulsa</option></select></div>
 							<div class="field"><label>Seguradora</label><input name="insurer" value={ onboarding.Insurer } required/></div>
 							<div class="field"><label>Início da vigência</label><input name="policy_start_date" type="date" value={ onboarding.PolicyStartDate } required/></div>
