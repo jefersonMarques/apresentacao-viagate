@@ -5,12 +5,14 @@ import (
 	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/brfields"
 )
 
-templ ContractingJourneyPage(onboarding domain.Onboarding, hasPolicy bool, message, errorMessage string, requireReview bool) {
+templ ContractingJourneyPage(onboarding domain.Onboarding, hasPolicy bool, message, errorMessage string, requireReview bool, proposalURL string) {
 	@PublicFlowLayout("ViaGate — Continuar contratação") {
 		<link rel="stylesheet" href="/assets/contracting.css"/>
 		<div class="public contracting-public">
 			<main class="shell public-flow-stack contracting-page" data-contracting-wizard data-policy-present={ BoolString(hasPolicy) }>
-				@PublicFlowHeader("CONTRATAÇÃO", "Prepare o contrato em poucos passos", "A proposta já foi aceita. Agora confirme os dados da empresa e do seguro para gerarmos o contrato.")
+				@PublicFlowHeader("CONTRATAÇÃO", "Prepare o contrato em poucos passos", "A proposta já foi aceita. Agora confirme os dados da empresa e do seguro para gerarmos o contrato.") {
+					@PublicProposalLink(proposalURL)
+				}
 				@PublicFlashMessages(message, errorMessage)
 
 				<nav class="contracting-progress" aria-label="Etapas da contratação">
@@ -80,9 +82,9 @@ templ ContractingJourneyPage(onboarding domain.Onboarding, hasPolicy bool, messa
 						}
 						<div class="notice public-flow-note"><strong>Apólice:</strong> { ContractingPolicyTitle(hasPolicy) }</div>
 						if requireReview {
-							<p class="public-flow-muted">Depois do envio, a ViaGate fará uma revisão rápida. Se houver qualquer ajuste, você receberá um link seguro por e-mail.</p>
+							<p class="public-flow-muted">Depois do envio, a ViaGate fará uma revisão rápida. Se houver qualquer ajuste, você receberá a orientação por e-mail e continuará usando o mesmo link da proposta.</p>
 						} else {
-							<p class="public-flow-muted">Depois do envio, o contrato será preparado e você seguirá diretamente para a assinatura.</p>
+							<p class="public-flow-muted">Depois do envio, o contrato será preparado e o mesmo link da proposta passará a abrir diretamente a assinatura.</p>
 						}
 						<div class="actions contracting-review-actions">
 							<button class="btn ghost" type="button" data-contracting-previous="insurance">Voltar</button>
@@ -97,7 +99,7 @@ templ ContractingJourneyPage(onboarding domain.Onboarding, hasPolicy bool, messa
 					</div>
 				</section>
 
-				<p class="contracting-resume-note">Você pode fechar esta página e continuar depois pelo link seguro enviado ao e-mail do responsável.</p>
+				<p class="contracting-resume-note">Você pode fechar esta página a qualquer momento. O mesmo link da proposta sempre abrirá a etapa atual da contratação.</p>
 			</main>
 			<script src="/assets/contracting.js" defer></script>
 		</div>
