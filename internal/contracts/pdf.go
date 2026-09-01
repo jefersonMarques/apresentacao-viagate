@@ -69,6 +69,52 @@ func (r *PDFRenderer) Render(ctx context.Context, html string) ([]byte, error) {
 	return pdf, nil
 }
 
+// RenderURL renders a browser-accessible page entirely on the server. The page
+// is responsible for its own @page rules; commercial slides use a fixed 16:9
+// page while contracts continue to use Render and the A4 document model above.
+func (r *PDFRenderer) RenderURL(ctx context.Context, sourceURL string) ([]byte, error) {
+	browserPath, err := resolveBrowserExecutable(r.chromiumPath)
+	if err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(sourceURL) == "" {
+		return nil, fmt.Errorf("PDF source URL is required")
+	}
+	if _, err := url.ParseRequestURI(sourceURL); err != nil {
+		return nil, fmt.Errorf("invalid PDF source URL: %w", err)
+	}
+
+	dir, err := os.MkdirTemp("", "viagate-commercial-pdf-*")
+	if err != nil {
+		return nil, fmt.Errorf("create commercial PDF temp dir: %w", err)
+	}
+	defer os.RemoveAll(dir)
+	pdfPath := filepath.Join(dir, "document.pdf")
+
+	command := exec.CommandContext(ctx, browserPath,
+		"--headless",
+		"--disable-gpu",
+		"--disable-dev-shm-usage",
+		"--no-pdf-header-footer",
+		"--window-size=1280,720",
+		"--run-all-compositor-stages-before-draw",
+		"--virtual-time-budget=8000",
+		"--print-to-pdf="+pdfPath,
+		sourceURL,
+	)
+	if output, err := command.CombinedOutput(); err != nil {
+		return nil, fmt.Errorf("render URL PDF with %q: %w: %s", browserPath, err, string(output))
+	}
+	pdf, err := os.ReadFile(pdfPath)
+	if err != nil {
+		return nil, fmt.Errorf("read generated URL PDF: %w", err)
+	}
+	if len(pdf) == 0 {
+		return nil, fmt.Errorf("generated URL PDF is empty")
+	}
+	return pdf, nil
+}
+
 func resolveBrowserExecutable(configuredPath string) (string, error) {
 	configuredPath = strings.Trim(strings.TrimSpace(configuredPath), `"'`)
 	candidates := browserCandidates(configuredPath)
