@@ -43,7 +43,10 @@ templ AdminLayout(title string, user domain.User) {
 		<link rel="stylesheet" href="/assets/admin-enhancements.css"/>
 		<link rel="stylesheet" href="/assets/admin-page.css"/>
 		<link rel="stylesheet" href="/assets/admin-list.css"/>
+		<link rel="stylesheet" href="/assets/admin-form.css"/>
+		<link rel="stylesheet" href="/assets/admin-notifications.css"/>
 		<link rel="stylesheet" href="/assets/activation.css"/>
+		<div data-user-permissions={ Join(user.Permissions) } hidden></div>
 		<div class="admin-app" data-admin-shell>
 			<aside class="admin-sidebar" data-admin-sidebar>
 				<div class="sidebar-brand-row">
@@ -51,83 +54,72 @@ templ AdminLayout(title string, user domain.User) {
 						<span class="brand-mark">VG</span>
 						<span class="brand-copy"><strong>VIAGATE</strong><small>Comercial</small></span>
 					</a>
-					<button class="sidebar-collapse" type="button" data-sidebar-toggle aria-label="Recolher menu">
-						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
-					</button>
+					<button class="sidebar-collapse" type="button" data-sidebar-toggle aria-label="Recolher menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
 				</div>
 				<nav class="sidebar-nav" aria-label="Navegação principal">
 					<span class="sidebar-section">Geral</span>
-					<a href="/admin" data-admin-nav>
-						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
-						<span>Visão geral</span>
-					</a>
-					<a href="/admin/pipeline" data-admin-nav>
-						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h6v5H4z"/><path d="M14 13h6v5h-6z"/><path d="M10 8h4v8"/></svg>
-						<span>Pipeline</span>
-					</a>
-					<span class="sidebar-section">Comercial</span>
-					<a href="/admin/proposals" data-admin-nav>
-						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6z"/><path d="M9 10h6M9 14h6M9 18h4"/></svg>
-						<span>Propostas</span>
-					</a>
-					<a href="/admin/presentations" data-admin-nav>
-						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H4z"/><path d="M9 20h6M12 16v4"/><path d="m8 12 3-3 2 2 3-3"/></svg>
-						<span>Apresentações</span>
-					</a>
-					if HasRole(user,"super_admin") || HasRole(user,"operations") {
+					<a href="/admin" data-admin-nav><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg><span>Visão geral</span></a>
+					<a href="/admin/pipeline" data-admin-nav><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h6v5H4z"/><path d="M14 13h6v5h-6z"/><path d="M10 8h4v8"/></svg><span>Pipeline</span></a>
+
+					if UserCan(user, "proposal.read_own") || UserCan(user, "proposal.read_all") || UserCan(user, "presentation.read_own") || UserCan(user, "presentation.read_all") {
+						<span class="sidebar-section">Comercial</span>
+					}
+					if UserCan(user, "proposal.read_own") || UserCan(user, "proposal.read_all") {
+						<a href="/admin/proposals" data-admin-nav><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6z"/><path d="M9 10h6M9 14h6M9 18h4"/></svg><span>Propostas</span></a>
+					}
+					if UserCan(user, "presentation.read_own") || UserCan(user, "presentation.read_all") {
+						<a href="/admin/presentations" data-admin-nav><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H4z"/><path d="M9 20h6M12 16v4"/><path d="m8 12 3-3 2 2 3-3"/></svg><span>Apresentações</span></a>
+					}
+
+					if UserCan(user, "customer.responses.read_own") || UserCan(user, "customer.responses.read_all") || UserCan(user, "activation.read_all") || UserCan(user, "contract.read_own") || UserCan(user, "contract.read_all") {
 						<span class="sidebar-section">Operação</span>
-						<a href="/admin/onboardings" data-admin-nav>
-							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v15H4z"/><path d="M8 3v4M16 3v4M8 11h8M8 15h5"/></svg>
-							<span>Cadastros</span>
-						</a>
-						<a href="/admin/activations" data-admin-nav>
-							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16"/><path d="m14 6 6 6-6 6"/><path d="M4 6h6M4 18h6"/></svg>
-							<span>Ativações</span>
-						</a>
 					}
-					if HasRole(user,"super_admin") || HasRole(user,"legal") {
-						<a href="/admin/contracts" data-admin-nav>
-							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6z"/><path d="M14 3v4h4"/><path d="M9 12h6M9 16h6"/></svg>
-							<span>Contratos</span>
-						</a>
-						<a href="/admin/audit" data-admin-nav>
-							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.4 8 8 9 4.6-1 8-4 8-9V6z"/><path d="M9 12h6M12 9v6"/></svg>
-							<span>Auditoria</span>
-						</a>
+					if UserCan(user, "customer.responses.read_own") || UserCan(user, "customer.responses.read_all") || UserCan(user, "onboarding.review") {
+						<a href="/admin/onboardings" data-admin-nav><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v15H4z"/><path d="M8 3v4M16 3v4M8 11h8M8 15h5"/></svg><span>Cadastros</span></a>
 					}
-					if HasRole(user,"super_admin") {
+					if UserCan(user, "activation.read_all") {
+						<a href="/admin/activations" data-admin-nav><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h16"/><path d="m14 6 6 6-6 6"/><path d="M4 6h6M4 18h6"/></svg><span>Ativações</span></a>
+					}
+					if UserCan(user, "contract.read_own") || UserCan(user, "contract.read_all") {
+						<a href="/admin/contracts" data-admin-nav><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6z"/><path d="M14 3v4h4"/><path d="M9 12h6M9 16h6"/></svg><span>Contratos</span></a>
+					}
+
+					if UserCan(user, "user.manage") || UserCan(user, "audit.read") || UserCan(user, "contract.template.manage") {
 						<span class="sidebar-section">Administração</span>
-						<a href="/admin/users" data-admin-nav>
-							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/><path d="M18 8v6M15 11h6"/></svg>
-							<span>Usuários</span>
-						</a>
+					}
+					if UserCan(user, "user.manage") {
+						<a href="/admin/users" data-admin-nav><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/><path d="M18 8v6M15 11h6"/></svg><span>Usuários</span></a>
+					}
+					if UserCan(user, "contract.template.manage") {
+						<a href="/admin/contracts/templates" data-admin-nav><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span>Modelos de contrato</span></a>
+					}
+					if UserCan(user, "audit.read") {
+						<a href="/admin/audit" data-admin-nav><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.4 8 8 9 4.6-1 8-4 8-9V6z"/><path d="M9 12h6M12 9v6"/></svg><span>Auditoria</span></a>
 					}
 				</nav>
 				<div class="sidebar-user">
-					<a class="sidebar-profile" href="/admin/profile" data-admin-nav>
-						<span class="profile-avatar">{ UserInitials(user.Name) }</span>
-						<span class="sidebar-user-copy"><strong>{ user.Name }</strong><small>{ user.Email }</small></span>
-					</a>
-					<form method="post" action="/logout">
-						<button class="sidebar-logout" type="submit" aria-label="Sair">
-							<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3"/><path d="M14 4h6v16h-6"/></svg>
-							<span>Sair</span>
-						</button>
-					</form>
+					<a class="sidebar-profile" href="/admin/profile" data-admin-nav><span class="profile-avatar">{ UserInitials(user.Name) }</span><span class="sidebar-user-copy"><strong>{ user.Name }</strong><small>{ user.Email }</small></span></a>
+					<form method="post" action="/logout"><button class="sidebar-logout" type="submit" aria-label="Sair"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3"/><path d="M14 4h6v16h-6"/></svg><span>Sair</span></button></form>
 				</div>
 			</aside>
 			<button class="sidebar-backdrop" type="button" data-sidebar-backdrop aria-label="Fechar menu"></button>
 			<div class="admin-main">
 				<header class="admin-topbar">
-					<button class="mobile-menu-toggle" type="button" data-sidebar-mobile-toggle aria-label="Abrir menu">
-						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
-					</button>
+					<button class="mobile-menu-toggle" type="button" data-sidebar-mobile-toggle aria-label="Abrir menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
 					<div class="admin-topbar-copy"><span>ViaGate</span><strong>Plataforma comercial</strong></div>
-					<a class="topbar-profile" href="/admin/profile"><span class="profile-avatar small">{ UserInitials(user.Name) }</span><span>{ user.Name }</span></a>
+					<div class="admin-topbar-actions">
+						if UserCan(user, "notification.read") {
+							<a class="topbar-notification" href="/admin/notifications" aria-label="Notificações">
+								<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
+								if user.UnreadNotifications > 0 {
+									<span class="topbar-notification-count">{ NotificationCount(user.UnreadNotifications) }</span>
+								}
+							</a>
+						}
+						<a class="topbar-profile" href="/admin/profile"><span class="profile-avatar small">{ UserInitials(user.Name) }</span><span>{ user.Name }</span></a>
+					</div>
 				</header>
-				<main class="admin-content">
-					{ children... }
-				</main>
+				<main class="admin-content">{ children... }</main>
 			</div>
 		</div>
 		<script src="/assets/admin-shell.js" defer></script>
@@ -138,7 +130,6 @@ templ AdminLayout(title string, user domain.User) {
 templ AdminEditorLayout(title string, user domain.User) {
 	@AdminLayout(title, user) {
 		<link rel="stylesheet" href="/assets/v1-admin-forms.css"/>
-		<link rel="stylesheet" href="/assets/admin-form.css"/>
 		{ children... }
 		<script src="/assets/form-controls.js" defer></script>
 		<script src="/assets/proposal-editor.js" defer></script>
