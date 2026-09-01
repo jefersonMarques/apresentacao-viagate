@@ -17,7 +17,7 @@
   let started = false;
   let locked = false;
 
-  function createContractFlow() {
+  function createAcceptanceFlow() {
     if (!document.body.classList.contains('public-proposal')) return null;
 
     const action = document.createElement('button');
@@ -28,71 +28,36 @@
     action.setAttribute('data-proposal-accept-floating', '');
 
     const modal = document.createElement('div');
-    modal.className = 'proposal-contract-modal';
+    modal.className = 'proposal-contract-modal proposal-accept-modal';
     modal.hidden = true;
-    modal.setAttribute('data-proposal-contract-modal', '');
     modal.setAttribute('role', 'dialog');
     modal.setAttribute('aria-modal', 'true');
-    modal.setAttribute('aria-label', 'Aceitar proposta e gerar contrato');
+    modal.setAttribute('aria-label', 'Aceitar proposta');
     modal.innerHTML = `
       <button class="proposal-contract-backdrop" type="button" aria-label="Fechar" data-proposal-contract-close></button>
-      <section class="proposal-contract-panel">
+      <section class="proposal-contract-panel proposal-accept-panel">
         <header class="proposal-contract-header">
           <div>
-            <small>ACEITE E CONTRATAÇÃO</small>
-            <h2>Aceitar proposta</h2>
-            <p>Complete os dados necessários para gerar o contrato e envie a apólice de seguros.</p>
+            <small>ACEITE DA PROPOSTA</small>
+            <h2>Confirmar aceite</h2>
+            <p>O aceite registra exatamente esta versão. Os dados necessários para gerar o contrato serão solicitados no próximo passo.</p>
           </div>
           <button class="proposal-contract-close" type="button" aria-label="Fechar" data-proposal-contract-close>×</button>
         </header>
         <div class="proposal-contract-body">
-          <div class="proposal-contract-model" data-proposal-contract-label>Carregando modelo de contrato...</div>
           <div class="proposal-contract-error" data-proposal-contract-error hidden></div>
-          <form class="proposal-contract-form" method="post" enctype="multipart/form-data" data-proposal-contract-form>
-            <section class="proposal-contract-section">
-              <header><small>01</small><div><strong>Empresa contratante</strong><span>O CNPJ preenche automaticamente os dados públicos disponíveis.</span></div></header>
-              <div class="proposal-contract-grid">
-                <label class="full"><span>CNPJ</span><input name="cnpj" data-mask="cnpj" autocomplete="off" required/><small data-contract-cnpj-status></small></label>
-                <label><span>Razão social</span><input name="legal_name" required/></label>
-                <label><span>Nome fantasia</span><input name="trade_name"/></label>
-                <label><span>CEP</span><input name="postal_code" data-mask="postal-code" autocomplete="postal-code" required/></label>
-                <label><span>Logradouro</span><input name="street" required/></label>
-                <label><span>Número</span><input name="street_number" required/></label>
-                <label><span>Complemento</span><input name="complement"/></label>
-                <label><span>Bairro</span><input name="district"/></label>
-                <label><span>Cidade</span><input name="city" required/></label>
-                <label><span>UF</span><input name="state" maxlength="2" required/></label>
-              </div>
-            </section>
-
-            <section class="proposal-contract-section">
-              <header><small>02</small><div><strong>Operação e seguro</strong><span>Estes dados serão incorporados à contratação.</span></div></header>
-              <div class="proposal-contract-grid">
-                <label><span>Tipo de operação</span><select name="operation_type" required><option value="normal">Normal</option><option value="avulsa">Avulsa</option></select></label>
-                <label><span>Seguradora</span><input name="insurer" required/></label>
-                <label><span>Início da vigência</span><input name="policy_start_date" type="date" required/></label>
-                <label><span>Fim da vigência</span><input name="policy_end_date" type="date" required/></label>
-                <label><span>Corretor parceiro</span><input name="broker_company"/></label>
-                <label><span>Produtor do corretor</span><input name="broker_producer"/></label>
-                <label class="full proposal-policy-upload"><span>Apólice de seguros</span><input name="insurance_policy" type="file" accept="application/pdf,image/jpeg,image/png" required/><small>PDF, JPG ou PNG · máximo 15 MB.</small></label>
-              </div>
-            </section>
-
-            <section class="proposal-contract-section">
-              <header><small>03</small><div><strong>Responsável pela contratação</strong><span>Este responsável também será o primeiro signatário do contrato.</span></div></header>
-              <div class="proposal-contract-grid">
-                <label><span>Nome completo</span><input name="responsible_name" autocomplete="name" required/></label>
-                <label><span>CPF</span><input name="responsible_cpf" data-mask="cpf" autocomplete="off" required/></label>
-                <label><span>Cargo / função</span><input name="responsible_role"/></label>
-                <label><span>E-mail</span><input name="responsible_email" type="email" autocomplete="email" required/></label>
-                <label><span>Telefone</span><input name="responsible_phone" data-mask="phone" autocomplete="tel" required/></label>
-              </div>
-              <label class="proposal-contract-authority"><input type="checkbox" name="authority" value="1" required/><span data-proposal-acceptance-text></span></label>
-            </section>
-
-            <footer class="proposal-contract-footer">
-              <p>Ao concluir, o contrato atribuído a esta versão será gerado e apresentado para assinatura eletrônica por código enviado ao e-mail informado.</p>
-              <button type="submit" data-proposal-contract-submit>GERAR CONTRATO PARA ASSINATURA</button>
+          <form class="proposal-contract-form proposal-accept-form" method="post" data-proposal-accept-form>
+            <div class="proposal-contract-grid">
+              <label class="full"><span>Nome completo do responsável</span><input name="name" autocomplete="name" required/></label>
+              <label><span>CPF</span><input name="cpf" inputmode="numeric" autocomplete="off" maxlength="14" required/></label>
+              <label><span>Cargo / função</span><input name="role" autocomplete="organization-title"/></label>
+              <label><span>E-mail</span><input name="email" type="email" autocomplete="email" required/></label>
+              <label><span>Telefone</span><input name="phone" inputmode="tel" autocomplete="tel" required/></label>
+            </div>
+            <label class="proposal-contract-authority"><input type="checkbox" name="authority" value="1" required/><span data-proposal-acceptance-text>Confirmo que possuo poderes para representar a empresa nesta contratação.</span></label>
+            <footer class="proposal-contract-footer proposal-accept-footer">
+              <p>Depois do aceite, você poderá continuar agora ou retomar a contratação pelo link seguro enviado ao seu e-mail.</p>
+              <button type="submit" data-proposal-accept-submit>ACEITAR PROPOSTA</button>
             </footer>
           </form>
         </div>
@@ -100,16 +65,22 @@
 
     document.body.append(action, modal);
 
-    const form = modal.querySelector('[data-proposal-contract-form]');
+    const form = modal.querySelector('[data-proposal-accept-form]');
     const errorBox = modal.querySelector('[data-proposal-contract-error]');
-    const label = modal.querySelector('[data-proposal-contract-label]');
     const acceptanceText = modal.querySelector('[data-proposal-acceptance-text]');
-    const submit = modal.querySelector('[data-proposal-contract-submit]');
-    const cnpjStatus = modal.querySelector('[data-contract-cnpj-status]');
+    const submit = modal.querySelector('[data-proposal-accept-submit]');
     let loaded = false;
-    let contractAssigned = true;
-    let cnpjTimer = 0;
-    let lastLookup = '';
+    let journey = { state: 'proposal', label: 'ACEITAR PROPOSTA', url: '', tone: 'primary' };
+
+    function field(name) {
+      return form?.elements.namedItem(name);
+    }
+
+    function setField(name, value) {
+      const input = field(name);
+      if (!(input instanceof HTMLInputElement) || input.value.trim() || !value) return;
+      input.value = String(value);
+    }
 
     function setError(message) {
       if (!errorBox) return;
@@ -117,149 +88,117 @@
       errorBox.hidden = !message;
     }
 
-    function rawCNPJ(value) {
-      return String(value || '').toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 14);
+    function applyJourney(nextJourney) {
+      if (!nextJourney || typeof nextJourney !== 'object') return;
+      journey = {
+        state: nextJourney.state || 'proposal',
+        label: nextJourney.label || 'ACEITAR PROPOSTA',
+        url: nextJourney.url || '',
+        tone: nextJourney.tone || 'primary',
+      };
+      action.textContent = journey.label;
+      action.classList.toggle('is-success', journey.tone === 'success');
     }
 
-    function field(name) {
-      return form?.elements.namedItem(name);
-    }
-
-    function setField(name, value, overwrite = true) {
-      const input = field(name);
-      if (!(input instanceof HTMLInputElement) && !(input instanceof HTMLTextAreaElement) && !(input instanceof HTMLSelectElement)) return;
-      if (!overwrite && input.value.trim()) return;
-      if (value == null || String(value).trim() === '') return;
-      input.value = String(value);
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-      input.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-
-    async function loadInitialData() {
-      if (loaded) return;
+    async function loadState() {
+      if (loaded) return journey;
       loaded = true;
-      if (label) label.textContent = 'Carregando modelo de contrato...';
       try {
         const response = await fetch(window.location.pathname, {
           credentials: 'same-origin',
           headers: { Accept: 'application/json' },
         });
-        if (!response.ok) throw new Error('Não foi possível carregar os dados da contratação.');
+        if (!response.ok) throw new Error('Não foi possível carregar o estado da proposta.');
         const data = await response.json();
-        contractAssigned = Boolean(data.contract_assigned);
-        if (label) label.textContent = contractAssigned
-          ? `Contrato desta proposta: ${data.contract_label || 'modelo atribuído'}`
-          : 'Esta proposta ainda não possui modelo de contrato atribuído.';
-        if (acceptanceText) acceptanceText.textContent = data.acceptance_text || '';
-        const company = data.company || {};
-        Object.entries(company).forEach(([name, value]) => setField(name, value, false));
+        applyJourney(data.journey);
+        if (acceptanceText && data.acceptance_text) acceptanceText.textContent = data.acceptance_text;
         const responsible = data.responsible || {};
-        setField('responsible_name', responsible.name, false);
-        setField('responsible_role', responsible.role, false);
-        setField('responsible_email', responsible.email, false);
-        setField('responsible_phone', responsible.phone, false);
-        if (!contractAssigned) setError('O comercial precisa atribuir um modelo de contrato e publicar uma nova versão antes do aceite.');
-      } catch (error) {
+        setField('name', responsible.name);
+        setField('role', responsible.role);
+        setField('email', responsible.email);
+        setField('phone', responsible.phone);
+      } catch (_) {
         loaded = false;
-        setError(error?.message || 'Não foi possível carregar os dados da contratação.');
       }
+      return journey;
     }
 
-    async function lookupCNPJ() {
-      const input = field('cnpj');
-      if (!(input instanceof HTMLInputElement)) return;
-      const cnpj = rawCNPJ(input.value);
-      if (cnpj.length !== 14 || cnpj === lastLookup) return;
-      lastLookup = cnpj;
-      if (cnpjStatus) cnpjStatus.textContent = 'Consultando dados públicos...';
-      try {
-        const response = await fetch(`${window.location.pathname}?cnpj=${encodeURIComponent(cnpj)}`, {
-          credentials: 'same-origin',
-          headers: { Accept: 'application/json' },
-        });
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.error || 'CNPJ não encontrado.');
-        ['cnpj','legal_name','trade_name','postal_code','street','street_number','complement','district','city','state'].forEach((name) => setField(name, data[name], true));
-        if (cnpjStatus) cnpjStatus.textContent = 'Dados encontrados. Revise antes de continuar.';
-      } catch (error) {
-        lastLookup = '';
-        if (cnpjStatus) cnpjStatus.textContent = error?.message || 'Não foi possível consultar o CNPJ.';
-      }
-    }
-
-    function open() {
+    function openModal() {
       modal.hidden = false;
       document.body.classList.add('proposal-contract-open');
       action.hidden = true;
       setError('');
-      loadInitialData();
-      window.setTimeout(() => modal.querySelector('input,select,button')?.focus(), 30);
+      window.setTimeout(() => form?.querySelector('input')?.focus(), 30);
     }
 
-    function close() {
+    function closeModal() {
       modal.hidden = true;
       document.body.classList.remove('proposal-contract-open');
       updateControls();
     }
 
-    action.addEventListener('click', open);
-    modal.querySelectorAll('[data-proposal-contract-close]').forEach((button) => button.addEventListener('click', close));
+    action.addEventListener('click', async () => {
+      await loadState();
+      if (journey.state !== 'proposal' && journey.url) {
+        window.location.assign(journey.url);
+        return;
+      }
+      openModal();
+    });
+
+    modal.querySelectorAll('[data-proposal-contract-close]').forEach((button) => button.addEventListener('click', closeModal));
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape' && !modal.hidden) {
         event.preventDefault();
-        close();
+        closeModal();
       }
     });
-
-    const cnpj = field('cnpj');
-    cnpj?.addEventListener('input', () => {
-      window.clearTimeout(cnpjTimer);
-      if (rawCNPJ(cnpj.value).length === 14) cnpjTimer = window.setTimeout(lookupCNPJ, 450);
-    });
-    cnpj?.addEventListener('blur', lookupCNPJ);
 
     form?.addEventListener('submit', async (event) => {
       event.preventDefault();
       setError('');
-      if (!contractAssigned) {
-        setError('Esta proposta não possui um modelo de contrato atribuído.');
-        return;
-      }
       if (!form.reportValidity()) return;
-      const fileInput = field('insurance_policy');
-      const file = fileInput instanceof HTMLInputElement ? fileInput.files?.[0] : null;
-      if (file && file.size > 15 * 1024 * 1024) {
-        setError('A apólice deve ter no máximo 15 MB.');
-        return;
-      }
+
+      const body = new URLSearchParams();
+      new FormData(form).forEach((value, key) => body.append(key, String(value)));
       if (submit instanceof HTMLButtonElement) {
         submit.disabled = true;
-        submit.textContent = 'GERANDO CONTRATO...';
+        submit.textContent = 'REGISTRANDO ACEITE...';
       }
       try {
         const response = await fetch(`${window.location.pathname}/accept`, {
           method: 'POST',
-          body: new FormData(form),
+          body,
           credentials: 'same-origin',
-          headers: { Accept: 'application/json' },
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+          },
         });
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.error || 'Não foi possível concluir a contratação.');
-        if (!data.sign_url) throw new Error('Contrato gerado sem link de assinatura.');
-        window.location.assign(data.sign_url);
+        if (!response.ok) {
+          const contentType = response.headers.get('content-type') || '';
+          const message = contentType.includes('application/json')
+            ? (await response.json().catch(() => ({}))).error
+            : '';
+          throw new Error(message || 'Não foi possível registrar o aceite. Revise os dados e tente novamente.');
+        }
+        const data = await response.json();
+        if (!data.next_url) throw new Error('O aceite foi registrado, mas o próximo passo não foi localizado.');
+        window.location.assign(data.next_url);
       } catch (error) {
-        setError(error?.message || 'Não foi possível concluir a contratação.');
+        setError(error?.message || 'Não foi possível registrar o aceite.');
         if (submit instanceof HTMLButtonElement) {
           submit.disabled = false;
-          submit.textContent = 'GERAR CONTRATO PARA ASSINATURA';
+          submit.textContent = 'ACEITAR PROPOSTA';
         }
       }
     });
 
+    loadState().then(updateControls);
     return { action, modal };
   }
 
-  const contractFlow = createContractFlow();
+  const contractFlow = createAcceptanceFlow();
 
   function currentSlide() {
     const items = slides();
@@ -291,8 +230,9 @@
 
   function updateAcceptAction(items, index) {
     if (!contractFlow?.action) return;
-    const threshold = investmentIndex(items);
-    const unavailable = !started || threshold < 0 || index < threshold || document.body.classList.contains('viewer-locked') || document.body.classList.contains('proposal-contract-open');
+    const investment = investmentIndex(items);
+    const threshold = investment >= 0 ? investment : Math.max(0, items.length - 1);
+    const unavailable = !started || index < threshold || document.body.classList.contains('viewer-locked') || document.body.classList.contains('proposal-contract-open');
     contractFlow.action.hidden = unavailable;
   }
 
@@ -375,8 +315,7 @@
     const direction = directions[event.key];
     if (!direction) return;
     const slide = currentSlide();
-    if (!slide) return;
-    if (canScrollInside(slide, direction)) return;
+    if (!slide || canScrollInside(slide, direction)) return;
     event.preventDefault();
     go(currentIndex() + direction);
   }
