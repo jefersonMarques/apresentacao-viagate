@@ -1,4 +1,9 @@
 (() => {
+  function currentPermissions() {
+    const node = document.querySelector('[data-user-permissions]');
+    return new Set(String(node?.dataset.userPermissions || '').split(',').map((value) => value.trim()).filter(Boolean));
+  }
+
   function parseMoney(value) {
     const normalized = String(value || '')
       .replace(/[^0-9,.-]/g, '')
@@ -8,7 +13,7 @@
     return Number.isFinite(parsed) ? parsed : 0;
   }
 
-  function updateProduct(row) {
+  function updateProduct(row, canEditPrices) {
     const enabled = row.querySelector('[data-product-enabled]');
     const optional = row.querySelector('[data-product-optional]');
     const price = row.querySelector('[name="item_price"]');
@@ -18,18 +23,38 @@
     row.dataset.productState = active ? (optional?.checked ? 'optional' : 'included') : 'off';
     if (status) status.value = active ? (optional?.checked ? 'optional' : 'included') : 'off';
     if (optional) optional.disabled = !active;
-    if (price) price.classList.toggle('is-disabled', !active);
+    if (price) {
+      price.readOnly = !canEditPrices;
+      price.classList.toggle('is-disabled', !active || !canEditPrices);
+    }
   }
 
   function initProposalEditor() {
     const form = document.querySelector('[data-proposal-editor]');
     if (!(form instanceof HTMLFormElement)) return;
 
+    const permissions = currentPermissions();
+    const canEditPrices = permissions.has('proposal.price.edit');
+    const canEditConditions = permissions.has('proposal.conditions.edit');
     const products = Array.from(form.querySelectorAll('[data-proposal-product]'));
     const pricingRadios = Array.from(form.querySelectorAll('[name="pricing_model"]'));
     const summaryCount = form.querySelector('[data-proposal-summary-count]');
     const summaryOptional = form.querySelector('[data-proposal-summary-optional]');
     const summaryTotal = form.querySelector('[data-proposal-summary-total]');
+
+    form.querySelectorAll('[name="minimum_invoice"], [name="setup_fee"]').forEach((field) => {
+      if (field instanceof HTMLInputElement) {
+        field.readOnly = !canEditPrices;
+        field.classList.toggle('is-disabled', !canEditPrices);
+      }
+    });
+
+    if (!canEditConditions) {
+      form.querySelectorAll('[name="condition"], [name="custom_conditions"]').forEach((field) => {
+        field.disabled = true;
+        field.classList.add('is-disabled');
+      });
+    }
 
     const syncModelVisibility = () => {
       const model = form.querySelector('[name="pricing_model"]:checked')?.value || 'per_item';
@@ -44,7 +69,7 @@
       let optional = 0;
       let total = 0;
       products.forEach((row) => {
-        updateProduct(row);
+        updateProduct(row, canEditPrices);
         const price = parseMoney(row.querySelector('[name="item_price"]')?.value);
         if (row.dataset.productState === 'included') {
           included += 1;
@@ -64,23 +89,25 @@
 
       enabled?.addEventListener('change', () => {
         if (!enabled.checked) {
-          if (price) price.value = '';
+          if (canEditPrices && price) price.value = '';
           if (optional) optional.checked = false;
-        } else if (price) {
+        } else if (canEditPrices && price) {
           price.focus();
         }
         refreshSummary();
       });
       optional?.addEventListener('change', refreshSummary);
-      price?.addEventListener('input', () => {
-        if (price.value.trim() !== '' && enabled && !enabled.checked) enabled.checked = true;
-        if (price.value.trim() === '' && enabled) {
-          enabled.checked = false;
-          if (optional) optional.checked = false;
-        }
-        refreshSummary();
-      });
-      updateProduct(row);
+      if (canEditPrices) {
+        price?.addEventListener('input', () => {
+          if (price.value.trim() !== '' && enabled && !enabled.checked) enabled.checked = true;
+          if (price.value.trim() === '' && enabled) {
+            enabled.checked = false;
+            if (optional) optional.checked = false;
+          }
+          refreshSummary();
+        });
+      }
+      updateProduct(row, canEditPrices);
     });
 
     pricingRadios.forEach((radio) => {
@@ -110,12 +137,12 @@
           if (!groups.has(group) && !optionalGroups.has(group)) {
             enabled.checked = false;
             const price = row.querySelector('[name="item_price"]');
-            if (price) price.value = '';
+            if (canEditPrices && price) price.value = '';
             if (optional) optional.checked = false;
           } else if (optional instanceof HTMLInputElement && optionalGroups.has(group) && enabled.checked) {
             optional.checked = true;
           }
-          updateProduct(row);
+          updateProduct(row, canEditPrices);
         });
 
         syncModelVisibility();
@@ -129,9 +156,14 @@
         const enabled = row.querySelector('[data-product-enabled]');
         const optional = row.querySelector('[data-product-optional]');
         const status = row.querySelector('[name="item_status"]');
-        const hasPrice = Boolean(price?.value?.trim());
-        if (enabled) enabled.checked = hasPrice;
-        if (status) status.value = hasPrice ? (optional?.checked ? 'optional' : 'included') : 'off';
+        if (!enabled || !status) return;
+        if (canEditPrices) {
+          const hasPrice = Boolean(price?.value?.trim());
+          enabled.checked = hasPrice;
+          status.value = hasPrice ? (optional?.checked ? 'optional' : 'included') : 'off';
+          return;
+        }
+        status.value = enabled.checked ? (optional?.checked ? 'optional' : 'included') : 'off';
       });
     }, { capture: true });
 
