@@ -64,12 +64,16 @@ TRUST_PROXY_HEADERS=true
 REQUIRE_ONBOARDING_REVIEW=true
 VIAGATE_LEGAL_NAME=...
 VIAGATE_CNPJ=...
-S3_BUCKET=...
-S3_SERVER_SIDE_ENCRYPTION=AES256
+S3_STAGE=prod
+S3_REGION=cl9a
+S3_BUCKET=comercial
+S3_ENDPOINT=https://viagate.ssc.cl9.cloud
+S3_USE_PATH_STYLE=true
+S3_SERVER_SIDE_ENCRYPTION=none
 BREVO_API_KEY=...
 ```
 
-`APP_BASE_URL` precisa ser HTTPS. A aplicação recusa inicialização em produção quando a URL não é pública/HTTPS, quando os dados legais obrigatórios estão ausentes, quando o Brevo não está configurado ou quando a criptografia do S3 está desativada.
+`APP_BASE_URL` precisa ser HTTPS. A aplicação recusa inicialização em produção quando a URL não é pública/HTTPS, quando os dados legais obrigatórios estão ausentes, quando o Brevo não está configurado ou quando `S3_STAGE` não é `prod`.
 
 `TRUST_PROXY_HEADERS=true` só deve ser usado quando `APP_ADDR` não estiver publicamente acessível e o proxy reverso for o único caminho até o Go.
 
@@ -87,7 +91,23 @@ As migrations são forward-only. Não existe `down` automático para documentos 
 
 ### S3
 
-O bucket precisa existir antes do deploy e deve permanecer privado. Em produção use `AES256` ou `aws:kms`. Se usar KMS, configure também `S3_KMS_KEY_ID`.
+O bucket precisa existir antes do deploy e deve permanecer privado. Todos os objetos são automaticamente isolados por ambiente:
+
+```text
+comercial/
+├── prod/
+│   ├── commercial-assets/
+│   ├── commercial-pdf/
+│   ├── onboarding/
+│   └── contracts/
+└── dev/
+    ├── commercial-assets/
+    ├── commercial-pdf/
+    ├── onboarding/
+    └── contracts/
+```
+
+O adapter recusa uma key `dev/...` quando configurado como `prod` e vice-versa. Em AWS S3 de produção use `AES256` ou `aws:kms`. Para endpoint S3 compatível customizado, `S3_SERVER_SIDE_ENCRYPTION=none` apenas significa que o backend não envia o header AWS SSE; a criptografia em repouso deve ser garantida pelo próprio provedor. Se usar KMS, configure também `S3_KMS_KEY_ID`.
 
 ### Chromium
 
@@ -328,4 +348,4 @@ A release só deve receber tráfego real quando todos os itens abaixo estiverem 
 - primeiro Super Admin ativo;
 - modelo de contrato padrão revisado e publicado;
 - sender do Brevo validado;
-- bucket privado e criptografado.
+- bucket privado com criptografia em repouso garantida pelo provedor.

@@ -38,6 +38,7 @@ type SessionConfig struct {
 }
 
 type S3Config struct {
+	Stage                string
 	Region               string
 	Bucket               string
 	Endpoint             string
@@ -66,8 +67,14 @@ type BootstrapConfig struct {
 }
 
 func Load() (Config, error) {
+	environment := strings.ToLower(strings.TrimSpace(env("APP_ENV", "development")))
+	storageStage := "dev"
+	if environment == "production" {
+		storageStage = "prod"
+	}
+
 	cfg := Config{
-		Environment:             env("APP_ENV", "development"),
+		Environment:             environment,
 		Address:                 env("APP_ADDR", ":8080"),
 		BaseURL:                 env("APP_BASE_URL", "http://localhost:8080"),
 		DatabaseURL:             os.Getenv("DATABASE_URL"),
@@ -85,9 +92,10 @@ func Load() (Config, error) {
 			SignatureOTPTTL: minutes("SIGNATURE_OTP_TTL_MINUTES", 10),
 		},
 		S3: S3Config{
-			Region:               env("S3_REGION", "us-east-1"),
-			Bucket:               os.Getenv("S3_BUCKET"),
-			Endpoint:             os.Getenv("S3_ENDPOINT"),
+			Stage:                strings.ToLower(strings.TrimSpace(env("S3_STAGE", storageStage))),
+			Region:               strings.TrimSpace(env("S3_REGION", "us-east-1")),
+			Bucket:               strings.TrimSpace(os.Getenv("S3_BUCKET")),
+			Endpoint:             strings.TrimSpace(os.Getenv("S3_ENDPOINT")),
 			AccessKeyID:          os.Getenv("S3_ACCESS_KEY_ID"),
 			SecretAccessKey:      os.Getenv("S3_SECRET_ACCESS_KEY"),
 			UsePathStyle:         boolean("S3_USE_PATH_STYLE", false),
@@ -116,14 +124,23 @@ func Load() (Config, error) {
 	if cfg.S3.Bucket == "" {
 		return Config{}, fmt.Errorf("S3_BUCKET is required")
 	}
+	if cfg.S3.Stage != "dev" && cfg.S3.Stage != "prod" {
+		return Config{}, fmt.Errorf("S3_STAGE must be dev or prod")
+	}
+	if cfg.Environment == "production" && cfg.S3.Stage != "prod" {
+		return Config{}, fmt.Errorf("S3_STAGE must be prod when APP_ENV=production")
+	}
+	if cfg.Environment != "production" && cfg.S3.Stage != "dev" {
+		return Config{}, fmt.Errorf("S3_STAGE must be dev outside production")
+	}
 	if cfg.S3.ServerSideEncryption != "none" && cfg.S3.ServerSideEncryption != "AES256" && cfg.S3.ServerSideEncryption != "aws:kms" {
 		return Config{}, fmt.Errorf("S3_SERVER_SIDE_ENCRYPTION must be none, AES256 or aws:kms")
 	}
 	if cfg.S3.ServerSideEncryption == "aws:kms" && cfg.S3.KMSKeyID == "" {
 		return Config{}, fmt.Errorf("S3_KMS_KEY_ID is required when using aws:kms")
 	}
-	if cfg.Environment == "production" && cfg.S3.ServerSideEncryption == "none" {
-		return Config{}, fmt.Errorf("S3 server-side encryption is required in production")
+	if cfg.Environment == "production" && cfg.S3.ServerSideEncryption == "none" && cfg.S3.Endpoint == "" {
+		return Config{}, fmt.Errorf("S3 server-side encryption is required for AWS S3 in production")
 	}
 	if cfg.Environment == "production" && (cfg.Company.LegalName == "" || cfg.Company.CNPJ == "") {
 		return Config{}, fmt.Errorf("VIAGATE_LEGAL_NAME and VIAGATE_CNPJ are required in production")
