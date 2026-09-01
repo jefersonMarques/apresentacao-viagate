@@ -11,6 +11,7 @@
   const previous = document.querySelector('[data-viewer-previous]');
   const next = document.querySelector('[data-viewer-next]');
   const counter = document.querySelector('[data-viewer-counter]');
+  const inlineAction = document.querySelector('[data-proposal-accept-inline]');
   const slides = () => Array.from(root.querySelectorAll('[data-viewer-slide]'));
   const startLabel = start?.getAttribute('data-viewer-start-label') || 'INICIAR';
   const continueLabel = start?.getAttribute('data-viewer-continue-label') || 'CONTINUAR';
@@ -56,7 +57,7 @@
             </div>
             <label class="proposal-contract-authority"><input type="checkbox" name="authority" value="1" required/><span data-proposal-acceptance-text>Confirmo que possuo poderes para representar a empresa nesta contratação.</span></label>
             <footer class="proposal-contract-footer proposal-accept-footer">
-              <p>Depois do aceite, você poderá continuar agora ou retomar a contratação pelo link seguro enviado ao seu e-mail.</p>
+              <p>Depois do aceite, este mesmo link da proposta sempre abrirá a etapa atual da contratação.</p>
               <button type="submit" data-proposal-accept-submit>ACEITAR PROPOSTA</button>
             </footer>
           </form>
@@ -88,6 +89,13 @@
       errorBox.hidden = !message;
     }
 
+    function updateActionButton(button) {
+      if (!(button instanceof HTMLButtonElement)) return;
+      button.textContent = journey.label;
+      button.classList.toggle('is-success', journey.tone === 'success');
+      button.setAttribute('aria-label', journey.label);
+    }
+
     function applyJourney(nextJourney) {
       if (!nextJourney || typeof nextJourney !== 'object') return;
       journey = {
@@ -96,12 +104,12 @@
         url: nextJourney.url || '',
         tone: nextJourney.tone || 'primary',
       };
-      action.textContent = journey.label;
-      action.classList.toggle('is-success', journey.tone === 'success');
+      updateActionButton(action);
+      updateActionButton(inlineAction);
     }
 
-    async function loadState() {
-      if (loaded) return journey;
+    async function loadState(force = false) {
+      if (loaded && !force) return journey;
       loaded = true;
       try {
         const response = await fetch(window.location.pathname, {
@@ -137,14 +145,17 @@
       updateControls();
     }
 
-    action.addEventListener('click', async () => {
+    async function advance() {
       await loadState();
       if (journey.state !== 'proposal' && journey.url) {
         window.location.assign(journey.url);
         return;
       }
       openModal();
-    });
+    }
+
+    action.addEventListener('click', advance);
+    inlineAction?.addEventListener('click', advance);
 
     modal.querySelectorAll('[data-proposal-contract-close]').forEach((button) => button.addEventListener('click', closeModal));
     document.addEventListener('keydown', (event) => {
@@ -195,7 +206,7 @@
     });
 
     loadState().then(updateControls);
-    return { action, modal };
+    return { action, modal, loadState };
   }
 
   const contractFlow = createAcceptanceFlow();
@@ -223,9 +234,16 @@
   }
 
   function investmentIndex(items) {
-    const marker = root.querySelector('.proposal-price-groups, .proposal-highlight-grid');
+    const marker = root.querySelector('.proposal-price-groups, .proposal-highlight-grid, [data-proposal-accept-inline]');
     const slide = marker?.closest('[data-viewer-slide]');
     return slide ? items.indexOf(slide) : -1;
+  }
+
+  function inlineActionVisible() {
+    if (!(inlineAction instanceof HTMLElement)) return false;
+    const rect = inlineAction.getBoundingClientRect();
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+    return rect.bottom > 0 && rect.top < viewportHeight;
   }
 
   function updateAcceptAction(items, index) {
@@ -233,7 +251,15 @@
     const investment = investmentIndex(items);
     const threshold = investment >= 0 ? investment : Math.max(0, items.length - 1);
     const unavailable = !started || index < threshold || document.body.classList.contains('viewer-locked') || document.body.classList.contains('proposal-contract-open');
-    contractFlow.action.hidden = unavailable;
+    if (unavailable) {
+      contractFlow.action.hidden = true;
+      return;
+    }
+
+    // No bloco de investimento o CTA principal aparece abaixo dos valores.
+    // Quando ele sai da tela (ou o cliente avança), a versão fixa assume e
+    // acompanha a navegação no centro inferior.
+    contractFlow.action.hidden = index === threshold && inlineActionVisible();
   }
 
   function updateControls() {
@@ -331,6 +357,7 @@
   window.addEventListener('wheel', wheel, { passive: false });
   window.addEventListener('keydown', keyboard);
   window.addEventListener('scroll', updateControls, { passive: true });
+  window.addEventListener('resize', updateControls);
   document.addEventListener('fullscreenchange', () => {
     if (document.fullscreenElement) {
       if (started) reveal();
