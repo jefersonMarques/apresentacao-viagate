@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/access"
 )
 
 func (s *Store) CreateManagedInvitation(ctx context.Context, email, name, roleCode string, tokenHash []byte, expiresAt time.Time, createdBy string) (string, error) {
@@ -104,7 +105,7 @@ func (s *Store) UpdateAccess(ctx context.Context, targetUserID, status, roleCode
 		`).Scan(&activeSuperAdmins); err != nil {
 			return err
 		}
-		if activeSuperAdmins <= 1 {
+		if !access.CanRemoveActiveSuperAdmin(activeSuperAdmins) {
 			return fmt.Errorf("cannot remove the last active super admin")
 		}
 	}
