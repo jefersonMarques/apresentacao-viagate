@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - feature/go-commercial-platform
+      - main
+    tags:
+      - 'v*'
   pull_request:
 
 permissions:
@@ -61,6 +64,7 @@ jobs:
       - name: Build binaries
         run: |
           go build ./cmd/migrate
+          go build ./cmd/preflight
           go build ./cmd/server
 
       - name: Apply migrations
@@ -73,3 +77,19 @@ jobs:
 
       - name: Verify migrations are idempotent
         run: go run ./cmd/migrate up
+
+      - name: Build Linux production bundle
+        env:
+          SKIP_CHECKS: '1'
+          VERSION: ${{ github.sha }}
+        run: bash ./scripts/build-release.sh
+
+      - name: Upload production bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: viagate-commercial-${{ github.sha }}
+          path: |
+            dist/*.tar.gz
+            dist/*.sha256
+          if-no-files-found: error
+          retention-days: 14
