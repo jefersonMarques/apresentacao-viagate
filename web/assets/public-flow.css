@@ -29,6 +29,22 @@
   word-break: break-all;
 }
 
+.public-flow-field-gap {
+  margin-top: 16px;
+}
+
+.verification-title {
+  margin-bottom: 8px;
+}
+
+.verification-title.success {
+  color: var(--success);
+}
+
+.verification-title.danger {
+  color: var(--danger);
+}
+
 .signature-document-view {
   padding: 0;
   overflow: hidden;
@@ -86,7 +102,8 @@
   font-weight: 800;
 }
 
-.public-flow-details p {
+.public-flow-details p,
+.public-flow-details > div {
   margin-top: 10px;
   color: var(--muted);
 }
