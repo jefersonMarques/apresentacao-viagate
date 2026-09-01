@@ -2,13 +2,16 @@ package templates
 
 import "github.com/jefersonMarques/apresentacao-viagate/internal/domain"
 
-templ OnboardingStatusPage(onboarding domain.Onboarding, message string) {
+templ OnboardingStatusPage(onboarding domain.Onboarding, message, proposalURL string) {
 	@PublicFlowLayout("ViaGate — Dados recebidos") {
 		<header class="topbar">
 			<span class="brand">VIAGATE · IMPLANTAÇÃO</span>
 			<span>{ onboarding.LegalName }</span>
 		</header>
 		<main class="shell public-flow-stack">
+			@PublicFlowHeader("CONTRATAÇÃO", "Acompanhe o andamento", "Você pode fechar esta página e retornar depois pelo mesmo link da proposta.") {
+				@PublicProposalLink(proposalURL)
+			}
 			<section class="proposal-hero public-status-hero">
 				<span class="step-title">CADASTRO RECEBIDO</span>
 				if onboarding.Status == "submitted" {
@@ -16,7 +19,7 @@ templ OnboardingStatusPage(onboarding domain.Onboarding, message string) {
 					<p>A equipe ViaGate recebeu as informações e a apólice. Assim que a revisão for concluída, o responsável receberá o contrato por e-mail para conferência e assinatura.</p>
 				} else if onboarding.Status == "under_review" {
 					<h1>Cadastro em revisão.</h1>
-					<p>A equipe ViaGate está conferindo os dados e documentos enviados. Caso seja necessário algum ajuste, o responsável receberá um novo link por e-mail.</p>
+					<p>A equipe ViaGate está conferindo os dados e documentos enviados. Caso seja necessário algum ajuste, o responsável receberá uma orientação por e-mail e continuará pelo mesmo link da proposta.</p>
 				} else if onboarding.Status == "approved" {
 					<h1>Cadastro aprovado.</h1>
 					<p>O contrato está sendo preparado ou já foi encaminhado ao e-mail do responsável indicado no cadastro.</p>
