@@ -157,7 +157,12 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 									<div class="proposal-price-groups">
 										for _, group := range ProposalPriceGroups(proposal) {
 											<section class="proposal-price-group">
-												<header class="proposal-price-group-header"><strong>{ group.Name }</strong>if group.AllOptional { <span class="proposal-optional-label">Opcional</span> }</header>
+												<header class="proposal-price-group-header">
+													<strong>{ group.Name }</strong>
+													if group.AllOptional {
+														<span class="proposal-optional-label">Opcional</span>
+													}
+												</header>
 												<table class="proposal-price-table">
 													<thead><tr><th>Item</th><th>Unidade</th><th>Status</th><th>Valor</th></tr></thead>
 													<tbody>
@@ -172,8 +177,12 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 								}
 								if proposal.MinimumInvoice > 0 || proposal.SetupFee > 0 {
 									<div class="proposal-highlight-grid">
-										if proposal.MinimumInvoice > 0 { <div class="proposal-highlight"><small>Fatura mínima mensal</small><strong>{ Money(proposal.MinimumInvoice) }</strong></div> }
-										if proposal.SetupFee > 0 { <div class="proposal-highlight"><small>Implantação</small><strong>{ Money(proposal.SetupFee) }</strong></div> }
+										if proposal.MinimumInvoice > 0 {
+											<div class="proposal-highlight"><small>Fatura mínima mensal</small><strong>{ Money(proposal.MinimumInvoice) }</strong></div>
+										}
+										if proposal.SetupFee > 0 {
+											<div class="proposal-highlight"><small>Implantação</small><strong>{ Money(proposal.SetupFee) }</strong></div>
+										}
 									</div>
 								}
 							</div>
@@ -208,19 +217,37 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 					<div class="proposal-slide-inner proposal-contact-final">
 						<div>
 							<p class="proposal-kicker" style="color:#fff">CONTATO COMERCIAL</p>
-							if ProposalSalesperson(proposal,"name") != "" { <h2>{ ProposalSalesperson(proposal,"name") }</h2> } else { <h2>ViaGate</h2> }
-							if ProposalSalespersonRole(proposal) != "" { <p class="proposal-lead" style="color:rgba(255,255,255,.84)">{ ProposalSalespersonRole(proposal) }</p> }
+							if ProposalSalesperson(proposal,"name") != "" {
+								<h2>{ ProposalSalesperson(proposal,"name") }</h2>
+							} else {
+								<h2>ViaGate</h2>
+							}
+							if ProposalSalespersonRole(proposal) != "" {
+								<p class="proposal-lead" style="color:rgba(255,255,255,.84)">{ ProposalSalespersonRole(proposal) }</p>
+							}
 						</div>
 						<aside class="proposal-contact-data">
-							if ProposalSalesperson(proposal,"photo_url") != "" { <img src={ templ.SafeURL(ProposalSalesperson(proposal,"photo_url")) } alt={ ProposalSalesperson(proposal,"name") }/> }
+							if ProposalSalesperson(proposal,"photo_url") != "" {
+								<img src={ templ.SafeURL(ProposalSalesperson(proposal,"photo_url")) } alt={ ProposalSalesperson(proposal,"name") }/>
+							}
 							<small>CONTATO RESPONSÁVEL</small>
-							if ProposalSalesperson(proposal,"name") != "" { <strong>{ ProposalSalesperson(proposal,"name") }</strong> }
-							if ProposalSalesperson(proposal,"phone") != "" { <span>{ Phone(ProposalSalesperson(proposal,"phone")) }</span> }
-							if ProposalSalesperson(proposal,"email") != "" { <span>{ ProposalSalesperson(proposal,"email") }</span> }
+							if ProposalSalesperson(proposal,"name") != "" {
+								<strong>{ ProposalSalesperson(proposal,"name") }</strong>
+							}
+							if ProposalSalesperson(proposal,"phone") != "" {
+								<span>{ Phone(ProposalSalesperson(proposal,"phone")) }</span>
+							}
+							if ProposalSalesperson(proposal,"email") != "" {
+								<span>{ ProposalSalesperson(proposal,"email") }</span>
+							}
 							if ProposalSalesperson(proposal,"linkedin") != "" || ProposalSalesperson(proposal,"instagram") != "" {
 								<div class="proposal-social-links">
-									if ProposalSalesperson(proposal,"linkedin") != "" { <a href={ templ.SafeURL(ProposalSalesperson(proposal,"linkedin")) } target="_blank" rel="noopener">LinkedIn</a> }
-									if ProposalSalesperson(proposal,"instagram") != "" { <a href={ templ.SafeURL(ProposalSalesperson(proposal,"instagram")) } target="_blank" rel="noopener">Instagram</a> }
+									if ProposalSalesperson(proposal,"linkedin") != "" {
+										<a href={ templ.SafeURL(ProposalSalesperson(proposal,"linkedin")) } target="_blank" rel="noopener">LinkedIn</a>
+									}
+									if ProposalSalesperson(proposal,"instagram") != "" {
+										<a href={ templ.SafeURL(ProposalSalesperson(proposal,"instagram")) } target="_blank" rel="noopener">Instagram</a>
+									}
 								</div>
 							}
 						</aside>
