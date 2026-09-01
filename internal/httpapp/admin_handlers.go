@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/jefersonMarques/apresentacao-viagate/internal/contracts"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
 	"github.com/jefersonMarques/apresentacao-viagate/web/templates"
 )
 
@@ -40,6 +41,28 @@ func (a *App) usersPage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "não foi possível carregar os usuários", http.StatusInternalServerError)
 		return
 	}
+
+	selected := domain.User{}
+	settings := []domain.PermissionSetting{}
+	preferences := []domain.NotificationPreference{}
+	if selectedID := strings.TrimSpace(r.URL.Query().Get("user")); selectedID != "" {
+		selected, err = a.authStore.ManagedUserByID(r.Context(), selectedID)
+		if err != nil {
+			http.Error(w, "usuário não encontrado", http.StatusNotFound)
+			return
+		}
+		settings, err = a.authStore.PermissionSettings(r.Context(), selectedID)
+		if err != nil {
+			http.Error(w, "não foi possível carregar as permissões", http.StatusInternalServerError)
+			return
+		}
+		preferences, err = a.authStore.NotificationPreferences(r.Context(), selectedID)
+		if err != nil {
+			http.Error(w, "não foi possível carregar as preferências", http.StatusInternalServerError)
+			return
+		}
+	}
+
 	message := ""
 	if r.URL.Query().Get("invited") == "1" {
 		message = "Convite criado e colocado na fila de envio do Brevo."
@@ -47,7 +70,13 @@ func (a *App) usersPage(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query().Get("updated") == "1" {
 		message = "Acesso do usuário atualizado."
 	}
-	render(r.Context(), w, http.StatusOK, templates.UsersManagementPage(user, items, message, r.URL.Query().Get("error")))
+	if r.URL.Query().Get("permissions") == "1" {
+		message = "Permissões individuais atualizadas."
+	}
+	if r.URL.Query().Get("notifications") == "1" {
+		message = "Preferências de notificação atualizadas."
+	}
+	render(r.Context(), w, http.StatusOK, templates.UsersManagementPage(user, items, selected, settings, preferences, message, r.URL.Query().Get("error")))
 }
 
 func (a *App) contractTemplatesPage(w http.ResponseWriter, r *http.Request) {
@@ -117,8 +146,6 @@ func (a *App) saveContractTemplate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// A mesma cadeia Renderer -> Chromium usada em contratos reais precisa
-	// conseguir produzir um PDF antes de uma nova versão jurídica ser criada.
 	if err := a.contractGenerator.ValidateTemplate(r.Context(), markdown); err != nil {
 		a.logger.Warn("contract template validation failed", "error", err, "user_id", user.ID)
 		http.Error(w, "O modelo não pode ser salvo porque a prévia falhou: "+err.Error(), http.StatusBadRequest)
