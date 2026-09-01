@@ -3,13 +3,13 @@ package templates
 import "github.com/jefersonMarques/apresentacao-viagate/internal/domain"
 
 templ OnboardingStatusPage(onboarding domain.Onboarding, message string) {
-	@Base("ViaGate — Dados recebidos") {
+	@PublicFlowLayout("ViaGate — Dados recebidos") {
 		<header class="topbar">
 			<span class="brand">VIAGATE · IMPLANTAÇÃO</span>
 			<span>{ onboarding.LegalName }</span>
 		</header>
-		<main class="shell">
-			<section class="proposal-hero" style="background:var(--deep);color:#fff">
+		<main class="shell public-flow-stack">
+			<section class="proposal-hero public-status-hero">
 				<span class="step-title">CADASTRO RECEBIDO</span>
 				if onboarding.Status == "submitted" {
 					<h1>Dados enviados para revisão.</h1>
@@ -25,15 +25,23 @@ templ OnboardingStatusPage(onboarding domain.Onboarding, message string) {
 					<p>O processo de contratação está em andamento.</p>
 				}
 			</section>
-			if message != "" {
-				<div class="notice" style="margin-top:18px">{ message }</div>
-			}
-			<section class="panel" style="margin-top:18px">
-				<div class="panel-body grid">
-					<div><small>Empresa</small><strong style="display:block;margin-top:4px">{ onboarding.LegalName }</strong></div>
-					<div><small>CNPJ</small><strong style="display:block;margin-top:4px">{ CNPJ(onboarding.CNPJ) }</strong></div>
-					<div><small>Responsável</small><strong style="display:block;margin-top:4px">{ onboarding.CompanyResponsibleName }</strong></div>
-					<div><small>E-mail</small><strong style="display:block;margin-top:4px">{ onboarding.CompanyResponsibleEmail }</strong></div>
+			@PublicFlashMessages(message, "")
+			<section class="panel">
+				<div class="panel-body">
+					@PublicDataGrid() {
+						@PublicDataField("Empresa") {
+							{ onboarding.LegalName }
+						}
+						@PublicDataField("CNPJ") {
+							{ CNPJ(onboarding.CNPJ) }
+						}
+						@PublicDataField("Responsável") {
+							{ onboarding.CompanyResponsibleName }
+						}
+						@PublicDataField("E-mail") {
+							{ onboarding.CompanyResponsibleEmail }
+						}
+					}
 				</div>
 			</section>
 		</main>
