@@ -1,0 +1,41 @@
+package templates
+
+import "github.com/jefersonMarques/apresentacao-viagate/internal/domain"
+
+templ Dashboard(user domain.User) {
+	@AdminLayout("ViaGate — Comercial", user) {
+		@AdminPageHeader("HUB COMERCIAL", "Pipeline de contratação", "O sistema acompanha a negociação desde a proposta até a assinatura, os dados para ativação e a implantação.")
+		<section class="grid admin-hub-grid">
+			<a class="panel admin-hub-card" href="/admin/pipeline">
+				<div class="panel-body"><span class="step-title">PIPELINE</span><h2>Contratações</h2><p>Acompanhe propostas aceitas, cadastros, contratos, assinaturas e ativação.</p></div>
+			</a>
+			<a class="panel admin-hub-card" href="/admin/proposals">
+				<div class="panel-body"><span class="step-title">COMERCIAL</span><h2>Propostas</h2><p>Criação, publicação, versões imutáveis e acompanhamento de aceite.</p></div>
+			</a>
+			<a class="panel admin-hub-card" href="/admin/presentations">
+				<div class="panel-body"><span class="step-title">INSTITUCIONAL</span><h2>Apresentações</h2><p>Materiais personalizados por comercial e cliente.</p></div>
+			</a>
+			if HasRole(user, "super_admin") || HasRole(user, "operations") {
+				<a class="panel admin-hub-card" href="/admin/onboardings">
+					<div class="panel-body"><span class="step-title">OPERAÇÕES</span><h2>Cadastros</h2><p>Revisão dos dados necessários para gerar o contrato.</p></div>
+				</a>
+				<a class="panel admin-hub-card" href="/admin/activations">
+					<div class="panel-body"><span class="step-title">IMPLANTAÇÃO</span><h2>Dados para ativação</h2><p>Financeiro, mercadorias, usuários e liberação da operação.</p></div>
+				</a>
+			}
+			if HasRole(user, "super_admin") || HasRole(user, "legal") {
+				<a class="panel admin-hub-card" href="/admin/contracts/templates">
+					<div class="panel-body"><span class="step-title">JURÍDICO</span><h2>Modelos de contrato</h2><p>Markdown versionado, validação e prévia em PDF.</p></div>
+				</a>
+				<a class="panel admin-hub-card" href="/admin/audit">
+					<div class="panel-body"><span class="step-title">AUDITORIA</span><h2>Histórico técnico</h2><p>Assinaturas, acessos e eventos críticos registrados.</p></div>
+				</a>
+			}
+			if HasRole(user, "super_admin") {
+				<a class="panel admin-hub-card" href="/admin/users">
+					<div class="panel-body"><span class="step-title">ADMINISTRAÇÃO</span><h2>Usuários</h2><p>Convites, funções e permissões.</p></div>
+				</a>
+			}
+		</section>
+	}
+}
