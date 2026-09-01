@@ -1,16 +1,15 @@
 package templates
 
-import "github.com/jefersonMarques/apresentacao-viagate/internal/domain"
+import (
+	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/notifications"
+)
 
-templ UsersManagementPage(current domain.User, users []domain.User, message, errorMessage string) {
+templ UsersManagementPage(current domain.User, users []domain.User, selected domain.User, settings []domain.PermissionSetting, preferences []domain.NotificationPreference, message, errorMessage string) {
 	@AdminLayout("ViaGate — Usuários", current) {
-		@AdminPageHeader("SUPER ADMIN", "Usuários e acessos", "Convide novos usuários, altere o perfil e desative acessos sem apagar o histórico comercial.")
-		if message != "" {
-			<div class="notice">{ message }</div>
-		}
-		if errorMessage != "" {
-			<div class="notice error">{ errorMessage }</div>
-		}
+		@AdminPageHeader("ACESSOS", "Usuários e permissões", "Perfis definem o nível base de acesso. Permissões individuais controlam o que cada usuário pode executar e visualizar.")
+		@FlashMessages(message, errorMessage)
+
 		<section class="panel">
 			<div class="panel-head"><h2>Convidar usuário</h2></div>
 			<div class="panel-body">
@@ -20,25 +19,26 @@ templ UsersManagementPage(current domain.User, users []domain.User, message, err
 					<div class="field">
 						<label>Perfil</label>
 						<select name="role">
-							<option value="commercial">Comercial</option>
-							<option value="operations">Operações</option>
-							<option value="legal">Jurídico</option>
-							<option value="super_admin">Super Admin</option>
+							<option value="user">Usuário</option>
+							if CanAssignAdminRoles(current) {
+								<option value="admin">Admin</option>
+								<option value="super_admin">Superadmin</option>
+							}
 						</select>
 					</div>
-					<div class="field" style="align-content:end"><button class="btn primary" type="submit" data-processing="Enviando convite...">Enviar convite</button></div>
+					<div class="field admin-form-align-end"><button class="btn primary" type="submit" data-processing="Enviando convite...">Enviar convite</button></div>
 				</form>
 			</div>
 		</section>
+
 		<div class="admin-list-root" data-admin-list>
 			@AdminListToolbar(len(users), "usuário(s)") {
 				@AdminListSearch("Buscar nome ou e-mail...")
 				@AdminListFilter("Perfil", "role") {
 					<option value="">Todos os perfis</option>
-					<option value="commercial">Comercial</option>
-					<option value="operations">Operações</option>
-					<option value="legal">Jurídico</option>
-					<option value="super_admin">Super Admin</option>
+					<option value="user">Usuário</option>
+					<option value="admin">Admin</option>
+					<option value="super_admin">Superadmin</option>
 				}
 				@AdminListFilter("Status", "status") {
 					<option value="">Todos os status</option>
@@ -58,34 +58,10 @@ templ UsersManagementPage(current domain.User, users []domain.User, message, err
 							<div class="admin-list-actions">
 								if item.ID == current.ID {
 									<span class="badge status-badge status-success">Seu acesso</span>
+								} else if CanManageUser(current, item) {
+									<a class="btn" href={ templ.SafeURL("/admin/users?user=" + item.ID) }>Gerenciar</a>
 								} else {
-									@AdminActionMenu("Gerenciar acesso de " + item.Name) {
-										<form method="post" action={ templ.SafeURL("/admin/users/" + item.ID + "/access") } class="admin-action-menu-form">
-											<strong>Gerenciar acesso</strong>
-											<small>{ item.Name }</small>
-											<label>
-												<span>Perfil</span>
-												<select name="role" aria-label="Perfil">
-													<option value="commercial" selected?={ PrimaryRole(item) == "commercial" }>Comercial</option>
-													<option value="operations" selected?={ PrimaryRole(item) == "operations" }>Operações</option>
-													<option value="legal" selected?={ PrimaryRole(item) == "legal" }>Jurídico</option>
-													<option value="super_admin" selected?={ PrimaryRole(item) == "super_admin" }>Super Admin</option>
-												</select>
-											</label>
-											<label>
-												<span>Status</span>
-												<select name="status" aria-label="Status">
-													if item.Status == "invited" {
-														<option value="invited" selected>Convidado</option>
-													} else {
-														<option value="active" selected?={ item.Status == "active" }>Ativo</option>
-													}
-													<option value="disabled" selected?={ item.Status == "disabled" }>Desativado</option>
-												</select>
-											</label>
-											<button class="btn dark" type="submit" data-processing="Salvando...">Salvar alterações</button>
-										</form>
-									}
+									<span class="badge status-badge status-neutral">Protegido</span>
 								}
 							</div>
 						</td>
@@ -93,5 +69,98 @@ templ UsersManagementPage(current domain.User, users []domain.User, message, err
 				}
 			}
 		</div>
+
+		if selected.ID != "" {
+			<section class="panel admin-form-section-gap">
+				<div class="panel-head">
+					<div><span class="step-title">ACESSO SELECIONADO</span><h2>{ selected.Name }</h2></div>
+					<div class="actions"><a class="btn" href="/admin/users">Fechar</a></div>
+				</div>
+				<div class="panel-body">
+					if CanManageUser(current, selected) {
+						<form method="post" action={ templ.SafeURL("/admin/users/" + selected.ID + "/access") }>
+							<input type="hidden" name="mode" value="access"/>
+							<div class="grid">
+								<div class="field"><label>E-mail</label><input value={ selected.Email } disabled/></div>
+								<div class="field">
+									<label>Perfil</label>
+									<select name="role">
+										<option value="user" selected?={ PrimaryRole(selected) == "user" }>Usuário</option>
+										if CanAssignAdminRoles(current) {
+											<option value="admin" selected?={ PrimaryRole(selected) == "admin" }>Admin</option>
+											<option value="super_admin" selected?={ PrimaryRole(selected) == "super_admin" }>Superadmin</option>
+										}
+									</select>
+								</div>
+								<div class="field">
+									<label>Status</label>
+									<select name="status">
+										if selected.Status == "invited" {
+											<option value="invited" selected>Convidado</option>
+										} else {
+											<option value="active" selected?={ selected.Status == "active" }>Ativo</option>
+										}
+										<option value="disabled" selected?={ selected.Status == "disabled" }>Desativado</option>
+									</select>
+								</div>
+								<div class="field admin-form-align-end"><button class="btn dark" type="submit" data-processing="Salvando acesso...">Salvar conta e perfil</button></div>
+							</div>
+						</form>
+					} else {
+						<div class="notice">Este perfil é protegido e não pode ser alterado pelo seu nível de acesso.</div>
+					}
+				</div>
+			</section>
+
+			if PrimaryRole(selected) == "user" && CanManageUser(current, selected) && UserCan(current, "user.permissions.manage") {
+				<section class="panel">
+					<div class="panel-head"><div><h2>Permissões individuais</h2><p>Marque somente o que este usuário precisa além do perfil base. A validação também ocorre no servidor.</p></div></div>
+					<div class="panel-body">
+						<form method="post" action={ templ.SafeURL("/admin/users/" + selected.ID + "/access") }>
+							<input type="hidden" name="mode" value="permissions"/>
+							for _, group := range PermissionGroups(current, settings) {
+								<div class="admin-permission-group">
+									<strong>{ group.Name }</strong>
+									<div class="admin-permission-grid">
+										for _, item := range group.Items {
+											<input type="hidden" name="managed_permission" value={ item.Code }/>
+											<label class="admin-permission-item">
+												<input type="checkbox" name="permission" value={ item.Code } checked?={ item.Effective }/>
+												<span><strong>{ item.Name }</strong><small>{ item.Code }</small></span>
+											</label>
+										}
+									</div>
+								</div>
+							}
+							<div class="actions admin-form-section-gap"><button class="btn primary" type="submit" data-processing="Salvando permissões...">Salvar permissões</button></div>
+						</form>
+					</div>
+				</section>
+			}
+
+			if CanManageUser(current, selected) {
+				<section class="panel">
+					<div class="panel-head"><div><h2>Notificações</h2><p>Permissão define o que a pessoa pode ver. Aqui definimos apenas sobre quais eventos ela deseja ser avisada.</p></div></div>
+					<div class="panel-body">
+						<form method="post" action={ templ.SafeURL("/admin/users/" + selected.ID + "/access") }>
+							<input type="hidden" name="mode" value="notifications"/>
+							<div class="admin-permission-grid">
+								for _, event := range notifications.EventDefinitions {
+									<div class="admin-notification-item">
+										<input type="hidden" name="notification_event" value={ event.Code }/>
+										<div><strong>{ event.Label }</strong><small>{ event.Group }</small></div>
+										<label><input type="checkbox" name="notify_own" value={ event.Code } checked?={ NotificationPreferenceEnabled(preferences, event.Code, "own", true) }/> Próprias</label>
+										if UserHasPermission(selected, "notification.receive_others") {
+											<label><input type="checkbox" name="notify_all" value={ event.Code } checked?={ NotificationPreferenceEnabled(preferences, event.Code, "all", false) }/> Outros usuários</label>
+										}
+									</div>
+								}
+							</div>
+							<div class="actions admin-form-section-gap"><button class="btn primary" type="submit" data-processing="Salvando notificações...">Salvar notificações</button></div>
+						</form>
+					</div>
+				</section>
+			}
+		}
 	}
 }
