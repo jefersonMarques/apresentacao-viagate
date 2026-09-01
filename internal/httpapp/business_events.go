@@ -100,6 +100,62 @@ func (a *App) publishContractEvent(ctx context.Context, contractID, eventType, t
 	}
 }
 
+func (a *App) publishOnboardingEvent(ctx context.Context, onboardingID string) {
+	var ownerID, proposalID, clientName string
+	if err := a.pool.QueryRow(ctx, `
+		select p.created_by::text,p.id::text,coalesce(nullif(o.trade_name,''),o.legal_name)
+		from onboardings o
+		join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
+		join proposals p on p.id=pa.proposal_id
+		where o.id=$1
+	`, onboardingID).Scan(&ownerID, &proposalID, &clientName); err != nil {
+		a.logger.Warn("load onboarding event owner failed", "onboarding_id", onboardingID, "error", err)
+		return
+	}
+	store := notifications.NewInAppStore(a.pool)
+	if err := store.Publish(ctx, notifications.Event{
+		OwnerUserID: ownerID,
+		EventType: "onboarding.submitted",
+		Title: "Cadastro de contratação enviado",
+		Body: clientName,
+		ResourceType: "onboarding",
+		ResourceID: onboardingID,
+		TargetURL: "/admin/pipeline/" + proposalID,
+		DedupeKey: "onboarding.submitted:" + onboardingID,
+	}); err != nil {
+		a.logger.Warn("publish onboarding notification failed", "onboarding_id", onboardingID, "error", err)
+	}
+}
+
+func (a *App) publishActivationEvent(ctx context.Context, activationID, eventType, title string) {
+	var ownerID, proposalID, clientName string
+	if err := a.pool.QueryRow(ctx, `
+		select p.created_by::text,p.id::text,coalesce(nullif(o.trade_name,''),o.legal_name)
+		from activation_profiles a
+		join contracts c on c.id=a.contract_id
+		join onboardings o on o.id=c.onboarding_id
+		join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
+		join proposals p on p.id=pa.proposal_id
+		where a.id=$1
+	`, activationID).Scan(&ownerID, &proposalID, &clientName); err != nil {
+		a.logger.Warn("load activation event owner failed", "activation_id", activationID, "event_type", eventType, "error", err)
+		return
+	}
+	store := notifications.NewInAppStore(a.pool)
+	if err := store.Publish(ctx, notifications.Event{
+		OwnerUserID: ownerID,
+		EventType: eventType,
+		Title: title,
+		Body: clientName,
+		ResourceType: "activation",
+		ResourceID: activationID,
+		TargetURL: "/admin/pipeline/" + proposalID,
+		DedupeKey: eventType + ":" + activationID,
+	}); err != nil {
+		a.logger.Warn("publish activation notification failed", "activation_id", activationID, "event_type", eventType, "error", err)
+	}
+}
+
 func dailyEventDedupe(resourceID string) string {
 	return fmt.Sprintf("%s:%s", resourceID, time.Now().UTC().Format("2006-01-02"))
 }
