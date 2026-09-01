@@ -25,22 +25,22 @@ const (
 	CustomerSensitiveRead    = "customer.sensitive_data.read"
 	CustomerDocumentsRead    = "customer.documents.read"
 
-	ContractReadOwn      = "contract.read_own"
-	ContractReadAll      = "contract.read_all"
-	ContractEvidenceRead = "contract.evidence.read"
+	ContractReadOwn        = "contract.read_own"
+	ContractReadAll        = "contract.read_all"
+	ContractEvidenceRead   = "contract.evidence.read"
 	ContractTemplateManage = "contract.template.manage"
 
-	OnboardingReview = "onboarding.review"
+	OnboardingReview  = "onboarding.review"
 	ActivationReadAll = "activation.read_all"
-	ActivationManage = "activation.manage"
+	ActivationManage  = "activation.manage"
 
 	UserManage            = "user.manage"
 	UserPermissionsManage = "user.permissions.manage"
 	UserStatusManage      = "user.status.manage"
 
-	ActivityReadOwn = "activity.read_own"
-	ActivityReadAll = "activity.read_all"
-	AuditRead       = "audit.read"
+	ActivityReadOwn    = "activity.read_own"
+	ActivityReadAll    = "activity.read_all"
+	AuditRead          = "audit.read"
 	AuditTechnicalRead = "audit.technical.read"
 
 	NotificationRead          = "notification.read"
@@ -92,4 +92,8 @@ func CanAssignRole(actor domain.User, role string) bool {
 		return role == "user" || role == "admin" || role == "super_admin"
 	}
 	return IsAdmin(actor) && role == "user"
+}
+
+func CanRemoveActiveSuperAdmin(activeSuperAdmins int) bool {
+	return activeSuperAdmins > 1
 }
