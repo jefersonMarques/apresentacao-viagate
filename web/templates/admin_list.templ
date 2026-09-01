@@ -33,7 +33,16 @@ templ AdminListToolbar(total int, noun string) {
 }
 
 templ AdminServerSearchToolbar(action, query, placeholder string, total int, noun string) {
-	<form method="get" action={ templ.SafeURL(action) } class="admin-list-toolbar">
+	<form
+		method="get"
+		action={ templ.SafeURL(action) }
+		class="admin-list-toolbar"
+		hx-get={ action }
+		hx-target="#adminContent"
+		hx-select="#adminContent"
+		hx-swap="outerHTML show:window:top"
+		hx-push-url="true"
+	>
 		<div class="admin-list-filters">
 			<label class="admin-list-control admin-list-search">
 				<span>Buscar</span>
