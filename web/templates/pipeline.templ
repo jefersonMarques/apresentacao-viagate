@@ -41,7 +41,19 @@ templ PipelinePage(user domain.User, items []domain.PipelineItem, all bool) {
 						</td>
 						<td data-label="Proposta">{ item.ProposalTitle }</td>
 						<td data-label="Última atividade">{ item.UpdatedAt.Format("02/01/2006 15:04") }</td>
-						<td data-label="Ações" data-actions="true"><div class="admin-list-actions"><a class="btn" href={ templ.SafeURL("/admin/pipeline/" + item.ProposalID) }>Detalhes</a></div></td>
+						<td data-label="Ações" data-actions="true">
+							<div class="admin-list-actions">
+								<a
+									class="btn"
+									href={ templ.SafeURL("/admin/pipeline/" + item.ProposalID) }
+									hx-get={ "/admin/pipeline/" + item.ProposalID }
+									hx-target="#adminContent"
+									hx-select="#adminContent"
+									hx-swap="outerHTML show:window:top"
+									hx-push-url="true"
+								>Detalhes</a>
+							</div>
+						</td>
 					</tr>
 				}
 			}
@@ -52,7 +64,13 @@ templ PipelinePage(user domain.User, items []domain.PipelineItem, all bool) {
 templ PipelineDetailPage(user domain.User, item domain.PipelineItem, events []domain.PipelineEvent) {
 	@AdminLayout("ViaGate — Negociação", user) {
 		<link rel="stylesheet" href="/assets/pipeline-timeline.css"/>
-		<header class="header"><div><span class="step-title">NEGOCIAÇÃO</span><h1>{ item.ClientName }</h1><p>{ item.ProposalTitle } · responsável comercial: { item.CommercialName }</p></div><div class="actions"><a class="btn" href="/admin/pipeline">Voltar</a><a class="btn dark" href={ templ.SafeURL("/admin/proposals/" + item.ProposalID + "/edit") }>Abrir proposta</a></div></header>
+		<header class="header">
+			<div><span class="step-title">NEGOCIAÇÃO</span><h1>{ item.ClientName }</h1><p>{ item.ProposalTitle } · responsável comercial: { item.CommercialName }</p></div>
+			<div class="actions">
+				<a class="btn" href="/admin/pipeline" hx-get="/admin/pipeline" hx-target="#adminContent" hx-select="#adminContent" hx-swap="outerHTML show:window:top" hx-push-url="true">Voltar</a>
+				<a class="btn dark" href={ templ.SafeURL("/admin/proposals/" + item.ProposalID + "/edit") }>Abrir proposta</a>
+			</div>
+		</header>
 		<section class="panel pipeline-current-panel">
 			<div class="panel-head"><h2>Etapa atual</h2><span class={ PipelineStageBadgeClass(item) }>{ PipelineStage(item) }</span></div>
 			<div class="panel-body">
@@ -102,7 +120,17 @@ templ PipelineDetailPage(user domain.User, item domain.PipelineItem, events []do
 					}
 				</div>
 				if item.ActivationID != "" {
-					<div style="margin-top:18px"><a class="btn" href={ templ.SafeURL("/admin/activations/" + item.ActivationID) }>Abrir dados para ativação</a></div>
+					<div style="margin-top:18px">
+						<a
+							class="btn"
+							href={ templ.SafeURL("/admin/activations/" + item.ActivationID) }
+							hx-get={ "/admin/activations/" + item.ActivationID }
+							hx-target="#adminContent"
+							hx-select="#adminContent"
+							hx-swap="outerHTML show:window:top"
+							hx-push-url="true"
+						>Abrir dados para ativação</a>
+					</div>
 				}
 				if item.ContractID != "" {
 					<div style="margin-top:18px;padding-top:18px;border-top:1px solid var(--line)">
