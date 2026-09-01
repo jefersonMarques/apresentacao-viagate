@@ -208,6 +208,7 @@ func (a *App) submitActivation(w http.ResponseWriter, r *http.Request) {
 	`, access.Profile.ID, requestIP(r), r.UserAgent())
 	a.queueActivationCompletedNotification(r, access.Profile.ID)
 	a.publishActivationEvent(r.Context(), access.Profile.ID, "activation.submitted", "Dados para ativação enviados")
+	a.publishActivationActionRequired(r.Context(), access.Profile.ID)
 	http.Redirect(w, r, "/activation/"+token+"?saved=completed", http.StatusSeeOther)
 }
 
@@ -310,6 +311,13 @@ func (a *App) adminActivationStatus(w http.ResponseWriter, r *http.Request) {
 		insert into audit_events(actor_user_id,actor_type,event_type,resource_type,resource_id,ip_address,user_agent,metadata)
 		values($1,'user','activation.status_changed','activation',$2,$3,$4,jsonb_build_object('status',$5::text))
 	`, user.ID, activationID, requestIP(r), r.UserAgent(), status)
+	if status == "under_internal_setup" || status == "activated" {
+		_, _ = a.pool.Exec(r.Context(), `
+			update in_app_notifications
+			set read_at=coalesce(read_at,now())
+			where dedupe_key=$1 and read_at is null
+		`, "activation.action-required:"+activationID)
+	}
 	if status == "activated" {
 		a.publishActivationEvent(r.Context(), activationID, "activation.activated", "Operação liberada")
 	}
