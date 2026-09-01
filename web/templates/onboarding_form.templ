@@ -3,42 +3,31 @@ package templates
 import "github.com/jefersonMarques/apresentacao-viagate/internal/domain"
 
 templ OnboardingFormPage(onboarding domain.Onboarding, message, errorMessage string, requireReview bool) {
-	@Base("ViaGate — Dados para contratação") {
+	@PublicFlowLayout("ViaGate — Dados para contratação") {
 		<header class="topbar">
 			<span class="brand">VIAGATE · CONTRATAÇÃO</span>
 			<span>{ onboarding.LegalName }</span>
 		</header>
-		<main class="shell">
-			<header class="header">
-				<div>
-					<span class="step-title">DADOS PARA CONTRATAÇÃO</span>
-					<h1>Somente o necessário para preparar o contrato</h1>
-					<p>Revise os dados da empresa, da apólice e do responsável pela contratação. Informações de faturamento, mercadorias e usuários serão solicitadas somente depois da assinatura.</p>
-				</div>
-			</header>
-			if message != "" {
-				<div class="notice">{ message }</div>
-			}
-			if errorMessage != "" {
-				<div class="notice error">{ errorMessage }</div>
-			}
+		<main class="shell public-flow-stack">
+			@PublicFlowHeader("DADOS PARA CONTRATAÇÃO", "Somente o necessário para preparar o contrato", "Revise os dados da empresa, da apólice e do responsável pela contratação. Informações de faturamento, mercadorias e usuários serão solicitadas somente depois da assinatura.")
+			@PublicFlashMessages(message, errorMessage)
 			<form method="post" action={ templ.SafeURL("/onboarding/" + onboarding.ID) }>
 				<section class="panel">
 					<div class="panel-head">
 						<h2>Contratante</h2>
-						<button class="btn" type="button" onclick="lookupCNPJ()">Preencher pelo CNPJ</button>
+						<button class="btn" type="button" data-cnpj-lookup data-cnpj-field="cnpj" data-cnpj-prefix="" data-cnpj-endpoint="/api/cnpj/">Preencher pelo CNPJ</button>
 					</div>
 					<div class="panel-body grid">
-						<div class="field"><label>CNPJ</label><input id="cnpj" name="cnpj" data-mask="cnpj" value={ onboarding.CNPJ } autocomplete="off" required/></div>
-						<div class="field"><label>Razão social</label><input id="legal_name" name="legal_name" value={ onboarding.LegalName } required/></div>
-						<div class="field"><label>Nome fantasia</label><input id="trade_name" name="trade_name" value={ onboarding.TradeName }/></div>
-						<div class="field"><label>CEP</label><input id="postal_code" name="postal_code" data-mask="postal-code" autocomplete="postal-code" value={ onboarding.PostalCode }/></div>
-						<div class="field"><label>Logradouro</label><input id="street" name="street" value={ onboarding.Street }/></div>
-						<div class="field"><label>Número</label><input id="street_number" name="street_number" value={ onboarding.StreetNumber }/></div>
-						<div class="field"><label>Complemento</label><input id="complement" name="complement" value={ onboarding.Complement }/></div>
-						<div class="field"><label>Bairro</label><input id="district" name="district" value={ onboarding.District }/></div>
-						<div class="field"><label>Cidade</label><input id="city" name="city" value={ onboarding.City }/></div>
-						<div class="field"><label>UF</label><input id="state" name="state" maxlength="2" value={ onboarding.State }/></div>
+						<div class="field"><label>CNPJ</label><input name="cnpj" data-mask="cnpj" value={ onboarding.CNPJ } autocomplete="off" required/><div class="public-cnpj-status" data-cnpj-status></div></div>
+						<div class="field"><label>Razão social</label><input name="legal_name" value={ onboarding.LegalName } required/></div>
+						<div class="field"><label>Nome fantasia</label><input name="trade_name" value={ onboarding.TradeName }/></div>
+						<div class="field"><label>CEP</label><input name="postal_code" data-mask="postal-code" autocomplete="postal-code" value={ onboarding.PostalCode }/></div>
+						<div class="field"><label>Logradouro</label><input name="street" value={ onboarding.Street }/></div>
+						<div class="field"><label>Número</label><input name="street_number" value={ onboarding.StreetNumber }/></div>
+						<div class="field"><label>Complemento</label><input name="complement" value={ onboarding.Complement }/></div>
+						<div class="field"><label>Bairro</label><input name="district" value={ onboarding.District }/></div>
+						<div class="field"><label>Cidade</label><input name="city" value={ onboarding.City }/></div>
+						<div class="field"><label>UF</label><input name="state" maxlength="2" value={ onboarding.State }/></div>
 					</div>
 				</section>
 				<section class="panel">
@@ -69,19 +58,19 @@ templ OnboardingFormPage(onboarding domain.Onboarding, message, errorMessage str
 						<div class="field full"><label><input type="checkbox" name="responsible_authority" value="1" checked?={ onboarding.AuthorityDeclared } required/> Declaro possuir poderes ou autorização para representar a empresa nesta contratação.</label></div>
 					</div>
 				</section>
-				<div class="notice" style="margin:18px 0">
+				<div class="notice public-flow-note">
 					<strong>Depois da assinatura:</strong> solicitaremos em uma etapa separada o responsável financeiro, as mercadorias transportadas e os usuários iniciais do sistema. Você poderá preencher ou encaminhar essa etapa para alguém da sua equipe.
 				</div>
 				<div class="actions"><button class="btn dark" type="submit">Salvar dados</button></div>
 			</form>
-			<section class="panel" style="margin-top:18px">
+			<section class="panel">
 				<div class="panel-head"><h2>Apólice</h2></div>
 				<div class="panel-body">
 					<form method="post" action={ templ.SafeURL("/onboarding/" + onboarding.ID + "/documents") } enctype="multipart/form-data">
 						<div class="upload-drop">
 							<div class="field"><label>Arquivo da apólice</label><input name="document" type="file" accept="application/pdf,image/jpeg,image/png" required/></div>
 							<small>PDF, JPG ou PNG · até 15 MB. Um novo envio substitui a apólice anterior.</small>
-							<button class="btn dark" type="submit" style="margin-top:12px">Enviar apólice</button>
+							<button class="btn dark public-flow-upload-action" type="submit">Enviar apólice</button>
 						</div>
 					</form>
 				</div>
@@ -102,9 +91,6 @@ templ OnboardingFormPage(onboarding domain.Onboarding, message, errorMessage str
 					</form>
 				</div>
 			</section>
-			<script>
-			async function lookupCNPJ(){const input=document.getElementById('cnpj');const cnpj=(input.value||'').toUpperCase().replace(/[^0-9A-Z]/g,'');if(!/^[0-9A-Z]{12}[0-9]{2}$/.test(cnpj)){alert('Informe um CNPJ válido, numérico ou alfanumérico.');return;}const r=await fetch('/api/cnpj/'+encodeURIComponent(cnpj));if(!r.ok){alert('Não foi possível consultar o CNPJ. Você pode preencher os dados manualmente.');return;}const d=await r.json();input.value=d.cnpj||cnpj;input.dispatchEvent(new Event('input',{bubbles:true}));for(const [id,key] of Object.entries({legal_name:'legal_name',trade_name:'trade_name',postal_code:'postal_code',street:'street',street_number:'number',complement:'complement',district:'district',city:'city',state:'state'})){const e=document.getElementById(id);if(e&&d[key]){e.value=d[key];e.dispatchEvent(new Event('input',{bubbles:true}));}}}
-			</script>
 		</main>
 	}
 }
