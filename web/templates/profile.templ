@@ -3,22 +3,10 @@ package templates
 import "github.com/jefersonMarques/apresentacao-viagate/internal/domain"
 
 templ ProfilePage(current domain.User, profile domain.User, message, errorMessage string) {
-	@AdminLayout("ViaGate — Meu perfil", current) {
-		<link rel="stylesheet" href="/assets/v1-admin-forms.css"/>
+	@AdminEditorLayout("ViaGate — Meu perfil", current) {
 		<div class="v1-page">
-			<header class="v1-editor-header">
-				<div>
-					<span class="v1-eyebrow">MEU PERFIL COMERCIAL</span>
-					<h1>Dados que aparecem nos materiais</h1>
-					<p>Foto, contato e redes sociais são congelados em cada nova versão de proposta ou apresentação.</p>
-				</div>
-			</header>
-			if message != "" {
-				<div class="v1-message">{ message }</div>
-			}
-			if errorMessage != "" {
-				<div class="v1-message error">{ errorMessage }</div>
-			}
+			@AdminEditorHeader("MEU PERFIL COMERCIAL", "Dados que aparecem nos materiais", "Foto, contato e redes sociais são congelados em cada nova versão de proposta ou apresentação.")
+			@FlashMessages(message, errorMessage)
 			<div class="v1-profile-grid">
 				<aside class="v1-profile-card">
 					if profile.PhotoURL != "" {
@@ -46,51 +34,34 @@ templ ProfilePage(current domain.User, profile domain.User, message, errorMessag
 					}
 					<div class="v1-profile-note">Alterar o perfil não modifica versões já publicadas. A próxima versão salva recebe uma cópia destes dados.</div>
 				</aside>
-				<section class="v1-section">
-					<header class="v1-section-head"><div><h2>Meu perfil comercial</h2><p>Informações exibidas no encerramento dos materiais e no contato comercial.</p></div></header>
-					<div class="v1-section-body">
-						<form method="post" action="/admin/profile">
-							<div class="v1-form-grid">
-								<div class="v1-field full"><label>Nome</label><input name="name" value={ profile.Name } autocomplete="name" required/></div>
-								<div class="v1-field full"><label>Cargo</label><input name="job_title" value={ profile.JobTitle } placeholder="Sócio-Diretor Comercial" autocomplete="organization-title"/></div>
-								<div class="v1-field"><label>E-mail comercial</label><input name="email" type="email" value={ profile.Email } autocomplete="email" required/></div>
-								<div class="v1-field"><label>Telefone / WhatsApp</label><input name="phone" data-mask="phone" value={ profile.Phone } autocomplete="tel"/></div>
-								<div class="v1-field full">
-									<label>Foto do comercial</label>
-									<div class="v1-upload" data-image-upload="salesperson_photo">
-										<input type="hidden" name="photo_url" value={ profile.PhotoURL } data-image-value/>
-										<div class="v1-upload-preview">
-											<img src={ templ.SafeURL(profile.PhotoURL) } alt="Prévia da foto" data-image-preview hidden?={ profile.PhotoURL == "" }/>
-											<div class="v1-upload-empty" data-image-empty hidden?={ profile.PhotoURL != "" }>Sua foto aparecerá aqui</div>
-										</div>
-										<div class="v1-upload-controls">
-											<div class="v1-upload-row">
-												<label class="v1-button dark small">Selecionar imagem<input type="file" accept="image/jpeg,image/png,image/webp" data-image-file hidden/></label>
-												<button class="v1-button ghost small" type="button" data-image-remove hidden>Remover</button>
-											</div>
-											<div class="v1-help">JPG, PNG ou WEBP · máximo 2 MB.</div>
-											<div class="v1-upload-status" data-image-status></div>
-										</div>
-									</div>
-								</div>
-								<div class="v1-field"><label>LinkedIn</label><input name="linkedin_url" type="url" value={ profile.LinkedInURL } placeholder="https://www.linkedin.com/in/..." autocomplete="url"/></div>
-								<div class="v1-field"><label>Instagram</label><input name="instagram_url" type="url" value={ profile.InstagramURL } placeholder="https://www.instagram.com/..." autocomplete="url"/></div>
+				@AdminFormSection("Meu perfil comercial", "Informações exibidas no encerramento dos materiais e no contato comercial.") {
+					<form method="post" action="/admin/profile">
+						<div class="v1-form-grid">
+							<div class="v1-field full"><label>Nome</label><input name="name" value={ profile.Name } autocomplete="name" required/></div>
+							<div class="v1-field full"><label>Cargo</label><input name="job_title" value={ profile.JobTitle } placeholder="Sócio-Diretor Comercial" autocomplete="organization-title"/></div>
+							<div class="v1-field"><label>E-mail comercial</label><input name="email" type="email" value={ profile.Email } autocomplete="email" required/></div>
+							<div class="v1-field"><label>Telefone / WhatsApp</label><input name="phone" data-mask="phone" value={ profile.Phone } autocomplete="tel"/></div>
+							<div class="v1-field full">
+								<label>Foto do comercial</label>
+								@AdminImageUpload("photo_url", profile.PhotoURL, "salesperson_photo", "Sua foto aparecerá aqui", "Prévia da foto")
 							</div>
-							<div class="v1-preview-card">
-								<small>COMO SERÁ IDENTIFICADO</small>
-								<strong>{ profile.Name }</strong>
-								if profile.JobTitle != "" {
-									<span>{ profile.JobTitle }</span>
-								}
-								<span>{ profile.Email }</span>
-								if profile.Phone != "" {
-									<span>{ Phone(profile.Phone) }</span>
-								}
-							</div>
-							<div class="v1-actions" style="margin-top:18px"><button class="v1-button primary" type="submit" data-processing="Salvando perfil...">Salvar perfil</button></div>
-						</form>
-					</div>
-				</section>
+							<div class="v1-field"><label>LinkedIn</label><input name="linkedin_url" type="url" value={ profile.LinkedInURL } placeholder="https://www.linkedin.com/in/..." autocomplete="url"/></div>
+							<div class="v1-field"><label>Instagram</label><input name="instagram_url" type="url" value={ profile.InstagramURL } placeholder="https://www.instagram.com/..." autocomplete="url"/></div>
+						</div>
+						<div class="v1-preview-card">
+							<small>COMO SERÁ IDENTIFICADO</small>
+							<strong>{ profile.Name }</strong>
+							if profile.JobTitle != "" {
+								<span>{ profile.JobTitle }</span>
+							}
+							<span>{ profile.Email }</span>
+							if profile.Phone != "" {
+								<span>{ Phone(profile.Phone) }</span>
+							}
+						</div>
+						<div class="v1-actions admin-form-actions"><button class="v1-button primary" type="submit" data-processing="Salvando perfil...">Salvar perfil</button></div>
+					</form>
+				}
 			</div>
 		</div>
 	}
