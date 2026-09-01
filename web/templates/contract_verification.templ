@@ -3,58 +3,55 @@ package templates
 import "github.com/jefersonMarques/apresentacao-viagate/internal/contracts"
 
 templ ContractVerificationPage(record contracts.VerificationRecord, verificationCode string) {
-	@Base("ViaGate — Verificação do contrato") {
+	@PublicFlowLayout("ViaGate — Verificação do contrato") {
 		<div class="public">
-			<main class="proposal-page" data-contract-verification data-expected-hash={ record.DocumentHashHex() }>
-				<section class="accept-box" style="margin-top:0">
+			<main class="proposal-page public-flow-stack" data-contract-verification data-expected-hash={ record.DocumentHashHex() }>
+				<section class="accept-box">
 					<span class="step-title">VERIFICAÇÃO DO DOCUMENTO</span>
 					if record.IsSigned() {
-						<h1 style="color:var(--success);margin-bottom:8px">Assinatura confirmada</h1>
+						<h1 class="verification-title success">Assinatura confirmada</h1>
 						<p>Este contrato possui uma assinatura eletrônica registrada pela ViaGate.</p>
 					} else if record.Status == "cancelled" {
-						<h1 style="color:var(--danger);margin-bottom:8px">Documento cancelado</h1>
+						<h1 class="verification-title danger">Documento cancelado</h1>
 						<p>Este registro não representa um contrato válido para assinatura.</p>
 					} else {
-						<h1 style="margin-bottom:8px">Aguardando assinatura</h1>
+						<h1 class="verification-title">Aguardando assinatura</h1>
 						<p>Este documento foi gerado pela ViaGate, mas a assinatura ainda não foi concluída.</p>
 					}
-
-					<div class="grid" style="margin-top:24px">
-						<div><small>Contratante</small><strong style="display:block;margin-top:4px">{ record.ClientName }</strong></div>
-						<div><small>CNPJ</small><strong style="display:block;margin-top:4px">{ CNPJ(record.ClientCNPJ) }</strong></div>
+					@PublicDataGrid() {
+						@PublicDataField("Contratante") { { record.ClientName } }
+						@PublicDataField("CNPJ") { { CNPJ(record.ClientCNPJ) } }
 						if record.SignerName != "" {
-							<div><small>Responsável pela assinatura</small><strong style="display:block;margin-top:4px">{ record.SignerName }</strong></div>
+							@PublicDataField("Responsável pela assinatura") { { record.SignerName } }
 						}
 						if record.FullySignedAt != nil {
-							<div><small>Assinatura concluída em</small><strong style="display:block;margin-top:4px">{ record.FullySignedAt.Format("02/01/2006 15:04") }</strong></div>
+							@PublicDataField("Assinatura concluída em") { { DateTime(record.FullySignedAt) } }
 						}
-						<div><small>Código de verificação</small><strong style="display:block;margin-top:4px">{ verificationCode }</strong></div>
-					</div>
+						@PublicDataField("Código de verificação") { { verificationCode } }
+					}
 				</section>
-
-				<section class="accept-box" style="margin-top:18px">
+				<section class="accept-box">
 					<span class="step-title">CONFIRA UMA CÓPIA DO PDF</span>
 					<h2>Quer saber se o arquivo é exatamente o mesmo?</h2>
 					<p>Escolha o PDF que você recebeu. A comparação acontece somente neste navegador: o arquivo não é enviado para a ViaGate.</p>
-					<div class="field" style="margin-top:16px">
+					<div class="field public-flow-field-gap">
 						<label for="verification-file">Arquivo PDF</label>
 						<input id="verification-file" type="file" accept="application/pdf,.pdf" data-verification-file/>
 					</div>
-					<div class="notice" style="margin-top:16px" data-verification-result hidden></div>
+					<div class="notice public-flow-field-gap" data-verification-result hidden></div>
 				</section>
-
-				<section class="accept-box" style="margin-top:18px">
+				<section class="accept-box">
 					<span class="step-title">COMO FUNCIONA</span>
 					<h2>Como garantimos que o documento não foi alterado</h2>
 					<p>Quando o contrato é gerado, a ViaGate cria uma impressão digital criptográfica a partir do PDF completo, já contendo o QR Code. Essa impressão digital é registrada antes da assinatura.</p>
 					<p>No momento da assinatura, o sistema vincula a assinatura àquela versão exata do documento. Depois disso, o PDF registrado não é alterado.</p>
 					<p>Se alguém modificar qualquer parte do arquivo posteriormente, mesmo uma alteração mínima, a impressão digital deixa de coincidir. É isso que a verificação acima compara.</p>
 					<p><strong>Importante:</strong> o QR Code não é a assinatura. Ele apenas leva ao registro usado para consultar e conferir a autenticidade do documento.</p>
-					<details style="margin-top:16px">
-						<summary style="cursor:pointer;font-weight:800">Como funciona tecnicamente?</summary>
-						<div style="margin-top:10px;color:var(--muted)">
+					<details class="public-flow-details">
+						<summary>Como funciona tecnicamente?</summary>
+						<div>
 							<p>A impressão digital é calculada com SHA-256 sobre os bytes do PDF final. A comparação de arquivo usa exatamente esse valor registrado pela ViaGate.</p>
-							<p style="word-break:break-all"><strong>SHA-256 registrado:</strong> { record.DocumentHashHex() }</p>
+							<p class="public-flow-hash"><strong>SHA-256 registrado:</strong> { record.DocumentHashHex() }</p>
 						</div>
 					</details>
 				</section>
