@@ -1,9 +1,6 @@
 package templates
 
-import (
-	"github.com/jefersonMarques/apresentacao-viagate/internal/legaltext"
-	"github.com/jefersonMarques/apresentacao-viagate/internal/proposals"
-)
+import "github.com/jefersonMarques/apresentacao-viagate/internal/proposals"
 
 templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage string) {
 	<!doctype html>
@@ -26,6 +23,9 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 			<link rel="stylesheet" href="/assets/v1-proposal-go.css"/>
 		</head>
 		<body class="public-proposal proposal-locked viewer-locked">
+			if errorMessage != "" {
+				<div class="proposal-public-error proposal-public-error-global">{ errorMessage }</div>
+			}
 			<main id="proposalPresentation" data-secure-viewer>
 				<section class="proposal-slide dark" data-viewer-slide>
 					<div class="proposal-slide-inner proposal-cover-grid">
@@ -90,10 +90,7 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 								if len(priorities) > 0 {
 									<div class="proposal-content-grid">
 										for index, priority := range priorities {
-											<article class="proposal-content-card">
-												<small>{ index + 1 }</small>
-												<h3>{ priority }</h3>
-											</article>
+											<article class="proposal-content-card"><small>{ index + 1 }</small><h3>{ priority }</h3></article>
 										}
 									</div>
 								}
@@ -117,10 +114,7 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 								if len(solutionScope) > 0 {
 									<div class="proposal-content-grid">
 										for index, scope := range solutionScope {
-											<article class="proposal-content-card">
-												<small>{ index + 1 }</small>
-												<h3>{ scope }</h3>
-											</article>
+											<article class="proposal-content-card"><small>{ index + 1 }</small><h3>{ scope }</h3></article>
 										}
 									</div>
 								}
@@ -143,11 +137,7 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 								}
 								<div class="proposal-model-grid">
 									for index, model := range modelCards {
-										<article class="proposal-model-card">
-											<small>MODELO { index + 1 }</small>
-											<strong>{ model.Title }</strong>
-											<span>{ model.Summary }</span>
-										</article>
+										<article class="proposal-model-card"><small>MODELO { index + 1 }</small><strong>{ model.Title }</strong><span>{ model.Summary }</span></article>
 									}
 								</div>
 							</div>
@@ -167,12 +157,7 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 									<div class="proposal-price-groups">
 										for _, group := range ProposalPriceGroups(proposal) {
 											<section class="proposal-price-group">
-												<header class="proposal-price-group-header">
-													<strong>{ group.Name }</strong>
-													if group.AllOptional {
-														<span class="proposal-optional-label">Opcional</span>
-													}
-												</header>
+												<header class="proposal-price-group-header"><strong>{ group.Name }</strong>if group.AllOptional { <span class="proposal-optional-label">Opcional</span> }</header>
 												<table class="proposal-price-table">
 													<thead><tr><th>Item</th><th>Unidade</th><th>Status</th><th>Valor</th></tr></thead>
 													<tbody>
@@ -187,12 +172,8 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 								}
 								if proposal.MinimumInvoice > 0 || proposal.SetupFee > 0 {
 									<div class="proposal-highlight-grid">
-										if proposal.MinimumInvoice > 0 {
-											<div class="proposal-highlight"><small>Fatura mínima mensal</small><strong>{ Money(proposal.MinimumInvoice) }</strong></div>
-										}
-										if proposal.SetupFee > 0 {
-											<div class="proposal-highlight"><small>Implantação</small><strong>{ Money(proposal.SetupFee) }</strong></div>
-										}
+										if proposal.MinimumInvoice > 0 { <div class="proposal-highlight"><small>Fatura mínima mensal</small><strong>{ Money(proposal.MinimumInvoice) }</strong></div> }
+										if proposal.SetupFee > 0 { <div class="proposal-highlight"><small>Implantação</small><strong>{ Money(proposal.SetupFee) }</strong></div> }
 									</div>
 								}
 							</div>
@@ -210,10 +191,7 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 								if len(proposal.Conditions) > 0 {
 									<div class="proposal-content-grid">
 										for index, condition := range proposal.Conditions {
-											<article class="proposal-content-card">
-												<small>{ index + 1 }</small>
-												<h3>{ condition }</h3>
-											</article>
+											<article class="proposal-content-card"><small>{ index + 1 }</small><h3>{ condition }</h3></article>
 										}
 									</div>
 								}
@@ -230,69 +208,24 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 					<div class="proposal-slide-inner proposal-contact-final">
 						<div>
 							<p class="proposal-kicker" style="color:#fff">CONTATO COMERCIAL</p>
-							if ProposalSalesperson(proposal,"name") != "" {
-								<h2>{ ProposalSalesperson(proposal,"name") }</h2>
-							} else {
-								<h2>ViaGate</h2>
-							}
-							if ProposalSalespersonRole(proposal) != "" {
-								<p class="proposal-lead" style="color:rgba(255,255,255,.84)">{ ProposalSalespersonRole(proposal) }</p>
-							}
+							if ProposalSalesperson(proposal,"name") != "" { <h2>{ ProposalSalesperson(proposal,"name") }</h2> } else { <h2>ViaGate</h2> }
+							if ProposalSalespersonRole(proposal) != "" { <p class="proposal-lead" style="color:rgba(255,255,255,.84)">{ ProposalSalespersonRole(proposal) }</p> }
 						</div>
 						<aside class="proposal-contact-data">
-							if ProposalSalesperson(proposal,"photo_url") != "" {
-								<img src={ templ.SafeURL(ProposalSalesperson(proposal,"photo_url")) } alt={ ProposalSalesperson(proposal,"name") }/>
-							}
+							if ProposalSalesperson(proposal,"photo_url") != "" { <img src={ templ.SafeURL(ProposalSalesperson(proposal,"photo_url")) } alt={ ProposalSalesperson(proposal,"name") }/> }
 							<small>CONTATO RESPONSÁVEL</small>
-							if ProposalSalesperson(proposal,"name") != "" {
-								<strong>{ ProposalSalesperson(proposal,"name") }</strong>
-							}
-							if ProposalSalesperson(proposal,"phone") != "" {
-								<span>{ Phone(ProposalSalesperson(proposal,"phone")) }</span>
-							}
-							if ProposalSalesperson(proposal,"email") != "" {
-								<span>{ ProposalSalesperson(proposal,"email") }</span>
-							}
+							if ProposalSalesperson(proposal,"name") != "" { <strong>{ ProposalSalesperson(proposal,"name") }</strong> }
+							if ProposalSalesperson(proposal,"phone") != "" { <span>{ Phone(ProposalSalesperson(proposal,"phone")) }</span> }
+							if ProposalSalesperson(proposal,"email") != "" { <span>{ ProposalSalesperson(proposal,"email") }</span> }
 							if ProposalSalesperson(proposal,"linkedin") != "" || ProposalSalesperson(proposal,"instagram") != "" {
 								<div class="proposal-social-links">
-									if ProposalSalesperson(proposal,"linkedin") != "" {
-										<a href={ templ.SafeURL(ProposalSalesperson(proposal,"linkedin")) } target="_blank" rel="noopener">LinkedIn</a>
-									}
-									if ProposalSalesperson(proposal,"instagram") != "" {
-										<a href={ templ.SafeURL(ProposalSalesperson(proposal,"instagram")) } target="_blank" rel="noopener">Instagram</a>
-									}
+									if ProposalSalesperson(proposal,"linkedin") != "" { <a href={ templ.SafeURL(ProposalSalesperson(proposal,"linkedin")) } target="_blank" rel="noopener">LinkedIn</a> }
+									if ProposalSalesperson(proposal,"instagram") != "" { <a href={ templ.SafeURL(ProposalSalesperson(proposal,"instagram")) } target="_blank" rel="noopener">Instagram</a> }
 								</div>
 							}
 						</aside>
 					</div>
 					<div class="proposal-slide-footer"><span>Contato comercial</span><span data-slide-number></span></div>
-				</section>
-
-				<section class="proposal-slide dark" data-viewer-slide>
-					<div class="proposal-slide-inner proposal-acceptance-layout">
-						<div class="proposal-acceptance-copy">
-							<p class="proposal-kicker">PRÓXIMO PASSO</p>
-							<h2>Aceitar proposta e <span>iniciar a contratação</span></h2>
-							<p class="proposal-lead">O aceite registra exatamente esta versão. Depois dele, o responsável segue para o cadastro da operação e envio da apólice.</p>
-						</div>
-						<div class="proposal-acceptance-card">
-							if errorMessage != "" {
-								<div class="proposal-public-error">{ errorMessage }</div>
-							}
-							<form method="post" action={ templ.SafeURL("/p/" + proposal.PublicToken + "/accept") }>
-								<div class="form-grid">
-									<div class="form-field full"><label>Nome completo do responsável</label><input name="name" autocomplete="name" required/></div>
-									<div class="form-field"><label>CPF</label><input name="cpf" data-mask="cpf" autocomplete="off" required/></div>
-									<div class="form-field"><label>Cargo / função</label><input name="role"/></div>
-									<div class="form-field"><label>E-mail</label><input name="email" type="email" autocomplete="email" required/></div>
-									<div class="form-field"><label>Telefone</label><input name="phone" data-mask="phone" autocomplete="tel" required/></div>
-									<div class="form-field full proposal-authority"><label><input type="checkbox" name="authority" value="1" required/><span>{ legaltext.ProposalAcceptanceText }</span></label></div>
-									<div class="form-field full"><button class="primary-button" type="submit" data-processing="Registrando aceite...">ACEITAR PROPOSTA E CONTINUAR</button></div>
-								</div>
-							</form>
-						</div>
-					</div>
-					<div class="proposal-slide-footer"><span>Aceite</span><span data-slide-number></span></div>
 				</section>
 			</main>
 
@@ -310,7 +243,8 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 				<span data-viewer-counter>01 / 01</span>
 				<button type="button" data-viewer-next aria-label="Próximo slide">↓</button>
 			</div>
-			<script src="/assets/app.js" defer></script>
+			<script src="/assets/core.js" defer></script>
+			<script src="/assets/form-controls.js" defer></script>
 			<script src="/assets/public-viewer.js" defer></script>
 		</body>
 	</html>
