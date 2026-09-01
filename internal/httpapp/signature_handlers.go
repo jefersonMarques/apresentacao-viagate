@@ -1,6 +1,7 @@
 package httpapp
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -41,10 +42,19 @@ func (a *App) sendSignatureOTP(w http.ResponseWriter, r *http.Request) {
 	token := chi.URLParam(r, "token")
 	access, err := a.contractStore.SignerByPublicToken(r.Context(), token)
 	if err != nil {
+		if wantsJSON(r) {
+			writeJSONError(w, http.StatusNotFound, "Link de assinatura inválido.")
+			return
+		}
 		http.Error(w, "Link inválido", http.StatusNotFound)
 		return
 	}
 	if access.Signer.Status == "signed" {
+		if wantsJSON(r) {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "signed": true})
+			return
+		}
 		http.Redirect(w, r, "/sign/"+token+"?signed=1", http.StatusSeeOther)
 		return
 	}
@@ -56,17 +66,29 @@ func (a *App) sendSignatureOTP(w http.ResponseWriter, r *http.Request) {
 		where contract_signer_id=$1 and created_at>now()-interval '10 minutes'
 	`, access.Signer.ID).Scan(&recent)
 	if recent >= 3 {
+		if wantsJSON(r) {
+			writeJSONError(w, http.StatusTooManyRequests, "Aguarde alguns minutos antes de solicitar outro código.")
+			return
+		}
 		render(r.Context(), w, http.StatusTooManyRequests, templates.SignatureContractPage(access, token, "", "Aguarde alguns minutos antes de solicitar outro código."))
 		return
 	}
 
 	otp, hash, err := security.RandomOTP()
 	if err != nil {
+		if wantsJSON(r) {
+			writeJSONError(w, http.StatusInternalServerError, "Não foi possível gerar o código.")
+			return
+		}
 		http.Error(w, "erro interno", http.StatusInternalServerError)
 		return
 	}
 	expiresAt := time.Now().Add(a.cfg.Session.SignatureOTPTTL)
 	if err := a.contractStore.CreateChallenge(r.Context(), access.Signer.ID, hash, expiresAt); err != nil {
+		if wantsJSON(r) {
+			writeJSONError(w, http.StatusInternalServerError, "Não foi possível gerar o código.")
+			return
+		}
 		http.Error(w, "não foi possível gerar o código", http.StatusInternalServerError)
 		return
 	}
@@ -83,22 +105,38 @@ func (a *App) sendSignatureOTP(w http.ResponseWriter, r *http.Request) {
 		values($1,$2,'otp.requested',$3,$4,$5,jsonb_build_object('channel','email'))
 	`, access.Contract.ID, access.Signer.ID, access.Contract.DocumentSHA256, requestIP(r), r.UserAgent())
 
+	contractLink := strings.TrimRight(a.cfg.BaseURL, "/") + "/sign/" + token
 	htmlBody := fmt.Sprintf(
-		"<p>Seu código de confirmação para assinatura do contrato ViaGate é:</p><p style=\"font-size:28px;font-weight:800;letter-spacing:4px\">%s</p><p>O código expira em %s.</p>",
+		"<p>Seu código de confirmação para assinatura do contrato ViaGate é:</p><p style=\"font-size:28px;font-weight:800;letter-spacing:4px\">%s</p><p>O código expira em %s.</p><p><a href=\"%s\">Voltar ao contrato</a></p>",
 		otp,
 		a.cfg.Session.SignatureOTPTTL,
+		contractLink,
 	)
 	if err := notifications.EnqueueWithOptions(r.Context(), a.pool, notifications.MessageOptions{
 		DedupeKey: fmt.Sprintf("signature-otp:%s:%d", access.Signer.ID, time.Now().UTC().UnixNano()),
 		Kind: "signature_otp", ToName: access.Signer.Name, ToEmail: access.Signer.Email,
-		Subject: "Código de assinatura ViaGate", HTMLBody: htmlBody, TextBody: "Código: " + otp,
+		Subject: "Código de assinatura ViaGate", HTMLBody: htmlBody, TextBody: "Código: " + otp + "\nVoltar ao contrato: " + contractLink,
 		ExpiresAt: &expiresAt, Sensitive: true,
 	}); err != nil {
 		a.logger.Error("enqueue signature OTP failed", "signer_id", access.Signer.ID, "recipient", access.Signer.Email, "error", err)
+		if wantsJSON(r) {
+			writeJSONError(w, http.StatusInternalServerError, "Não foi possível enviar o código.")
+			return
+		}
 		http.Error(w, "não foi possível enviar o código", http.StatusInternalServerError)
 		return
 	}
 
+	if wantsJSON(r) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-Control", "no-store")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"ok": true,
+			"message": "Código enviado para " + maskEmail(access.Signer.Email),
+			"retry_after_seconds": 60,
+		})
+		return
+	}
 	http.Redirect(w, r, "/sign/"+token+"?otp=sent", http.StatusSeeOther)
 }
 
@@ -159,9 +197,34 @@ func (a *App) confirmSignature(w http.ResponseWriter, r *http.Request) {
 			on conflict (dedupe_key) where dedupe_key is not null do nothing
 		`, contractID)
 		a.publishContractEvent(r.Context(), contractID, "contract.signed", "Contrato assinado", contractID)
+		if err := a.queuePostSignatureActivation(r.Context(), access); err != nil {
+			a.logger.Error("queue post-signature activation failed", "contract_id", contractID, "signer_id", access.Signer.ID, "error", err)
+		}
 	}
 
 	http.Redirect(w, r, "/sign/"+token+"?signed=1", http.StatusSeeOther)
+}
+
+func writeJSONError(w http.ResponseWriter, status int, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": message})
+}
+
+func maskEmail(value string) string {
+	parts := strings.SplitN(strings.TrimSpace(value), "@", 2)
+	if len(parts) != 2 || parts[0] == "" {
+		return "o e-mail informado"
+	}
+	local := parts[0]
+	visible := local[:1]
+	if len(local) > 2 {
+		visible += strings.Repeat("*", min(4, len(local)-2)) + local[len(local)-1:]
+	} else {
+		visible += "***"
+	}
+	return visible + "@" + parts[1]
 }
 
 func (a *App) downloadSignedContract(w http.ResponseWriter, r *http.Request) {
