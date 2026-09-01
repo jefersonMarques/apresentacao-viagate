@@ -207,6 +207,7 @@ func (a *App) submitActivation(w http.ResponseWriter, r *http.Request) {
 		values('customer','activation.submitted','activation',$1,$2,$3,'{}')
 	`, access.Profile.ID, requestIP(r), r.UserAgent())
 	a.queueActivationCompletedNotification(r, access.Profile.ID)
+	a.publishActivationEvent(r.Context(), access.Profile.ID, "activation.submitted", "Dados para ativação enviados")
 	http.Redirect(w, r, "/activation/"+token+"?saved=completed", http.StatusSeeOther)
 }
 
@@ -308,5 +309,8 @@ func (a *App) adminActivationStatus(w http.ResponseWriter, r *http.Request) {
 		insert into audit_events(actor_user_id,actor_type,event_type,resource_type,resource_id,ip_address,user_agent,metadata)
 		values($1,'user','activation.status_changed','activation',$2,$3,$4,jsonb_build_object('status',$5::text))
 	`, user.ID, activationID, requestIP(r), r.UserAgent(), status)
+	if status == "activated" {
+		a.publishActivationEvent(r.Context(), activationID, "activation.activated", "Operação liberada")
+	}
 	http.Redirect(w, r, "/admin/activations/"+activationID, http.StatusSeeOther)
 }
