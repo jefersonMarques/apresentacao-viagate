@@ -41,6 +41,7 @@ tasks:
       - go vet ./...
       - go test ./...
       - go build ./cmd/migrate
+      - go build ./cmd/preflight
       - go build ./cmd/server
 
   dev:
@@ -55,6 +56,16 @@ tasks:
     desc: Start the server without changing dependencies or schema
     cmds:
       - go run ./cmd/server
+
+  prod:preflight:
+    desc: Validate production configuration and required external dependencies
+    cmds:
+      - go run ./cmd/preflight
+
+  release:linux:
+    desc: Build the self-contained Linux production bundle under dist/
+    cmds:
+      - bash ./scripts/build-release.sh
 
   clean-generated:
     desc: Remove locally generated templ Go files
