@@ -151,7 +151,19 @@ templ ActivationsAdminPage(user domain.User, items []activation.AdminItem) {
 						<td data-label="Status"><span class={ "badge status-badge " + AdminStatusBadgeClass(item.Status) }>{ ActivationStatusLabel(item.Status) }</span></td>
 						<td data-label="Dados">{ fmt.Sprintf("%d mercadorias · %d usuários", item.GoodsCount, item.SystemUserCount) }</td>
 						<td data-label="Contrato">{ DateTime(item.FullySignedAt) }</td>
-						<td data-label="Ações" data-actions="true"><div class="admin-list-actions"><a class="btn" href={ templ.SafeURL("/admin/activations/" + item.ProfileID) }>Abrir</a></div></td>
+						<td data-label="Ações" data-actions="true">
+							<div class="admin-list-actions">
+								<a
+									class="btn"
+									href={ templ.SafeURL("/admin/activations/" + item.ProfileID) }
+									hx-get={ "/admin/activations/" + item.ProfileID }
+									hx-target="#adminContent"
+									hx-select="#adminContent"
+									hx-swap="outerHTML show:window:top"
+									hx-push-url="true"
+								>Abrir</a>
+							</div>
+						</td>
 					</tr>
 				}
 			}
@@ -161,6 +173,7 @@ templ ActivationsAdminPage(user domain.User, items []activation.AdminItem) {
 
 templ ActivationAdminDetailPage(user domain.User, profile activation.Profile) {
 	@AdminLayout("Ativação", user) {
+		@ActivationAdminShellStateOOB(user)
 		@AdminPageHeader("DADOS PARA ATIVAÇÃO", profile.LegalName, ActivationStatusLabel(profile.Status)) {
 			<a class="btn ghost" href={ templ.SafeURL("/admin/contracts/" + profile.ContractID + "/document") }>Contrato assinado</a>
 		}
@@ -227,14 +240,45 @@ templ ActivationAdminDetailPage(user domain.User, profile activation.Profile) {
 				<div class="panel-body">
 					<div class="actions">
 						if profile.Status == "completed" {
-							<form method="post" action={ templ.SafeURL("/admin/activations/" + profile.ID + "/status") }><input type="hidden" name="status" value="under_internal_setup"/><button class="btn dark" type="submit">Iniciar implantação</button></form>
+							<form
+								method="post"
+								action={ templ.SafeURL("/admin/activations/" + profile.ID + "/status") }
+								hx-post={ "/admin/activations/" + profile.ID + "/status" }
+								hx-target="#adminContent"
+								hx-select="#adminContent"
+								hx-swap="outerHTML show:window:top"
+							>
+								<input type="hidden" name="status" value="under_internal_setup"/>
+								<button class="btn dark" type="submit" data-processing="Iniciando implantação...">Iniciar implantação</button>
+							</form>
 						}
 						if profile.Status == "under_internal_setup" {
-							<form method="post" action={ templ.SafeURL("/admin/activations/" + profile.ID + "/status") }><input type="hidden" name="status" value="activated"/><button class="btn primary" type="submit">Marcar operação como liberada</button></form>
+							<form
+								method="post"
+								action={ templ.SafeURL("/admin/activations/" + profile.ID + "/status") }
+								hx-post={ "/admin/activations/" + profile.ID + "/status" }
+								hx-target="#adminContent"
+								hx-select="#adminContent"
+								hx-swap="outerHTML show:window:top"
+							>
+								<input type="hidden" name="status" value="activated"/>
+								<button class="btn primary" type="submit" data-processing="Liberando operação...">Marcar operação como liberada</button>
+							</form>
 						}
 					</div>
 				</div>
 			</section>
 		}
 	}
+}
+
+templ ActivationAdminShellStateOOB(user domain.User) {
+	<template>
+		@NotificationTopbarCount(user.UnreadNotifications, true)
+		if user.PendingActivations > 0 {
+			<span class="sidebar-nav-alert" title="Ativações aguardando ação interna" hx-swap-oob="outerHTML:.sidebar-nav-alert">{ NotificationCount(user.PendingActivations) }</span>
+		} else {
+			<span hx-swap-oob="delete:.sidebar-nav-alert"></span>
+		}
+	</template>
 }
