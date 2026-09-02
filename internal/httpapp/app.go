@@ -244,7 +244,7 @@ func (a *App) proxyClientIP(next http.Handler) http.Handler {
 		if ip := net.ParseIP(candidate); ip != nil {
 			r.RemoteAddr = net.JoinHostPort(ip.String(), "0")
 		}
-		next.ServeHTTP(w, r.WithContext(r.Context()))
+		next.ServeHTTP(w, r)
 	})
 }
 
