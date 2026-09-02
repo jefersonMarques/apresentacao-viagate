@@ -2,6 +2,8 @@
 
 Este documento descreve a promoção da plataforma para um host Linux com systemd e proxy reverso. O processo não depende de Docker.
 
+A plataforma comercial compartilha o domínio público `viagate.com.br` com o site institucional, mas roda como um serviço Go separado. O Nginx encaminha apenas as rotas comerciais para este serviço; o site institucional permanece como fallback para as demais rotas.
+
 ## 1. Dependências obrigatórias
 
 O host de produção precisa ter:
@@ -12,7 +14,7 @@ O host de produção precisa ter:
 - Chrome, Chromium ou Edge compatível com execução headless;
 - acesso HTTPS público através de proxy reverso;
 - credenciais válidas do Brevo;
-- DNS apontando para o proxy antes da abertura para usuários reais.
+- DNS de `viagate.com.br` apontando para o proxy antes da abertura para usuários reais.
 
 A geração de contrato e os PDFs comerciais dependem do navegador headless. Por isso a release inclui o comando `preflight`, que verifica configuração, PostgreSQL, S3 e o executável do navegador antes do restart.
 
@@ -52,14 +54,14 @@ Nunca envie esse arquivo para o Git.
 
 ## 3. Configuração de produção
 
-Valores obrigatórios ou críticos:
+Valores obrigatórios ou críticos para o host atual:
 
 ```env
 APP_ENV=production
-APP_ADDR=127.0.0.1:8080
-APP_BASE_URL=https://SEU-DOMINIO
+APP_ADDR=127.0.0.1:8081
+APP_BASE_URL=https://viagate.com.br
 DATABASE_URL=...
-CHROMIUM_PATH=...
+CHROMIUM_PATH=/usr/bin/google-chrome-stable
 TRUST_PROXY_HEADERS=true
 REQUIRE_ONBOARDING_REVIEW=true
 VIAGATE_LEGAL_NAME=...
@@ -73,7 +75,9 @@ S3_SERVER_SIDE_ENCRYPTION=none
 BREVO_API_KEY=...
 ```
 
-`APP_BASE_URL` precisa ser HTTPS. A aplicação recusa inicialização em produção quando a URL não é pública/HTTPS, quando os dados legais obrigatórios estão ausentes, quando o Brevo não está configurado ou quando `S3_STAGE` não é `prod`.
+`APP_BASE_URL` é a origem pública da plataforma, não uma subpasta. Por isso deve ser `https://viagate.com.br`: o sistema monta links como `/login`, `/p/{token}`, `/sign/{token}` e `/activation/{token}` sobre essa origem.
+
+A aplicação recusa inicialização em produção quando a URL não é pública/HTTPS, quando os dados legais obrigatórios estão ausentes, quando o Brevo não está configurado ou quando `S3_STAGE` não é `prod`.
 
 `TRUST_PROXY_HEADERS=true` só deve ser usado quando `APP_ADDR` não estiver publicamente acessível e o proxy reverso for o único caminho até o Go.
 
@@ -246,36 +250,90 @@ journalctl -u viagate-commercial -f
 No próprio servidor:
 
 ```bash
-curl -fsS http://127.0.0.1:8080/healthz -o /dev/null
-curl -fsS http://127.0.0.1:8080/readyz -o /dev/null
+curl -fsS http://127.0.0.1:8081/healthz -o /dev/null
+curl -fsS http://127.0.0.1:8081/readyz -o /dev/null
 ```
 
 `/healthz` confirma o processo HTTP. `/readyz` confirma PostgreSQL e S3.
 
-Depois teste externamente via HTTPS:
+Depois que as rotas comerciais estiverem configuradas no Nginx, valide também pela origem pública:
 
 ```bash
-curl -fsS https://SEU-DOMINIO/healthz -o /dev/null
-curl -fsS https://SEU-DOMINIO/readyz -o /dev/null
+curl -fsS https://viagate.com.br/healthz -o /dev/null
+curl -fsS https://viagate.com.br/readyz -o /dev/null
 ```
 
-## 9. Proxy reverso
+## 9. Proxy reverso no mesmo domínio
 
-Encaminhe o domínio HTTPS para:
+O site institucional e o comercial são serviços separados:
 
 ```text
-127.0.0.1:8080
+127.0.0.1:8090  site institucional
+127.0.0.1:8081  ViaGate Comercial
 ```
 
-Preserve o `Host` original e sobrescreva corretamente `X-Forwarded-For`/`X-Real-IP`. Force HTTPS no proxy. A aplicação em produção também envia HSTS e headers de segurança.
+O site institucional permanece como fallback. Encaminhe para o comercial somente as rotas pertencentes à plataforma:
 
-Não exponha a porta `8080` à internet quando `TRUST_PROXY_HEADERS=true`.
+```text
+/login
+/logout
+/forgot-password
+/reset-password/*
+/invite/*
+/admin e /admin/*
+/p/*
+/a/*
+/onboarding/*
+/sign/*
+/activation/*
+/verify/*
+/api/cnpj/*
+/media/*
+/commercial-assets/*
+/v1/*
+/healthz
+/readyz
+```
+
+`/assets/*` pertence ao site institucional. Os assets da plataforma comercial são servidos exclusivamente em `/commercial-assets/*`; `/v1/assets/*` continua reservado à apresentação/proposta V1.
+
+Exemplo da separação no Nginx:
+
+```nginx
+location ~ ^/(login|logout|forgot-password|healthz|readyz)$ {
+    proxy_pass http://127.0.0.1:8081;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+
+location ~ ^/(admin(?:/|$)|p/|a/|onboarding/|sign/|activation/|verify/|invite/|reset-password/|api/cnpj/|media/|commercial-assets/|v1/) {
+    proxy_pass http://127.0.0.1:8081;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+
+location / {
+    proxy_pass http://127.0.0.1:8090;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+O proxy deve sobrescrever `X-Forwarded-For` e `X-Real-IP`, em vez de confiar em valores fornecidos pelo cliente. Force HTTPS no proxy. A aplicação em produção também envia HSTS e headers de segurança.
+
+Não exponha `8081`, `8090` ou `5432` à internet. Os serviços Go e PostgreSQL devem permanecer em loopback; somente o Nginx recebe tráfego público em 80/443.
 
 ## 10. Smoke test obrigatório
 
 Antes de considerar a release aberta para clientes reais, valide em produção:
 
-1. login administrativo;
+1. login administrativo em `https://viagate.com.br/login`;
 2. criação/publicação de apresentação;
 3. abertura do link público da apresentação;
 4. PDF da apresentação, incluindo a página de métricas dinâmicas;
@@ -292,9 +350,10 @@ Antes de considerar a release aberta para clientes reais, valide em produção:
 15. download do contrato assinado, evidência e pacote final;
 16. ativação do cliente;
 17. notificação interna de ativação pendente;
-18. mudança para implantação interna e resolução do alerta.
+18. mudança para implantação interna e resolução do alerta;
+19. navegação pelas páginas institucionais e carregamento de `/assets/*` sem interferência do comercial.
 
-Esse smoke test valida, em conjunto, PostgreSQL, S3, Brevo, Chromium, jobs internos, sessão, links públicos e fluxo jurídico.
+Esse smoke test valida, em conjunto, PostgreSQL, S3, Brevo, Chromium, jobs internos, sessão, links públicos, fluxo jurídico e coexistência com o site institucional.
 
 ## 11. Primeiro Super Admin
 
@@ -343,7 +402,8 @@ A release só deve receber tráfego real quando todos os itens abaixo estiverem 
 - `preflight` aprovado;
 - migrations aplicadas sem erro;
 - `/healthz` e `/readyz` aprovados;
-- HTTPS e proxy validados;
+- HTTPS e roteamento por caminho no proxy validados;
+- `/assets/*` do site e `/commercial-assets/*` do comercial validados separadamente;
 - smoke test completo aprovado;
 - primeiro Super Admin ativo;
 - modelo de contrato padrão revisado e publicado;
