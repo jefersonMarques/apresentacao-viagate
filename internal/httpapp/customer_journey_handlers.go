@@ -72,10 +72,13 @@ func (a *App) proposalJourneyForAcceptance(ctx context.Context, acceptanceID str
 	}
 
 	switch onboardingStatus {
-	case "submitted", "under_review":
+	case "submitted", "approved":
+		if delivery, continueErr := a.continueOnboardingContract(ctx, onboardingID, onboardingStatus, "proposal_resume"); continueErr == nil {
+			return proposalJourney{State: "signature", Label: "REVISAR E ASSINAR CONTRATO", URL: "/sign/" + delivery.SignerToken, Tone: "success"}, true
+		}
+		return proposalJourney{State: "preparing_contract", Label: "RETOMAR PREPARAÇÃO DO CONTRATO", URL: "/onboarding/" + onboardingID, Tone: "success"}, true
+	case "under_review":
 		return proposalJourney{State: "review", Label: "ACOMPANHAR CONTRATAÇÃO", URL: "/onboarding/" + onboardingID, Tone: "success"}, true
-	case "approved":
-		return proposalJourney{State: "preparing_contract", Label: "CONTRATO EM PREPARAÇÃO", URL: "/onboarding/" + onboardingID, Tone: "success"}, true
 	default:
 		return proposalJourney{State: "contracting", Label: "CONTINUAR CONTRATAÇÃO", URL: "/onboarding/" + onboardingID, Tone: "success"}, true
 	}
