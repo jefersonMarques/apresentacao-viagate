@@ -27,6 +27,27 @@ require_command() {
 	command -v "$1" >/dev/null 2>&1 || fail "comando obrigatório não encontrado: $1"
 }
 
+service_is_healthy() {
+	sudo systemctl is-active --quiet "$SERVICE" &&
+		curl -fsS http://127.0.0.1:8081/healthz -o /dev/null &&
+		curl -fsS http://127.0.0.1:8081/readyz -o /dev/null
+}
+
+wait_for_health() {
+	local attempts="${PROD_HEALTH_ATTEMPTS:-30}"
+	local delay_seconds="${PROD_HEALTH_DELAY_SECONDS:-1}"
+	local attempt
+
+	for ((attempt = 1; attempt <= attempts; attempt++)); do
+		if service_is_healthy; then
+			return 0
+		fi
+		sleep "$delay_seconds"
+	done
+
+	return 1
+}
+
 show_status() {
 	local deployed="indisponível"
 	if [[ -r "$CURRENT_LINK/GIT_SHA" ]]; then
@@ -77,6 +98,16 @@ TARGET_SHA="$(git rev-parse HEAD)"
 if [[ "${PROD_SCRIPT_SYNCED:-0}" != "1" && "$INITIAL_SHA" != "$TARGET_SHA" ]]; then
 	log "Reexecutando o script atualizado"
 	exec env PROD_SCRIPT_SYNCED=1 bash "$ROOT_DIR/scripts/prod.sh" "$@"
+fi
+
+if [[ "${PROD_FORCE:-0}" != "1" && -r "$CURRENT_LINK/GIT_SHA" ]] &&
+	[[ "$(cat "$CURRENT_LINK/GIT_SHA")" == "$TARGET_SHA" ]] &&
+	service_is_healthy; then
+	log "Produção já está neste SHA e está saudável"
+	printf 'release: %s\n' "$(readlink -f "$CURRENT_LINK")"
+	printf 'sha: %s\n' "$TARGET_SHA"
+	printf 'nenhuma alteração aplicada\n'
+	exit 0
 fi
 
 VERSION="$(git rev-parse --short=12 HEAD)"
@@ -152,19 +183,10 @@ sudo mv -Tf "${CURRENT_LINK}.new" "$CURRENT_LINK"
 sudo systemctl restart "$SERVICE"
 
 log "Validando serviço"
-if ! sudo systemctl is-active --quiet "$SERVICE"; then
+if ! wait_for_health; then
 	printf 'release anterior: %s\n' "$PREVIOUS_RELEASE" >&2
-	fail "serviço não ficou ativo após o restart"
-fi
-
-if ! curl -fsS http://127.0.0.1:8081/healthz -o /dev/null; then
-	printf 'release anterior: %s\n' "$PREVIOUS_RELEASE" >&2
-	fail "healthz falhou após o deploy"
-fi
-
-if ! curl -fsS http://127.0.0.1:8081/readyz -o /dev/null; then
-	printf 'release anterior: %s\n' "$PREVIOUS_RELEASE" >&2
-	fail "readyz falhou após o deploy"
+	sudo systemctl --no-pager --full status "$SERVICE" >&2 || true
+	fail "serviço não ficou saudável dentro da janela de validação"
 fi
 
 DEPLOYED_SHA="$(cat "$CURRENT_LINK/GIT_SHA")"
