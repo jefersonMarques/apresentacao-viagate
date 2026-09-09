@@ -288,7 +288,7 @@ bash ./scripts/prod.sh
 
 Não é necessário instalar o Task no servidor. Se o `go-task` já estiver disponível, `task prod` é apenas um atalho para o mesmo script.
 
-O script sincroniza `main` com o GitHub, executa checks/build, valida checksum e preflight, gera backup, aplica migrations, ativa a release e executa os healthchecks. Para consultar o estado atual sem fazer deploy:
+O script sincroniza `main` com o GitHub, executa checks/build, valida checksum e preflight, gera backup, aplica migrations, ativa a release e executa os healthchecks. Se o mesmo SHA já estiver ativo e saudável, o comando encerra sem rebuild, backup ou restart. Para consultar o estado atual sem fazer deploy:
 
 ```bash
 bash ./scripts/prod.sh status
