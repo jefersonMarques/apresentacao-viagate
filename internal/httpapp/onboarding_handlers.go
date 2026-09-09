@@ -59,7 +59,7 @@ func (a *App) onboardingPage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Não foi possível carregar a contratação.", http.StatusInternalServerError)
 		return
 	}
-	render(r.Context(), w, http.StatusOK, templates.ContractingJourneyPage(onboarding, hasPolicy, message, "", a.cfg.RequireOnboardingReview, proposalURL))
+	render(r.Context(), w, http.StatusOK, templates.ContractingJourneyPage(onboarding, hasPolicy, message, "", proposalURL))
 }
 
 func (a *App) saveOnboarding(w http.ResponseWriter, r *http.Request) {
@@ -258,28 +258,24 @@ func (a *App) submitOnboarding(w http.ResponseWriter, r *http.Request) {
 
 	_, _ = a.pool.Exec(r.Context(), `
 		insert into audit_events(actor_type,event_type,resource_type,resource_id,ip_address,user_agent,metadata)
-		values('customer','onboarding.submitted','onboarding',$1,$2,$3,jsonb_build_object('review_required',$4))
-	`, current.ID, requestIP(r), r.UserAgent(), a.cfg.RequireOnboardingReview)
+		values(
+			'customer',
+			'onboarding.submitted',
+			'onboarding',
+			$1,
+			$2,
+			$3,
+			jsonb_build_object('source','contracting_journey','auto_approval',true)
+		)
+	`, current.ID, requestIP(r), r.UserAgent())
 	a.queueOnboardingSubmittedNotification(r, current.ID)
 	a.publishOnboardingEvent(r.Context(), current.ID)
 
-	if a.cfg.RequireOnboardingReview {
-		http.Redirect(w, r, "/onboarding/"+current.ID+"?submitted=1", http.StatusSeeOther)
-		return
-	}
-
-	command, err := a.pool.Exec(r.Context(), `
-		update onboardings
-		set status='approved',approved_at=coalesce(approved_at,now()),reviewed_at=now(),
-		    review_notes='Aprovação automática: revisão interna desativada.',updated_at=now()
-		where id=$1 and status='submitted'
-	`, current.ID)
-	if err != nil || command.RowsAffected() != 1 {
+	if err := a.autoApproveOnboarding(r.Context(), current.ID, "contracting_journey"); err != nil {
 		a.logger.Error("auto approve onboarding failed", "error", err, "onboarding_id", current.ID)
-		http.Redirect(w, r, "/onboarding/"+current.ID+"?contract_pending=1", http.StatusSeeOther)
+		http.Error(w, "Os dados foram recebidos, mas não foi possível preparar o contrato agora. Tente novamente pelo mesmo link da proposta.", http.StatusInternalServerError)
 		return
 	}
-	_, _ = a.pool.Exec(r.Context(), `insert into audit_events(actor_type,event_type,resource_type,resource_id,metadata) values('system','onboarding.auto_approved','onboarding',$1,'{}')`, current.ID)
 
 	access, _, err := a.ensureContractDelivery(r.Context(), current.ID)
 	if err != nil {
