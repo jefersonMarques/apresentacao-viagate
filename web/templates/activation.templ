@@ -64,7 +64,7 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
 					<p>Liste os principais tipos. Você pode adicionar quantos forem necessários.</p>
 					if ActivationCanEdit(access, "goods") {
 						<form method="post" action={ templ.SafeURL("/activation/" + token + "/goods") }>
-							<div data-activation-goods>
+							<div data-activation-goods data-persisted-complete={ BoolString(len(access.Profile.Goods) > 0) }>
 								if len(access.Profile.Goods) == 0 {
 									<div class="activation-repeat-row"><input name="goods" placeholder="Ex.: Queijos frescos" required/><button type="button" class="btn ghost activation-remove" aria-label="Remover">×</button></div>
 								}
@@ -72,6 +72,7 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
 									<div class="activation-repeat-row"><input name="goods" value={ good } required/><button type="button" class="btn ghost activation-remove" aria-label="Remover">×</button></div>
 								}
 							</div>
+							<p class="activation-step-requirement">Obrigatório: informe pelo menos uma mercadoria.</p>
 							<div class="actions activation-step-actions"><button type="button" class="btn ghost" data-add-activation-good>+ Adicionar mercadoria</button><button class="btn dark" type="submit" data-activation-section-save="goods" data-processing="Salvando..." disabled?={ len(access.Profile.Goods) == 0 }>Salvar e continuar</button></div>
 						</form>
 					} else {
@@ -89,7 +90,7 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
 					<p>Informe apenas quem precisa receber acesso inicialmente. Outros usuários poderão ser cadastrados depois.</p>
 					if ActivationCanEdit(access, "users") {
 						<form method="post" action={ templ.SafeURL("/activation/" + token + "/users") }>
-							<div data-activation-users>
+							<div data-activation-users data-persisted-complete={ BoolString(len(access.Profile.SystemUsers) > 0) }>
 								if len(access.Profile.SystemUsers) == 0 {
 									<div class="activation-user-row"><input name="system_user_name" placeholder="Nome" required/><input name="system_user_phone" placeholder="Telefone"/><input type="email" name="system_user_email" placeholder="E-mail" required/><button type="button" class="btn ghost activation-remove" aria-label="Remover">×</button></div>
 								}
@@ -97,6 +98,7 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
 									<div class="activation-user-row"><input name="system_user_name" value={ systemUser.Name } required/><input name="system_user_phone" value={ brfields.FormatPhone(systemUser.Phone) }/><input type="email" name="system_user_email" value={ systemUser.Email } required/><button type="button" class="btn ghost activation-remove" aria-label="Remover">×</button></div>
 								}
 							</div>
+							<p class="activation-step-requirement">Obrigatório: informe pelo menos um usuário com nome e e-mail válidos.</p>
 							<div class="actions activation-step-actions"><button type="button" class="btn ghost" data-add-activation-user>+ Adicionar usuário</button><button class="btn dark" type="submit" data-activation-section-save="users" data-processing="Salvando..." disabled?={ len(access.Profile.SystemUsers) == 0 }>Salvar e revisar</button></div>
 						</form>
 					} else {
