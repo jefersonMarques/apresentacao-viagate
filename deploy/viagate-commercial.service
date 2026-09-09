@@ -8,7 +8,7 @@ Type=simple
 User=viagate
 Group=viagate
 WorkingDirectory=/opt/viagate-commercial/current
-EnvironmentFile=/etc/viagate-commercial/viagate.env
+EnvironmentFile=/etc/viagate-commercial/.env
 Environment=HOME=/var/lib/viagate-commercial
 ExecStart=/opt/viagate-commercial/current/server
 Restart=on-failure
