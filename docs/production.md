@@ -63,7 +63,7 @@ APP_BASE_URL=https://viagate.com.br
 DATABASE_URL=...
 CHROMIUM_PATH=/usr/bin/google-chrome-stable
 TRUST_PROXY_HEADERS=true
-REQUIRE_ONBOARDING_REVIEW=true
+REQUIRE_ONBOARDING_REVIEW=false
 VIAGATE_LEGAL_NAME=...
 VIAGATE_CNPJ=...
 S3_STAGE=prod
@@ -80,6 +80,8 @@ BREVO_API_KEY=...
 A aplicação recusa inicialização em produção quando a URL não é pública/HTTPS, quando os dados legais obrigatórios estão ausentes, quando o Brevo não está configurado ou quando `S3_STAGE` não é `prod`.
 
 `TRUST_PROXY_HEADERS=true` só deve ser usado quando `APP_ADDR` não estiver publicamente acessível e o proxy reverso for o único caminho até o Go.
+
+`REQUIRE_ONBOARDING_REVIEW=false` representa o fluxo comercial padrão: depois que o cliente completa e valida os dados obrigatórios e envia a apólice, o cadastro é aprovado automaticamente e o contrato é preparado para assinatura. A revisão administrativa permanece disponível para exceções operacionais e correções.
 
 ### PostgreSQL
 

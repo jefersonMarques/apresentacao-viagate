@@ -101,5 +101,5 @@ func (a *App) renderContractingError(w http.ResponseWriter, r *http.Request, cur
 	if proposalPath, err := a.proposalPublicPathByOnboarding(r.Context(), current.ID); err == nil {
 		proposalURL = proposalPath + "?view=proposal"
 	}
-	render(r.Context(), w, http.StatusBadRequest, templates.ContractingJourneyPage(current, hasPolicy, "", message, a.cfg.RequireOnboardingReview, proposalURL))
+	render(r.Context(), w, http.StatusBadRequest, templates.ContractingJourneyPage(current, hasPolicy, "", message, proposalURL))
 }

@@ -36,12 +36,29 @@ func (a *App) queuePostSignatureActivation(ctx context.Context, access contracts
 	if err != nil {
 		return err
 	}
-	link := strings.TrimRight(a.cfg.BaseURL, "/") + proposalPath
+
+	signerToken, err := a.contractStore.SignerPublicToken(ctx, access.Signer.ID)
+	if err != nil {
+		return err
+	}
+
+	baseURL := strings.TrimRight(a.cfg.BaseURL, "/")
+	activationLink := baseURL + proposalPath
+	contractLink := baseURL + "/sign/" + signerToken + "/contract"
+
 	htmlBody := fmt.Sprintf(
-		"<p>Olá, %s.</p><p>Seu contrato ViaGate foi assinado com sucesso.</p><p>Para prepararmos sua operação, faltam apenas três informações:</p><ul><li><strong>Financeiro</strong> — responsável por faturamento</li><li><strong>Operação</strong> — principais mercadorias transportadas</li><li><strong>Acessos</strong> — usuários iniciais do sistema</li></ul><p><a href=\"%s\">Continuar para ativação</a></p><p>Use o mesmo link da proposta para continuar agora ou retomar depois. Ele sempre abrirá a etapa atual da contratação.</p>",
+		"<p>Olá, %s.</p><p>Seu contrato ViaGate foi assinado com sucesso.</p><p><a href=\"%s\">Baixar contrato assinado</a></p><p>Para prepararmos sua operação, faltam apenas três informações:</p><ul><li><strong>Financeiro</strong> — responsável por faturamento</li><li><strong>Operação</strong> — principais mercadorias transportadas</li><li><strong>Acessos</strong> — usuários iniciais do sistema</li></ul><p><a href=\"%s\">Preencher dados para ativação</a></p><p>Se preferir continuar depois, use o mesmo link da proposta. Ele sempre abrirá a etapa atual da contratação.</p>",
 		html.EscapeString(access.Signer.Name),
-		html.EscapeString(link),
+		html.EscapeString(contractLink),
+		html.EscapeString(activationLink),
 	)
+
+	textBody := fmt.Sprintf(
+		"Seu contrato ViaGate foi assinado com sucesso.\n\nBaixar contrato assinado: %s\n\nPreencher dados para ativação: %s\n\nO mesmo link da proposta pode ser usado para retomar o processo depois.",
+		contractLink,
+		activationLink,
+	)
+
 	return notifications.EnqueueWithOptions(ctx, a.pool, notifications.MessageOptions{
 		DedupeKey: "activation-access:" + access.Contract.ID,
 		Kind:      "activation_access",
@@ -49,7 +66,7 @@ func (a *App) queuePostSignatureActivation(ctx context.Context, access contracts
 		ToEmail:   access.Signer.Email,
 		Subject:   "Contrato assinado — próximos passos para ativar a ViaGate",
 		HTMLBody:  htmlBody,
-		TextBody:  "Seu contrato foi assinado. Continue para ativação usando o mesmo link da proposta: " + link,
+		TextBody:  textBody,
 		Sensitive: true,
 	})
 }

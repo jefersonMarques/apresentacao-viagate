@@ -183,24 +183,7 @@ func (a *App) acceptProposalContractFlow(w http.ResponseWriter, r *http.Request,
 }
 
 func (a *App) approveInlineOnboarding(r *http.Request, onboardingID string) error {
-	command, err := a.pool.Exec(r.Context(), `
-		update onboardings
-		set status='approved',approved_at=coalesce(approved_at,now()),reviewed_at=now(),
-		    review_notes='Aprovação automática após aceite e preenchimento completo na proposta.',updated_at=now()
-		where id=$1 and status='submitted'
-	`, onboardingID)
-	if err != nil {
-		a.logger.Error("approve inline onboarding failed", "onboarding_id", onboardingID, "error", err)
-		return err
-	}
-	if command.RowsAffected() != 1 {
-		return fmt.Errorf("onboarding is not submitted")
-	}
-	_, _ = a.pool.Exec(r.Context(), `
-		insert into audit_events(actor_type,event_type,resource_type,resource_id,metadata)
-		values('system','onboarding.auto_approved','onboarding',$1,jsonb_build_object('source','proposal_modal'))
-	`, onboardingID)
-	return nil
+	return a.autoApproveOnboarding(r.Context(), onboardingID, "proposal_modal")
 }
 
 func (a *App) storeInlineInsurancePolicy(r *http.Request, onboardingID string, file io.Reader, filename string) error {

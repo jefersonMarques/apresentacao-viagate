@@ -24,11 +24,18 @@ type PublicProposal struct {
 	PublicToken     string
 	Title           string
 	Status          string
-	ClientID        string
-	ClientName      string
-	ClientTradeName string
-	ClientCNPJ      string
-	PricingModel    string
+	ClientID           string
+	ClientName         string
+	ClientTradeName    string
+	ClientCNPJ         string
+	ClientStreet       string
+	ClientStreetNumber string
+	ClientComplement   string
+	ClientDistrict     string
+	ClientCity         string
+	ClientState        string
+	ClientPostalCode   string
+	PricingModel       string
 	Content         map[string]any
 	Conditions      []string
 	MinimumInvoice  float64
@@ -115,6 +122,13 @@ func (s *Store) PublicByToken(ctx context.Context, token string) (PublicProposal
 	result.ClientName = snapshotString(result.Content, "client", "legal_name", currentClientName)
 	result.ClientTradeName = snapshotString(result.Content, "client", "trade_name", "")
 	result.ClientCNPJ = snapshotString(result.Content, "client", "cnpj", currentClientCNPJ)
+	result.ClientStreet = snapshotString(result.Content, "client", "street", "")
+	result.ClientStreetNumber = snapshotString(result.Content, "client", "street_number", "")
+	result.ClientComplement = snapshotString(result.Content, "client", "complement", "")
+	result.ClientDistrict = snapshotString(result.Content, "client", "district", "")
+	result.ClientCity = snapshotString(result.Content, "client", "city", "")
+	result.ClientState = snapshotString(result.Content, "client", "state", "")
+	result.ClientPostalCode = snapshotString(result.Content, "client", "postal_code", "")
 	result.ValidUntil = currentValidUntil
 
 	if value := snapshotString(result.Content, "proposal", "valid_until", ""); value != "" {
@@ -252,11 +266,34 @@ func (s *Store) Accept(ctx context.Context, proposal PublicProposal, input Accep
 	err = tx.QueryRow(ctx, `
 		insert into onboardings(
 			proposal_acceptance_id,client_id,status,cnpj,legal_name,trade_name,
+			street,street_number,complement,district,city,state,postal_code,
 			company_responsible_name,company_responsible_cpf,company_responsible_phone,
 			company_responsible_email,company_responsible_role,company_responsible_authority_declared
-		) values($1,$2,'pending',nullif($3,''),nullif($4,''),nullif($5,''),$6,$7,$8,$9,$10,true)
+		) values(
+			$1,$2,'pending',$3,$4,nullif($5,''),
+			nullif($6,''),nullif($7,''),nullif($8,''),nullif($9,''),nullif($10,''),nullif($11,''),nullif($12,''),
+			$13,$14,$15,$16,$17,true
+		)
 		returning id::text
-	`, result.AcceptanceID, proposal.ClientID, proposal.ClientCNPJ, proposal.ClientName, proposal.ClientTradeName, input.Name, input.CPF, input.Phone, input.Email, input.Role).Scan(&result.OnboardingID)
+	`,
+		result.AcceptanceID,
+		proposal.ClientID,
+		proposal.ClientCNPJ,
+		proposal.ClientName,
+		proposal.ClientTradeName,
+		proposal.ClientStreet,
+		proposal.ClientStreetNumber,
+		proposal.ClientComplement,
+		proposal.ClientDistrict,
+		proposal.ClientCity,
+		proposal.ClientState,
+		proposal.ClientPostalCode,
+		input.Name,
+		input.CPF,
+		input.Phone,
+		input.Email,
+		input.Role,
+	).Scan(&result.OnboardingID)
 	if err != nil {
 		return AcceptanceResult{}, fmt.Errorf("create onboarding: %w", err)
 	}

@@ -29,7 +29,7 @@ templ ProposalListPage(user domain.User, items []domain.Proposal) {
 						<td data-label="Proposta">{ item.Title }</td>
 						<td data-label="Status">
 							if item.Status == "accepted" {
-								<span class="badge status-badge status-success">Aceita · bloqueada</span>
+								<span class="badge status-badge status-success">Aceita · versão protegida</span>
 							} else {
 								<span class={ "badge status-badge " + AdminStatusBadgeClass(item.Status) }>{ humanStatus(item.Status) }</span>
 							}

@@ -80,7 +80,7 @@ func Load() (Config, error) {
 		DatabaseURL:             os.Getenv("DATABASE_URL"),
 		ChromiumPath:            env("CHROMIUM_PATH", "chromium"),
 		TrustProxyHeaders:       boolean("TRUST_PROXY_HEADERS", false),
-		RequireOnboardingReview: boolean("REQUIRE_ONBOARDING_REVIEW", true),
+		RequireOnboardingReview: boolean("REQUIRE_ONBOARDING_REVIEW", false),
 		Company: CompanyConfig{
 			LegalName: os.Getenv("VIAGATE_LEGAL_NAME"),
 			CNPJ:      os.Getenv("VIAGATE_CNPJ"),

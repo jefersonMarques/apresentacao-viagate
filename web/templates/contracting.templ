@@ -5,7 +5,7 @@ import (
 	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/brfields"
 )
 
-templ ContractingJourneyPage(onboarding domain.Onboarding, hasPolicy bool, message, errorMessage string, requireReview bool, proposalURL string) {
+templ ContractingJourneyPage(onboarding domain.Onboarding, hasPolicy bool, message, errorMessage, proposalURL string) {
 	@PublicFlowLayout("ViaGate — Continuar contratação") {
 		<link rel="stylesheet" href="/commercial-assets/contracting.css"/>
 		<div class="public contracting-public">
@@ -81,19 +81,11 @@ templ ContractingJourneyPage(onboarding domain.Onboarding, hasPolicy bool, messa
 							@PublicDataField("Responsável") { <strong>{ onboarding.CompanyResponsibleName }</strong><span>{ onboarding.CompanyResponsibleEmail } · { brfields.FormatPhone(onboarding.CompanyResponsiblePhone) }</span> }
 						}
 						<div class="notice public-flow-note"><strong>Apólice:</strong> { ContractingPolicyTitle(hasPolicy) }</div>
-						if requireReview {
-							<p class="public-flow-muted">Depois do envio, a ViaGate fará uma revisão rápida. Se houver qualquer ajuste, você receberá a orientação por e-mail e continuará usando o mesmo link da proposta.</p>
-						} else {
-							<p class="public-flow-muted">Depois do envio, o contrato será preparado e o mesmo link da proposta passará a abrir diretamente a assinatura.</p>
-						}
+						<p class="public-flow-muted">Depois do envio, os dados serão validados e o contrato será preparado automaticamente. O mesmo link da proposta passará a abrir diretamente a assinatura.</p>
 						<div class="actions contracting-review-actions">
 							<button class="btn ghost" type="button" data-contracting-previous="insurance">Voltar</button>
 							<form method="post" action={ templ.SafeURL("/onboarding/" + onboarding.ID + "/submit") }>
-								if requireReview {
-									<button class="btn primary" type="submit" data-processing="Enviando para revisão..." disabled?={ !hasPolicy }>Enviar dados para revisão</button>
-								} else {
-									<button class="btn primary" type="submit" data-processing="Preparando contrato..." disabled?={ !hasPolicy }>Gerar contrato para assinatura</button>
-								}
+								<button class="btn primary" type="submit" data-processing="Preparando contrato..." disabled?={ !hasPolicy }>Gerar contrato para assinatura</button>
 							</form>
 						</div>
 					</div>
