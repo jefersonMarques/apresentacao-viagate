@@ -33,6 +33,24 @@
   margin-top: 18px;
 }
 
+.public .panel {
+  color: var(--ink);
+  color-scheme: light;
+}
+
+.public .panel .field input,
+.public .panel .field select,
+.public .panel .field textarea {
+  color: var(--ink);
+  background: var(--white);
+}
+
+.public .panel .field input::placeholder,
+.public .panel .field textarea::placeholder {
+  color: #81919b;
+  opacity: 1;
+}
+
 .data-grid {
   margin-top: 24px;
 }
