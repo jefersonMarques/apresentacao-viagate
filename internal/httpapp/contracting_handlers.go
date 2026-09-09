@@ -63,8 +63,9 @@ func (a *App) saveOnboardingInsurance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	operationType := strings.ToLower(strings.TrimSpace(r.FormValue("operation_type")))
+	current.OperationType = operationType
 	if operationType != "normal" && operationType != "avulsa" {
-		a.renderContractingError(w, r, current, "Selecione um tipo de operação válido.")
+		a.renderContractingError(w, r, current, "Selecione um tipo de operação e salve os dados do seguro.")
 		return
 	}
 	insurer := strings.TrimSpace(r.FormValue("insurer"))
@@ -81,7 +82,6 @@ func (a *App) saveOnboardingInsurance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	current.OperationType = operationType
 	current.Insurer = insurer
 	current.PolicyStartDate = startValue
 	current.PolicyEndDate = endValue
