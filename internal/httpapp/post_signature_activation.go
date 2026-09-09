@@ -37,9 +37,14 @@ func (a *App) queuePostSignatureActivation(ctx context.Context, access contracts
 		return err
 	}
 
+	signerToken, err := a.contractStore.SignerPublicToken(ctx, access.Signer.ID)
+	if err != nil {
+		return err
+	}
+
 	baseURL := strings.TrimRight(a.cfg.BaseURL, "/")
 	activationLink := baseURL + proposalPath
-	contractLink := baseURL + "/sign/" + access.SignerToken + "/contract"
+	contractLink := baseURL + "/sign/" + signerToken + "/contract"
 
 	htmlBody := fmt.Sprintf(
 		"<p>Olá, %s.</p><p>Seu contrato ViaGate foi assinado com sucesso.</p><p><a href=\"%s\">Baixar contrato assinado</a></p><p>Para prepararmos sua operação, faltam apenas três informações:</p><ul><li><strong>Financeiro</strong> — responsável por faturamento</li><li><strong>Operação</strong> — principais mercadorias transportadas</li><li><strong>Acessos</strong> — usuários iniciais do sistema</li></ul><p><a href=\"%s\">Preencher dados para ativação</a></p><p>Se preferir continuar depois, use o mesmo link da proposta. Ele sempre abrirá a etapa atual da contratação.</p>",
