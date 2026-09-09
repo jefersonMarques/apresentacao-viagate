@@ -40,3 +40,21 @@ func TestContractingOperationTypeLabel(t *testing.T) {
 		}
 	}
 }
+
+func TestContractingReadyForReview(t *testing.T) {
+	complete := domain.Onboarding{
+		OperationType:    "normal",
+		Insurer:          "Seguradora Teste",
+		PolicyStartDate:  "2026-09-01",
+		PolicyEndDate:    "2027-09-01",
+	}
+
+	if !ContractingReadyForReview(complete, true) {
+		t.Fatal("complete persisted insurance data with policy should be ready for review")
+	}
+
+	complete.OperationType = ""
+	if ContractingReadyForReview(complete, true) {
+		t.Fatal("missing operation type must block review")
+	}
+}
