@@ -132,6 +132,8 @@ bash ./scripts/prod.sh
 
 Não instale dependências adicionais apenas para o deploy. `task prod` é um atalho opcional quando o `go-task` já estiver disponível.
 
+O script é idempotente: se o mesmo SHA já estiver ativo e saudável, encerra sem rebuild, backup, migration ou restart. Após um restart real, os healthchecks aguardam o serviço ficar pronto em vez de falhar na primeira tentativa.
+
 O script:
 
 1. sincroniza o checkout limpo com `github/main`;
