@@ -11,6 +11,26 @@ import (
 	"github.com/jefersonMarques/apresentacao-viagate/internal/notifications"
 )
 
+func (a *App) continueOnboardingContract(ctx context.Context, onboardingID, status, source string) (contracts.DeliveryAccess, error) {
+	switch status {
+	case "submitted":
+		if _, err := a.onboardingStore.AutoApprove(ctx, onboardingID, source); err != nil {
+			return contracts.DeliveryAccess{}, fmt.Errorf("auto approve onboarding: %w", err)
+		}
+	case "approved":
+		// O contrato pode ter falhado em uma tentativa anterior; ensureContractDelivery
+		// é idempotente e retoma a partir do estado persistido.
+	default:
+		return contracts.DeliveryAccess{}, fmt.Errorf("onboarding cannot continue contract delivery in status %s", status)
+	}
+
+	access, _, err := a.ensureContractDelivery(ctx, onboardingID)
+	if err != nil {
+		return contracts.DeliveryAccess{}, err
+	}
+	return access, nil
+}
+
 func (a *App) ensureContractDelivery(ctx context.Context, onboardingID string) (contracts.DeliveryAccess, bool, error) {
 	access, err := a.contractStore.DeliveryByOnboarding(ctx, onboardingID)
 	created := false
