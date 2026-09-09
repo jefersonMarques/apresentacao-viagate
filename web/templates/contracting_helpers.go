@@ -35,6 +35,17 @@ func ContractingPolicyButton(hasPolicy bool) string {
 	return "Enviar apólice"
 }
 
+func ContractingOperationTypeLabel(value string) string {
+	switch strings.TrimSpace(strings.ToLower(value)) {
+	case "normal":
+		return "Normal"
+	case "avulsa":
+		return "Avulsa"
+	default:
+		return "Não informado"
+	}
+}
+
 func ContractingAddress(onboarding domain.Onboarding) string {
 	parts := []string{}
 	street := strings.TrimSpace(onboarding.Street)
