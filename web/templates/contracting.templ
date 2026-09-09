@@ -9,7 +9,7 @@ templ ContractingJourneyPage(onboarding domain.Onboarding, hasPolicy bool, messa
 	@PublicFlowLayout("ViaGate — Continuar contratação") {
 		<link rel="stylesheet" href="/commercial-assets/contracting.css"/>
 		<div class="public contracting-public">
-			<main class="shell public-flow-stack contracting-page" data-contracting-wizard data-policy-present={ BoolString(hasPolicy) }>
+			<main class="shell public-flow-stack contracting-page" data-contracting-wizard data-policy-present={ BoolString(hasPolicy) } data-insurance-ready={ BoolString(ContractingReadyForReview(onboarding,hasPolicy)) }>
 				@PublicFlowHeader("CONTRATAÇÃO", "Prepare o contrato em poucos passos", "A proposta já foi aceita. Agora confirme os dados da empresa e do seguro para gerarmos o contrato.") {
 					@PublicProposalLink(proposalURL)
 				}
@@ -65,7 +65,7 @@ templ ContractingJourneyPage(onboarding domain.Onboarding, hasPolicy bool, messa
 								<button class="btn primary" type="submit" data-processing="Enviando apólice...">{ ContractingPolicyButton(hasPolicy) }</button>
 							</form>
 						</div>
-						if hasPolicy {
+						if ContractingReadyForReview(onboarding,hasPolicy) {
 							<div class="actions contracting-next"><button class="btn primary" type="button" data-contracting-next="review">Revisar contratação</button></div>
 						}
 					</div>
@@ -85,7 +85,7 @@ templ ContractingJourneyPage(onboarding domain.Onboarding, hasPolicy bool, messa
 						<div class="actions contracting-submit-actions">
 							<button class="btn ghost" type="button" data-contracting-previous="insurance">Voltar</button>
 							<form method="post" action={ templ.SafeURL("/onboarding/" + onboarding.ID + "/submit") }>
-								<button class="btn primary" type="submit" data-processing="Preparando contrato..." disabled?={ !hasPolicy }>Gerar contrato para assinatura</button>
+								<button class="btn primary" type="submit" data-processing="Preparando contrato..." disabled?={ !ContractingReadyForReview(onboarding,hasPolicy) }>Gerar contrato para assinatura</button>
 							</form>
 						</div>
 					</div>
