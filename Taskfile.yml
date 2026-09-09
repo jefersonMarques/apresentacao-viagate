@@ -57,6 +57,16 @@ tasks:
     cmds:
       - go run ./cmd/server
 
+  prod:
+    desc: Build, validate and deploy GitHub main on the production host
+    cmds:
+      - bash ./scripts/prod.sh
+
+  prod:status:
+    desc: Show production release, service state and health checks
+    cmds:
+      - bash ./scripts/prod.sh status
+
   prod:preflight:
     desc: Validate production configuration and required external dependencies
     cmds:
