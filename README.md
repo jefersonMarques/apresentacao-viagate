@@ -46,9 +46,9 @@ Dados para ativação
 Implantação interna
   ↓
 Operação liberada
+```
 
 Exceções operacionais continuam disponíveis no painel administrativo para correção ou retry sem fazer parte do caminho normal do cliente.
-```
 
 A biometria facial e a prova de vida já existem como modos previstos no domínio de verificação de identidade, mas não estão habilitadas nesta versão.
 
