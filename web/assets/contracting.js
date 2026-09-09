@@ -18,7 +18,7 @@
   }
 
   function insuranceComplete() {
-    return ['insurer', 'policy_start_date', 'policy_end_date'].every((name) => fieldValue(name)) && policyPresent;
+    return ['operation_type', 'insurer', 'policy_start_date', 'policy_end_date'].every((name) => fieldValue(name)) && policyPresent;
   }
 
   function initialStep() {
