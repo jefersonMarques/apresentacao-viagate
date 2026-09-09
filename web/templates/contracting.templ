@@ -82,7 +82,7 @@ templ ContractingJourneyPage(onboarding domain.Onboarding, hasPolicy bool, messa
 						}
 						<div class="notice public-flow-note"><strong>Apólice:</strong> { ContractingPolicyTitle(hasPolicy) }</div>
 						<p class="public-flow-muted">Depois do envio, os dados serão validados e o contrato será preparado automaticamente. O mesmo link da proposta passará a abrir diretamente a assinatura.</p>
-						<div class="actions contracting-review-actions">
+						<div class="actions contracting-submit-actions">
 							<button class="btn ghost" type="button" data-contracting-previous="insurance">Voltar</button>
 							<form method="post" action={ templ.SafeURL("/onboarding/" + onboarding.ID + "/submit") }>
 								<button class="btn primary" type="submit" data-processing="Preparando contrato..." disabled?={ !hasPolicy }>Gerar contrato para assinatura</button>
