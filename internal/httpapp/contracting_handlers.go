@@ -9,6 +9,16 @@ import (
 	"github.com/jefersonMarques/apresentacao-viagate/web/templates"
 )
 
+func normalizeOperationType(value string) (string, bool) {
+	normalized := strings.ToLower(strings.TrimSpace(value))
+	switch normalized {
+	case "normal", "avulsa":
+		return normalized, true
+	default:
+		return normalized, false
+	}
+}
+
 func (a *App) saveOnboardingCompany(w http.ResponseWriter, r *http.Request) {
 	current, err := a.currentOnboarding(r)
 	if err != nil {
@@ -62,9 +72,9 @@ func (a *App) saveOnboardingInsurance(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "dados inválidos", http.StatusBadRequest)
 		return
 	}
-	operationType := strings.ToLower(strings.TrimSpace(r.FormValue("operation_type")))
+	operationType, operationTypeValid := normalizeOperationType(r.FormValue("operation_type"))
 	current.OperationType = operationType
-	if operationType != "normal" && operationType != "avulsa" {
+	if !operationTypeValid {
 		a.renderContractingError(w, r, current, "Selecione um tipo de operação e salve os dados do seguro.")
 		return
 	}
