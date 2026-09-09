@@ -46,6 +46,19 @@ func ContractingOperationTypeLabel(value string) string {
 	}
 }
 
+func ContractingReadyForReview(onboarding domain.Onboarding, hasPolicy bool) bool {
+	if !hasPolicy {
+		return false
+	}
+	operationType := strings.TrimSpace(strings.ToLower(onboarding.OperationType))
+	if operationType != "normal" && operationType != "avulsa" {
+		return false
+	}
+	return strings.TrimSpace(onboarding.Insurer) != "" &&
+		strings.TrimSpace(onboarding.PolicyStartDate) != "" &&
+		strings.TrimSpace(onboarding.PolicyEndDate) != ""
+}
+
 func ContractingAddress(onboarding domain.Onboarding) string {
 	parts := []string{}
 	street := strings.TrimSpace(onboarding.Street)
