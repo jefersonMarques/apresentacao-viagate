@@ -67,6 +67,16 @@ func (a *App) acceptProposal(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Proposta não disponível.", http.StatusGone)
 		return
 	}
+	if proposalSnapshotString(proposal.Content, "proposal", "contract_template_version_id") == "" {
+		const message = "Esta proposta ainda não está pronta para contratação. Solicite uma nova versão ao responsável comercial."
+		if wantsJSON(r) {
+			writeJSONError(w, http.StatusConflict, message)
+			return
+		}
+		render(r.Context(), w, http.StatusConflict, templates.PublicProposalViewerPage(proposal, message))
+		return
+	}
+
 	if strings.HasPrefix(strings.ToLower(r.Header.Get("Content-Type")), "multipart/form-data") {
 		// Compatibility for proposal links already open during rollout. New viewers
 		// use the short acceptance flow below and collect contracting data afterward.
