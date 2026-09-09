@@ -53,7 +53,9 @@ for command_name in git sudo tar curl sha256sum; do
 	require_command "$command_name"
 done
 
-[[ -f "$ENV_FILE" ]] || fail "arquivo de produção não encontrado: $ENV_FILE"
+if ! sudo -u "$SERVICE_USER" test -r "$ENV_FILE"; then
+	fail "arquivo de produção inexistente ou sem leitura para $SERVICE_USER: $ENV_FILE"
+fi
 
 if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
 	fail "existem alterações locais rastreadas. Commit, reverta ou guarde as alterações antes do deploy."

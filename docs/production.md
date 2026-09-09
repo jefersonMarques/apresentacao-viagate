@@ -127,14 +127,10 @@ Aponte `CHROMIUM_PATH` para o executável real. O `preflight` falha se o navegad
 Para atualizações normais no host de produção, execute a partir do checkout:
 
 ```bash
-task prod
-```
-
-Ou, sem Task instalado:
-
-```bash
 bash ./scripts/prod.sh
 ```
+
+Não instale dependências adicionais apenas para o deploy. `task prod` é um atalho opcional quando o `go-task` já estiver disponível.
 
 O script:
 
@@ -152,7 +148,7 @@ O script:
 Para apenas consultar o estado:
 
 ```bash
-task prod:status
+bash ./scripts/prod.sh status
 ```
 
 As seções seguintes documentam o procedimento manual equivalente para troubleshooting e recuperação.

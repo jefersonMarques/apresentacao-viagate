@@ -280,16 +280,18 @@ make check
 
 A V1 está preparada como release candidate de produção. O procedimento operacional completo está em [`docs/production.md`](docs/production.md).
 
-Para atualizações normais no host de produção, use:
+Para atualizações normais no host de produção, use diretamente o script versionado do repositório:
 
 ```bash
-task prod
+bash ./scripts/prod.sh
 ```
 
-O comando sincroniza `main` com o GitHub, executa checks/build, valida checksum e preflight, gera backup, aplica migrations, ativa a release e executa os healthchecks. Para consultar o estado atual sem fazer deploy:
+Não é necessário instalar o Task no servidor. Se o `go-task` já estiver disponível, `task prod` é apenas um atalho para o mesmo script.
+
+O script sincroniza `main` com o GitHub, executa checks/build, valida checksum e preflight, gera backup, aplica migrations, ativa a release e executa os healthchecks. Para consultar o estado atual sem fazer deploy:
 
 ```bash
-task prod:status
+bash ./scripts/prod.sh status
 ```
 
 A release inclui:
