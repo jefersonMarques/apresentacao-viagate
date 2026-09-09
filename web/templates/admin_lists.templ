@@ -28,11 +28,7 @@ templ ProposalListPage(user domain.User, items []domain.Proposal) {
 						<td data-label="Cliente" data-primary="true"><strong>{ item.ClientName }</strong></td>
 						<td data-label="Proposta">{ item.Title }</td>
 						<td data-label="Status">
-							if item.Status == "accepted" {
-								<span class="badge status-badge status-success">Aceita · versão protegida</span>
-							} else {
-								<span class={ "badge status-badge " + AdminStatusBadgeClass(item.Status) }>{ humanStatus(item.Status) }</span>
-							}
+							<span class={ "badge status-badge " + AdminStatusBadgeClass(item.Status) }>{ humanStatus(item.Status) }</span>
 						</td>
 						<td data-label="Versão">v{ item.CurrentVersion }</td>
 						<td data-label="Validade">{ Date(item.ValidUntil) }</td>
