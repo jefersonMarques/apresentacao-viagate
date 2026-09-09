@@ -3,6 +3,7 @@ package activation
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -77,6 +78,30 @@ type AdminItem struct {
 
 func NewStore(pool *pgxpool.Pool) *Store {
 	return &Store{pool: pool}
+}
+
+func validateSectionItems(profile Profile, section string) error {
+	switch section {
+	case "goods":
+		if len(profile.Goods) == 0 {
+			return fmt.Errorf("at least one transported good is required")
+		}
+		for _, good := range profile.Goods {
+			if strings.TrimSpace(good) == "" {
+				return fmt.Errorf("transported goods cannot be empty")
+			}
+		}
+	case "users":
+		if len(profile.SystemUsers) == 0 {
+			return fmt.Errorf("at least one system user is required")
+		}
+		for _, user := range profile.SystemUsers {
+			if strings.TrimSpace(user.Name) == "" || strings.TrimSpace(user.Email) == "" {
+				return fmt.Errorf("system user name and email are required")
+			}
+		}
+	}
+	return nil
 }
 
 func (s *Store) EnsureForSignedContract(ctx context.Context, contractID string) (Profile, error) {
@@ -188,6 +213,10 @@ func (s *Store) ByID(ctx context.Context, id string) (Profile, error) {
 }
 
 func (s *Store) Save(ctx context.Context, tokenID string, profile Profile, section string) error {
+	if err := validateSectionItems(profile, section); err != nil {
+		return err
+	}
+
 	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.Serializable})
 	if err != nil {
 		return err
