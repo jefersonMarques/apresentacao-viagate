@@ -7,6 +7,9 @@
   const links = new Map(steps.map((step) => [step, root.querySelector(`[data-contracting-step-link="${step}"]`)]));
   const params = new URL(window.location.href).searchParams;
   const policyPresent = root.getAttribute('data-policy-present') === 'true';
+  const insurancePersistedReady = root.getAttribute('data-insurance-ready') === 'true';
+  const insuranceForm = panels.get('insurance')?.querySelector('form.grid');
+  let insuranceDirty = false;
 
   function fieldValue(name) {
     const input = root.querySelector(`[name="${name}"]`);
@@ -18,16 +21,25 @@
   }
 
   function insuranceComplete() {
-    return ['operation_type', 'insurer', 'policy_start_date', 'policy_end_date'].every((name) => fieldValue(name)) && policyPresent;
+    return insurancePersistedReady &&
+      !insuranceDirty &&
+      policyPresent &&
+      ['operation_type', 'insurer', 'policy_start_date', 'policy_end_date'].every((name) => fieldValue(name));
+  }
+
+  function resolveStep(step) {
+    if (step === 'insurance' && !companyComplete()) return 'company';
+    if (step === 'review' && !insuranceComplete()) return companyComplete() ? 'insurance' : 'company';
+    return step;
   }
 
   function initialStep() {
     const requested = params.get('step');
-    if (steps.includes(requested)) return requested;
+    if (steps.includes(requested)) return resolveStep(requested);
     const saved = params.get('saved');
     if (saved === 'company') return 'insurance';
     if (saved === 'document' && insuranceComplete()) return 'review';
-    if (saved === 'insurance') return policyPresent ? 'review' : 'insurance';
+    if (saved === 'insurance') return insuranceComplete() ? 'review' : 'insurance';
     if (!companyComplete()) return 'company';
     if (!insuranceComplete()) return 'insurance';
     return 'review';
@@ -35,6 +47,7 @@
 
   function setStep(step, push = false) {
     if (!steps.includes(step)) return;
+    step = resolveStep(step);
     for (const current of steps) {
       const panel = panels.get(current);
       const link = links.get(current);
@@ -55,13 +68,16 @@
   }
 
   root.querySelectorAll('[data-contracting-step-link]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const step = button.getAttribute('data-contracting-step-link');
-      if (step === 'insurance' && !companyComplete()) return setStep('company', true);
-      if (step === 'review' && !insuranceComplete()) return setStep(companyComplete() ? 'insurance' : 'company', true);
-      setStep(step, true);
-    });
+    button.addEventListener('click', () => setStep(button.getAttribute('data-contracting-step-link'), true));
   });
+
+  if (insuranceForm instanceof HTMLFormElement) {
+    ['input', 'change'].forEach((eventName) => {
+      insuranceForm.addEventListener(eventName, () => {
+        insuranceDirty = true;
+      });
+    });
+  }
 
   root.querySelectorAll('[data-contracting-previous]').forEach((button) => {
     button.addEventListener('click', () => setStep(button.getAttribute('data-contracting-previous'), true));
