@@ -59,6 +59,8 @@ if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
 	fail "existem alterações locais rastreadas. Commit, reverta ou guarde as alterações antes do deploy."
 fi
 
+INITIAL_SHA="$(git rev-parse HEAD)"
+
 log "Sincronizando $BRANCH com o GitHub"
 if git remote get-url "$GITHUB_REMOTE" >/dev/null 2>&1; then
 	git remote set-url "$GITHUB_REMOTE" "$GITHUB_URL"
@@ -70,6 +72,11 @@ git fetch --prune "$GITHUB_REMOTE" "$BRANCH"
 git switch -C "$BRANCH" "$GITHUB_REMOTE/$BRANCH"
 
 TARGET_SHA="$(git rev-parse HEAD)"
+if [[ "${PROD_SCRIPT_SYNCED:-0}" != "1" && "$INITIAL_SHA" != "$TARGET_SHA" ]]; then
+	log "Reexecutando o script atualizado"
+	exec env PROD_SCRIPT_SYNCED=1 bash "$ROOT_DIR/scripts/prod.sh" "$@"
+fi
+
 VERSION="$(git rev-parse --short=12 HEAD)"
 RELEASE_NAME="viagate-commercial-${VERSION}-linux-amd64"
 ARCHIVE="$ROOT_DIR/dist/${RELEASE_NAME}.tar.gz"
