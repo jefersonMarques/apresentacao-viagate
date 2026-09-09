@@ -157,7 +157,7 @@ task prod:status
 
 As seções seguintes documentam o procedimento manual equivalente para troubleshooting e recuperação.
 
-## 6. Gerar uma release
+## 5. Gerar uma release
 
 O bundle Linux contém os três binários e todos os arquivos necessários em runtime:
 
@@ -426,7 +426,7 @@ Antes de abrir produção, defina:
 - alerta para indisponibilidade do serviço;
 - acompanhamento da outbox de e-mails e falhas de finalização de contrato.
 
-## 14. Critério de liberação
+## 15. Critério de liberação
 
 A release só deve receber tráfego real quando todos os itens abaixo estiverem verdadeiros:
 
