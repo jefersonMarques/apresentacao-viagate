@@ -155,8 +155,8 @@ func validateOnboarding(current domain.Onboarding) string {
 	if _, err := mail.ParseAddress(current.CompanyResponsibleEmail); err != nil {
 		return "O e-mail do responsável é inválido."
 	}
-	if current.OperationType != "normal" && current.OperationType != "avulsa" {
-		return "Selecione um tipo de operação válido."
+	if _, valid := normalizeOperationType(current.OperationType); !valid {
+		return "Volte à etapa Seguro, selecione o tipo de operação e salve os dados antes de gerar o contrato."
 	}
 	if len(current.State) != 2 {
 		return "UF inválida."

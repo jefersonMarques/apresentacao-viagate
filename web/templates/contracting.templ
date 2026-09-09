@@ -9,7 +9,7 @@ templ ContractingJourneyPage(onboarding domain.Onboarding, hasPolicy bool, messa
 	@PublicFlowLayout("ViaGate — Continuar contratação") {
 		<link rel="stylesheet" href="/commercial-assets/contracting.css"/>
 		<div class="public contracting-public">
-			<main class="shell public-flow-stack contracting-page" data-contracting-wizard data-policy-present={ BoolString(hasPolicy) }>
+			<main class="shell public-flow-stack contracting-page" data-contracting-wizard data-policy-present={ BoolString(hasPolicy) } data-insurance-ready={ BoolString(ContractingReadyForReview(onboarding,hasPolicy)) }>
 				@PublicFlowHeader("CONTRATAÇÃO", "Prepare o contrato em poucos passos", "A proposta já foi aceita. Agora confirme os dados da empresa e do seguro para gerarmos o contrato.") {
 					@PublicProposalLink(proposalURL)
 				}
@@ -49,7 +49,7 @@ templ ContractingJourneyPage(onboarding domain.Onboarding, hasPolicy bool, messa
 					<div class="panel-body public-flow-stack">
 						<form method="post" action={ templ.SafeURL("/onboarding/" + onboarding.ID) } class="grid">
 							<input type="hidden" name="step" value="insurance"/>
-							<div class="field"><label>Tipo de operação</label><select name="operation_type"><option value="normal" selected?={ onboarding.OperationType == "normal" || onboarding.OperationType == "" }>Normal</option><option value="avulsa" selected?={ onboarding.OperationType == "avulsa" }>Avulsa</option></select></div>
+							<div class="field"><label>Tipo de operação</label><select name="operation_type" required><option value="" disabled selected?={ onboarding.OperationType == "" }>Selecione...</option><option value="normal" selected?={ onboarding.OperationType == "normal" }>Normal</option><option value="avulsa" selected?={ onboarding.OperationType == "avulsa" }>Avulsa</option></select></div>
 							<div class="field"><label>Seguradora</label><input name="insurer" value={ onboarding.Insurer } required/></div>
 							<div class="field"><label>Início da vigência</label><input name="policy_start_date" type="date" value={ onboarding.PolicyStartDate } required/></div>
 							<div class="field"><label>Fim da vigência</label><input name="policy_end_date" type="date" value={ onboarding.PolicyEndDate } required/></div>
@@ -65,7 +65,7 @@ templ ContractingJourneyPage(onboarding domain.Onboarding, hasPolicy bool, messa
 								<button class="btn primary" type="submit" data-processing="Enviando apólice...">{ ContractingPolicyButton(hasPolicy) }</button>
 							</form>
 						</div>
-						if hasPolicy {
+						if ContractingReadyForReview(onboarding,hasPolicy) {
 							<div class="actions contracting-next"><button class="btn primary" type="button" data-contracting-next="review">Revisar contratação</button></div>
 						}
 					</div>
@@ -77,7 +77,7 @@ templ ContractingJourneyPage(onboarding domain.Onboarding, hasPolicy bool, messa
 						@PublicDataGrid() {
 							@PublicDataField("Empresa") { <strong>{ onboarding.LegalName }</strong><span>{ brfields.FormatCNPJ(onboarding.CNPJ) }</span> }
 							@PublicDataField("Endereço") { <strong>{ ContractingAddress(onboarding) }</strong> }
-							@PublicDataField("Seguro") { <strong>{ onboarding.Insurer }</strong><span>{ onboarding.PolicyStartDate } a { onboarding.PolicyEndDate }</span> }
+							@PublicDataField("Seguro") { <strong>{ onboarding.Insurer }</strong><span>{ ContractingOperationTypeLabel(onboarding.OperationType) } · { onboarding.PolicyStartDate } a { onboarding.PolicyEndDate }</span> }
 							@PublicDataField("Responsável") { <strong>{ onboarding.CompanyResponsibleName }</strong><span>{ onboarding.CompanyResponsibleEmail } · { brfields.FormatPhone(onboarding.CompanyResponsiblePhone) }</span> }
 						}
 						<div class="notice public-flow-note"><strong>Apólice:</strong> { ContractingPolicyTitle(hasPolicy) }</div>
@@ -85,7 +85,7 @@ templ ContractingJourneyPage(onboarding domain.Onboarding, hasPolicy bool, messa
 						<div class="actions contracting-submit-actions">
 							<button class="btn ghost" type="button" data-contracting-previous="insurance">Voltar</button>
 							<form method="post" action={ templ.SafeURL("/onboarding/" + onboarding.ID + "/submit") }>
-								<button class="btn primary" type="submit" data-processing="Preparando contrato..." disabled?={ !hasPolicy }>Gerar contrato para assinatura</button>
+								<button class="btn primary" type="submit" data-processing="Preparando contrato..." disabled?={ !ContractingReadyForReview(onboarding,hasPolicy) }>Gerar contrato para assinatura</button>
 							</form>
 						</div>
 					</div>
