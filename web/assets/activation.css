@@ -3,3 +3,39 @@
 .activation-admin-grid{gap:18px;align-items:stretch}.activation-admin-panel{margin-bottom:0!important;height:100%}.activation-admin-panel .panel-body{min-height:100%;padding:22px}.activation-admin-panel .data-list{gap:13px 20px}.activation-admin-panel .data-list dt{color:#7a8993;font-size:9px;font-weight:800}.activation-admin-panel .data-list dd{color:#203540;font-size:12px;line-height:1.55;overflow-wrap:anywhere}.activation-admin-panel .activation-tags span{background:#f8fafb;border-color:#dfe6ea}.activation-admin-panel .activation-user-list>div{align-items:flex-start;background:#f8fafb;border-color:#dfe6ea}.activation-admin-panel .activation-user-list strong{font-size:12px}.activation-admin-panel .activation-user-list span{text-align:right;font-size:11px}.activation-admin-empty{margin:0;color:var(--admin-muted,#73838e);font-size:12px;line-height:1.6}.activation-admin-implementation{margin-top:18px}.activation-admin-implementation .panel-head{align-items:flex-start}.activation-admin-implementation .panel-head p{margin:5px 0 0;color:var(--admin-muted,#73838e);font-size:11px;line-height:1.55}.activation-admin-implementation .panel-body{padding:20px 22px}
 
 @media(max-width:760px){.activation-progress{grid-template-columns:repeat(3,1fr)}.activation-progress-item{justify-content:center;padding:12px 8px}.activation-progress-item strong{font-size:11px}.activation-summary-grid{grid-template-columns:1fr}.activation-user-row{grid-template-columns:1fr}.activation-user-list>div{flex-direction:column}.data-list{grid-template-columns:1fr}.activation-page .actions{align-items:stretch}.activation-page .actions .btn{width:100%}.activation-admin-grid{gap:12px}.activation-admin-panel .panel-body{padding:18px}.activation-admin-panel .activation-user-list span{text-align:left}.activation-admin-implementation .panel-body{padding:18px}}
+
+
+.activation-step-requirement {
+  margin: 14px 0 10px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.activation-step-actions {
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.activation-step-actions [type="submit"] {
+  margin-left: auto;
+}
+
+.activation-step-actions [type="submit"]:disabled {
+  border-color: #d7e0e5;
+  background: #eef2f4;
+  color: #8b9aa3;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+@media(max-width:760px) {
+  .activation-step-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .activation-step-actions [type="submit"] {
+    margin-left: 0;
+  }
+}
