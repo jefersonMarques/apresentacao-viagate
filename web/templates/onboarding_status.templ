@@ -15,8 +15,8 @@ templ OnboardingStatusPage(onboarding domain.Onboarding, message, proposalURL st
 			<section class="proposal-hero public-status-hero">
 				<span class="step-title">CADASTRO RECEBIDO</span>
 				if onboarding.Status == "submitted" {
-					<h1>Dados enviados para revisão.</h1>
-					<p>A equipe ViaGate recebeu as informações e a apólice. Assim que a revisão for concluída, o responsável receberá o contrato por e-mail para conferência e assinatura.</p>
+					<h1>Preparando seu contrato.</h1>
+					<p>As informações e a apólice foram recebidas. O sistema está retomando automaticamente a preparação do contrato para conferência e assinatura.</p>
 				} else if onboarding.Status == "under_review" {
 					<h1>Cadastro em revisão.</h1>
 					<p>A equipe ViaGate está conferindo os dados e documentos enviados. Caso seja necessário algum ajuste, o responsável receberá uma orientação por e-mail e continuará pelo mesmo link da proposta.</p>
