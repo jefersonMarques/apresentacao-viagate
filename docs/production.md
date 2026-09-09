@@ -44,7 +44,7 @@ sudo chmod 750 /etc/viagate-commercial
 O arquivo `/etc/viagate-commercial/.env` deve ser legível apenas por root e pelo grupo do serviço:
 
 ```bash
-sudo cp deploy/.env.example /etc/viagate-commercial/.env
+sudo cp deploy/viagate.env.example /etc/viagate-commercial/.env
 sudo chown root:viagate /etc/viagate-commercial/.env
 sudo chmod 640 /etc/viagate-commercial/.env
 sudo nano /etc/viagate-commercial/.env
