@@ -2,7 +2,7 @@
 
 Sistema comercial da ViaGate para apresentação institucional, proposta, aceite, onboarding do cliente, geração de contrato e assinatura eletrônica.
 
-Esta branch substitui a arquitetura do protótipo estático/Supabase por um backend próprio em Go.
+A plataforma usa backend próprio em Go e mantém PostgreSQL e storage privado atrás da camada de aplicação.
 
 ## Arquitetura
 
@@ -29,28 +29,26 @@ Cliente abre a proposta
   ↓
 Aceite da versão exata
   ↓
-Dados pessoais do responsável
+Onboarding + dados faltantes + apólice
   ↓
-Onboarding + CNPJ + apólice
+Validação e aprovação automática
   ↓
-Revisão interna
-  ├─ correção solicitada → cliente retoma o cadastro
-  └─ aprovado
-       ↓
 Contrato gerado a partir de Markdown versionado
-       ↓
+  ↓
 PDF + SHA-256
-       ↓
+  ↓
 OTP por e-mail / Brevo
-       ↓
+  ↓
 Assinatura eletrônica
-       ↓
+  ↓
 Dados para ativação
-       ↓
+  ↓
 Implantação interna
-       ↓
+  ↓
 Operação liberada
 ```
+
+Exceções operacionais continuam disponíveis no painel administrativo para correção ou retry sem fazer parte do caminho normal do cliente.
 
 A biometria facial e a prova de vida já existem como modos previstos no domínio de verificação de identidade, mas não estão habilitadas nesta versão.
 
@@ -75,7 +73,7 @@ O relatório registra, entre outros dados, identidade declarada do responsável,
 ## Perfis iniciais
 
 - `commercial` — cria e acompanha os próprios materiais comerciais;
-- `operations` — revisa onboarding e documentos;
+- `operations` — acompanha onboarding, documentos e exceções operacionais;
 - `legal` — administra modelos de contrato;
 - `super_admin` — visão global e gestão de usuários/permissões.
 
@@ -105,8 +103,6 @@ APP_BASE_URL=http://localhost:8080
 DATABASE_URL=postgres://viagate:viagate@localhost:5432/viagate?sslmode=disable
 CHROMIUM_PATH=chromium
 TRUST_PROXY_HEADERS=false
-REQUIRE_ONBOARDING_REVIEW=true
-
 S3_REGION=us-east-1
 S3_BUCKET=viagate-commercial
 S3_ENDPOINT=http://localhost:9000
@@ -208,23 +204,13 @@ Os modelos são Markdown versionado e aceitam variáveis controladas, por exempl
 
 Cada salvamento gera uma nova versão. Contratos já gerados continuam ligados à versão antiga.
 
-## Revisão do onboarding
+## Onboarding e preparação do contrato
 
-O padrão é:
+Depois que o cliente completa os dados obrigatórios e envia a apólice, o backend valida o onboarding, registra a aprovação automática e prepara o contrato.
 
-```env
-REQUIRE_ONBOARDING_REVIEW=true
-```
+A continuação é idempotente: se geração do PDF, storage ou entrega do contrato falhar temporariamente, o mesmo link da proposta retoma a preparação a partir do estado persistido sem criar outro contrato.
 
-Nesse modo, depois que o cliente envia o cadastro e a apólice, os dados ficam bloqueados e entram na fila de revisão. Operações/Super Admin pode:
-
-- marcar em revisão;
-- solicitar correção, enviando ao cliente um novo link seguro;
-- aprovar o cadastro.
-
-Somente a aprovação permite gerar e enviar o contrato.
-
-Para ambientes de demonstração pode ser usado `REQUIRE_ONBOARDING_REVIEW=false`; o sistema então aprova o cadastro automaticamente antes de gerar o contrato.
+Operações/Super Admin continua podendo acompanhar o onboarding, solicitar correções quando necessário e executar retry de contrato em exceções operacionais.
 
 ## Desenvolvimento
 
@@ -285,14 +271,26 @@ make check
 7. criar/publicar uma proposta;
 8. aceitar a proposta como cliente;
 9. preencher onboarding e enviar a apólice;
-10. revisar e aprovar no painel administrativo;
-11. abrir o link recebido via Brevo e assinar com OTP;
+10. validar a geração automática do contrato e o recebimento do link via Brevo;
+11. abrir o contrato e assinar com OTP;
 12. complementar os dados para ativação;
 13. validar `contract.pdf`, `evidence.pdf` e `signed-package.zip`.
 
 ## Produção
 
 A V1 está preparada como release candidate de produção. O procedimento operacional completo está em [`docs/production.md`](docs/production.md).
+
+Para atualizações normais no host de produção, use:
+
+```bash
+task prod
+```
+
+O comando sincroniza `main` com o GitHub, executa checks/build, valida checksum e preflight, gera backup, aplica migrations, ativa a release e executa os healthchecks. Para consultar o estado atual sem fazer deploy:
+
+```bash
+task prod:status
+```
 
 A release inclui:
 

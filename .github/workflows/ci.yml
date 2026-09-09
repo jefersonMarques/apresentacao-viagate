@@ -3,7 +3,6 @@ name: ci
 on:
   push:
     branches:
-      - feature/go-commercial-platform
       - main
     tags:
       - 'v*'
@@ -55,6 +54,9 @@ jobs:
           diff -u /tmp/go.mod.before go.mod
           diff -u /tmp/go.sum.before go.sum
 
+      - name: Validate shell scripts
+        run: bash -n scripts/*.sh
+
       - name: Vet
         run: go vet ./...
 
@@ -69,6 +71,11 @@ jobs:
 
       - name: Apply migrations
         run: go run ./cmd/migrate up
+
+      - name: Test onboarding state transition
+        env:
+          RUN_DB_INTEGRATION: '1'
+        run: go test ./internal/onboarding -run TestAutoApproveIsIdempotent -count=1
 
       - name: Test notification scopes
         env:

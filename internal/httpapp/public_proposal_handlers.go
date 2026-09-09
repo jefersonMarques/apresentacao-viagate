@@ -78,9 +78,12 @@ func (a *App) acceptProposal(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if strings.HasPrefix(strings.ToLower(r.Header.Get("Content-Type")), "multipart/form-data") {
-		// Compatibility for proposal links already open during rollout. New viewers
-		// use the short acceptance flow below and collect contracting data afterward.
-		a.acceptProposalContractFlow(w, r, proposal)
+		const message = "Esta página da proposta foi atualizada. Recarregue o link para continuar com o fluxo atual."
+		if wantsJSON(r) {
+			writeJSONError(w, http.StatusConflict, message)
+			return
+		}
+		render(r.Context(), w, http.StatusConflict, templates.PublicProposalViewerPage(proposal, message))
 		return
 	}
 	if err := r.ParseForm(); err != nil {

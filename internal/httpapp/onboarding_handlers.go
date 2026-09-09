@@ -49,7 +49,18 @@ func (a *App) onboardingPage(w http.ResponseWriter, r *http.Request) {
 		message = "Correção solicitada pela ViaGate: " + onboarding.ReviewNotes
 	}
 
-	if onboarding.Status == "submitted" || onboarding.Status == "under_review" || onboarding.Status == "approved" {
+	if onboarding.Status == "submitted" || onboarding.Status == "approved" {
+		access, continueErr := a.continueOnboardingContract(r.Context(), onboarding.ID, onboarding.Status, "customer_resume")
+		if continueErr == nil {
+			http.Redirect(w, r, "/sign/"+access.SignerToken, http.StatusSeeOther)
+			return
+		}
+		a.logger.Error("resume contract journey failed", "onboarding_id", onboarding.ID, "status", onboarding.Status, "error", continueErr)
+		message = "Seus dados foram recebidos. A preparação do contrato será retomada automaticamente quando você abrir este link novamente."
+		render(r.Context(), w, http.StatusOK, templates.OnboardingStatusPage(onboarding, message, proposalURL))
+		return
+	}
+	if onboarding.Status == "under_review" {
 		render(r.Context(), w, http.StatusOK, templates.OnboardingStatusPage(onboarding, message, proposalURL))
 		return
 	}
@@ -131,7 +142,7 @@ func (a *App) saveOnboarding(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := a.onboardingStore.Save(r.Context(), current); err != nil {
 		a.logger.Error("save onboarding failed", "error", err)
-		a.renderContractingError(w, r, current, "Não foi possível salvar os dados. O cadastro pode já ter sido enviado para revisão.")
+		a.renderContractingError(w, r, current, "Não foi possível salvar os dados. O cadastro pode já ter avançado para a preparação do contrato.")
 		return
 	}
 	http.Redirect(w, r, "/onboarding/"+current.ID+"?saved=1", http.StatusSeeOther)
@@ -271,13 +282,7 @@ func (a *App) submitOnboarding(w http.ResponseWriter, r *http.Request) {
 	a.queueOnboardingSubmittedNotification(r, current.ID)
 	a.publishOnboardingEvent(r.Context(), current.ID)
 
-	if err := a.autoApproveOnboarding(r.Context(), current.ID, "contracting_journey"); err != nil {
-		a.logger.Error("auto approve onboarding failed", "error", err, "onboarding_id", current.ID)
-		http.Error(w, "Os dados foram recebidos, mas não foi possível preparar o contrato agora. Tente novamente pelo mesmo link da proposta.", http.StatusInternalServerError)
-		return
-	}
-
-	access, _, err := a.ensureContractDelivery(r.Context(), current.ID)
+	access, err := a.continueOnboardingContract(r.Context(), current.ID, "submitted", "contracting_journey")
 	if err != nil {
 		a.logger.Error("automatic contract delivery failed", "error", err, "onboarding_id", current.ID)
 		a.queueContractGenerationFailure(r, current.ID, err)
@@ -301,8 +306,8 @@ func (a *App) queueOnboardingSubmittedNotification(r *http.Request, onboardingID
 		a.logger.Error("resolve commercial for onboarding notification failed", "error", err, "onboarding_id", onboardingID)
 		return
 	}
-	htmlBody := fmt.Sprintf("<p>O cadastro de <strong>%s</strong> foi enviado para a contratação da proposta <strong>%s</strong>.</p><p>Acesse o painel para revisar os dados e documentos.</p>", clientName, proposalTitle)
-	if err := notifications.EnqueueUnique(r.Context(), a.pool, "onboarding-submitted:"+onboardingID, name, emailAddress, "Cadastro recebido: "+clientName, htmlBody, "O cadastro de "+clientName+" foi enviado e está disponível para revisão."); err != nil {
+	htmlBody := fmt.Sprintf("<p>O cadastro de <strong>%s</strong> foi concluído para a proposta <strong>%s</strong>.</p><p>O contrato será preparado automaticamente. Acesse o painel apenas se precisar acompanhar ou intervir no processo.</p>", clientName, proposalTitle)
+	if err := notifications.EnqueueUnique(r.Context(), a.pool, "onboarding-submitted:"+onboardingID, name, emailAddress, "Cadastro recebido: "+clientName, htmlBody, "O cadastro de "+clientName+" foi concluído e o contrato será preparado automaticamente."); err != nil {
 		a.logger.Error("queue onboarding submitted notification failed", "error", err, "onboarding_id", onboardingID)
 	}
 }

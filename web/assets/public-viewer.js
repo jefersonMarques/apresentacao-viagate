@@ -2,9 +2,6 @@
   const root = document.querySelector('[data-secure-viewer]');
   if (!root) return;
 
-  const legacyAcceptance = root.querySelector('.proposal-acceptance-layout')?.closest('[data-viewer-slide]');
-  legacyAcceptance?.remove();
-
   const gate = document.querySelector('[data-viewer-gate]');
   const start = document.querySelector('[data-viewer-start]');
   const restart = document.querySelector('[data-viewer-restart]');
@@ -21,50 +18,10 @@
   function createAcceptanceFlow() {
     if (!document.body.classList.contains('public-proposal')) return null;
 
-    const action = document.createElement('button');
-    action.className = 'proposal-accept-floating';
-    action.type = 'button';
-    action.hidden = true;
-    action.textContent = 'ACEITAR PROPOSTA';
-    action.setAttribute('data-proposal-accept-floating', '');
+    const action = document.querySelector('[data-proposal-accept-floating]');
+    const modal = document.querySelector('[data-proposal-accept-modal]');
+    if (!(action instanceof HTMLButtonElement) || !(modal instanceof HTMLElement)) return null;
 
-    const modal = document.createElement('div');
-    modal.className = 'proposal-contract-modal proposal-accept-modal';
-    modal.hidden = true;
-    modal.setAttribute('role', 'dialog');
-    modal.setAttribute('aria-modal', 'true');
-    modal.setAttribute('aria-label', 'Aceitar proposta');
-    modal.innerHTML = `
-      <button class="proposal-contract-backdrop" type="button" aria-label="Fechar" data-proposal-contract-close></button>
-      <section class="proposal-contract-panel proposal-accept-panel">
-        <header class="proposal-contract-header">
-          <div>
-            <small>ACEITE DA PROPOSTA</small>
-            <h2>Confirmar aceite</h2>
-            <p>O aceite registra exatamente esta versão. Os dados necessários para gerar o contrato serão solicitados no próximo passo.</p>
-          </div>
-          <button class="proposal-contract-close" type="button" aria-label="Fechar" data-proposal-contract-close>×</button>
-        </header>
-        <div class="proposal-contract-body">
-          <div class="proposal-contract-error" data-proposal-contract-error hidden></div>
-          <form class="proposal-contract-form proposal-accept-form" method="post" data-proposal-accept-form>
-            <div class="proposal-contract-grid">
-              <label class="full"><span>Nome completo do responsável</span><input name="name" autocomplete="name" required/></label>
-              <label><span>CPF</span><input name="cpf" inputmode="numeric" autocomplete="off" maxlength="14" required/></label>
-              <label><span>Cargo / função</span><input name="role" autocomplete="organization-title"/></label>
-              <label><span>E-mail</span><input name="email" type="email" autocomplete="email" required/></label>
-              <label><span>Telefone</span><input name="phone" inputmode="tel" autocomplete="tel" required/></label>
-            </div>
-            <label class="proposal-contract-authority"><input type="checkbox" name="authority" value="1" required/><span data-proposal-acceptance-text>Confirmo que possuo poderes para representar a empresa nesta contratação.</span></label>
-            <footer class="proposal-contract-footer proposal-accept-footer">
-              <p>Depois do aceite, este mesmo link da proposta sempre abrirá a etapa atual da contratação.</p>
-              <button type="submit" data-proposal-accept-submit>ACEITAR PROPOSTA</button>
-            </footer>
-          </form>
-        </div>
-      </section>`;
-
-    document.body.append(action, modal);
 
     const form = modal.querySelector('[data-proposal-accept-form]');
     const errorBox = modal.querySelector('[data-proposal-contract-error]');

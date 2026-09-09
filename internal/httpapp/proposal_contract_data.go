@@ -3,6 +3,7 @@ package httpapp
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/jefersonMarques/apresentacao-viagate/internal/legaltext"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/proposals"
@@ -97,4 +98,14 @@ func fmtInt(value int) string {
 		value /= 10
 	}
 	return string(buf[index:])
+}
+
+func wantsJSON(r *http.Request) bool {
+	return strings.Contains(strings.ToLower(r.Header.Get("Accept")), "application/json")
+}
+
+func proposalSnapshotString(content map[string]any, section, key string) string {
+	group, _ := content[section].(map[string]any)
+	value, _ := group[key].(string)
+	return strings.TrimSpace(value)
 }

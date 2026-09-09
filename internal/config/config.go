@@ -16,7 +16,6 @@ type Config struct {
 	DatabaseURL             string
 	ChromiumPath            string
 	TrustProxyHeaders       bool
-	RequireOnboardingReview bool
 	Company                 CompanyConfig
 	Session                 SessionConfig
 	S3                      S3Config
@@ -80,7 +79,6 @@ func Load() (Config, error) {
 		DatabaseURL:             os.Getenv("DATABASE_URL"),
 		ChromiumPath:            env("CHROMIUM_PATH", "chromium"),
 		TrustProxyHeaders:       boolean("TRUST_PROXY_HEADERS", false),
-		RequireOnboardingReview: boolean("REQUIRE_ONBOARDING_REVIEW", false),
 		Company: CompanyConfig{
 			LegalName: os.Getenv("VIAGATE_LEGAL_NAME"),
 			CNPJ:      os.Getenv("VIAGATE_CNPJ"),

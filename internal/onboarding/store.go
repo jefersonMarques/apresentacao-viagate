@@ -162,3 +162,55 @@ func (s *Store) Submit(ctx context.Context, onboardingID string) error {
 	if command.RowsAffected() != 1 { return fmt.Errorf("onboarding is incomplete or cannot be submitted in its current state") }
 	return nil
 }
+
+func (s *Store) AutoApprove(ctx context.Context, onboardingID, source string) (bool, error) {
+	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.Serializable})
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback(ctx)
+
+	var status string
+	if err := tx.QueryRow(ctx, `select status::text from onboardings where id=$1 for update`, onboardingID).Scan(&status); err != nil {
+		return false, err
+	}
+	if status == "approved" {
+		if err := tx.Commit(ctx); err != nil {
+			return false, err
+		}
+		return false, nil
+	}
+	if status != "submitted" {
+		return false, fmt.Errorf("onboarding cannot be auto-approved in status %s", status)
+	}
+
+	if _, err := tx.Exec(ctx, `
+		update onboardings
+		set status='approved',
+		    approved_at=coalesce(approved_at,now()),
+		    reviewed_at=now(),
+		    review_notes='Aprovação automática após validação dos dados da contratação.',
+		    updated_at=now()
+		where id=$1
+	`, onboardingID); err != nil {
+		return false, err
+	}
+
+	if _, err := tx.Exec(ctx, `
+		insert into audit_events(actor_type,event_type,resource_type,resource_id,metadata)
+		values(
+			'system',
+			'onboarding.auto_approved',
+			'onboarding',
+			$1,
+			jsonb_build_object('source',$2::text)
+		)
+	`, onboardingID, source); err != nil {
+		return false, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return false, err
+	}
+	return true, nil
+}

@@ -27,7 +27,7 @@ A geração de contrato e os PDFs comerciais dependem do navegador headless. Por
   current -> /opt/viagate-commercial/releases/<version>
 
 /etc/viagate-commercial/
-  viagate.env
+  .env
 
 /var/lib/viagate-commercial/
 ```
@@ -41,13 +41,13 @@ sudo chown -R viagate:viagate /opt/viagate-commercial /var/lib/viagate-commercia
 sudo chmod 750 /etc/viagate-commercial
 ```
 
-O arquivo `/etc/viagate-commercial/viagate.env` deve ser legível apenas por root e pelo grupo do serviço:
+O arquivo `/etc/viagate-commercial/.env` deve ser legível apenas por root e pelo grupo do serviço:
 
 ```bash
-sudo cp deploy/viagate.env.example /etc/viagate-commercial/viagate.env
-sudo chown root:viagate /etc/viagate-commercial/viagate.env
-sudo chmod 640 /etc/viagate-commercial/viagate.env
-sudo nano /etc/viagate-commercial/viagate.env
+sudo cp deploy/viagate.env.example /etc/viagate-commercial/.env
+sudo chown root:viagate /etc/viagate-commercial/.env
+sudo chmod 640 /etc/viagate-commercial/.env
+sudo nano /etc/viagate-commercial/.env
 ```
 
 Nunca envie esse arquivo para o Git.
@@ -63,7 +63,6 @@ APP_BASE_URL=https://viagate.com.br
 DATABASE_URL=...
 CHROMIUM_PATH=/usr/bin/google-chrome-stable
 TRUST_PROXY_HEADERS=true
-REQUIRE_ONBOARDING_REVIEW=false
 VIAGATE_LEGAL_NAME=...
 VIAGATE_CNPJ=...
 S3_STAGE=prod
@@ -80,8 +79,6 @@ BREVO_API_KEY=...
 A aplicação recusa inicialização em produção quando a URL não é pública/HTTPS, quando os dados legais obrigatórios estão ausentes, quando o Brevo não está configurado ou quando `S3_STAGE` não é `prod`.
 
 `TRUST_PROXY_HEADERS=true` só deve ser usado quando `APP_ADDR` não estiver publicamente acessível e o proxy reverso for o único caminho até o Go.
-
-`REQUIRE_ONBOARDING_REVIEW=false` representa o fluxo comercial padrão: depois que o cliente completa e valida os dados obrigatórios e envia a apólice, o cadastro é aprovado automaticamente e o contrato é preparado para assinatura. A revisão administrativa permanece disponível para exceções operacionais e correções.
 
 ### PostgreSQL
 
@@ -125,7 +122,42 @@ which chromium || which chromium-browser || which google-chrome || which google-
 
 Aponte `CHROMIUM_PATH` para o executável real. O `preflight` falha se o navegador não for localizado.
 
-## 4. Gerar uma release
+## 4. Deploy operacional recomendado
+
+Para atualizações normais no host de produção, execute a partir do checkout:
+
+```bash
+task prod
+```
+
+Ou, sem Task instalado:
+
+```bash
+bash ./scripts/prod.sh
+```
+
+O script:
+
+1. sincroniza o checkout limpo com `github/main`;
+2. executa os checks e gera o bundle Linux;
+3. valida o checksum;
+4. prepara uma release versionada sem alterar `current`;
+5. executa o preflight;
+6. cria backup PostgreSQL;
+7. aplica migrations forward-only;
+8. troca o symlink `current` atomicamente;
+9. reinicia o serviço;
+10. valida `healthz`, `readyz` e o SHA ativo.
+
+Para apenas consultar o estado:
+
+```bash
+task prod:status
+```
+
+As seções seguintes documentam o procedimento manual equivalente para troubleshooting e recuperação.
+
+## 5. Gerar uma release
 
 O bundle Linux contém os três binários e todos os arquivos necessários em runtime:
 
@@ -158,7 +190,7 @@ dist/viagate-commercial-<sha>-linux-amd64.tar.gz.sha256
 
 O GitHub Actions também gera esse bundle como artifact depois que o CI passa.
 
-## 5. Instalar a release sem downtime desnecessário
+## 6. Instalar a release sem downtime desnecessário
 
 Envie o `.tar.gz` para o servidor e confira o checksum:
 
@@ -185,7 +217,7 @@ Carregue a configuração e execute o preflight usando a release nova:
 ```bash
 sudo -u viagate bash -c '
   set -a
-  source /etc/viagate-commercial/viagate.env
+  source /etc/viagate-commercial/.env
   set +a
   cd "'"$RELEASE"'"
   ./preflight
@@ -201,14 +233,14 @@ ok browser
 production preflight passed
 ```
 
-## 6. Aplicar migrations
+## 7. Aplicar migrations
 
 Somente depois de backup + preflight:
 
 ```bash
 sudo -u viagate bash -c '
   set -a
-  source /etc/viagate-commercial/viagate.env
+  source /etc/viagate-commercial/.env
   set +a
   cd "'"$RELEASE"'"
   ./migrate up
@@ -217,7 +249,7 @@ sudo -u viagate bash -c '
 
 O runner valida os hashes das migrations já aplicadas e interrompe se detectar alteração indevida em migration histórica.
 
-## 7. Ativar a release
+## 8. Ativar a release
 
 Troque o symlink de forma atômica:
 
@@ -247,7 +279,7 @@ Logs:
 journalctl -u viagate-commercial -f
 ```
 
-## 8. Healthcheck antes de liberar tráfego
+## 9. Healthcheck antes de liberar tráfego
 
 No próprio servidor:
 
@@ -265,7 +297,7 @@ curl -fsS https://viagate.com.br/healthz -o /dev/null
 curl -fsS https://viagate.com.br/readyz -o /dev/null
 ```
 
-## 9. Proxy reverso no mesmo domínio
+## 10. Proxy reverso no mesmo domínio
 
 O site institucional e o comercial são serviços separados:
 
@@ -331,7 +363,7 @@ O proxy deve sobrescrever `X-Forwarded-For` e `X-Real-IP`, em vez de confiar em 
 
 Não exponha `8081`, `8090` ou `5432` à internet. Os serviços Go e PostgreSQL devem permanecer em loopback; somente o Nginx recebe tráfego público em 80/443.
 
-## 10. Smoke test obrigatório
+## 11. Smoke test obrigatório
 
 Antes de considerar a release aberta para clientes reais, valide em produção:
 
@@ -345,7 +377,7 @@ Antes de considerar a release aberta para clientes reais, valide em produção:
 8. aceite da proposta;
 9. retomada pelo mesmo link da proposta;
 10. onboarding e upload de apólice;
-11. revisão/aprovação interna;
+11. geração automática do contrato ou retomada automática após falha temporária;
 12. recebimento do e-mail do contrato;
 13. abertura do PDF exato do contrato;
 14. envio e confirmação do OTP;
@@ -357,7 +389,7 @@ Antes de considerar a release aberta para clientes reais, valide em produção:
 
 Esse smoke test valida, em conjunto, PostgreSQL, S3, Brevo, Chromium, jobs internos, sessão, links públicos, fluxo jurídico e coexistência com o site institucional.
 
-## 11. Primeiro Super Admin
+## 12. Primeiro Super Admin
 
 Se o banco de produção for novo, configure temporariamente:
 
@@ -368,7 +400,7 @@ BOOTSTRAP_ADMIN_NAME=...
 
 Inicie a aplicação, receba e conclua o convite. Depois remova esses dois valores da configuração permanente e reinicie o serviço.
 
-## 12. Rollback
+## 13. Rollback
 
 Mantenha pelo menos a release anterior em `/opt/viagate-commercial/releases`.
 
@@ -382,7 +414,7 @@ sudo systemctl restart viagate-commercial
 
 Se migrations já foram aplicadas, não presuma que um binário antigo é compatível com o schema novo. Nesse caso, avalie a migration específica. Se houver incompatibilidade, o rollback seguro exige restauração do backup PostgreSQL e coordenação com os objetos S3 criados após o deploy.
 
-## 13. Backups e observabilidade
+## 14. Backups e observabilidade
 
 Antes de abrir produção, defina:
 
@@ -394,7 +426,7 @@ Antes de abrir produção, defina:
 - alerta para indisponibilidade do serviço;
 - acompanhamento da outbox de e-mails e falhas de finalização de contrato.
 
-## 14. Critério de liberação
+## 15. Critério de liberação
 
 A release só deve receber tráfego real quando todos os itens abaixo estiverem verdadeiros:
 
