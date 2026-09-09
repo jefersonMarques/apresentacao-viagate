@@ -29,8 +29,8 @@ require_command() {
 
 service_is_healthy() {
 	sudo systemctl is-active --quiet "$SERVICE" &&
-		curl -fsS http://127.0.0.1:8081/healthz -o /dev/null &&
-		curl -fsS http://127.0.0.1:8081/readyz -o /dev/null
+		curl -fsS http://127.0.0.1:8081/healthz -o /dev/null 2>/dev/null &&
+		curl -fsS http://127.0.0.1:8081/readyz -o /dev/null 2>/dev/null
 }
 
 wait_for_health() {
