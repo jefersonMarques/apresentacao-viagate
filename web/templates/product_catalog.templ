@@ -104,7 +104,7 @@ templ ProductCatalogPage(user domain.User, categories []catalog.ManagedCategory,
 								if len(category.Products) == 0 {
 									<div class="catalog-empty compact">
 										<strong>Nenhum produto nesta categoria.</strong>
-										if !category.IsDeleted {
+										if !category.IsDeleted && !category.IsArchived {
 											<span>Use “Adicionar produto” para cadastrar o primeiro item.</span>
 										}
 									</div>
@@ -334,7 +334,7 @@ templ CatalogProductFields(categories []catalog.ManagedCategory, product catalog
 			<span>Categoria</span>
 			<select name="category_id" required data-catalog-product-category>
 				for _, category := range categories {
-					if !category.IsDeleted {
+					if !category.IsDeleted && (!category.IsArchived || category.ID == product.CategoryID) {
 						<option value={ category.ID } selected?={ category.ID == product.CategoryID }>{ category.Name }</option>
 					}
 				}
@@ -411,7 +411,7 @@ templ CatalogDependencyGroup(categories []catalog.ManagedCategory, product catal
 										<option
 											value={ candidate.ID }
 											selected?={ CatalogDependencySelected(group, candidate.ID) }
-											disabled?={ CatalogDependencyCandidateDisabled(candidate, CatalogDependencySelected(group, candidate.ID)) }
+											disabled?={ CatalogDependencyCandidateDisabled(category, candidate, CatalogDependencySelected(group, candidate.ID)) }
 										>
 											{ candidate.Name }{ CatalogDependencyStatusSuffix(candidate) }
 										</option>
@@ -445,7 +445,7 @@ templ CatalogDependencyGroupTemplate(categories []catalog.ManagedCategory, produ
 				<span>Produtos necessários</span>
 				<select multiple size="6" data-dependency-products-template>
 					for _, category := range categories {
-						if !category.IsDeleted {
+						if !category.IsDeleted && !category.IsArchived {
 							<optgroup label={ category.Name }>
 								for _, candidate := range category.Products {
 									if candidate.ID != product.ID && !candidate.IsDeleted && candidate.IsActive && !candidate.IsArchived {
