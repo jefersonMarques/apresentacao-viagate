@@ -19,3 +19,11 @@ func CatalogActiveClass(active bool) string {
 func CatalogSortOrder(value int) string {
 	return strconv.Itoa(value)
 }
+
+
+func CatalogValueOrDash(value string) string {
+	if value == "" {
+		return "—"
+	}
+	return value
+}
