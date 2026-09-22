@@ -128,21 +128,31 @@ templ ProposalEditorPage(user domain.User, input proposals.EditorInput, draft pr
 											<div class="v1-product-list">
 												for _, catalogItem := range category.Products {
 													{{ existing, found := ProposalEditorItem(input, catalogItem.Code) }}
-													<div class="v1-product-row" data-proposal-product data-group={ category.Code }>
+													<div class="v1-product-row" data-proposal-product data-group={ category.Code } data-product-code={ catalogItem.Code }>
 														<input type="hidden" name="catalog_id" value={ catalogItem.Code }/>
 														<input type="hidden" name="item_status" value={ ProposalItemStatus(existing, found) }/>
+														for _, dependencyGroup := range catalogItem.DependencyGroups {
+															<span data-product-dependency-group data-mode={ dependencyGroup.MatchMode } hidden>
+																for _, requiredProduct := range dependencyGroup.RequiredProducts {
+																	<i data-required-code={ requiredProduct.Code } data-required-name={ requiredProduct.Name }></i>
+																}
+															</span>
+														}
 														<div class="v1-product-copy">
 															<strong>{ catalogItem.Name }</strong>
 															<small>
 																if catalogItem.Unit != "" {
 																	<span>{ catalogItem.Unit }</span>
 																}
-																if !catalogItem.IsActive {
-																	<span class="v1-product-inactive">INATIVO · mantido nesta proposta</span>
+																if catalogItem.IsDeleted || catalogItem.IsArchived || !catalogItem.IsActive {
+																	<span class="v1-product-inactive">{ CatalogLifecycleLabel(catalogItem.IsActive, catalogItem.IsArchived, catalogItem.IsDeleted) } · mantido nesta proposta</span>
 																}
 															</small>
 															if catalogItem.Description != "" {
 																<em>{ catalogItem.Description }</em>
+															}
+															if len(catalogItem.DependencyGroups) > 0 {
+																<span class="v1-product-dependency-note" data-product-dependency-note>Requer: { CatalogDependencySummary(catalogItem.DependencyGroups) }</span>
 															}
 														</div>
 														<label class="v1-switch" aria-label="Incluir produto">

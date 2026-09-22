@@ -5,12 +5,12 @@ import (
 	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
 )
 
-templ ProductCatalogPage(user domain.User, categories []catalog.ManagedCategory, message, errorMessage string) {
+templ ProductCatalogPage(user domain.User, categories []catalog.ManagedCategory, showDeleted bool, message, errorMessage string) {
 	@AdminLayout("ViaGate — Produtos", user) {
 		<link rel="stylesheet" href="/commercial-assets/product-catalog.css"/>
-		@AdminPageHeader("CATÁLOGO COMERCIAL", "Produtos", "Organize o catálogo por categorias. Abra uma categoria somente quando precisar consultar ou editar seus produtos.") {
+		@AdminPageHeader("CATÁLOGO COMERCIAL", "Produtos", "Organize categorias, produtos e dependências usadas na composição das propostas.") {
 			<button class="btn" type="button" data-catalog-dialog-open="new-category">Nova categoria</button>
-			if len(categories) > 0 {
+			if CatalogHasWritableCategory(categories) {
 				<button class="btn primary" type="button" data-catalog-dialog-open="new-product">Novo produto</button>
 			}
 		}
@@ -21,23 +21,31 @@ templ ProductCatalogPage(user domain.User, categories []catalog.ManagedCategory,
 				<div>
 					<span class="eyebrow">ESTRUTURA DO CATÁLOGO</span>
 					<h2>Categorias</h2>
-					<p>As categorias ficam recolhidas por padrão para manter o catálogo compacto.</p>
+					<p>Arquivados permanecem visíveis para administração. Excluídos aparecem somente quando o filtro está ativo.</p>
 				</div>
-				<span>{ len(categories) } categoria(s)</span>
+				<form method="get" action="/admin/products" class="catalog-filter">
+					<label>
+						<input type="checkbox" name="show_deleted" value="1" checked?={ showDeleted }/>
+						<span>Mostrar excluídos</span>
+					</label>
+					<button class="btn" type="submit">Aplicar</button>
+				</form>
 			</div>
 
 			if len(categories) == 0 {
 				<div class="catalog-empty">
-					<strong>Nenhuma categoria cadastrada.</strong>
-					<span>Crie a primeira categoria para começar a organizar os produtos.</span>
+					<strong>Nenhuma categoria encontrada.</strong>
+					<span>Crie uma categoria ou altere o filtro atual.</span>
 				</div>
 			} else {
 				<div class="catalog-category-list">
 					for _, category := range categories {
-						<details class="catalog-category">
+						<details class={ "catalog-category " + CatalogLifecycleClass(category.IsActive, category.IsArchived, category.IsDeleted) }>
 							<summary class="catalog-category-summary">
 								<div class="catalog-category-main">
-									<span class={ "catalog-status " + CatalogActiveClass(category.IsActive) }>{ CatalogActiveLabel(category.IsActive) }</span>
+									<span class={ "catalog-status " + CatalogLifecycleClass(category.IsActive, category.IsArchived, category.IsDeleted) }>
+										{ CatalogLifecycleLabel(category.IsActive, category.IsArchived, category.IsDeleted) }
+									</span>
 									<div class="catalog-category-copy">
 										<strong>{ category.Name }</strong>
 										if category.Description != "" {
@@ -46,7 +54,7 @@ templ ProductCatalogPage(user domain.User, categories []catalog.ManagedCategory,
 									</div>
 								</div>
 								<div class="catalog-category-meta">
-									<span>{ len(category.Products) } produto(s)</span>
+									<span>{ CatalogNonDeletedProductCount(category) } produto(s)</span>
 									<span class="catalog-chevron" aria-hidden="true">
 										<svg viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></svg>
 									</span>
@@ -60,38 +68,95 @@ templ ProductCatalogPage(user domain.User, categories []catalog.ManagedCategory,
 										<code>{ category.Code }</code>
 									</div>
 									<div class="catalog-toolbar-actions">
-										<button class="btn" type="button" data-catalog-dialog-open={ "category-" + category.ID }>Editar categoria</button>
-										<button class="btn primary" type="button" data-catalog-new-product-category={ category.ID }>Adicionar produto</button>
+										if category.IsDeleted {
+											<form method="post" action={ templ.SafeURL("/admin/products/categories/" + category.ID + "/lifecycle") }>
+												<input type="hidden" name="action" value="restore"/>
+												<input type="hidden" name="show_deleted" value="1"/>
+												<button class="btn" type="submit">Restaurar categoria</button>
+											</form>
+										} else {
+											<button class="btn" type="button" data-catalog-dialog-open={ "category-" + category.ID }>Editar categoria</button>
+											<button class="btn primary" type="button" data-catalog-new-product-category={ category.ID }>Adicionar produto</button>
+											<form method="post" action={ templ.SafeURL("/admin/products/categories/" + category.ID + "/lifecycle") }>
+												if category.IsArchived {
+													<input type="hidden" name="action" value="unarchive"/>
+													<button class="btn" type="submit">Desarquivar</button>
+												} else {
+													<input type="hidden" name="action" value="archive"/>
+													<button class="btn" type="submit">Arquivar</button>
+												}
+											</form>
+											if CatalogNonDeletedProductCount(category) == 0 {
+												<form method="post" action={ templ.SafeURL("/admin/products/categories/" + category.ID + "/lifecycle") } data-catalog-confirm="Excluir esta categoria? Ela só poderá ser excluída se nunca tiver sido usada.">
+													<input type="hidden" name="action" value="delete"/>
+													<button class="btn danger" type="submit">Excluir</button>
+												</form>
+											}
+										}
 									</div>
 								</div>
 
 								if len(category.Products) == 0 {
 									<div class="catalog-empty compact">
 										<strong>Nenhum produto nesta categoria.</strong>
-										<span>Use “Adicionar produto” para cadastrar o primeiro item.</span>
+										if !category.IsDeleted {
+											<span>Use “Adicionar produto” para cadastrar o primeiro item.</span>
+										}
 									</div>
 								} else {
 									<div class="catalog-product-table" role="table" aria-label={ "Produtos de " + category.Name }>
 										<div class="catalog-product-row catalog-product-header" role="row">
 											<span role="columnheader">Produto</span>
+											<span role="columnheader">Dependências</span>
 											<span role="columnheader">Unidade</span>
 											<span role="columnheader">Status</span>
-											<span role="columnheader">Ordem</span>
 											<span role="columnheader"></span>
 										</div>
 										for _, product := range category.Products {
-											<div class="catalog-product-row" role="row">
+											<div class={ "catalog-product-row " + CatalogLifecycleClass(product.IsActive, product.IsArchived, product.IsDeleted) } role="row">
 												<div class="catalog-product-name" role="cell">
 													<strong>{ product.Name }</strong>
 													if product.Description != "" {
 														<small>{ product.Description }</small>
 													}
 												</div>
+												<div class="catalog-product-dependency-summary" role="cell">
+													if CatalogDependencyCount(product) > 0 {
+														<strong>{ CatalogDependencyCount(product) } grupo(s)</strong>
+														<small>{ CatalogDependencySummary(product.DependencyGroups) }</small>
+													} else {
+														<span>Sem dependências</span>
+													}
+												</div>
 												<span role="cell">{ CatalogValueOrDash(product.Unit) }</span>
-												<span role="cell"><span class={ "catalog-status " + CatalogActiveClass(product.IsActive) }>{ CatalogActiveLabel(product.IsActive) }</span></span>
-												<span role="cell">{ CatalogSortOrder(product.SortOrder) }</span>
+												<span role="cell">
+													<span class={ "catalog-status " + CatalogLifecycleClass(product.IsActive, product.IsArchived, product.IsDeleted) }>
+														{ CatalogLifecycleLabel(product.IsActive, product.IsArchived, product.IsDeleted) }
+													</span>
+												</span>
 												<div class="catalog-product-actions" role="cell">
-													<button class="btn" type="button" data-catalog-dialog-open={ "product-" + product.ID }>Editar</button>
+													if product.IsDeleted {
+														<form method="post" action={ templ.SafeURL("/admin/products/items/" + product.ID + "/lifecycle") }>
+															<input type="hidden" name="action" value="restore"/>
+															<input type="hidden" name="show_deleted" value="1"/>
+															<button class="btn" type="submit">Restaurar</button>
+														</form>
+													} else {
+														<button class="btn" type="button" data-catalog-dialog-open={ "product-" + product.ID }>Editar</button>
+														<form method="post" action={ templ.SafeURL("/admin/products/items/" + product.ID + "/lifecycle") }>
+															if product.IsArchived {
+																<input type="hidden" name="action" value="unarchive"/>
+																<button class="btn" type="submit">Desarquivar</button>
+															} else {
+																<input type="hidden" name="action" value="archive"/>
+																<button class="btn" type="submit">Arquivar</button>
+															}
+														</form>
+														<form method="post" action={ templ.SafeURL("/admin/products/items/" + product.ID + "/lifecycle") } data-catalog-confirm="Excluir este produto? A exclusão só será permitida se ele nunca tiver sido usado e não for requisito de outro produto.">
+															<input type="hidden" name="action" value="delete"/>
+															<button class="btn danger" type="submit">Excluir</button>
+														</form>
+													}
 												</div>
 											</div>
 										}
@@ -123,7 +188,7 @@ templ ProductCatalogPage(user domain.User, categories []catalog.ManagedCategory,
 			</div>
 		</dialog>
 
-		if len(categories) > 0 {
+		if CatalogHasWritableCategory(categories) {
 			<dialog class="catalog-dialog" data-catalog-dialog="new-product" aria-labelledby="catalog-new-product-title">
 				<div class="catalog-dialog-card">
 					<header class="catalog-dialog-head">
@@ -145,46 +210,50 @@ templ ProductCatalogPage(user domain.User, categories []catalog.ManagedCategory,
 		}
 
 		for _, category := range categories {
-			<dialog class="catalog-dialog" data-catalog-dialog={ "category-" + category.ID } aria-label={ "Editar " + category.Name }>
-				<div class="catalog-dialog-card">
-					<header class="catalog-dialog-head">
-						<div>
-							<span class="eyebrow">EDITAR CATEGORIA</span>
-							<h2>{ category.Name }</h2>
-						</div>
-						<button class="catalog-dialog-close" type="button" data-catalog-dialog-close aria-label="Fechar">×</button>
-					</header>
-					<form method="post" action="/admin/products/categories" class="catalog-dialog-form">
-						<input type="hidden" name="id" value={ category.ID }/>
-						@CatalogCategoryFields(category.Name, category.Description, category.Code, category.IsActive, category.SortOrder)
-						<footer class="catalog-dialog-footer">
-							<button class="btn" type="button" data-catalog-dialog-close>Cancelar</button>
-							<button class="btn primary" type="submit">Salvar categoria</button>
-						</footer>
-					</form>
-				</div>
-			</dialog>
-
-			for _, product := range category.Products {
-				<dialog class="catalog-dialog" data-catalog-dialog={ "product-" + product.ID } aria-label={ "Editar " + product.Name }>
+			if !category.IsDeleted {
+				<dialog class="catalog-dialog" data-catalog-dialog={ "category-" + category.ID } aria-label={ "Editar " + category.Name }>
 					<div class="catalog-dialog-card">
 						<header class="catalog-dialog-head">
 							<div>
-								<span class="eyebrow">EDITAR PRODUTO</span>
-								<h2>{ product.Name }</h2>
+								<span class="eyebrow">EDITAR CATEGORIA</span>
+								<h2>{ category.Name }</h2>
 							</div>
 							<button class="catalog-dialog-close" type="button" data-catalog-dialog-close aria-label="Fechar">×</button>
 						</header>
-						<form method="post" action="/admin/products/items" class="catalog-dialog-form">
-							<input type="hidden" name="id" value={ product.ID }/>
-							@CatalogProductFields(categories, product)
+						<form method="post" action="/admin/products/categories" class="catalog-dialog-form">
+							<input type="hidden" name="id" value={ category.ID }/>
+							@CatalogCategoryFields(category.Name, category.Description, category.Code, category.IsActive, category.SortOrder)
 							<footer class="catalog-dialog-footer">
 								<button class="btn" type="button" data-catalog-dialog-close>Cancelar</button>
-								<button class="btn primary" type="submit">Salvar produto</button>
+								<button class="btn primary" type="submit">Salvar categoria</button>
 							</footer>
 						</form>
 					</div>
 				</dialog>
+			}
+
+			for _, product := range category.Products {
+				if !product.IsDeleted {
+					<dialog class="catalog-dialog catalog-dialog-wide" data-catalog-dialog={ "product-" + product.ID } aria-label={ "Editar " + product.Name }>
+						<div class="catalog-dialog-card">
+							<header class="catalog-dialog-head">
+								<div>
+									<span class="eyebrow">EDITAR PRODUTO</span>
+									<h2>{ product.Name }</h2>
+								</div>
+								<button class="catalog-dialog-close" type="button" data-catalog-dialog-close aria-label="Fechar">×</button>
+							</header>
+							<form method="post" action="/admin/products/items" class="catalog-dialog-form">
+								<input type="hidden" name="id" value={ product.ID }/>
+								@CatalogProductFields(categories, product)
+								<footer class="catalog-dialog-footer">
+									<button class="btn" type="button" data-catalog-dialog-close>Cancelar</button>
+									<button class="btn primary" type="submit">Salvar produto</button>
+								</footer>
+							</form>
+						</div>
+					</dialog>
+				}
 			}
 		}
 
@@ -226,7 +295,9 @@ templ CatalogProductFields(categories []catalog.ManagedCategory, product catalog
 			<span>Categoria</span>
 			<select name="category_id" required data-catalog-product-category>
 				for _, category := range categories {
-					<option value={ category.ID } selected?={ category.ID == product.CategoryID }>{ category.Name }</option>
+					if !category.IsDeleted {
+						<option value={ category.ID } selected?={ category.ID == product.CategoryID }>{ category.Name }</option>
+					}
 				}
 			</select>
 		</label>
@@ -250,5 +321,104 @@ templ CatalogProductFields(categories []catalog.ManagedCategory, product catalog
 			<input type="checkbox" name="is_active" value="1" checked?={ product.IsActive }/>
 			<span>Produto ativo</span>
 		</label>
+	</div>
+
+	<details class="catalog-dependencies" open?={ len(product.DependencyGroups) > 0 }>
+		<summary>
+			<span>Dependências</span>
+			if len(product.DependencyGroups) > 0 {
+				<small>{ CatalogDependencySummary(product.DependencyGroups) }</small>
+			} else {
+				<small>Sem condicionais configuradas.</small>
+			}
+		</summary>
+		<div class="catalog-dependencies-body">
+			<p>Todos os grupos precisam ser atendidos. Dentro de cada grupo você escolhe se basta qualquer produto ou se todos são obrigatórios.</p>
+			<div class="catalog-dependency-groups" data-dependency-groups data-next-index={ CatalogSortOrder(len(product.DependencyGroups)) }>
+				for index, group := range product.DependencyGroups {
+					@CatalogDependencyGroup(categories, product, group, index)
+				}
+			</div>
+			<button class="btn" type="button" data-add-dependency-group>Adicionar grupo de condições</button>
+			<template data-dependency-group-template>
+				@CatalogDependencyGroupTemplate(categories, product)
+			</template>
+		</div>
+	</details>
+}
+
+templ CatalogDependencyGroup(categories []catalog.ManagedCategory, product catalog.ManagedProduct, group catalog.DependencyGroup, index int) {
+	<div class="catalog-dependency-group" data-dependency-group>
+		<div class="catalog-dependency-group-head">
+			<strong>Grupo de condição</strong>
+			<button class="catalog-remove-dependency" type="button" data-remove-dependency-group aria-label="Remover grupo">×</button>
+		</div>
+		<div class="catalog-dependency-grid">
+			<label>
+				<span>Regra</span>
+				<select name={ CatalogDependencyModeName(index) }>
+					<option value="any" selected?={ group.MatchMode == "any" }>Qualquer um</option>
+					<option value="all" selected?={ group.MatchMode == "all" }>Todos</option>
+				</select>
+			</label>
+			<label>
+				<span>Produtos necessários</span>
+				<select name={ CatalogDependencyProductName(index) } multiple size="6">
+					for _, category := range categories {
+						if !category.IsDeleted {
+							<optgroup label={ category.Name }>
+								for _, candidate := range category.Products {
+									if candidate.ID != product.ID && !candidate.IsDeleted {
+										<option
+											value={ candidate.ID }
+											selected?={ CatalogDependencySelected(group, candidate.ID) }
+											disabled?={ CatalogDependencyCandidateDisabled(candidate, CatalogDependencySelected(group, candidate.ID)) }
+										>
+											{ candidate.Name }{ CatalogDependencyStatusSuffix(candidate) }
+										</option>
+									}
+								}
+							</optgroup>
+						}
+					}
+				</select>
+				<small>Use Ctrl/Cmd para selecionar mais de um produto.</small>
+			</label>
+		</div>
+	</div>
+}
+
+templ CatalogDependencyGroupTemplate(categories []catalog.ManagedCategory, product catalog.ManagedProduct) {
+	<div class="catalog-dependency-group" data-dependency-group>
+		<div class="catalog-dependency-group-head">
+			<strong>Grupo de condição</strong>
+			<button class="catalog-remove-dependency" type="button" data-remove-dependency-group aria-label="Remover grupo">×</button>
+		</div>
+		<div class="catalog-dependency-grid">
+			<label>
+				<span>Regra</span>
+				<select data-dependency-mode-template>
+					<option value="any">Qualquer um</option>
+					<option value="all">Todos</option>
+				</select>
+			</label>
+			<label>
+				<span>Produtos necessários</span>
+				<select multiple size="6" data-dependency-products-template>
+					for _, category := range categories {
+						if !category.IsDeleted {
+							<optgroup label={ category.Name }>
+								for _, candidate := range category.Products {
+									if candidate.ID != product.ID && !candidate.IsDeleted && candidate.IsActive && !candidate.IsArchived {
+										<option value={ candidate.ID }>{ candidate.Name }</option>
+									}
+								}
+							</optgroup>
+						}
+					}
+				</select>
+				<small>Use Ctrl/Cmd para selecionar mais de um produto.</small>
+			</label>
+		</div>
 	</div>
 }

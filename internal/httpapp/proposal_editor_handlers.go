@@ -454,6 +454,13 @@ func (a *App) proposalInputFromForm(r *http.Request, salesperson domain.User) (p
 			SortOrder:    index,
 		})
 	}
+	selectedProductCodes := make([]string, 0, len(input.Items))
+	for _, item := range input.Items {
+		selectedProductCodes = append(selectedProductCodes, item.CatalogID)
+	}
+	if err := a.catalogStore.ValidateSelection(r.Context(), selectedProductCodes); err != nil {
+		return input, err
+	}
 	input.Conditions = normalizedConditions(r.Form["condition"], r.FormValue("custom_conditions"))
 	validUntil := ""
 	if input.ValidUntil != nil {

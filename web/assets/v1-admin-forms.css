@@ -73,3 +73,11 @@
 @media(max-width:720px){
   .v1-category-selector{grid-template-columns:1fr}
 }
+
+
+.v1-product-dependency-note{display:block;margin-top:6px;color:#7a5a28;font-size:9px;font-weight:700;line-height:1.45}
+.v1-product-dependency-note[data-state="ready"]{color:#3f6f57}
+.v1-product-dependency-note[data-state="blocked"]{color:#a35d1f}
+.v1-product-row.is-dependency-blocked{background:#fffaf4}
+.v1-product-row.is-dependency-blocked .v1-product-copy>strong{color:#7b6b5f}
+.v1-product-row.is-dependency-blocked .v1-switch{opacity:.55}

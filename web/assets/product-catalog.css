@@ -76,3 +76,56 @@
   .catalog-toolbar-actions .btn{width:100%;justify-content:center}
   .catalog-dialog-head,.catalog-dialog-form{padding-left:16px;padding-right:16px}
 }
+
+
+.catalog-filter{display:flex;align-items:center;gap:8px}
+.catalog-filter label{display:flex;align-items:center;gap:7px;color:var(--admin-muted);font-size:11px;font-weight:700}
+.catalog-filter input{width:16px;height:16px;accent-color:var(--admin-orange)}
+.catalog-status.archived{background:#fff5e8;color:#a65a0a}
+.catalog-status.deleted{background:#fff0ef;color:#b42318}
+.catalog-category.archived>.catalog-category-summary{background:#fffdf9}
+.catalog-category.deleted>.catalog-category-summary{background:#fffafa}
+.catalog-product-row.archived{background:#fffdf9}
+.catalog-product-row.deleted{background:#fffafa}
+.catalog-product-row.deleted .catalog-product-name strong{text-decoration:line-through;color:#7a8c96}
+.catalog-product-row{grid-template-columns:minmax(240px,1.8fr) minmax(220px,1.35fr) 100px 90px minmax(240px,1.2fr)}
+.catalog-product-dependency-summary{display:grid;gap:3px;min-width:0}
+.catalog-product-dependency-summary strong{color:#405765;font-size:10px}
+.catalog-product-dependency-summary small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--admin-muted);font-size:9px}
+.catalog-product-dependency-summary>span{color:var(--admin-muted);font-size:10px}
+.catalog-product-actions,.catalog-toolbar-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap}
+.catalog-product-actions form,.catalog-toolbar-actions form{margin:0}
+.catalog-product-actions .btn,.catalog-toolbar-actions .btn{min-height:34px;padding:0 10px;font-size:10px}
+.catalog-dialog-wide{width:min(820px,calc(100vw - 24px))}
+.catalog-dependencies{border:1px solid #dce5e9;background:#f8fafb}
+.catalog-dependencies>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 14px;cursor:pointer}
+.catalog-dependencies>summary::-webkit-details-marker{display:none}
+.catalog-dependencies>summary span{color:var(--admin-text);font-size:12px;font-weight:800}
+.catalog-dependencies>summary small{max-width:540px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--admin-muted);font-size:10px}
+.catalog-dependencies-body{display:grid;gap:12px;padding:14px;border-top:1px solid #dce5e9}
+.catalog-dependencies-body>p{margin:0;color:var(--admin-muted);font-size:10px;line-height:1.55}
+.catalog-dependency-groups{display:grid;gap:10px}
+.catalog-dependency-group{padding:12px;border:1px solid #dce5e9;background:#fff}
+.catalog-dependency-group-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.catalog-dependency-group-head strong{font-size:11px}
+.catalog-remove-dependency{width:28px;height:28px;border:1px solid #d8e1e6;background:#fff;color:#70848f;font-size:18px;line-height:1;cursor:pointer}
+.catalog-remove-dependency:hover{border-color:#d39a92;color:#b42318}
+.catalog-dependency-grid{display:grid;grid-template-columns:160px 1fr;gap:10px}
+.catalog-dependency-grid label{display:grid;gap:6px;color:#536875;font-size:10px;font-weight:700}
+.catalog-dependency-grid select{width:100%;box-sizing:border-box;border:1px solid #cfdbe1;background:#fff;color:var(--admin-text);padding:9px 10px;font:inherit;font-size:11px}
+.catalog-dependency-grid select[multiple]{min-height:132px;padding:5px}
+.catalog-dependency-grid label>small{color:var(--admin-muted);font-size:9px;font-weight:500}
+.catalog-dependency-grid option:disabled{color:#9aa7ae}
+@media(max-width:1120px){
+  .catalog-product-row{grid-template-columns:minmax(220px,1.8fr) minmax(180px,1.2fr) 90px 90px minmax(180px,1fr)}
+}
+@media(max-width:820px){
+  .catalog-filter{align-items:stretch;flex-direction:column}
+  .catalog-filter .btn{width:100%;justify-content:center}
+  .catalog-product-row{grid-template-columns:1fr auto}
+  .catalog-product-header{display:none}
+  .catalog-product-name,.catalog-product-dependency-summary{grid-column:1/-1}
+  .catalog-product-actions{grid-column:1/-1;justify-content:flex-start}
+  .catalog-product-row>span{display:flex;align-items:center;gap:5px}
+  .catalog-dependency-grid{grid-template-columns:1fr}
+}

@@ -159,6 +159,8 @@ func (a *App) Routes() http.Handler {
 		admin.With(a.permission("settings.manage")).Get("/admin/products", a.productCatalogPage)
 		admin.With(a.permission("settings.manage")).Post("/admin/products/categories", a.saveProductCategory)
 		admin.With(a.permission("settings.manage")).Post("/admin/products/items", a.saveProductItem)
+		admin.With(a.permission("settings.manage")).Post("/admin/products/categories/{id}/lifecycle", a.updateCategoryLifecycle)
+		admin.With(a.permission("settings.manage")).Post("/admin/products/items/{id}/lifecycle", a.updateProductLifecycle)
 
 		admin.Get("/admin/presentations", a.adminPresentations)
 		admin.With(a.permission("presentation.create")).Get("/admin/presentations/new", a.newPresentationPage)
