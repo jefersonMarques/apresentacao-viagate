@@ -1,7 +1,6 @@
 package httpapp
 
 import (
-	"context"
 	"fmt"
 	"html"
 	"net/http"
@@ -219,8 +218,4 @@ func absoluteProposalEmailURL(baseURL, value string) string {
 		return strings.TrimRight(baseURL, "/") + value
 	}
 	return value
-}
-
-func queueProposalShareEmail(ctx context.Context) {
-	_ = ctx
 }
