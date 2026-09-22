@@ -15,8 +15,8 @@ import (
 
 func (a *App) productCatalogPage(w http.ResponseWriter, r *http.Request) {
 	user, _ := currentUser(r.Context())
-	showDeleted := r.URL.Query().Get("show_deleted") == "1"
-	categories, err := a.catalogStore.ListAdmin(r.Context(), showDeleted)
+	showHidden := r.URL.Query().Get("show_hidden") == "1" || r.URL.Query().Get("show_deleted") == "1"
+	categories, err := a.catalogStore.ListAdmin(r.Context(), showHidden)
 	if err != nil {
 		a.logger.Error("load product catalog failed", "error", err)
 		http.Error(w, "não foi possível carregar o catálogo de produtos", http.StatusInternalServerError)
@@ -31,11 +31,27 @@ func (a *App) productCatalogPage(w http.ResponseWriter, r *http.Request) {
 		message = "Produto salvo."
 	case "lifecycle":
 		message = "Status do catálogo atualizado."
+	case "product_deleted":
+		message = "Produto excluído."
+	case "product_archived":
+		message = "O produto não pôde ser excluído porque está em uso ou é requisito de outro produto. Ele foi arquivado."
+	case "product_reactivated":
+		message = "Produto reativado."
+	case "product_restored":
+		message = "Produto restaurado."
+	case "category_deleted":
+		message = "Categoria excluída."
+	case "category_archived":
+		message = "A categoria não pôde ser excluída e foi arquivada."
+	case "category_reactivated":
+		message = "Categoria reativada."
+	case "category_restored":
+		message = "Categoria restaurada."
 	}
 	render(r.Context(), w, http.StatusOK, templates.ProductCatalogPage(
 		user,
 		categories,
-		showDeleted,
+		showHidden,
 		message,
 		strings.TrimSpace(r.URL.Query().Get("error")),
 	))
@@ -126,19 +142,27 @@ func (a *App) updateProductLifecycle(w http.ResponseWriter, r *http.Request) {
 	}
 	productID := chi.URLParam(r, "id")
 	action := strings.TrimSpace(r.FormValue("action"))
-	showDeleted := r.FormValue("show_deleted") == "1"
+	showHidden := r.FormValue("show_hidden") == "1" || r.FormValue("show_deleted") == "1"
 
-	if err := a.catalogStore.UpdateProductLifecycle(r.Context(), productID, action); err != nil {
+	err := a.catalogStore.UpdateProductLifecycle(r.Context(), productID, action)
+	saved := productLifecycleSavedState(action)
+	auditAction := action
+	if errors.Is(err, catalog.ErrCatalogArchivedInstead) {
+		err = nil
+		saved = "product_archived"
+		auditAction = "archive_fallback"
+	}
+	if err != nil {
 		a.logger.Error("update product lifecycle failed", "user_id", user.ID, "product_id", productID, "action", action, "error", err)
-		redirectProductCatalog(w, r, showDeleted, catalogLifecycleError(err, "produto"), "")
+		redirectProductCatalog(w, r, showHidden, catalogLifecycleError(err, "produto"), "")
 		return
 	}
 
 	_, _ = a.pool.Exec(r.Context(), `
 		insert into audit_events(actor_user_id,event_type,resource_type,resource_id,metadata)
 		values($1,'catalog.product_lifecycle','product',$2,jsonb_build_object('action',$3::text))
-	`, user.ID, productID, action)
-	redirectProductCatalog(w, r, showDeleted, "", "lifecycle")
+	`, user.ID, productID, auditAction)
+	redirectProductCatalog(w, r, showHidden, "", saved)
 }
 
 func (a *App) updateCategoryLifecycle(w http.ResponseWriter, r *http.Request) {
@@ -149,19 +173,53 @@ func (a *App) updateCategoryLifecycle(w http.ResponseWriter, r *http.Request) {
 	}
 	categoryID := chi.URLParam(r, "id")
 	action := strings.TrimSpace(r.FormValue("action"))
-	showDeleted := r.FormValue("show_deleted") == "1"
+	showHidden := r.FormValue("show_hidden") == "1" || r.FormValue("show_deleted") == "1"
 
-	if err := a.catalogStore.UpdateCategoryLifecycle(r.Context(), categoryID, action); err != nil {
+	err := a.catalogStore.UpdateCategoryLifecycle(r.Context(), categoryID, action)
+	saved := categoryLifecycleSavedState(action)
+	auditAction := action
+	if errors.Is(err, catalog.ErrCatalogArchivedInstead) {
+		err = nil
+		saved = "category_archived"
+		auditAction = "archive_fallback"
+	}
+	if err != nil {
 		a.logger.Error("update category lifecycle failed", "user_id", user.ID, "category_id", categoryID, "action", action, "error", err)
-		redirectProductCatalog(w, r, showDeleted, catalogLifecycleError(err, "categoria"), "")
+		redirectProductCatalog(w, r, showHidden, catalogLifecycleError(err, "categoria"), "")
 		return
 	}
 
 	_, _ = a.pool.Exec(r.Context(), `
 		insert into audit_events(actor_user_id,event_type,resource_type,resource_id,metadata)
 		values($1,'catalog.category_lifecycle','product_category',$2,jsonb_build_object('action',$3::text))
-	`, user.ID, categoryID, action)
-	redirectProductCatalog(w, r, showDeleted || action == "delete", "", "lifecycle")
+	`, user.ID, categoryID, auditAction)
+	redirectProductCatalog(w, r, showHidden, "", saved)
+}
+
+func productLifecycleSavedState(action string) string {
+	switch action {
+	case "delete":
+		return "product_deleted"
+	case "unarchive":
+		return "product_reactivated"
+	case "restore":
+		return "product_restored"
+	default:
+		return "lifecycle"
+	}
+}
+
+func categoryLifecycleSavedState(action string) string {
+	switch action {
+	case "delete":
+		return "category_deleted"
+	case "unarchive":
+		return "category_reactivated"
+	case "restore":
+		return "category_restored"
+	default:
+		return "lifecycle"
+	}
 }
 
 func parseCatalogSortOrder(value string) (int, error) {
@@ -217,10 +275,10 @@ func catalogLifecycleError(err error, resource string) string {
 	}
 }
 
-func redirectProductCatalog(w http.ResponseWriter, r *http.Request, showDeleted bool, errorMessage, saved string) {
+func redirectProductCatalog(w http.ResponseWriter, r *http.Request, showHidden bool, errorMessage, saved string) {
 	values := url.Values{}
-	if showDeleted {
-		values.Set("show_deleted", "1")
+	if showHidden {
+		values.Set("show_hidden", "1")
 	}
 	if errorMessage != "" {
 		values.Set("error", errorMessage)
