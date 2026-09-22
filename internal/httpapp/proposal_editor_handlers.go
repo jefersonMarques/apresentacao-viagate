@@ -321,8 +321,9 @@ func (a *App) proposalInputFromForm(r *http.Request, salesperson domain.User) (p
 		OperationContext:   strings.TrimSpace(r.FormValue("operation_context")),
 		CustomerPriorities: multilineValues(r.FormValue("customer_priorities")),
 		SolutionTitle:      strings.TrimSpace(r.FormValue("solution_title")),
-		SolutionScope:      multilineValues(r.FormValue("solution_scope")),
-		PricingModel:       "catalog",
+		SolutionScope:         multilineValues(r.FormValue("solution_scope")),
+		SelectedCategoryCodes: normalizedCategoryCodes(r.Form["category_code"]),
+		PricingModel:          "catalog",
 		Content: map[string]any{
 			"proposal": map[string]any{"contract_template_id": contractTemplateID},
 		},
@@ -545,6 +546,21 @@ func multilineValues(value string) []string {
 		if line != "" {
 			result = append(result, line)
 		}
+	}
+	return result
+}
+
+
+func normalizedCategoryCodes(values []string) []string {
+	seen := map[string]bool{}
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" || seen[value] {
+			continue
+		}
+		seen[value] = true
+		result = append(result, value)
 	}
 	return result
 }
