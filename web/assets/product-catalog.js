@@ -5,7 +5,7 @@
   }
 
   function openDialog(dialog) {
-    if (!(dialog instanceof HTMLDialogElement)) return;
+    if (typeof HTMLDialogElement === 'undefined' || !(dialog instanceof HTMLDialogElement)) return;
     if (typeof dialog.showModal === 'function') {
       dialog.showModal();
     } else {
@@ -17,7 +17,7 @@
   }
 
   function closeDialog(dialog) {
-    if (!(dialog instanceof HTMLDialogElement)) return;
+    if (typeof HTMLDialogElement === 'undefined' || !(dialog instanceof HTMLDialogElement)) return;
     if (typeof dialog.close === 'function') {
       dialog.close();
     } else {
@@ -37,7 +37,7 @@
     document.querySelectorAll('[data-catalog-new-product-category]').forEach((button) => {
       button.addEventListener('click', () => {
         const dialog = dialogByKey('new-product');
-        if (!(dialog instanceof HTMLDialogElement)) return;
+        if (typeof HTMLDialogElement === 'undefined' || !(dialog instanceof HTMLDialogElement)) return;
         const category = button.getAttribute('data-catalog-new-product-category');
         const select = dialog.querySelector('[data-catalog-product-category]');
         if (select instanceof HTMLSelectElement && category) {
