@@ -27,6 +27,20 @@ func (a *App) decorateProposalCatalog(ctx context.Context, input proposals.Edito
 	if input.Content == nil {
 		input.Content = map[string]any{}
 	}
+	if len(input.SelectedCategoryCodes) == 0 {
+		selectedProducts := map[string]bool{}
+		for _, item := range input.Items {
+			selectedProducts[item.CatalogID] = true
+		}
+		for _, category := range categories {
+			for _, product := range category.Products {
+				if selectedProducts[product.Code] {
+					input.SelectedCategoryCodes = append(input.SelectedCategoryCodes, category.Code)
+					break
+				}
+			}
+		}
+	}
 	input.Content["__ui_product_catalog"] = categories
 	return input
 }
