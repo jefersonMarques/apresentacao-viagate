@@ -92,7 +92,7 @@ templ AdminLayout(title string, user domain.User) {
 						<a href="/admin/contracts" data-admin-nav><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6z"/><path d="M14 3v4h4"/><path d="M9 12h6M9 16h6"/></svg><span>Contratos</span></a>
 					}
 
-					if UserCan(user, "user.manage") || UserCan(user, "audit.read") || UserCan(user, "contract.template.manage") {
+					if UserCan(user, "user.manage") || UserCan(user, "audit.read") || UserCan(user, "contract.template.manage") || UserCan(user, "settings.manage") {
 						<span class="sidebar-section">Administração</span>
 					}
 					if UserCan(user, "user.manage") {
@@ -100,6 +100,9 @@ templ AdminLayout(title string, user domain.User) {
 					}
 					if UserCan(user, "contract.template.manage") {
 						<a href="/admin/contracts/templates" data-admin-nav><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span>Modelos de contrato</span></a>
+					}
+					if UserCan(user, "settings.manage") {
+						<a href="/admin/products" data-admin-nav><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v12H4z"/><path d="M8 7V5h8v2"/><path d="M8 11h8M8 15h5"/></svg><span>Produtos</span></a>
 					}
 					if UserCan(user, "audit.read") {
 						<a href="/admin/audit" data-admin-nav><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.4 8 8 9 4.6-1 8-4 8-9V6z"/><path d="M9 12h6M12 9v6"/></svg><span>Auditoria</span></a>
