@@ -331,6 +331,16 @@ func (s *Store) SaveProduct(
 	}
 	defer tx.Rollback(ctx)
 
+	var categoryExists bool
+	if err := tx.QueryRow(ctx, `
+		select exists(select 1 from product_categories where id=$1 and deleted_at is null)
+	`, categoryID).Scan(&categoryExists); err != nil {
+		return "", err
+	}
+	if !categoryExists {
+		return "", ErrCatalogNotFound
+	}
+
 	productID := strings.TrimSpace(id)
 	if productID == "" {
 		if err := tx.QueryRow(ctx, `
@@ -385,8 +395,13 @@ func (s *Store) UpdateProductLifecycle(ctx context.Context, productID, action st
 		`, productID)
 	case "restore":
 		return execLifecycle(ctx, s.pool, `
-			update products set deleted_at=null,updated_at=now()
-			where id=$1 and deleted_at is not null
+			update products p
+			set deleted_at=null,updated_at=now()
+			where p.id=$1 and p.deleted_at is not null
+			  and exists(
+				select 1 from product_categories c
+				where c.id=p.category_id and c.deleted_at is null
+			  )
 		`, productID)
 	case "delete":
 		var code string
