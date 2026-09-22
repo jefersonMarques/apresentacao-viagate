@@ -10,13 +10,15 @@ import (
 )
 
 type EditorItem struct {
-	CatalogID  string
-	GroupName  string
-	Label      string
-	Unit       string
-	Price      float64
-	IsOptional bool
-	SortOrder  int
+	CatalogID    string
+	CategoryID   string
+	CategoryCode string
+	GroupName    string
+	Label        string
+	Unit         string
+	Price        float64
+	IsOptional   bool
+	SortOrder    int
 }
 
 type EditorInput struct {
@@ -211,7 +213,12 @@ func (s *Store) SaveDraft(ctx context.Context, userID string, allowAll bool, inp
 	}
 
 	for _, item := range input.Items {
-		metadata, _ := json.Marshal(map[string]any{"catalog_id": item.CatalogID})
+		metadata, _ := json.Marshal(map[string]any{
+			"catalog_id":    item.CatalogID,
+			"product_code":  item.CatalogID,
+			"category_id":   item.CategoryID,
+			"category_code": item.CategoryCode,
+		})
 		if _, err := tx.Exec(ctx, `
 			insert into proposal_items(proposal_version_id,group_name,label,unit,price,is_optional,sort_order,metadata)
 			values($1,$2,$3,$4,$5,$6,$7,$8)
@@ -344,14 +351,33 @@ func (s *Store) EditorByID(ctx context.Context, userID, proposalID string, allow
 		_ = json.Unmarshal(conditionsJSON, &input.Conditions)
 	}
 	if draft.VersionID != "" {
-		rows, err := s.pool.Query(ctx, `select coalesce(metadata->>'catalog_id',''),group_name,label,coalesce(unit,''),price,is_optional,sort_order from proposal_items where proposal_version_id=$1 order by sort_order,id`, draft.VersionID)
+		rows, err := s.pool.Query(ctx, `
+			select
+				coalesce(metadata->>'catalog_id',metadata->>'product_code',''),
+				coalesce(metadata->>'category_id',''),
+				coalesce(metadata->>'category_code',''),
+				group_name,label,coalesce(unit,''),price,is_optional,sort_order
+			from proposal_items
+			where proposal_version_id=$1
+			order by sort_order,id
+		`, draft.VersionID)
 		if err != nil {
 			return EditorInput{}, SavedDraft{}, err
 		}
 		defer rows.Close()
 		for rows.Next() {
 			var item EditorItem
-			if err := rows.Scan(&item.CatalogID, &item.GroupName, &item.Label, &item.Unit, &item.Price, &item.IsOptional, &item.SortOrder); err != nil {
+			if err := rows.Scan(
+				&item.CatalogID,
+				&item.CategoryID,
+				&item.CategoryCode,
+				&item.GroupName,
+				&item.Label,
+				&item.Unit,
+				&item.Price,
+				&item.IsOptional,
+				&item.SortOrder,
+			); err != nil {
 				return EditorInput{}, SavedDraft{}, err
 			}
 			input.Items = append(input.Items, item)
