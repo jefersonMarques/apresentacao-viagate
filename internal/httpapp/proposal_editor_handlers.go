@@ -443,11 +443,13 @@ func (a *App) proposalInputFromForm(r *http.Request, salesperson domain.User) (p
 		}
 		input.Items = append(input.Items, proposals.EditorItem{
 			CatalogID:    product.Code,
-			CategoryID:   category.ID,
-			CategoryCode: category.Code,
-			GroupName:    category.Name,
-			Label:        product.Name,
-			Unit:         product.Unit,
+			CategoryID:          category.ID,
+			CategoryCode:        category.Code,
+			CategoryDescription: category.Description,
+			GroupName:           category.Name,
+			Label:               product.Name,
+			Description:         product.Description,
+			Unit:                product.Unit,
 			Price:        price,
 			IsOptional:   status == "optional",
 			SortOrder:    index,
