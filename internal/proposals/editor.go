@@ -46,6 +46,7 @@ type EditorInput struct {
 	CustomerPriorities  []string
 	SolutionTitle       string
 	SolutionScope       []string
+	SelectedCategoryCodes []string
 	PricingModel        string
 	MinimumInvoice      float64
 	SetupFee            float64
