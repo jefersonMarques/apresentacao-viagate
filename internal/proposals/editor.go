@@ -10,15 +10,17 @@ import (
 )
 
 type EditorItem struct {
-	CatalogID    string
-	CategoryID   string
-	CategoryCode string
-	GroupName    string
-	Label        string
-	Unit         string
-	Price        float64
-	IsOptional   bool
-	SortOrder    int
+	CatalogID            string
+	CategoryID           string
+	CategoryCode         string
+	CategoryDescription  string
+	GroupName            string
+	Label                string
+	Description          string
+	Unit                 string
+	Price                float64
+	IsOptional           bool
+	SortOrder            int
 }
 
 type EditorInput struct {
@@ -217,8 +219,10 @@ func (s *Store) SaveDraft(ctx context.Context, userID string, allowAll bool, inp
 		metadata, _ := json.Marshal(map[string]any{
 			"catalog_id":    item.CatalogID,
 			"product_code":  item.CatalogID,
-			"category_id":   item.CategoryID,
-			"category_code": item.CategoryCode,
+			"category_id":          item.CategoryID,
+			"category_code":        item.CategoryCode,
+			"category_description": item.CategoryDescription,
+			"product_description":  item.Description,
 		})
 		if _, err := tx.Exec(ctx, `
 			insert into proposal_items(proposal_version_id,group_name,label,unit,price,is_optional,sort_order,metadata)
@@ -357,7 +361,10 @@ func (s *Store) EditorByID(ctx context.Context, userID, proposalID string, allow
 				coalesce(metadata->>'catalog_id',metadata->>'product_code',''),
 				coalesce(metadata->>'category_id',''),
 				coalesce(metadata->>'category_code',''),
-				group_name,label,coalesce(unit,''),price,is_optional,sort_order
+				coalesce(metadata->>'category_description',''),
+				group_name,label,
+				coalesce(metadata->>'product_description',''),
+				coalesce(unit,''),price,is_optional,sort_order
 			from proposal_items
 			where proposal_version_id=$1
 			order by sort_order,id
@@ -372,8 +379,10 @@ func (s *Store) EditorByID(ctx context.Context, userID, proposalID string, allow
 				&item.CatalogID,
 				&item.CategoryID,
 				&item.CategoryCode,
+				&item.CategoryDescription,
 				&item.GroupName,
 				&item.Label,
+				&item.Description,
 				&item.Unit,
 				&item.Price,
 				&item.IsOptional,
