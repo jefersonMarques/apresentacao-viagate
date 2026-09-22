@@ -161,6 +161,84 @@ templ ProposalEditorPage(user domain.User, input proposals.EditorInput, draft pr
 					</div>
 				</div>
 			</form>
+
+			if ProposalShareDialogOpen(input) {
+				<dialog
+					class="v1-share-dialog"
+					data-proposal-share-dialog
+					data-auto-open="true"
+					aria-labelledby="proposal-share-title"
+				>
+					<div class="v1-share-card">
+						<header class="v1-share-head">
+							<div>
+								<span class="v1-eyebrow">COMPARTILHAR PROPOSTA</span>
+								if ProposalShareState(input) == "published" && draft.PublishedPublicToken != "" {
+									<h2 id="proposal-share-title">Proposta publicada</h2>
+									<p>Escolha como deseja enviar a proposta ao contato da negociação.</p>
+								} else {
+									<h2 id="proposal-share-title">Rascunho salvo</h2>
+									<p>Publique esta versão antes de compartilhar com o cliente.</p>
+								}
+							</div>
+							<button class="v1-share-close" type="button" data-proposal-share-close aria-label="Fechar">×</button>
+						</header>
+
+						if ProposalShareState(input) == "published" && draft.PublishedPublicToken != "" {
+							<div class="v1-share-body">
+								<div class="v1-share-recipient">
+									<span>Contato da negociação</span>
+									if ProposalHasContactEmail(input) {
+										<strong>{ input.ContactName }</strong>
+										<small>{ input.ContactEmail }</small>
+									} else {
+										<strong>E-mail não informado</strong>
+										<small>Preencha o e-mail do contato para usar o envio automático.</small>
+									}
+								</div>
+
+								<div class="v1-share-actions">
+									<button
+										class="v1-button primary"
+										type="button"
+										data-proposal-share-email
+										data-endpoint={ templ.SafeURL("/admin/proposals/" + input.ProposalID + "/share-email") }
+										disabled?={ !ProposalHasContactEmail(input) }
+									>Enviar por e-mail</button>
+									<button
+										class="v1-button"
+										type="button"
+										data-proposal-share-copy
+										data-share-path={ proposalPublicURL(draft.PublishedPublicToken) }
+									>Copiar link</button>
+									<button
+										class="v1-button dark"
+										type="button"
+										data-proposal-share-native
+										data-share-path={ proposalPublicURL(draft.PublishedPublicToken) }
+										data-share-title={ proposalTitle(input.Title) }
+									>Compartilhar</button>
+								</div>
+								<div class="v1-share-status" data-proposal-share-status aria-live="polite"></div>
+								<div class="v1-share-preview">
+									<span>Link público</span>
+									<code>{ proposalPublicURL(draft.PublishedPublicToken) }</code>
+								</div>
+							</div>
+						} else {
+							<div class="v1-share-body">
+								<div class="v1-share-draft-note">
+									<strong>O rascunho foi salvo.</strong>
+									<span>Enquanto esta versão não for publicada, nenhum link ou e-mail será enviado ao cliente.</span>
+								</div>
+								<div class="v1-share-actions">
+									<button class="v1-button dark" type="button" data-proposal-share-close>Continuar editando</button>
+								</div>
+							</div>
+						}
+					</div>
+				</dialog>
+			}
 		</div>
 		<script src="/commercial-assets/proposal-money.js" defer></script>
 	}
