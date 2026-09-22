@@ -12,7 +12,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/access"
-	"github.com/jefersonMarques/apresentacao-viagate/internal/catalog"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/proposals"
 	"github.com/jefersonMarques/apresentacao-viagate/web/templates"
