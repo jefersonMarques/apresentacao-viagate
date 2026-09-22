@@ -191,16 +191,16 @@ func (a *App) adminProposals(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "não foi possível carregar as propostas", http.StatusInternalServerError)
 		return
 	}
-	defaultProposal, err := a.proposalStore.Default(r.Context())
+	defaultProposals, err := a.proposalStore.Defaults(r.Context())
 	if err != nil {
-		http.Error(w, "não foi possível carregar a proposta padrão", http.StatusInternalServerError)
+		http.Error(w, "não foi possível carregar as propostas padrão", http.StatusInternalServerError)
 		return
 	}
 	if proposalID := strings.TrimSpace(r.URL.Query().Get("pdf")); proposalID != "" {
 		a.downloadProposalPDF(w, r, items, proposalID)
 		return
 	}
-	render(r.Context(), w, http.StatusOK, templates.ProposalListPage(user, items, defaultProposal))
+	render(r.Context(), w, http.StatusOK, templates.ProposalListPage(user, items, defaultProposals))
 }
 
 func (a *App) setDefaultProposal(w http.ResponseWriter, r *http.Request) {
