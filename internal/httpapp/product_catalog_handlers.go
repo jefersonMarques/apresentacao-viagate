@@ -138,7 +138,7 @@ func (a *App) updateProductLifecycle(w http.ResponseWriter, r *http.Request) {
 		insert into audit_events(actor_user_id,event_type,resource_type,resource_id,metadata)
 		values($1,'catalog.product_lifecycle','product',$2,jsonb_build_object('action',$3::text))
 	`, user.ID, productID, action)
-	redirectProductCatalog(w, r, showDeleted || action == "delete", "", "lifecycle")
+	redirectProductCatalog(w, r, showDeleted, "", "lifecycle")
 }
 
 func (a *App) updateCategoryLifecycle(w http.ResponseWriter, r *http.Request) {

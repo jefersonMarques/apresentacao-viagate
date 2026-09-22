@@ -89,11 +89,62 @@
       remove.closest('[data-dependency-group]')?.remove();
     });
 
-    document.querySelectorAll('[data-catalog-confirm]').forEach((form) => {
-      form.addEventListener('submit', (event) => {
-        const message = form.getAttribute('data-catalog-confirm') || 'Confirmar esta ação?';
-        if (!window.confirm(message)) event.preventDefault();
+    const deleteDialog = document.querySelector('[data-catalog-delete-dialog]');
+    let pendingDeleteForm = null;
+
+    if (typeof HTMLDialogElement !== 'undefined' && deleteDialog instanceof HTMLDialogElement) {
+      const title = deleteDialog.querySelector('[data-catalog-delete-title]');
+      const name = deleteDialog.querySelector('[data-catalog-delete-name]');
+      const message = deleteDialog.querySelector('[data-catalog-delete-message]');
+      const confirmButton = deleteDialog.querySelector('[data-catalog-delete-confirm]');
+
+      document.querySelectorAll('[data-catalog-delete-open]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const form = button.closest('[data-catalog-delete-form]');
+          if (!(form instanceof HTMLFormElement)) return;
+
+          pendingDeleteForm = form;
+          if (title) title.textContent = form.dataset.deleteTitle || 'Excluir item';
+          if (name) name.textContent = form.dataset.deleteName || '';
+          if (message) {
+            message.textContent = form.dataset.deleteMessage || 'Confirme a exclusão deste item do catálogo.';
+          }
+          if (confirmButton instanceof HTMLButtonElement) {
+            confirmButton.disabled = false;
+            confirmButton.textContent = 'Excluir';
+          }
+          openDialog(deleteDialog);
+        });
       });
-    });
+
+      deleteDialog.querySelectorAll('[data-catalog-delete-close]').forEach((button) => {
+        button.addEventListener('click', () => {
+          pendingDeleteForm = null;
+          closeDialog(deleteDialog);
+        });
+      });
+
+      deleteDialog.addEventListener('click', (event) => {
+        if (event.target !== deleteDialog) return;
+        pendingDeleteForm = null;
+        closeDialog(deleteDialog);
+      });
+
+      deleteDialog.addEventListener('close', () => {
+        if (!deleteDialog.returnValue) pendingDeleteForm = null;
+      });
+
+      confirmButton?.addEventListener('click', () => {
+        if (!(pendingDeleteForm instanceof HTMLFormElement)) return;
+        if (confirmButton instanceof HTMLButtonElement) {
+          confirmButton.disabled = true;
+          confirmButton.textContent = 'Excluindo...';
+        }
+        const form = pendingDeleteForm;
+        pendingDeleteForm = null;
+        closeDialog(deleteDialog);
+        form.requestSubmit();
+      });
+    }
   });
 })();
