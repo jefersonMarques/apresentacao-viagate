@@ -48,11 +48,12 @@ func (b *Brevo) Send(ctx context.Context, message Message) error {
 		return fmt.Errorf("recipient email is empty")
 	}
 
+	htmlContent := RenderViaGateHTML(message.Subject, message.HTMLBody, message.TextBody)
 	payload := map[string]any{
 		"sender": map[string]string{"name": b.senderName, "email": b.senderEmail},
 		"to": []map[string]string{{"name": message.ToName, "email": message.ToEmail}},
 		"subject":     message.Subject,
-		"htmlContent": message.HTMLBody,
+		"htmlContent": htmlContent,
 		"textContent": message.TextBody,
 	}
 
