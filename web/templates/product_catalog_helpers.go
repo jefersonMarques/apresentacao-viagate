@@ -84,11 +84,11 @@ func CatalogDependencySelected(group catalog.DependencyGroup, productID string) 
 	return false
 }
 
-func CatalogDependencyCandidateDisabled(product catalog.ManagedProduct, selected bool) bool {
+func CatalogDependencyCandidateDisabled(category catalog.ManagedCategory, product catalog.ManagedProduct, selected bool) bool {
 	if selected {
 		return false
 	}
-	return !product.IsActive || product.IsArchived || product.IsDeleted
+	return category.IsArchived || category.IsDeleted || !product.IsActive || product.IsArchived || product.IsDeleted
 }
 
 func CatalogDependencySummary(groups []catalog.DependencyGroup) string {
@@ -129,7 +129,7 @@ func CatalogDependencyStatusSuffix(product catalog.ManagedProduct) string {
 
 func CatalogHasWritableCategory(categories []catalog.ManagedCategory) bool {
 	for _, category := range categories {
-		if !category.IsDeleted {
+		if !category.IsDeleted && !category.IsArchived {
 			return true
 		}
 	}
