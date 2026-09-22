@@ -177,7 +177,7 @@
 
   function initProposalSourceDialog() {
     const dialog = document.querySelector('[data-proposal-source-dialog]');
-    if (!(dialog instanceof HTMLDialogElement) || typeof dialog.showModal !== 'function') return;
+    if (typeof HTMLDialogElement === 'undefined' || !(dialog instanceof HTMLDialogElement) || typeof dialog.showModal !== 'function') return;
 
     const openers = Array.from(document.querySelectorAll('[data-proposal-source-open]'));
     const close = dialog.querySelector('[data-proposal-source-close]');
