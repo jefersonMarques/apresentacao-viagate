@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/access"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/contracts"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
@@ -190,11 +191,52 @@ func (a *App) adminProposals(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "não foi possível carregar as propostas", http.StatusInternalServerError)
 		return
 	}
+	defaultProposal, err := a.proposalStore.Default(r.Context())
+	if err != nil {
+		http.Error(w, "não foi possível carregar a proposta padrão", http.StatusInternalServerError)
+		return
+	}
 	if proposalID := strings.TrimSpace(r.URL.Query().Get("pdf")); proposalID != "" {
 		a.downloadProposalPDF(w, r, items, proposalID)
 		return
 	}
-	render(r.Context(), w, http.StatusOK, templates.ProposalListPage(user, items))
+	render(r.Context(), w, http.StatusOK, templates.ProposalListPage(user, items, defaultProposal))
+}
+
+func (a *App) setDefaultProposal(w http.ResponseWriter, r *http.Request) {
+	user, _ := currentUser(r.Context())
+	proposalID := chi.URLParam(r, "id")
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "dados inválidos", http.StatusBadRequest)
+		return
+	}
+
+	action := strings.TrimSpace(r.FormValue("action"))
+	var err error
+	switch action {
+	case "", "set":
+		err = a.proposalStore.SetDefault(r.Context(), proposalID)
+	case "clear":
+		err = a.proposalStore.ClearDefault(r.Context(), proposalID)
+	default:
+		http.Error(w, "ação inválida", http.StatusBadRequest)
+		return
+	}
+	if err != nil {
+		a.logger.Error("update default proposal failed", "user_id", user.ID, "proposal_id", proposalID, "action", action, "error", err)
+		http.Error(w, "não foi possível atualizar a proposta padrão", http.StatusBadRequest)
+		return
+	}
+
+	eventType := "proposal.default_set"
+	if action == "clear" {
+		eventType = "proposal.default_cleared"
+	}
+	_, _ = a.pool.Exec(r.Context(), `
+		insert into audit_events(actor_user_id,event_type,resource_type,resource_id,metadata)
+		values($1,$2,'proposal',$3,'{}'::jsonb)
+	`, user.ID, eventType, proposalID)
+	http.Redirect(w, r, "/admin/proposals", http.StatusSeeOther)
 }
 
 func (a *App) adminPresentations(w http.ResponseWriter, r *http.Request) {
