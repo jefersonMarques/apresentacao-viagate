@@ -12,7 +12,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/access"
-	"github.com/jefersonMarques/apresentacao-viagate/internal/catalog"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/proposals"
 	"github.com/jefersonMarques/apresentacao-viagate/web/templates"
@@ -66,7 +65,7 @@ func (a *App) newProposalPage(w http.ResponseWriter, r *http.Request) {
 			input.Conditions = nil
 		}
 		input = rehashProposalInput(input)
-		input = a.decorateProposalContractOptions(r.Context(), input)
+		input = a.decorateProposalEditor(r.Context(), input)
 		render(r.Context(), w, http.StatusOK, templates.ProposalEditorPage(
 			user,
 			input,
@@ -78,8 +77,8 @@ func (a *App) newProposalPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	validUntil := time.Now().AddDate(0, 0, 15)
-	input := proposals.EditorInput{Title: "Proposta Comercial ViaGate", PricingModel: "per_item", ValidUntil: &validUntil}
-	input = a.decorateProposalContractOptions(r.Context(), input)
+	input := proposals.EditorInput{Title: "Proposta Comercial ViaGate", PricingModel: "catalog", ValidUntil: &validUntil}
+	input = a.decorateProposalEditor(r.Context(), input)
 	render(r.Context(), w, http.StatusOK, templates.ProposalEditorPage(user, input, proposals.SavedDraft{}, "", ""))
 }
 
@@ -119,7 +118,7 @@ func (a *App) editProposalPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	input = a.decorateProposalContractOptions(r.Context(), input)
+	input = a.decorateProposalEditor(r.Context(), input)
 	if input.Content == nil {
 		input.Content = map[string]any{}
 	}
@@ -172,12 +171,12 @@ func (a *App) saveProposal(w http.ResponseWriter, r *http.Request) {
 	}
 	input, err := a.proposalInputFromForm(r, salesperson)
 	if err != nil {
-		input = a.decorateProposalContractOptions(r.Context(), input)
+		input = a.decorateProposalEditor(r.Context(), input)
 		render(r.Context(), w, http.StatusBadRequest, templates.ProposalEditorPage(user, input, proposals.SavedDraft{}, "", err.Error()))
 		return
 	}
 	if err := a.enforceProposalProtectedFields(r, user, allowAll, &input); err != nil {
-		input = a.decorateProposalContractOptions(r.Context(), input)
+		input = a.decorateProposalEditor(r.Context(), input)
 		render(r.Context(), w, http.StatusForbidden, templates.ProposalEditorPage(user, input, proposals.SavedDraft{}, "", err.Error()))
 		return
 	}
@@ -190,7 +189,7 @@ func (a *App) saveProposal(w http.ResponseWriter, r *http.Request) {
 		if a.cfg.Environment != "production" {
 			message += " Detalhe: " + err.Error()
 		}
-		input = a.decorateProposalContractOptions(r.Context(), input)
+		input = a.decorateProposalEditor(r.Context(), input)
 		render(r.Context(), w, http.StatusBadRequest, templates.ProposalEditorPage(user, input, proposals.SavedDraft{}, "", message))
 		return
 	}
@@ -200,14 +199,14 @@ func (a *App) saveProposal(w http.ResponseWriter, r *http.Request) {
 		if a.cfg.Environment != "production" {
 			message += " Detalhe: " + err.Error()
 		}
-		input = a.decorateProposalContractOptions(r.Context(), input)
+		input = a.decorateProposalEditor(r.Context(), input)
 		render(r.Context(), w, http.StatusBadRequest, templates.ProposalEditorPage(user, input, draft, "Rascunho salvo.", message))
 		return
 	}
 
 	if action == "publish" {
 		if err := validateProposalForPublish(input); err != nil {
-			input = a.decorateProposalContractOptions(r.Context(), input)
+			input = a.decorateProposalEditor(r.Context(), input)
 			render(r.Context(), w, http.StatusBadRequest, templates.ProposalEditorPage(user, input, draft, "Rascunho salvo antes da validação de publicação.", err.Error()))
 			return
 		}
@@ -217,7 +216,7 @@ func (a *App) saveProposal(w http.ResponseWriter, r *http.Request) {
 			if a.cfg.Environment != "production" {
 				message += " Detalhe: " + err.Error()
 			}
-			input = a.decorateProposalContractOptions(r.Context(), input)
+			input = a.decorateProposalEditor(r.Context(), input)
 			render(r.Context(), w, http.StatusBadRequest, templates.ProposalEditorPage(user, input, draft, "", message))
 			return
 		}
@@ -321,8 +320,9 @@ func (a *App) proposalInputFromForm(r *http.Request, salesperson domain.User) (p
 		OperationContext:   strings.TrimSpace(r.FormValue("operation_context")),
 		CustomerPriorities: multilineValues(r.FormValue("customer_priorities")),
 		SolutionTitle:      strings.TrimSpace(r.FormValue("solution_title")),
-		SolutionScope:      multilineValues(r.FormValue("solution_scope")),
-		PricingModel:       strings.TrimSpace(r.FormValue("pricing_model")),
+		SolutionScope:         multilineValues(r.FormValue("solution_scope")),
+		SelectedCategoryCodes: normalizedCategoryCodes(r.Form["category_code"]),
+		PricingModel:          "catalog",
 		Content: map[string]any{
 			"proposal": map[string]any{"contract_template_id": contractTemplateID},
 		},
@@ -331,10 +331,6 @@ func (a *App) proposalInputFromForm(r *http.Request, salesperson domain.User) (p
 	if input.Title == "" {
 		input.Title = "Proposta Comercial ViaGate"
 	}
-	if input.PricingModel == "" {
-		input.PricingModel = "per_item"
-	}
-
 	if input.ClientCNPJ != "" {
 		cnpj, err := cleanCNPJ(input.ClientCNPJ)
 		if err != nil {
@@ -394,10 +390,6 @@ func (a *App) proposalInputFromForm(r *http.Request, salesperson domain.User) (p
 		}
 		input.ValidUntil = &date
 	}
-	if !validPricingModel(input.PricingModel) {
-		return input, fmt.Errorf("Modelo comercial inválido.")
-	}
-
 	contractTemplateVersionID, err := a.resolveProposalContractTemplateVersion(r.Context(), contractTemplateID)
 	if err != nil {
 		return input, err
@@ -414,6 +406,11 @@ func (a *App) proposalInputFromForm(r *http.Request, salesperson domain.User) (p
 	}
 	input.SetupFee = setupFee
 
+	selectedCategories := map[string]bool{}
+	for _, categoryCode := range input.SelectedCategoryCodes {
+		selectedCategories[categoryCode] = true
+	}
+
 	ids := r.Form["catalog_id"]
 	statuses := r.Form["item_status"]
 	prices := r.Form["item_price"]
@@ -428,11 +425,11 @@ func (a *App) proposalInputFromForm(r *http.Request, salesperson domain.User) (p
 		if status == "off" {
 			continue
 		}
-		group, item, ok := catalog.ItemByID(id)
-		if !ok {
-			return input, fmt.Errorf("Item comercial inválido: %s", id)
+		category, product, err := a.catalogStore.ProductForProposal(r.Context(), id, input.ProposalID)
+		if err != nil {
+			return input, fmt.Errorf("Item comercial inválido ou inativo: %s", id)
 		}
-		if !catalog.ModelAllows(item, input.PricingModel) {
+		if !selectedCategories[category.Code] {
 			continue
 		}
 		priceValue := ""
@@ -441,9 +438,21 @@ func (a *App) proposalInputFromForm(r *http.Request, salesperson domain.User) (p
 		}
 		price, err := parseMoney(priceValue)
 		if err != nil {
-			return input, fmt.Errorf("Valor inválido para %s.", item.Label)
+			return input, fmt.Errorf("Valor inválido para %s.", product.Name)
 		}
-		input.Items = append(input.Items, proposals.EditorItem{CatalogID: item.ID, GroupName: group.Title, Label: item.Label, Unit: item.Unit, Price: price, IsOptional: status == "optional", SortOrder: index})
+		input.Items = append(input.Items, proposals.EditorItem{
+			CatalogID:    product.Code,
+			CategoryID:          category.ID,
+			CategoryCode:        category.Code,
+			CategoryDescription: category.Description,
+			GroupName:           category.Name,
+			Label:               product.Name,
+			Description:         product.Description,
+			Unit:                product.Unit,
+			Price:        price,
+			IsOptional:   status == "optional",
+			SortOrder:    index,
+		})
 	}
 	input.Conditions = normalizedConditions(r.Form["condition"], r.FormValue("custom_conditions"))
 	validUntil := ""
@@ -498,15 +507,6 @@ func proposalContentString(content map[string]any, section, key string) string {
 	return strings.TrimSpace(value)
 }
 
-func validPricingModel(value string) bool {
-	for _, model := range catalog.PricingModels {
-		if model.ID == value {
-			return true
-		}
-	}
-	return false
-}
-
 func parseMoney(value string) (float64, error) {
 	value = strings.TrimSpace(value)
 	if value == "" {
@@ -555,6 +555,21 @@ func multilineValues(value string) []string {
 		if line != "" {
 			result = append(result, line)
 		}
+	}
+	return result
+}
+
+
+func normalizedCategoryCodes(values []string) []string {
+	seen := map[string]bool{}
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" || seen[value] {
+			continue
+		}
+		seen[value] = true
+		result = append(result, value)
 	}
 	return result
 }

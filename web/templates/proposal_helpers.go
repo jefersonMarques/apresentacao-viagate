@@ -26,3 +26,21 @@ func CustomConditions(values []string)string{
 	for _,value:=range values{if !standard[value]{custom=append(custom,value)}}
 	return strings.Join(custom,"\n")
 }
+
+
+func ProposalManagedCatalog(input proposals.EditorInput) []catalog.ManagedCategory {
+	if input.Content == nil {
+		return nil
+	}
+	items, _ := input.Content["__ui_product_catalog"].([]catalog.ManagedCategory)
+	return items
+}
+
+func ProposalCategorySelected(input proposals.EditorInput, code string) bool {
+	for _, current := range input.SelectedCategoryCodes {
+		if current == code {
+			return true
+		}
+	}
+	return false
+}

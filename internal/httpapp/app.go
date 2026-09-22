@@ -15,6 +15,7 @@ import (
 	"github.com/jefersonMarques/apresentacao-viagate/internal/activation"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/auditlog"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/auth"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/catalog"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/config"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/contracts"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
@@ -39,6 +40,7 @@ type App struct {
 	pool              *pgxpool.Pool
 	logger            *slog.Logger
 	authStore         *auth.Store
+	catalogStore      *catalog.Store
 	proposalStore     *proposals.Store
 	presentationStore *presentations.Store
 	pipelineStore     *pipeline.Store
@@ -76,7 +78,7 @@ type Dependencies struct {
 
 func New(deps Dependencies) *App {
 	return &App{
-		cfg: deps.Config, pool: deps.Pool, logger: deps.Logger, authStore: deps.AuthStore,
+		cfg: deps.Config, pool: deps.Pool, logger: deps.Logger, authStore: deps.AuthStore, catalogStore: catalog.NewStore(deps.Pool),
 		proposalStore: deps.ProposalStore, presentationStore: deps.PresentationStore, pipelineStore: deps.PipelineStore,
 		onboardingStore: deps.OnboardingStore, contractStore: deps.ContractStore, activationStore: deps.ActivationStore,
 		auditStore: deps.AuditStore, contractRenderer: deps.ContractRenderer, contractGenerator: deps.ContractGenerator,
@@ -153,6 +155,10 @@ func (a *App) Routes() http.Handler {
 		admin.With(a.permission("proposal.create")).Post("/admin/proposals/save", a.saveProposal)
 		admin.With(a.permission("proposal.create")).Post("/admin/proposals/{id}/share-email", a.shareProposalByEmail)
 		admin.With(a.permission("settings.manage")).Post("/admin/proposals/{id}/default", a.setDefaultProposal)
+
+		admin.With(a.permission("settings.manage")).Get("/admin/products", a.productCatalogPage)
+		admin.With(a.permission("settings.manage")).Post("/admin/products/categories", a.saveProductCategory)
+		admin.With(a.permission("settings.manage")).Post("/admin/products/items", a.saveProductItem)
 
 		admin.Get("/admin/presentations", a.adminPresentations)
 		admin.With(a.permission("presentation.create")).Get("/admin/presentations/new", a.newPresentationPage)
