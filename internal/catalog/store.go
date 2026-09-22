@@ -40,32 +40,84 @@ func NewStore(pool *pgxpool.Pool) *Store {
 }
 
 func (s *Store) ListAdmin(ctx context.Context) ([]ManagedCategory, error) {
-	return s.list(ctx, nil, true)
+	rows, err := s.pool.Query(ctx, `
+		select id::text,code,name,coalesce(description,''),is_active,sort_order
+		from product_categories
+		order by sort_order,name
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	categories := []ManagedCategory{}
+	indexes := map[string]int{}
+	for rows.Next() {
+		var category ManagedCategory
+		if err := rows.Scan(
+			&category.ID,
+			&category.Code,
+			&category.Name,
+			&category.Description,
+			&category.IsActive,
+			&category.SortOrder,
+		); err != nil {
+			return nil, err
+		}
+		indexes[category.ID] = len(categories)
+		categories = append(categories, category)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	rows.Close()
+
+	productRows, err := s.pool.Query(ctx, `
+		select
+			p.id::text,p.category_id::text,c.code,p.code,p.name,
+			coalesce(p.description,''),coalesce(p.unit,''),p.is_active,p.sort_order
+		from products p
+		join product_categories c on c.id=p.category_id
+		order by c.sort_order,c.name,p.sort_order,p.name
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer productRows.Close()
+
+	for productRows.Next() {
+		var product ManagedProduct
+		if err := productRows.Scan(
+			&product.ID,
+			&product.CategoryID,
+			&product.CategoryCode,
+			&product.Code,
+			&product.Name,
+			&product.Description,
+			&product.Unit,
+			&product.IsActive,
+			&product.SortOrder,
+		); err != nil {
+			return nil, err
+		}
+		if index, ok := indexes[product.CategoryID]; ok {
+			categories[index].Products = append(categories[index].Products, product)
+		}
+	}
+	return categories, productRows.Err()
 }
 
 func (s *Store) ListForProposal(ctx context.Context, selectedCodes []string) ([]ManagedCategory, error) {
-	return s.list(ctx, selectedCodes, false)
-}
-
-func (s *Store) list(ctx context.Context, selectedCodes []string, includeInactive bool) ([]ManagedCategory, error) {
-	query := `
+	rows, err := s.pool.Query(ctx, `
 		select
 			c.id::text,c.code,c.name,coalesce(c.description,''),c.is_active,c.sort_order,
 			p.id::text,p.category_id::text,p.code,p.name,coalesce(p.description,''),coalesce(p.unit,''),p.is_active,p.sort_order
 		from product_categories c
 		join products p on p.category_id=c.id
-	`
-	args := []any{}
-	if !includeInactive {
-		query += `
-			where (c.is_active=true and p.is_active=true)
-			   or p.code = any($1::text[])
-		`
-		args = append(args, selectedCodes)
-	}
-	query += ` order by c.sort_order,c.name,p.sort_order,p.name`
-
-	rows, err := s.pool.Query(ctx, query, args...)
+		where (c.is_active=true and p.is_active=true)
+		   or p.code = any($1::text[])
+		order by c.sort_order,c.name,p.sort_order,p.name
+	`, selectedCodes)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +151,6 @@ func (s *Store) list(ctx context.Context, selectedCodes []string, includeInactiv
 		if !ok {
 			index = len(result)
 			indexes[category.ID] = index
-			category.Products = []ManagedProduct{}
 			result = append(result, category)
 		}
 		result[index].Products = append(result[index].Products, product)
