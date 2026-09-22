@@ -220,6 +220,9 @@ func validateProposalForPublish(input proposals.EditorInput) error {
 	if strings.TrimSpace(input.ClientLegalName) == "" && strings.TrimSpace(input.ClientTradeName) == "" {
 		return fmt.Errorf("Informe a razão social ou o nome fantasia do cliente antes de publicar.")
 	}
+	if input.ValidUntil != nil && proposals.IsDateExpired(*input.ValidUntil, time.Now()) {
+		return fmt.Errorf("A validade da proposta está vencida. Informe a data de hoje ou uma data futura antes de publicar.")
+	}
 	priced := false
 	for _, item := range input.Items {
 		if item.Price > 0 {
