@@ -100,12 +100,14 @@
           const satisfied = dependenciesSatisfied(row);
           const enabled = row.querySelector('[data-product-enabled]');
           const optional = row.querySelector('[data-product-optional]');
+          const price = row.querySelector('[name="item_price"]');
           const status = row.querySelector('[name="item_status"]');
 
           row.dataset.dependencySatisfied = satisfied ? 'true' : 'false';
           if (!satisfied && enabled instanceof HTMLInputElement && enabled.checked) {
             enabled.checked = false;
             if (optional instanceof HTMLInputElement) optional.checked = false;
+            if (canEditPrices && price instanceof HTMLInputElement) price.value = '';
             if (status instanceof HTMLInputElement) status.value = 'off';
             changed = true;
           }
