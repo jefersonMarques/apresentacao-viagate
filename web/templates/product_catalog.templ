@@ -5,7 +5,7 @@ import (
 	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
 )
 
-templ ProductCatalogPage(user domain.User, categories []catalog.ManagedCategory, showDeleted bool, message, errorMessage string) {
+templ ProductCatalogPage(user domain.User, categories []catalog.ManagedCategory, showHidden bool, message, errorMessage string) {
 	@AdminLayout("ViaGate — Produtos", user) {
 		<link rel="stylesheet" href="/commercial-assets/product-catalog.css"/>
 		@AdminPageHeader("CATÁLOGO COMERCIAL", "Produtos", "Organize categorias, produtos e dependências usadas na composição das propostas.") {
@@ -21,12 +21,12 @@ templ ProductCatalogPage(user domain.User, categories []catalog.ManagedCategory,
 				<div>
 					<span class="eyebrow">ESTRUTURA DO CATÁLOGO</span>
 					<h2>Categorias</h2>
-					<p>Arquivados permanecem visíveis para administração. Excluídos aparecem somente quando o filtro está ativo.</p>
+					<p>Arquivados e excluídos ficam ocultos por padrão e podem ser consultados usando o filtro.</p>
 				</div>
 				<form method="get" action="/admin/products" class="catalog-filter">
 					<label>
-						<input type="checkbox" name="show_deleted" value="1" checked?={ showDeleted }/>
-						<span>Mostrar excluídos</span>
+						<input type="checkbox" name="show_hidden" value="1" checked?={ showHidden }/>
+						<span>Mostrar arquivados e excluídos</span>
 					</label>
 					<button class="btn" type="submit">Aplicar</button>
 				</form>
@@ -71,40 +71,32 @@ templ ProductCatalogPage(user domain.User, categories []catalog.ManagedCategory,
 										if category.IsDeleted {
 											<form method="post" action={ templ.SafeURL("/admin/products/categories/" + category.ID + "/lifecycle") }>
 												<input type="hidden" name="action" value="restore"/>
-												<input type="hidden" name="show_deleted" value="1"/>
+												<input type="hidden" name="show_hidden" value="1"/>
 												<button class="btn" type="submit">Restaurar categoria</button>
+											</form>
+										} else if category.IsArchived {
+											<form method="post" action={ templ.SafeURL("/admin/products/categories/" + category.ID + "/lifecycle") }>
+												<input type="hidden" name="action" value="unarchive"/>
+												<input type="hidden" name="show_hidden" value="1"/>
+												<button class="btn" type="submit">Reativar categoria</button>
 											</form>
 										} else {
 											<button class="btn" type="button" data-catalog-dialog-open={ "category-" + category.ID }>Editar categoria</button>
 											<button class="btn primary" type="button" data-catalog-new-product-category={ category.ID }>Adicionar produto</button>
-											<form method="post" action={ templ.SafeURL("/admin/products/categories/" + category.ID + "/lifecycle") }>
-												if showDeleted {
-													<input type="hidden" name="show_deleted" value="1"/>
+											<form
+												method="post"
+												action={ templ.SafeURL("/admin/products/categories/" + category.ID + "/lifecycle") }
+												data-catalog-delete-form
+												data-delete-title="Excluir categoria"
+												data-delete-name={ category.Name }
+												data-delete-message="O sistema tentará excluir a categoria. Se ela já estiver em uso ou ainda possuir produtos, será arquivada automaticamente."
+											>
+												<input type="hidden" name="action" value="delete"/>
+												if showHidden {
+													<input type="hidden" name="show_hidden" value="1"/>
 												}
-												if category.IsArchived {
-													<input type="hidden" name="action" value="unarchive"/>
-													<button class="btn" type="submit">Desarquivar</button>
-												} else {
-													<input type="hidden" name="action" value="archive"/>
-													<button class="btn" type="submit">Arquivar</button>
-												}
+												<button class="btn danger" type="button" data-catalog-delete-open>Excluir</button>
 											</form>
-											if CatalogNonDeletedProductCount(category) == 0 {
-												<form
-													method="post"
-													action={ templ.SafeURL("/admin/products/categories/" + category.ID + "/lifecycle") }
-													data-catalog-delete-form
-													data-delete-title="Excluir categoria"
-													data-delete-name={ category.Name }
-													data-delete-message="A categoria será removida do catálogo. A exclusão só será concluída se ela nunca tiver sido usada e não possuir produtos não excluídos."
-												>
-													<input type="hidden" name="action" value="delete"/>
-													if showDeleted {
-														<input type="hidden" name="show_deleted" value="1"/>
-													}
-													<button class="btn danger" type="button" data-catalog-delete-open>Excluir</button>
-												</form>
-											}
 										}
 									</div>
 								</div>
@@ -151,34 +143,28 @@ templ ProductCatalogPage(user domain.User, categories []catalog.ManagedCategory,
 													if product.IsDeleted {
 														<form method="post" action={ templ.SafeURL("/admin/products/items/" + product.ID + "/lifecycle") }>
 															<input type="hidden" name="action" value="restore"/>
-															<input type="hidden" name="show_deleted" value="1"/>
+															<input type="hidden" name="show_hidden" value="1"/>
 															<button class="btn" type="submit">Restaurar</button>
+														</form>
+													} else if product.IsArchived {
+														<form method="post" action={ templ.SafeURL("/admin/products/items/" + product.ID + "/lifecycle") }>
+															<input type="hidden" name="action" value="unarchive"/>
+															<input type="hidden" name="show_hidden" value="1"/>
+															<button class="btn" type="submit">Reativar</button>
 														</form>
 													} else {
 														<button class="btn" type="button" data-catalog-dialog-open={ "product-" + product.ID }>Editar</button>
-														<form method="post" action={ templ.SafeURL("/admin/products/items/" + product.ID + "/lifecycle") }>
-															if showDeleted {
-																<input type="hidden" name="show_deleted" value="1"/>
-															}
-															if product.IsArchived {
-																<input type="hidden" name="action" value="unarchive"/>
-																<button class="btn" type="submit">Desarquivar</button>
-															} else {
-																<input type="hidden" name="action" value="archive"/>
-																<button class="btn" type="submit">Arquivar</button>
-															}
-														</form>
 														<form
 															method="post"
 															action={ templ.SafeURL("/admin/products/items/" + product.ID + "/lifecycle") }
 															data-catalog-delete-form
 															data-delete-title="Excluir produto"
 															data-delete-name={ product.Name }
-															data-delete-message="O produto será removido do catálogo. A exclusão só será concluída se ele nunca tiver sido usado em proposta e não for requisito de outro produto."
+															data-delete-message="O sistema tentará excluir o produto. Se ele já estiver em uso ou for requisito de outro produto, será arquivado automaticamente."
 														>
 															<input type="hidden" name="action" value="delete"/>
-															if showDeleted {
-																<input type="hidden" name="show_deleted" value="1"/>
+															if showHidden {
+																<input type="hidden" name="show_hidden" value="1"/>
 															}
 															<button class="btn danger" type="button" data-catalog-delete-open>Excluir</button>
 														</form>
@@ -300,7 +286,7 @@ templ ProductCatalogPage(user domain.User, categories []catalog.ManagedCategory,
 					<p data-catalog-delete-message></p>
 					<div class="catalog-delete-warning">
 						<strong>Esta ação não apaga o histórico.</strong>
-						<span>Quando permitida, a exclusão é lógica e o item poderá ser consultado novamente usando o filtro “Mostrar excluídos”.</span>
+						<span>Se o item puder ser excluído, a exclusão será lógica. Se já estiver em uso, ele será arquivado automaticamente. Ambos poderão ser consultados pelo filtro “Mostrar arquivados e excluídos”.</span>
 					</div>
 				</div>
 				<footer class="catalog-dialog-footer catalog-delete-footer">
