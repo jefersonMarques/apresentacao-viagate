@@ -175,8 +175,50 @@
     window.addEventListener('scroll', () => closeActionMenu(), true);
   }
 
+  function initProposalSourceDialog() {
+    const dialog = document.querySelector('[data-proposal-source-dialog]');
+    if (!(dialog instanceof HTMLDialogElement) || typeof dialog.showModal !== 'function') return;
+
+    const openers = Array.from(document.querySelectorAll('[data-proposal-source-open]'));
+    const close = dialog.querySelector('[data-proposal-source-close]');
+    const search = dialog.querySelector('[data-proposal-source-search]');
+    const options = Array.from(dialog.querySelectorAll('[data-proposal-source-option]'));
+    const empty = dialog.querySelector('[data-proposal-source-empty]');
+
+    const applySearch = () => {
+      const query = normalize(search?.value);
+      let visible = 0;
+      options.forEach((option) => {
+        const show = !query || normalize(option.getAttribute('data-search')).includes(query);
+        option.hidden = !show;
+        if (show) visible += 1;
+      });
+      if (empty) empty.hidden = visible !== 0;
+    };
+
+    openers.forEach((opener) => {
+      opener.addEventListener('click', (event) => {
+        event.preventDefault();
+        applySearch();
+        dialog.showModal();
+        window.requestAnimationFrame(() => search?.focus());
+      });
+    });
+
+    close?.addEventListener('click', () => dialog.close());
+    search?.addEventListener('input', applySearch);
+    dialog.addEventListener('click', (event) => {
+      if (event.target === dialog) dialog.close();
+    });
+    dialog.addEventListener('close', () => {
+      if (search) search.value = '';
+      applySearch();
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('[data-admin-list]').forEach(initList);
     initActionMenus();
+    initProposalSourceDialog();
   });
 })();
