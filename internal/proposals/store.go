@@ -3,6 +3,7 @@ package proposals
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"strings"
@@ -12,6 +13,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/legaltext"
 )
+
+var ErrProposalExpired = errors.New("proposal expired")
 
 type Store struct {
 	pool *pgxpool.Pool
@@ -139,12 +142,8 @@ func (s *Store) PublicByToken(ctx context.Context, token string) (PublicProposal
 
 	// Validade é uma regra para celebrar um novo aceite. Depois de aceita, a
 	// proposta passa a ser um registro histórico e continua consultável.
-	if result.Status == "published" && result.ValidUntil != nil {
-		today := time.Now().In(time.Local)
-		today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
-		if result.ValidUntil.Before(today) {
-			return PublicProposal{}, fmt.Errorf("proposal expired")
-		}
+	if result.Status == "published" && result.ValidUntil != nil && IsDateExpired(*result.ValidUntil, time.Now()) {
+		return PublicProposal{}, ErrProposalExpired
 	}
 
 	if len(conditionsJSON) > 0 {
@@ -355,4 +354,9 @@ func nullableIP(ip net.IP) any {
 		return nil
 	}
 	return ip.String()
+}
+
+
+func IsDateExpired(value time.Time, now time.Time) bool {
+	return value.Format("2006-01-02") < now.Format("2006-01-02")
 }
