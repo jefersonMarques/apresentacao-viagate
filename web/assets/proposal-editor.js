@@ -196,7 +196,7 @@
 
   function initProposalShareDialog() {
     const dialog = document.querySelector('[data-proposal-share-dialog]');
-    if (!(dialog instanceof HTMLDialogElement)) return;
+    if (typeof HTMLDialogElement === 'undefined' || !(dialog instanceof HTMLDialogElement)) return;
 
     const status = dialog.querySelector('[data-proposal-share-status]');
     const setStatus = (message, state = '') => {
