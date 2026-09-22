@@ -34,7 +34,7 @@ func (a *App) productCatalogPage(w http.ResponseWriter, r *http.Request) {
 	case "product_deleted":
 		message = "Produto excluído."
 	case "product_archived":
-		message = "O produto já está em uso e foi arquivado."
+		message = "O produto não pôde ser excluído porque está em uso ou é requisito de outro produto. Ele foi arquivado."
 	case "product_reactivated":
 		message = "Produto reativado."
 	case "product_restored":
