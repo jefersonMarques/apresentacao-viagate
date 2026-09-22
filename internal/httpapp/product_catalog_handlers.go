@@ -305,5 +305,8 @@ func redirectProductCatalogWithOpenCategory(
 	if encoded := values.Encode(); encoded != "" {
 		target += "?" + encoded
 	}
+	if openCategoryID != "" {
+		target += "#category-" + url.PathEscape(openCategoryID)
+	}
 	http.Redirect(w, r, target, http.StatusSeeOther)
 }
