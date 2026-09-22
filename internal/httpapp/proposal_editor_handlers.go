@@ -21,23 +21,44 @@ import (
 func (a *App) newProposalPage(w http.ResponseWriter, r *http.Request) {
 	user, _ := currentUser(r.Context())
 	duplicateID := strings.TrimSpace(r.URL.Query().Get("duplicate"))
-	if duplicateID != "" {
+	templateID := strings.TrimSpace(r.URL.Query().Get("template"))
+
+	if duplicateID != "" || templateID != "" {
 		if !access.Can(user, access.ProposalDuplicate) {
 			http.Error(w, "acesso negado", http.StatusForbidden)
 			return
 		}
+
 		allowAll := access.Can(user, access.ProposalReadAll)
-		source, err := a.proposalStore.DuplicateSourceByID(r.Context(), user.ID, duplicateID, allowAll)
+		var (
+			source proposals.EditorInput
+			err    error
+			message string
+		)
+		if templateID != "" {
+			source, err = a.proposalStore.TemplateSourceByID(r.Context(), user.ID, templateID, allowAll)
+			message = "Modelo carregado. Os dados do cliente foram removidos; revise a proposta antes de salvar."
+		} else {
+			source, err = a.proposalStore.DuplicateSourceByID(r.Context(), user.ID, duplicateID, allowAll)
+			message = "Cópia preparada como nova proposta. Os dados do cliente e os campos protegidos pela sua permissão foram ajustados. Revise e salve para criar o novo rascunho."
+		}
 		if err != nil {
 			http.Error(w, "proposta não encontrada ou acesso negado", http.StatusNotFound)
 			return
 		}
+
 		salesperson, profileErr := a.authStore.Profile(r.Context(), user.ID)
 		if profileErr != nil {
-			a.logger.Error("load commercial profile for proposal duplicate failed", "user_id", user.ID, "error", profileErr)
+			a.logger.Error("load commercial profile for proposal source failed", "user_id", user.ID, "error", profileErr)
 			salesperson = user
 		}
-		input := a.prepareDuplicatedProposalInput(r.Context(), source, salesperson)
+
+		var input proposals.EditorInput
+		if templateID != "" {
+			input = a.prepareTemplateProposalInput(r.Context(), source, salesperson)
+		} else {
+			input = a.prepareDuplicatedProposalInput(r.Context(), source, salesperson)
+		}
 		if !access.Can(user, access.ProposalPriceEdit) {
 			clearProposalPrices(&input)
 		}
@@ -50,7 +71,7 @@ func (a *App) newProposalPage(w http.ResponseWriter, r *http.Request) {
 			user,
 			input,
 			proposals.SavedDraft{},
-			"Cópia preparada como nova proposta. Os dados do cliente e os campos protegidos pela sua permissão foram ajustados. Revise e salve para criar o novo rascunho.",
+			message,
 			"",
 		))
 		return
