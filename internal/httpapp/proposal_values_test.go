@@ -2,6 +2,7 @@ package httpapp
 
 import (
 	"testing"
+	"time"
 
 	"github.com/jefersonMarques/apresentacao-viagate/internal/proposals"
 )
@@ -89,5 +90,38 @@ func TestValidateProposalForPublishRequiresPricedProduct(t *testing.T) {
 	base.Items[0].Price = 10
 	if err := validateProposalForPublish(base); err != nil {
 		t.Fatalf("proposal with a priced product should pass publish validation: %v", err)
+	}
+}
+
+
+func TestValidateProposalForPublishRejectsExpiredValidity(t *testing.T) {
+	yesterday := time.Now().AddDate(0, 0, -1)
+	input := proposals.EditorInput{
+		ClientLegalName: "Cliente Teste Ltda",
+		ValidUntil:      &yesterday,
+		Content: map[string]any{
+			"proposal": map[string]any{"contract_template_version_id": "template-version"},
+		},
+		Items: []proposals.EditorItem{{CatalogID: "score-item-driver-register", Price: 10}},
+	}
+
+	if err := validateProposalForPublish(input); err == nil {
+		t.Fatal("expired proposal must not be publishable")
+	}
+}
+
+func TestValidateProposalForPublishAcceptsTodayValidity(t *testing.T) {
+	today := time.Now()
+	input := proposals.EditorInput{
+		ClientLegalName: "Cliente Teste Ltda",
+		ValidUntil:      &today,
+		Content: map[string]any{
+			"proposal": map[string]any{"contract_template_version_id": "template-version"},
+		},
+		Items: []proposals.EditorItem{{CatalogID: "score-item-driver-register", Price: 10}},
+	}
+
+	if err := validateProposalForPublish(input); err != nil {
+		t.Fatalf("proposal valid today should be publishable: %v", err)
 	}
 }
