@@ -6,12 +6,15 @@ import (
 	"fmt"
 )
 
-func (s *Store) TemplateSourceByID(ctx context.Context, userID, proposalID string, allowAll bool) (EditorInput, error) {
+func (s *Store) TemplateSourceByID(ctx context.Context, userID, proposalID string) (EditorInput, error) {
 	var isDefault bool
 	if err := s.pool.QueryRow(ctx, `select is_default from proposals where id=$1`, proposalID).Scan(&isDefault); err != nil {
 		return EditorInput{}, err
 	}
-	return s.DuplicateSourceByID(ctx, userID, proposalID, allowAll || isDefault)
+	if !isDefault {
+		return EditorInput{}, fmt.Errorf("proposal is not a template")
+	}
+	return s.DuplicateSourceByID(ctx, userID, proposalID, true)
 }
 
 func (s *Store) DuplicateSourceByID(ctx context.Context, userID, proposalID string, allowAll bool) (EditorInput, error) {
