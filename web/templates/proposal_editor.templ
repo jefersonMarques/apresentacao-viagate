@@ -152,7 +152,13 @@ templ ProposalEditorPage(user domain.User, input proposals.EditorInput, draft pr
 																<em>{ catalogItem.Description }</em>
 															}
 															if len(catalogItem.DependencyGroups) > 0 {
-																<span class="v1-product-dependency-note" data-product-dependency-note>Requer: { CatalogDependencySummary(catalogItem.DependencyGroups) }</span>
+																<div class="v1-product-dependency-note" data-product-dependency-note>
+																	<span>
+																		<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2.8 19h18.4L12 3Z"/><path d="M12 9v4"/><path d="M12 16h.01"/></svg>
+																		<span>Requer: { CatalogDependencySummary(catalogItem.DependencyGroups) }</span>
+																	</span>
+																	<button type="button" data-product-select-requirement>Selecionar requisito</button>
+																</div>
 															}
 														</div>
 														<label class="v1-switch" aria-label="Incluir produto">
