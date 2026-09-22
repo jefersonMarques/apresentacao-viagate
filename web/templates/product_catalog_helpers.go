@@ -125,3 +125,13 @@ func CatalogDependencyStatusSuffix(product catalog.ManagedProduct) string {
 		return ""
 	}
 }
+
+
+func CatalogHasWritableCategory(categories []catalog.ManagedCategory) bool {
+	for _, category := range categories {
+		if !category.IsDeleted {
+			return true
+		}
+	}
+	return false
+}
