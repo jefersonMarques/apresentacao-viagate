@@ -8,153 +8,245 @@ import (
 templ ProductCatalogPage(user domain.User, categories []catalog.ManagedCategory, message, errorMessage string) {
 	@AdminLayout("ViaGate — Produtos", user) {
 		<link rel="stylesheet" href="/commercial-assets/product-catalog.css"/>
-		@AdminPageHeader("CATÁLOGO COMERCIAL", "Produtos", "Cadastre categorias e produtos usados na composição das propostas. Itens inativos deixam de aparecer em novas propostas, sem alterar versões antigas.") {
+		@AdminPageHeader("CATÁLOGO COMERCIAL", "Produtos", "Organize o catálogo por categorias. Abra uma categoria somente quando precisar consultar ou editar seus produtos.") {
+			<button class="btn" type="button" data-catalog-dialog-open="new-category">Nova categoria</button>
+			if len(categories) > 0 {
+				<button class="btn primary" type="button" data-catalog-dialog-open="new-product">Novo produto</button>
+			}
 		}
 		@FlashMessages(message, errorMessage)
-
-		<div class="catalog-admin-layout">
-			<section class="catalog-create-card">
-				<div class="catalog-create-head">
-					<span class="eyebrow">NOVA CATEGORIA</span>
-					<h2>Criar categoria</h2>
-				</div>
-				<form method="post" action="/admin/products/categories" class="catalog-form">
-					<label>
-						<span>Nome</span>
-						<input name="name" required placeholder="Ex.: Cargo Score"/>
-					</label>
-					<label>
-						<span>Descrição</span>
-						<textarea name="description" rows="3" placeholder="Explique resumidamente o que esta categoria reúne."></textarea>
-					</label>
-					<div class="catalog-form-row">
-						<label>
-							<span>Ordem</span>
-							<input name="sort_order" type="number" value="0"/>
-						</label>
-						<label class="catalog-check">
-							<input type="checkbox" name="is_active" value="1" checked/>
-							<span>Categoria ativa</span>
-						</label>
-					</div>
-					<button class="btn primary" type="submit">Criar categoria</button>
-				</form>
-			</section>
-
-			<section class="catalog-create-card">
-				<div class="catalog-create-head">
-					<span class="eyebrow">NOVO PRODUTO</span>
-					<h2>Criar produto</h2>
-				</div>
-				if len(categories) > 0 {
-					<form method="post" action="/admin/products/items" class="catalog-form">
-						<label>
-							<span>Categoria</span>
-							<select name="category_id" required>
-								for _, category := range categories {
-									<option value={ category.ID }>{ category.Name }</option>
-								}
-							</select>
-						</label>
-						<label>
-							<span>Nome</span>
-							<input name="name" required placeholder="Ex.: Consulta | Motorista"/>
-						</label>
-						<label>
-							<span>Descrição</span>
-							<textarea name="description" rows="2" placeholder="Opcional"></textarea>
-						</label>
-						<div class="catalog-form-row">
-							<label>
-								<span>Unidade</span>
-								<input name="unit" placeholder="consulta, veículo, viagem..."/>
-							</label>
-							<label>
-								<span>Ordem</span>
-								<input name="sort_order" type="number" value="0"/>
-							</label>
-						</div>
-						<label class="catalog-check">
-							<input type="checkbox" name="is_active" value="1" checked/>
-							<span>Produto ativo</span>
-						</label>
-						<button class="btn primary" type="submit">Criar produto</button>
-					</form>
-				} else {
-					<div class="catalog-empty">Crie uma categoria antes de cadastrar produtos.</div>
-				}
-			</section>
-		</div>
 
 		<section class="catalog-list">
 			<div class="catalog-section-head">
 				<div>
 					<span class="eyebrow">ESTRUTURA DO CATÁLOGO</span>
-					<h2>Categorias e produtos</h2>
+					<h2>Categorias</h2>
+					<p>As categorias ficam recolhidas por padrão para manter o catálogo compacto.</p>
 				</div>
 				<span>{ len(categories) } categoria(s)</span>
 			</div>
 
 			if len(categories) == 0 {
-				<div class="catalog-empty">Nenhuma categoria cadastrada.</div>
+				<div class="catalog-empty">
+					<strong>Nenhuma categoria cadastrada.</strong>
+					<span>Crie a primeira categoria para começar a organizar os produtos.</span>
+				</div>
 			} else {
-				for _, category := range categories {
-					<article class="catalog-category">
-						<form method="post" action="/admin/products/categories" class="catalog-category-form">
-							<input type="hidden" name="id" value={ category.ID }/>
-							<div class="catalog-category-title">
-								<div>
+				<div class="catalog-category-list">
+					for _, category := range categories {
+						<details class="catalog-category">
+							<summary class="catalog-category-summary">
+								<div class="catalog-category-main">
 									<span class={ "catalog-status " + CatalogActiveClass(category.IsActive) }>{ CatalogActiveLabel(category.IsActive) }</span>
-									<strong>{ category.Name }</strong>
-									<small>{ category.Code }</small>
+									<div class="catalog-category-copy">
+										<strong>{ category.Name }</strong>
+										if category.Description != "" {
+											<small>{ category.Description }</small>
+										}
+									</div>
 								</div>
-								<button class="btn" type="submit">Salvar categoria</button>
-							</div>
-							<div class="catalog-edit-grid">
-								<label><span>Nome</span><input name="name" value={ category.Name } required/></label>
-								<label><span>Ordem</span><input name="sort_order" type="number" value={ CatalogSortOrder(category.SortOrder) }/></label>
-								<label class="full"><span>Descrição</span><textarea name="description" rows="2">{ category.Description }</textarea></label>
-								<label class="catalog-check full"><input type="checkbox" name="is_active" value="1" checked?={ category.IsActive }/><span>Categoria ativa</span></label>
-							</div>
-						</form>
+								<div class="catalog-category-meta">
+									<span>{ len(category.Products) } produto(s)</span>
+									<span class="catalog-chevron" aria-hidden="true">⌄</span>
+								</div>
+							</summary>
 
-						<div class="catalog-products">
-							if len(category.Products) == 0 {
-								<div class="catalog-empty compact">Nenhum produto nesta categoria.</div>
-							} else {
-								for _, product := range category.Products {
-									<form method="post" action="/admin/products/items" class="catalog-product">
-										<input type="hidden" name="id" value={ product.ID }/>
-										<div class="catalog-product-summary">
-											<div>
-												<span class={ "catalog-status " + CatalogActiveClass(product.IsActive) }>{ CatalogActiveLabel(product.IsActive) }</span>
-												<strong>{ product.Name }</strong>
-												<small>{ product.Code }</small>
-											</div>
-											<button class="btn" type="submit">Salvar</button>
+							<div class="catalog-category-body">
+								<div class="catalog-category-toolbar">
+									<div>
+										<small>CÓDIGO</small>
+										<code>{ category.Code }</code>
+									</div>
+									<div class="catalog-toolbar-actions">
+										<button class="btn" type="button" data-catalog-dialog-open={ "category-" + category.ID }>Editar categoria</button>
+										<button class="btn primary" type="button" data-catalog-new-product-category={ category.ID }>Adicionar produto</button>
+									</div>
+								</div>
+
+								if len(category.Products) == 0 {
+									<div class="catalog-empty compact">
+										<strong>Nenhum produto nesta categoria.</strong>
+										<span>Use “Adicionar produto” para cadastrar o primeiro item.</span>
+									</div>
+								} else {
+									<div class="catalog-product-table" role="table" aria-label={ "Produtos de " + category.Name }>
+										<div class="catalog-product-row catalog-product-header" role="row">
+											<span role="columnheader">Produto</span>
+											<span role="columnheader">Unidade</span>
+											<span role="columnheader">Status</span>
+											<span role="columnheader">Ordem</span>
+											<span role="columnheader"></span>
 										</div>
-										<div class="catalog-edit-grid product">
-											<label>
-												<span>Categoria</span>
-												<select name="category_id" required>
-													for _, option := range categories {
-														<option value={ option.ID } selected?={ option.ID == product.CategoryID }>{ option.Name }</option>
+										for _, product := range category.Products {
+											<div class="catalog-product-row" role="row">
+												<div class="catalog-product-name" role="cell">
+													<strong>{ product.Name }</strong>
+													if product.Description != "" {
+														<small>{ product.Description }</small>
 													}
-												</select>
-											</label>
-											<label><span>Nome</span><input name="name" value={ product.Name } required/></label>
-											<label><span>Unidade</span><input name="unit" value={ product.Unit }/></label>
-											<label><span>Ordem</span><input name="sort_order" type="number" value={ CatalogSortOrder(product.SortOrder) }/></label>
-											<label class="full"><span>Descrição</span><textarea name="description" rows="2">{ product.Description }</textarea></label>
-											<label class="catalog-check full"><input type="checkbox" name="is_active" value="1" checked?={ product.IsActive }/><span>Produto ativo</span></label>
-										</div>
-									</form>
+												</div>
+												<span role="cell">{ CatalogValueOrDash(product.Unit) }</span>
+												<span role="cell"><span class={ "catalog-status " + CatalogActiveClass(product.IsActive) }>{ CatalogActiveLabel(product.IsActive) }</span></span>
+												<span role="cell">{ CatalogSortOrder(product.SortOrder) }</span>
+												<div class="catalog-product-actions" role="cell">
+													<button class="btn" type="button" data-catalog-dialog-open={ "product-" + product.ID }>Editar</button>
+												</div>
+											</div>
+										}
+									</div>
 								}
-							}
-						</div>
-					</article>
-				}
+							</div>
+						</details>
+					}
+				</div>
 			}
 		</section>
+
+		<dialog class="catalog-dialog" data-catalog-dialog="new-category" aria-labelledby="catalog-new-category-title">
+			<div class="catalog-dialog-card">
+				<header class="catalog-dialog-head">
+					<div>
+						<span class="eyebrow">NOVA CATEGORIA</span>
+						<h2 id="catalog-new-category-title">Criar categoria</h2>
+					</div>
+					<button class="catalog-dialog-close" type="button" data-catalog-dialog-close aria-label="Fechar">×</button>
+				</header>
+				<form method="post" action="/admin/products/categories" class="catalog-dialog-form">
+					@CatalogCategoryFields("", "", "", true, 0)
+					<footer class="catalog-dialog-footer">
+						<button class="btn" type="button" data-catalog-dialog-close>Cancelar</button>
+						<button class="btn primary" type="submit">Criar categoria</button>
+					</footer>
+				</form>
+			</div>
+		</dialog>
+
+		if len(categories) > 0 {
+			<dialog class="catalog-dialog" data-catalog-dialog="new-product" aria-labelledby="catalog-new-product-title">
+				<div class="catalog-dialog-card">
+					<header class="catalog-dialog-head">
+						<div>
+							<span class="eyebrow">NOVO PRODUTO</span>
+							<h2 id="catalog-new-product-title">Criar produto</h2>
+						</div>
+						<button class="catalog-dialog-close" type="button" data-catalog-dialog-close aria-label="Fechar">×</button>
+					</header>
+					<form method="post" action="/admin/products/items" class="catalog-dialog-form">
+						@CatalogProductFields(categories, catalog.ManagedProduct{IsActive: true})
+						<footer class="catalog-dialog-footer">
+							<button class="btn" type="button" data-catalog-dialog-close>Cancelar</button>
+							<button class="btn primary" type="submit">Criar produto</button>
+						</footer>
+					</form>
+				</div>
+			</dialog>
+		}
+
+		for _, category := range categories {
+			<dialog class="catalog-dialog" data-catalog-dialog={ "category-" + category.ID } aria-label={ "Editar " + category.Name }>
+				<div class="catalog-dialog-card">
+					<header class="catalog-dialog-head">
+						<div>
+							<span class="eyebrow">EDITAR CATEGORIA</span>
+							<h2>{ category.Name }</h2>
+						</div>
+						<button class="catalog-dialog-close" type="button" data-catalog-dialog-close aria-label="Fechar">×</button>
+					</header>
+					<form method="post" action="/admin/products/categories" class="catalog-dialog-form">
+						<input type="hidden" name="id" value={ category.ID }/>
+						@CatalogCategoryFields(category.Name, category.Description, category.Code, category.IsActive, category.SortOrder)
+						<footer class="catalog-dialog-footer">
+							<button class="btn" type="button" data-catalog-dialog-close>Cancelar</button>
+							<button class="btn primary" type="submit">Salvar categoria</button>
+						</footer>
+					</form>
+				</div>
+			</dialog>
+
+			for _, product := range category.Products {
+				<dialog class="catalog-dialog" data-catalog-dialog={ "product-" + product.ID } aria-label={ "Editar " + product.Name }>
+					<div class="catalog-dialog-card">
+						<header class="catalog-dialog-head">
+							<div>
+								<span class="eyebrow">EDITAR PRODUTO</span>
+								<h2>{ product.Name }</h2>
+							</div>
+							<button class="catalog-dialog-close" type="button" data-catalog-dialog-close aria-label="Fechar">×</button>
+						</header>
+						<form method="post" action="/admin/products/items" class="catalog-dialog-form">
+							<input type="hidden" name="id" value={ product.ID }/>
+							@CatalogProductFields(categories, product)
+							<footer class="catalog-dialog-footer">
+								<button class="btn" type="button" data-catalog-dialog-close>Cancelar</button>
+								<button class="btn primary" type="submit">Salvar produto</button>
+							</footer>
+						</form>
+					</div>
+				</dialog>
+			}
+		}
+
+		<script src="/commercial-assets/product-catalog.js" defer></script>
 	}
+}
+
+templ CatalogCategoryFields(name, description, code string, active bool, sortOrder int) {
+	<div class="catalog-form-grid">
+		<label class="full">
+			<span>Nome</span>
+			<input name="name" value={ name } required placeholder="Ex.: Cargo Score"/>
+		</label>
+		if code != "" {
+			<label class="full">
+				<span>Código interno</span>
+				<input value={ code } readonly/>
+				<small>O código é estável para preservar referências históricas.</small>
+			</label>
+		}
+		<label class="full">
+			<span>Descrição</span>
+			<textarea name="description" rows="3" placeholder="Explique resumidamente o que esta categoria reúne.">{ description }</textarea>
+		</label>
+		<label>
+			<span>Ordem</span>
+			<input name="sort_order" type="number" value={ CatalogSortOrder(sortOrder) }/>
+		</label>
+		<label class="catalog-check">
+			<input type="checkbox" name="is_active" value="1" checked?={ active }/>
+			<span>Categoria ativa</span>
+		</label>
+	</div>
+}
+
+templ CatalogProductFields(categories []catalog.ManagedCategory, product catalog.ManagedProduct) {
+	<div class="catalog-form-grid">
+		<label>
+			<span>Categoria</span>
+			<select name="category_id" required data-catalog-product-category>
+				for _, category := range categories {
+					<option value={ category.ID } selected?={ category.ID == product.CategoryID }>{ category.Name }</option>
+				}
+			</select>
+		</label>
+		<label>
+			<span>Unidade</span>
+			<input name="unit" value={ product.Unit } placeholder="consulta, veículo, viagem..."/>
+		</label>
+		<label class="full">
+			<span>Nome</span>
+			<input name="name" value={ product.Name } required placeholder="Ex.: Consulta | Motorista"/>
+		</label>
+		<label class="full">
+			<span>Descrição</span>
+			<textarea name="description" rows="3" placeholder="Opcional">{ product.Description }</textarea>
+		</label>
+		<label>
+			<span>Ordem</span>
+			<input name="sort_order" type="number" value={ CatalogSortOrder(product.SortOrder) }/>
+		</label>
+		<label class="catalog-check">
+			<input type="checkbox" name="is_active" value="1" checked?={ product.IsActive }/>
+			<span>Produto ativo</span>
+		</label>
+	</div>
 }
