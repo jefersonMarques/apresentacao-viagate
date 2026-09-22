@@ -53,3 +53,32 @@ func TestParseProductDependencyInputsKeepsGroupsSeparated(t *testing.T) {
 		t.Fatalf("unexpected dependency ordering: %#v", got[1].RequiredProductIDs)
 	}
 }
+
+
+func TestProductLifecycleSavedState(t *testing.T) {
+	cases := map[string]string{
+		"delete":    "product_deleted",
+		"unarchive": "product_reactivated",
+		"restore":   "product_restored",
+		"archive":   "lifecycle",
+	}
+	for action, want := range cases {
+		if got := productLifecycleSavedState(action); got != want {
+			t.Fatalf("product lifecycle %q = %q, want %q", action, got, want)
+		}
+	}
+}
+
+func TestCategoryLifecycleSavedState(t *testing.T) {
+	cases := map[string]string{
+		"delete":    "category_deleted",
+		"unarchive": "category_reactivated",
+		"restore":   "category_restored",
+		"archive":   "lifecycle",
+	}
+	for action, want := range cases {
+		if got := categoryLifecycleSavedState(action); got != want {
+			t.Fatalf("category lifecycle %q = %q, want %q", action, got, want)
+		}
+	}
+}
