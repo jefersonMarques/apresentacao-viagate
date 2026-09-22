@@ -36,7 +36,7 @@ func (a *App) newProposalPage(w http.ResponseWriter, r *http.Request) {
 			message string
 		)
 		if templateID != "" {
-			source, err = a.proposalStore.TemplateSourceByID(r.Context(), user.ID, templateID, allowAll)
+			source, err = a.proposalStore.TemplateSourceByID(r.Context(), user.ID, templateID)
 			message = "Modelo carregado. Os dados do cliente foram removidos; revise a proposta antes de salvar."
 		} else {
 			source, err = a.proposalStore.DuplicateSourceByID(r.Context(), user.ID, duplicateID, allowAll)
@@ -120,6 +120,17 @@ func (a *App) editProposalPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	input = a.decorateProposalContractOptions(r.Context(), input)
+	if input.Content == nil {
+		input.Content = map[string]any{}
+	}
+	if r.URL.Query().Get("share") == "1" {
+		input.Content["__ui_share_dialog"] = true
+		if r.URL.Query().Get("published") == "1" {
+			input.Content["__ui_share_state"] = "published"
+		} else {
+			input.Content["__ui_share_state"] = "draft"
+		}
+	}
 	message := ""
 	if r.URL.Query().Get("saved") == "1" {
 		message = "Rascunho salvo."
@@ -210,10 +221,10 @@ func (a *App) saveProposal(w http.ResponseWriter, r *http.Request) {
 			render(r.Context(), w, http.StatusBadRequest, templates.ProposalEditorPage(user, input, draft, "", message))
 			return
 		}
-		http.Redirect(w, r, "/admin/proposals/"+draft.ProposalID+"/edit?published=1", http.StatusSeeOther)
+		http.Redirect(w, r, "/admin/proposals/"+draft.ProposalID+"/edit?published=1&share=1", http.StatusSeeOther)
 		return
 	}
-	http.Redirect(w, r, "/admin/proposals/"+draft.ProposalID+"/edit?saved=1", http.StatusSeeOther)
+	http.Redirect(w, r, "/admin/proposals/"+draft.ProposalID+"/edit?saved=1&share=1", http.StatusSeeOther)
 }
 
 func validateProposalForPublish(input proposals.EditorInput) error {

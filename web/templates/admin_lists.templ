@@ -5,9 +5,9 @@ import (
 	"github.com/jefersonMarques/apresentacao-viagate/internal/presentations"
 )
 
-templ ProposalListPage(user domain.User, items []domain.Proposal, defaultProposal *domain.Proposal) {
+templ ProposalListPage(user domain.User, items []domain.Proposal, defaultProposals []domain.Proposal) {
 	@AdminLayout("ViaGate — Propostas", user) {
-		@AdminPageHeader("PROPOSTAS", "Propostas comerciais", "Escolha uma proposta existente como modelo padrão ou inicie uma nova negociação do zero.") {
+		@AdminPageHeader("PROPOSTAS", "Propostas comerciais", "Defina propostas como padrão para disponibilizá-las como modelos na criação de novas propostas.") {
 			if UserCan(user, "proposal.create") {
 				<a class="btn primary" href="/admin/proposals/new" data-proposal-source-open>Nova proposta</a>
 			}
@@ -16,46 +16,48 @@ templ ProposalListPage(user domain.User, items []domain.Proposal, defaultProposa
 		<section class="proposal-list-section">
 			<div class="proposal-list-section-heading">
 				<div>
-					<span class="eyebrow">MODELO PRINCIPAL</span>
-					<h2>Proposta padrão</h2>
-					<p>Esta proposta aparece primeiro ao iniciar uma nova proposta.</p>
+					<span class="eyebrow">MODELOS</span>
+					<h2>Propostas padrão</h2>
+					<p>Somente estas propostas ficam disponíveis como modelos ao criar uma nova proposta.</p>
 				</div>
 			</div>
-			if defaultProposal != nil {
-				@AdminDataTable([]string{"Proposta", "Status", "Versão", "Atualizada", "Ações"}, 1, "Nenhuma proposta padrão definida.") {
-					<tr data-admin-list-row>
-						<td data-label="Proposta" data-primary="true">
-							<strong>{ defaultProposal.Title }</strong>
-							<small>{ defaultProposal.ClientName }</small>
-						</td>
-						<td data-label="Status"><span class={ "badge status-badge " + AdminStatusBadgeClass(defaultProposal.Status) }>{ humanStatus(defaultProposal.Status) }</span></td>
-						<td data-label="Versão">v{ defaultProposal.CurrentVersion }</td>
-						<td data-label="Atualizada">{ defaultProposal.UpdatedAt.Format("02/01/2006 15:04") }</td>
-						<td data-label="Ações" data-actions="true">
-							<div class="admin-list-actions">
-								if UserCan(user, "proposal.create") && UserCan(user, "proposal.duplicate") {
-									<a class="btn primary" href={ templ.SafeURL("/admin/proposals/new?template=" + defaultProposal.ID) }>Usar como modelo</a>
-								}
-								if defaultProposal.PublicToken != "" {
-									<a class="btn dark" target="_blank" rel="noopener" href={ templ.SafeURL("/p/" + defaultProposal.PublicToken) }>Abrir</a>
-								}
-								if UserCan(user, "settings.manage") {
-									<form method="post" action={ templ.SafeURL("/admin/proposals/" + defaultProposal.ID + "/default") }>
-										<input type="hidden" name="action" value="clear"/>
-										<button class="btn" type="submit">Remover padrão</button>
-									</form>
-								}
-							</div>
-						</td>
-					</tr>
+			if len(defaultProposals) > 0 {
+				@AdminDataTable([]string{"Proposta", "Status", "Versão", "Atualizada", "Ações"}, len(defaultProposals), "Nenhuma proposta padrão definida.") {
+					for _, item := range defaultProposals {
+						<tr data-admin-list-row>
+							<td data-label="Proposta" data-primary="true">
+								<strong>{ item.Title }</strong>
+								<small>{ item.ClientName }</small>
+							</td>
+							<td data-label="Status"><span class={ "badge status-badge " + AdminStatusBadgeClass(item.Status) }>{ humanStatus(item.Status) }</span></td>
+							<td data-label="Versão">v{ item.CurrentVersion }</td>
+							<td data-label="Atualizada">{ item.UpdatedAt.Format("02/01/2006 15:04") }</td>
+							<td data-label="Ações" data-actions="true">
+								<div class="admin-list-actions">
+									if UserCan(user, "proposal.create") && UserCan(user, "proposal.duplicate") {
+										<a class="btn primary" href={ templ.SafeURL("/admin/proposals/new?template=" + item.ID) }>Usar como modelo</a>
+									}
+									if item.PublicToken != "" {
+										<a class="btn dark" target="_blank" rel="noopener" href={ templ.SafeURL("/p/" + item.PublicToken) }>Abrir</a>
+									}
+									if UserCan(user, "settings.manage") {
+										<form method="post" action={ templ.SafeURL("/admin/proposals/" + item.ID + "/default") }>
+											<input type="hidden" name="action" value="clear"/>
+											<button class="btn" type="submit">Remover padrão</button>
+										</form>
+									}
+								</div>
+							</td>
+						</tr>
+					}
 				}
 			} else {
 				<div class="proposal-default-empty">
 					<strong>Nenhuma proposta padrão definida.</strong>
 					if UserCan(user, "settings.manage") {
-						<span>Use “Tornar padrão” em uma proposta abaixo.</span>
+						<span>Use “Tornar padrão” em uma proposta abaixo para disponibilizá-la como modelo.</span>
 					} else {
-						<span>Um administrador pode definir o modelo principal.</span>
+						<span>Um administrador pode definir os modelos disponíveis.</span>
 					}
 				</div>
 			}
@@ -66,7 +68,7 @@ templ ProposalListPage(user domain.User, items []domain.Proposal, defaultProposa
 				<div>
 					<span class="eyebrow">HISTÓRICO</span>
 					<h2>Todas as propostas</h2>
-					<p>Propostas aceitas são imutáveis; use uma proposta como modelo para iniciar uma nova negociação sem carregar os dados do cliente anterior.</p>
+					<p>Propostas marcadas como padrão são movidas para a lista de modelos acima.</p>
 				</div>
 			</div>
 			<div class="admin-list-root" data-admin-list>
@@ -103,7 +105,6 @@ templ ProposalListPage(user domain.User, items []domain.Proposal, defaultProposa
 										@AdminActionMenu("Mais ações da proposta") {
 											if UserCan(user, "proposal.duplicate") {
 												<a href={ templ.SafeURL("/admin/proposals/new?duplicate=" + item.ID) }>Duplicar proposta</a>
-												<a href={ templ.SafeURL("/admin/proposals/new?template=" + item.ID) }>Usar como modelo</a>
 											}
 											if UserCan(user, "settings.manage") {
 												<form method="post" action={ templ.SafeURL("/admin/proposals/" + item.ID + "/default") }>
@@ -139,46 +140,41 @@ templ ProposalListPage(user domain.User, items []domain.Proposal, defaultProposa
 						<div>
 							<span class="eyebrow">NOVA PROPOSTA</span>
 							<h2 id="proposal-source-title">Como deseja começar?</h2>
-							<p>Use uma proposta existente como modelo ou comece com uma proposta vazia.</p>
+							<p>Escolha um modelo padrão ou comece com uma proposta vazia.</p>
 						</div>
 						<button type="button" class="proposal-source-close" data-proposal-source-close aria-label="Fechar">×</button>
 					</header>
 					<div class="proposal-source-dialog-body">
-						if defaultProposal != nil && UserCan(user, "proposal.duplicate") {
-							<section class="proposal-source-default">
-								<div>
-									<span class="proposal-source-label">PADRÃO</span>
-									<strong>{ defaultProposal.Title }</strong>
-									<small>Modelo principal definido para novas propostas.</small>
-								</div>
-								<a class="btn primary" href={ templ.SafeURL("/admin/proposals/new?template=" + defaultProposal.ID) }>Usar proposta padrão</a>
-							</section>
-						}
-
-						if UserCan(user, "proposal.duplicate") && ProposalRegularCount(items) > 0 {
+						if UserCan(user, "proposal.duplicate") && len(defaultProposals) > 0 {
 							<section class="proposal-source-existing">
 								<div class="proposal-source-existing-head">
 									<div>
-										<strong>Outras propostas</strong>
+										<strong>Propostas padrão</strong>
 										<small>Os dados do cliente serão removidos antes de abrir o editor.</small>
 									</div>
-									<input type="search" placeholder="Buscar proposta..." autocomplete="off" data-proposal-source-search/>
+									if len(defaultProposals) > 1 {
+										<input type="search" placeholder="Buscar modelo..." autocomplete="off" data-proposal-source-search/>
+									}
 								</div>
 								<div class="proposal-source-options">
-									for _, item := range items {
-										if !item.IsDefault {
-											<div class="proposal-source-option" data-proposal-source-option data-search={ item.ClientName + " " + item.Title }>
-												<div>
-													<strong>{ item.Title }</strong>
-													<small>{ item.ClientName } · { humanStatus(item.Status) }</small>
-												</div>
-												<a class="btn" href={ templ.SafeURL("/admin/proposals/new?template=" + item.ID) }>Usar</a>
+									for _, item := range defaultProposals {
+										<div class="proposal-source-option" data-proposal-source-option data-search={ item.ClientName + " " + item.Title }>
+											<div>
+												<span class="proposal-source-label">PADRÃO</span>
+												<strong>{ item.Title }</strong>
+												<small>{ item.ClientName } · { humanStatus(item.Status) }</small>
 											</div>
-										}
+											<a class="btn primary" href={ templ.SafeURL("/admin/proposals/new?template=" + item.ID) }>Usar</a>
+										</div>
 									}
-									<div class="proposal-source-no-results" data-proposal-source-empty hidden>Nenhuma proposta encontrada.</div>
+									<div class="proposal-source-no-results" data-proposal-source-empty hidden>Nenhum modelo encontrado.</div>
 								</div>
 							</section>
+						} else {
+							<div class="proposal-default-empty">
+								<strong>Nenhum modelo padrão disponível.</strong>
+								<span>Você ainda pode iniciar uma proposta do zero.</span>
+							</div>
 						}
 
 						<div class="proposal-source-blank">
