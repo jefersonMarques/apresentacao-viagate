@@ -274,8 +274,12 @@
       const addCondition = event.target.closest('[data-add-dependency-group]');
       if (addCondition) {
         const editor = dependencyEditor(addCondition);
+        if (!(editor instanceof HTMLElement)) return;
+        const hadGroups = editor.querySelectorAll('[data-dependency-group]').length > 0;
         setDependencyAvailability(editor, 'dependent');
-        const group = addDependencyGroup(editor);
+        const group = hadGroups
+          ? addDependencyGroup(editor)
+          : editor.querySelector('[data-dependency-group]');
         group?.querySelector('[data-dependency-search]')?.focus();
         return;
       }
