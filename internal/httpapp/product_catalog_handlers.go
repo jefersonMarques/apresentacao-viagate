@@ -16,6 +16,7 @@ import (
 func (a *App) productCatalogPage(w http.ResponseWriter, r *http.Request) {
 	user, _ := currentUser(r.Context())
 	showHidden := r.URL.Query().Get("show_hidden") == "1" || r.URL.Query().Get("show_deleted") == "1"
+	openCategoryID := strings.TrimSpace(r.URL.Query().Get("open_category"))
 	categories, err := a.catalogStore.ListAdmin(r.Context(), showHidden)
 	if err != nil {
 		a.logger.Error("load product catalog failed", "error", err)
@@ -52,6 +53,7 @@ func (a *App) productCatalogPage(w http.ResponseWriter, r *http.Request) {
 		user,
 		categories,
 		showHidden,
+		openCategoryID,
 		message,
 		strings.TrimSpace(r.URL.Query().Get("error")),
 	))
@@ -87,7 +89,7 @@ func (a *App) saveProductCategory(w http.ResponseWriter, r *http.Request) {
 		insert into audit_events(actor_user_id,event_type,resource_type,resource_id,metadata)
 		values($1,'catalog.category_saved','product_category',$2,'{}'::jsonb)
 	`, user.ID, id)
-	redirectProductCatalog(w, r, false, "", "category")
+	redirectProductCatalogWithOpenCategory(w, r, false, "", "category", id)
 }
 
 func (a *App) saveProductItem(w http.ResponseWriter, r *http.Request) {
@@ -97,16 +99,17 @@ func (a *App) saveProductItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	categoryID := strings.TrimSpace(r.FormValue("category_id"))
 	sortOrder, err := parseCatalogSortOrder(r.FormValue("sort_order"))
 	if err != nil {
-		redirectProductCatalog(w, r, false, "Ordem do produto inválida.", "")
+		redirectProductCatalogWithOpenCategory(w, r, false, "Ordem do produto inválida.", "", categoryID)
 		return
 	}
 	dependencies := parseProductDependencyInputs(r.Form)
 	id, err := a.catalogStore.SaveProduct(
 		r.Context(),
 		strings.TrimSpace(r.FormValue("id")),
-		strings.TrimSpace(r.FormValue("category_id")),
+		categoryID,
 		strings.TrimSpace(r.FormValue("name")),
 		strings.TrimSpace(r.FormValue("description")),
 		strings.TrimSpace(r.FormValue("unit")),
@@ -123,7 +126,7 @@ func (a *App) saveProductItem(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, catalog.ErrInvalidDependency):
 			message = "Existe uma dependência inválida. Use apenas produtos ativos e não arquivados."
 		}
-		redirectProductCatalog(w, r, false, message, "")
+		redirectProductCatalogWithOpenCategory(w, r, false, message, "", categoryID)
 		return
 	}
 
@@ -131,7 +134,7 @@ func (a *App) saveProductItem(w http.ResponseWriter, r *http.Request) {
 		insert into audit_events(actor_user_id,event_type,resource_type,resource_id,metadata)
 		values($1,'catalog.product_saved','product',$2,'{}'::jsonb)
 	`, user.ID, id)
-	redirectProductCatalog(w, r, false, "", "product")
+	redirectProductCatalogWithOpenCategory(w, r, false, "", "product", categoryID)
 }
 
 func (a *App) updateProductLifecycle(w http.ResponseWriter, r *http.Request) {
@@ -276,6 +279,15 @@ func catalogLifecycleError(err error, resource string) string {
 }
 
 func redirectProductCatalog(w http.ResponseWriter, r *http.Request, showHidden bool, errorMessage, saved string) {
+	redirectProductCatalogWithOpenCategory(w, r, showHidden, errorMessage, saved, "")
+}
+
+func redirectProductCatalogWithOpenCategory(
+	w http.ResponseWriter,
+	r *http.Request,
+	showHidden bool,
+	errorMessage, saved, openCategoryID string,
+) {
 	values := url.Values{}
 	if showHidden {
 		values.Set("show_hidden", "1")
@@ -285,6 +297,9 @@ func redirectProductCatalog(w http.ResponseWriter, r *http.Request, showHidden b
 	}
 	if saved != "" {
 		values.Set("saved", saved)
+	}
+	if openCategoryID != "" {
+		values.Set("open_category", openCategoryID)
 	}
 	target := "/admin/products"
 	if encoded := values.Encode(); encoded != "" {
