@@ -3,6 +3,7 @@ package httpapp
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -21,11 +22,16 @@ func (a *App) publicProposalPage(w http.ResponseWriter, r *http.Request) {
 	token := chi.URLParam(r, "token")
 	proposal, err := a.proposalStore.PublicByToken(r.Context(), token)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			http.Error(w, "Proposta não encontrada.", http.StatusNotFound)
 			return
 		}
-		http.Error(w, "Esta proposta não está mais disponível.", http.StatusGone)
+		if errors.Is(err, proposals.ErrProposalExpired) {
+			http.Error(w, "Esta proposta não está mais disponível.", http.StatusGone)
+			return
+		}
+		a.logger.Error("load public proposal failed", "error", err)
+		http.Error(w, "Não foi possível carregar a proposta.", http.StatusInternalServerError)
 		return
 	}
 	if wantsJSON(r) {
