@@ -67,16 +67,12 @@ func (a *App) prepareProposalSourceInput(ctx context.Context, source proposals.E
 		ValidUntil:     &validUntil,
 		SolutionTitle:  scrubDuplicatedProposalText(source.SolutionTitle, sensitiveValues),
 		SolutionScope:  solutionScope,
-		PricingModel:   source.PricingModel,
+		PricingModel:   "catalog",
 		MinimumInvoice: source.MinimumInvoice,
 		SetupFee:       source.SetupFee,
 		Conditions:     conditions,
 		Items:          append([]proposals.EditorItem(nil), source.Items...),
 	}
-	if input.PricingModel == "" {
-		input.PricingModel = "per_item"
-	}
-
 	input.Content = map[string]any{
 		"proposal": map[string]any{
 			"title":                        input.Title,
