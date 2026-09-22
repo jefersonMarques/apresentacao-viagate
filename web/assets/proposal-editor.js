@@ -18,15 +18,21 @@
     const optional = row.querySelector('[data-product-optional]');
     const price = row.querySelector('[name="item_price"]');
     const status = row.querySelector('[name="item_status"]');
-    const active = Boolean(enabled?.checked);
+    const dependencySatisfied = row.dataset.dependencySatisfied !== 'false';
+    const active = Boolean(enabled?.checked) && dependencySatisfied;
 
+    if (enabled instanceof HTMLInputElement) enabled.disabled = !dependencySatisfied;
+    row.classList.toggle('is-dependency-blocked', !dependencySatisfied);
     row.dataset.productState = active ? (optional?.checked ? 'optional' : 'included') : 'off';
     if (status) status.value = active ? (optional?.checked ? 'optional' : 'included') : 'off';
-    if (optional) optional.disabled = !active;
+    if (optional) optional.disabled = !active || !dependencySatisfied;
     if (price) {
-      price.readOnly = !canEditPrices;
-      price.classList.toggle('is-disabled', !active || !canEditPrices);
+      price.readOnly = !canEditPrices || !dependencySatisfied;
+      price.classList.toggle('is-disabled', !active || !canEditPrices || !dependencySatisfied);
     }
+
+    const note = row.querySelector('[data-product-dependency-note]');
+    if (note) note.dataset.state = dependencySatisfied ? 'ready' : 'blocked';
   }
 
   function initProposalEditor() {
@@ -37,6 +43,11 @@
     const canEditPrices = permissions.has('proposal.price.edit');
     const canEditConditions = permissions.has('proposal.conditions.edit');
     const products = Array.from(form.querySelectorAll('[data-proposal-product]'));
+    const productByCode = new Map(
+      products
+        .map((row) => [row.getAttribute('data-product-code') || '', row])
+        .filter(([code]) => code),
+    );
     const categoryToggles = Array.from(form.querySelectorAll('[data-proposal-category]'));
     const summaryCount = form.querySelector('[data-proposal-summary-count]');
     const summaryOptional = form.querySelector('[data-proposal-summary-optional]');
@@ -55,6 +66,53 @@
         field.classList.add('is-disabled');
       });
     }
+
+    const isProductSelected = (code) => {
+      const row = productByCode.get(code);
+      if (!row || row.hidden) return false;
+      const enabled = row.querySelector('[data-product-enabled]');
+      return enabled instanceof HTMLInputElement && enabled.checked;
+    };
+
+    const dependenciesSatisfied = (row) => {
+      const groups = Array.from(row.querySelectorAll('[data-product-dependency-group]'));
+      if (groups.length === 0) return true;
+
+      return groups.every((group) => {
+        const mode = group.getAttribute('data-mode') || 'all';
+        const requirements = Array.from(group.querySelectorAll('[data-required-code]'))
+          .map((node) => node.getAttribute('data-required-code') || '')
+          .filter(Boolean);
+        if (requirements.length === 0) return true;
+        if (mode === 'any') return requirements.some(isProductSelected);
+        return requirements.every(isProductSelected);
+      });
+    };
+
+    const syncDependencyStates = () => {
+      let changed = true;
+      let iteration = 0;
+      while (changed && iteration <= products.length + 1) {
+        changed = false;
+        iteration += 1;
+
+        products.forEach((row) => {
+          const satisfied = dependenciesSatisfied(row);
+          const enabled = row.querySelector('[data-product-enabled]');
+          const optional = row.querySelector('[data-product-optional]');
+          const status = row.querySelector('[name="item_status"]');
+
+          row.dataset.dependencySatisfied = satisfied ? 'true' : 'false';
+          if (!satisfied && enabled instanceof HTMLInputElement && enabled.checked) {
+            enabled.checked = false;
+            if (optional instanceof HTMLInputElement) optional.checked = false;
+            if (status instanceof HTMLInputElement) status.value = 'off';
+            changed = true;
+          }
+          updateProduct(row, canEditPrices);
+        });
+      }
+    };
 
     const syncCategoryVisibility = () => {
       const selected = new Set(
@@ -88,6 +146,8 @@
           updateProduct(row, canEditPrices);
         });
       });
+
+      syncDependencyStates();
     };
 
     const refreshSummary = () => {
@@ -109,6 +169,11 @@
       if (summaryTotal) summaryTotal.textContent = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     };
 
+    const refreshEditor = () => {
+      syncDependencyStates();
+      refreshSummary();
+    };
+
     products.forEach((row) => {
       const enabled = row.querySelector('[data-product-enabled]');
       const optional = row.querySelector('[data-product-optional]');
@@ -121,17 +186,17 @@
         } else if (canEditPrices && price) {
           price.focus();
         }
-        refreshSummary();
+        refreshEditor();
       });
-      optional?.addEventListener('change', refreshSummary);
+      optional?.addEventListener('change', refreshEditor);
       if (canEditPrices) {
         price?.addEventListener('input', () => {
-          if (price.value.trim() !== '' && enabled && !enabled.checked) enabled.checked = true;
+          if (price.value.trim() !== '' && enabled && !enabled.checked && !enabled.disabled) enabled.checked = true;
           if (price.value.trim() === '' && enabled) {
             enabled.checked = false;
             if (optional) optional.checked = false;
           }
-          refreshSummary();
+          refreshEditor();
         });
       }
       updateProduct(row, canEditPrices);
@@ -145,13 +210,14 @@
     });
 
     form.addEventListener('submit', () => {
+      syncDependencyStates();
       products.forEach((row) => {
         const price = row.querySelector('[name="item_price"]');
         const enabled = row.querySelector('[data-product-enabled]');
         const optional = row.querySelector('[data-product-optional]');
         const status = row.querySelector('[name="item_status"]');
         if (!enabled || !status) return;
-        if (row.hidden) {
+        if (row.hidden || row.dataset.dependencySatisfied === 'false') {
           status.value = 'off';
           return;
         }
@@ -166,7 +232,7 @@
     }, { capture: true });
 
     syncCategoryVisibility();
-    refreshSummary();
+    refreshEditor();
   }
 
   function initProposalShareDialog() {
