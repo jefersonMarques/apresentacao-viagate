@@ -37,7 +37,7 @@
     const canEditPrices = permissions.has('proposal.price.edit');
     const canEditConditions = permissions.has('proposal.conditions.edit');
     const products = Array.from(form.querySelectorAll('[data-proposal-product]'));
-    const pricingRadios = Array.from(form.querySelectorAll('[name="pricing_model"]'));
+    const categoryToggles = Array.from(form.querySelectorAll('[data-proposal-category]'));
     const summaryCount = form.querySelector('[data-proposal-summary-count]');
     const summaryOptional = form.querySelector('[data-proposal-summary-optional]');
     const summaryTotal = form.querySelector('[data-proposal-summary-total]');
@@ -56,14 +56,27 @@
       });
     }
 
-    const syncModelVisibility = () => {
-      const model = form.querySelector('[name="pricing_model"]:checked')?.value || 'per_item';
-      products.forEach((row) => {
-        const models = String(row.dataset.models || '').split(',').filter(Boolean);
-        const hidden = models.length > 0 && !models.includes(model);
-        row.hidden = hidden;
+    const syncCategoryVisibility = () => {
+      const selected = new Set(
+        categoryToggles
+          .filter((toggle) => toggle instanceof HTMLInputElement && toggle.checked)
+          .map((toggle) => toggle.value),
+      );
 
-        if (hidden) {
+      form.querySelectorAll('[data-proposal-category-choice]').forEach((choice) => {
+        const toggle = choice.querySelector('[data-proposal-category]');
+        choice.classList.toggle('is-selected', Boolean(toggle?.checked));
+      });
+
+      form.querySelectorAll('[data-catalog-group]').forEach((group) => {
+        const groupCode = group.getAttribute('data-catalog-group') || '';
+        const hidden = !selected.has(groupCode);
+        group.hidden = hidden;
+
+        group.querySelectorAll('[data-proposal-product]').forEach((row) => {
+          row.hidden = hidden;
+          if (!hidden) return;
+
           const enabled = row.querySelector('[data-product-enabled]');
           const optional = row.querySelector('[data-product-optional]');
           const price = row.querySelector('[name="item_price"]');
@@ -73,12 +86,7 @@
           if (canEditPrices && price instanceof HTMLInputElement) price.value = '';
           if (status instanceof HTMLInputElement) status.value = 'off';
           updateProduct(row, canEditPrices);
-        }
-      });
-
-      form.querySelectorAll('[data-catalog-group]').forEach((group) => {
-        const visibleProducts = Array.from(group.querySelectorAll('[data-proposal-product]')).some((row) => !row.hidden);
-        group.hidden = !visibleProducts;
+        });
       });
     };
 
@@ -129,42 +137,9 @@
       updateProduct(row, canEditPrices);
     });
 
-    pricingRadios.forEach((radio) => {
-      radio.addEventListener('change', () => {
-        syncModelVisibility();
-        refreshSummary();
-      });
-    });
-
-    form.querySelectorAll('[data-proposal-preset]').forEach((button) => {
-      button.addEventListener('click', () => {
-        const model = button.dataset.model || 'per_item';
-        const groups = new Set((button.dataset.groups || '').split(',').filter(Boolean));
-        const optionalGroups = new Set((button.dataset.optionalGroups || '').split(',').filter(Boolean));
-        const radio = form.querySelector(`[name="pricing_model"][value="${CSS.escape(model)}"]`);
-        if (radio instanceof HTMLInputElement) {
-          radio.checked = true;
-          radio.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-
-        products.forEach((row) => {
-          const group = row.dataset.group || '';
-          const enabled = row.querySelector('[data-product-enabled]');
-          const optional = row.querySelector('[data-product-optional]');
-          if (!(enabled instanceof HTMLInputElement)) return;
-
-          if (!groups.has(group) && !optionalGroups.has(group)) {
-            enabled.checked = false;
-            const price = row.querySelector('[name="item_price"]');
-            if (canEditPrices && price) price.value = '';
-            if (optional) optional.checked = false;
-          } else if (optional instanceof HTMLInputElement && optionalGroups.has(group) && enabled.checked) {
-            optional.checked = true;
-          }
-          updateProduct(row, canEditPrices);
-        });
-
-        syncModelVisibility();
+    categoryToggles.forEach((toggle) => {
+      toggle.addEventListener('change', () => {
+        syncCategoryVisibility();
         refreshSummary();
       });
     });
@@ -190,7 +165,7 @@
       });
     }, { capture: true });
 
-    syncModelVisibility();
+    syncCategoryVisibility();
     refreshSummary();
   }
 
