@@ -3,6 +3,7 @@ package proposals
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 )
 
 func (s *Store) TemplateSourceByID(ctx context.Context, userID, proposalID string, allowAll bool) (EditorInput, error) {
