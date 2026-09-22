@@ -89,6 +89,26 @@
       });
     };
 
+    const firstMissingRequirementCode = (row) => {
+      const groups = Array.from(row.querySelectorAll('[data-product-dependency-group]'));
+      for (const group of groups) {
+        const mode = group.getAttribute('data-mode') || 'all';
+        const requirements = Array.from(group.querySelectorAll('[data-required-code]'))
+          .map((node) => node.getAttribute('data-required-code') || '')
+          .filter(Boolean);
+        if (requirements.length === 0) continue;
+
+        const satisfied = mode === 'any'
+          ? requirements.some(isProductSelected)
+          : requirements.every(isProductSelected);
+        if (satisfied) continue;
+
+        const missing = requirements.find((code) => !isProductSelected(code) && productByCode.has(code));
+        if (missing) return missing;
+      }
+      return '';
+    };
+
     const syncDependencyStates = () => {
       let changed = true;
       let iteration = 0;
@@ -208,6 +228,37 @@
       toggle.addEventListener('change', () => {
         syncCategoryVisibility();
         refreshSummary();
+      });
+    });
+
+    form.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-product-select-requirement]');
+      if (!button) return;
+
+      const sourceRow = button.closest('[data-proposal-product]');
+      if (!(sourceRow instanceof HTMLElement)) return;
+      const requiredCode = firstMissingRequirementCode(sourceRow);
+      if (!requiredCode) return;
+
+      const targetRow = productByCode.get(requiredCode);
+      if (!(targetRow instanceof HTMLElement)) return;
+
+      const categoryCode = targetRow.dataset.group || '';
+      const categoryToggle = categoryToggles.find((toggle) =>
+        toggle instanceof HTMLInputElement && toggle.value === categoryCode
+      );
+      if (categoryToggle instanceof HTMLInputElement && !categoryToggle.checked) {
+        categoryToggle.checked = true;
+        syncCategoryVisibility();
+        refreshSummary();
+      }
+
+      window.requestAnimationFrame(() => {
+        targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        targetRow.classList.add('is-requirement-focus');
+        window.setTimeout(() => targetRow.classList.remove('is-requirement-focus'), 1800);
+        const enabled = targetRow.querySelector('[data-product-enabled]');
+        if (enabled instanceof HTMLInputElement && !enabled.disabled) enabled.focus();
       });
     });
 

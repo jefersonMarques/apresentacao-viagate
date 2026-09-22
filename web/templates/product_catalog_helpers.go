@@ -135,3 +135,32 @@ func CatalogHasWritableCategory(categories []catalog.ManagedCategory) bool {
 	}
 	return false
 }
+
+
+func CatalogDependencyChoiceClass(active bool) string {
+	if active {
+		return "is-active"
+	}
+	return ""
+}
+
+func CatalogConditionLabel(index int) string {
+	return fmt.Sprintf("Condição %d", index+1)
+}
+
+func CatalogDependencyGroupSummary(group catalog.DependencyGroup) string {
+	if len(group.RequiredProducts) == 0 {
+		return "Adicione pelo menos um produto."
+	}
+	names := make([]string, 0, len(group.RequiredProducts))
+	for _, required := range group.RequiredProducts {
+		names = append(names, required.Name)
+	}
+	connector := " e "
+	prefix := "Todos: "
+	if group.MatchMode == "any" {
+		connector = " ou "
+		prefix = "Qualquer um: "
+	}
+	return prefix + strings.Join(names, connector)
+}
