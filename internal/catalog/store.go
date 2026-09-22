@@ -176,7 +176,7 @@ func (s *Store) ProductForProposal(ctx context.Context, code, proposalID string)
 					select 1
 					from proposal_versions v
 					join proposal_items pi on pi.proposal_version_id=v.id
-					where v.proposal_id=$2::uuid
+					where v.proposal_id=nullif($2,'')::uuid
 					  and coalesce(pi.metadata->>'catalog_id',pi.metadata->>'product_code','')=$1
 				)
 			)
