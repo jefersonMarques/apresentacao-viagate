@@ -368,65 +368,151 @@ templ CatalogProductFields(categories []catalog.ManagedCategory, product catalog
 
 	<details class="catalog-dependencies" open?={ len(product.DependencyGroups) > 0 }>
 		<summary>
-			<span>Dependências</span>
-			if len(product.DependencyGroups) > 0 {
-				<small>{ CatalogDependencySummary(product.DependencyGroups) }</small>
-			} else {
-				<small>Sem condicionais configuradas.</small>
-			}
-		</summary>
-		<div class="catalog-dependencies-body">
-			<p>Todos os grupos precisam ser atendidos. Dentro de cada grupo você escolhe se basta qualquer produto ou se todos são obrigatórios.</p>
-			<div class="catalog-dependency-groups" data-dependency-groups data-next-index={ CatalogSortOrder(len(product.DependencyGroups)) }>
-				for index, group := range product.DependencyGroups {
-					@CatalogDependencyGroup(categories, product, group, index)
+			<div class="catalog-dependency-summary-copy">
+				<span>Disponibilidade do produto</span>
+				if len(product.DependencyGroups) > 0 {
+					<small>{ CatalogDependencySummary(product.DependencyGroups) }</small>
+				} else {
+					<small>Este produto pode ser selecionado sem pré-requisitos.</small>
 				}
 			</div>
-			<button class="btn" type="button" data-add-dependency-group>Adicionar grupo de condições</button>
-			<template data-dependency-group-template>
-				@CatalogDependencyGroupTemplate(categories, product)
-			</template>
+			<span class="catalog-dependency-chevron" aria-hidden="true">
+				<svg viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></svg>
+			</span>
+		</summary>
+		<div class="catalog-dependencies-body" data-dependency-editor>
+			<div class="catalog-dependency-question">
+				<strong>Quando este produto pode ser usado?</strong>
+				<span>Defina se ele fica sempre disponível ou se depende de outros produtos da proposta.</span>
+			</div>
+
+			<div class="catalog-dependency-availability" data-dependency-availability>
+				<button
+					class={ "catalog-dependency-choice " + CatalogDependencyChoiceClass(len(product.DependencyGroups) == 0) }
+					type="button"
+					data-dependency-availability-option="always"
+				>
+					<span class="catalog-dependency-choice-icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><path d="M5 12.5 9.2 17 19 7"/></svg>
+					</span>
+					<span>
+						<strong>Sempre disponível</strong>
+						<small>Não exige outro produto na proposta.</small>
+					</span>
+				</button>
+				<button
+					class={ "catalog-dependency-choice " + CatalogDependencyChoiceClass(len(product.DependencyGroups) > 0) }
+					type="button"
+					data-dependency-availability-option="dependent"
+				>
+					<span class="catalog-dependency-choice-icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><path d="M8 7h8M8 17h8"/><circle cx="5" cy="7" r="2"/><circle cx="19" cy="17" r="2"/><path d="M7 8.5 17 15.5"/></svg>
+					</span>
+					<span>
+						<strong>Depende de outros produtos</strong>
+						<small>Libera somente quando as condições forem atendidas.</small>
+					</span>
+				</button>
+			</div>
+
+			<div class="catalog-dependency-builder" data-dependency-builder hidden?={ len(product.DependencyGroups) == 0 }>
+				<div class="catalog-dependency-builder-intro">
+					<div>
+						<span class="eyebrow">REGRAS DE DISPONIBILIDADE</span>
+						<strong>Monte as condições visualmente</strong>
+					</div>
+					<span>Todos os cards abaixo são combinados com <b>E</b>.</span>
+				</div>
+
+				<div class="catalog-dependency-groups" data-dependency-groups data-next-index={ CatalogSortOrder(len(product.DependencyGroups)) }>
+					for index, group := range product.DependencyGroups {
+						@CatalogDependencyGroup(categories, product, group, index)
+					}
+				</div>
+
+				<button class="btn catalog-add-condition" type="button" data-add-dependency-group>
+					<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+					<span>Adicionar outra condição</span>
+				</button>
+
+				<div class="catalog-dependency-final">
+					<span>REGRA FINAL</span>
+					if len(product.DependencyGroups) > 0 {
+						<strong data-dependency-rule-summary>{ CatalogDependencySummary(product.DependencyGroups) }</strong>
+					} else {
+						<strong data-dependency-rule-summary>Adicione uma condição para definir a disponibilidade.</strong>
+					}
+				</div>
+
+				<template data-dependency-group-template>
+					@CatalogDependencyGroupTemplate(categories, product)
+				</template>
+			</div>
 		</div>
 	</details>
 }
 
 templ CatalogDependencyGroup(categories []catalog.ManagedCategory, product catalog.ManagedProduct, group catalog.DependencyGroup, index int) {
-	<div class="catalog-dependency-group" data-dependency-group>
+	<div class="catalog-dependency-group" data-dependency-group data-dependency-index={ CatalogSortOrder(index) }>
 		<div class="catalog-dependency-group-head">
-			<strong>Grupo de condição</strong>
-			<button class="catalog-remove-dependency" type="button" data-remove-dependency-group aria-label="Remover grupo">×</button>
+			<div>
+				<span class="catalog-condition-number">{ CatalogConditionLabel(index) }</span>
+				<strong>Escolha os produtos necessários</strong>
+			</div>
+			<button class="catalog-remove-dependency" type="button" data-remove-dependency-group aria-label="Remover condição">
+				<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
+			</button>
 		</div>
-		<div class="catalog-dependency-grid">
-			<label>
-				<span>Regra</span>
-				<select name={ CatalogDependencyModeName(index) }>
-					<option value="any" selected?={ group.MatchMode == "any" }>Qualquer um</option>
-					<option value="all" selected?={ group.MatchMode == "all" }>Todos</option>
-				</select>
-			</label>
-			<label>
-				<span>Produtos necessários</span>
-				<select name={ CatalogDependencyProductName(index) } multiple size="6">
-					for _, category := range categories {
-						if !category.IsDeleted {
-							<optgroup label={ category.Name }>
-								for _, candidate := range category.Products {
-									if candidate.ID != product.ID && !candidate.IsDeleted {
-										<option
-											value={ candidate.ID }
-											selected?={ CatalogDependencySelected(group, candidate.ID) }
-											disabled?={ CatalogDependencyCandidateDisabled(category, candidate, CatalogDependencySelected(group, candidate.ID)) }
-										>
-											{ candidate.Name }{ CatalogDependencyStatusSuffix(candidate) }
-										</option>
-									}
-								}
-							</optgroup>
-						}
-					}
-				</select>
-				<small>Use Ctrl/Cmd para selecionar mais de um produto.</small>
-			</label>
+
+		<div class="catalog-dependency-rule">
+			<span>A condição será atendida quando:</span>
+			<div class="catalog-rule-segmented">
+				<label>
+					<input type="radio" name={ CatalogDependencyModeName(index) } value="any" checked?={ group.MatchMode == "any" } data-dependency-mode/>
+					<span>Qualquer um</span>
+				</label>
+				<label>
+					<input type="radio" name={ CatalogDependencyModeName(index) } value="all" checked?={ group.MatchMode == "all" } data-dependency-mode/>
+					<span>Todos</span>
+				</label>
+			</div>
+		</div>
+
+		<div class="catalog-selected-products" data-dependency-selected>
+			for _, required := range group.RequiredProducts {
+				<div class="catalog-product-chip" data-dependency-chip data-product-id={ required.ID } data-product-name={ required.Name }>
+					<span class="catalog-product-chip-icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24"><path d="M4 7h16v12H4z"/><path d="M8 7V5h8v2"/></svg>
+					</span>
+					<span class="catalog-product-chip-copy">
+						<strong>{ required.Name }</strong>
+						<small>{ required.CategoryName }</small>
+					</span>
+					<button type="button" data-remove-dependency-product aria-label={ "Remover " + required.Name }>
+						<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
+					</button>
+					<input type="hidden" name={ CatalogDependencyProductName(index) } value={ required.ID }/>
+				</div>
+			}
+			<div class="catalog-selected-empty" data-dependency-empty hidden?={ len(group.RequiredProducts) > 0 }>
+				Nenhum produto adicionado a esta condição.
+			</div>
+		</div>
+
+		<div class="catalog-product-picker" data-dependency-picker>
+			<div class="catalog-product-search">
+				<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></svg>
+				<input type="search" autocomplete="off" placeholder="Buscar produto para adicionar..." data-dependency-search/>
+			</div>
+			<div class="catalog-product-options" data-dependency-options hidden>
+				@CatalogDependencyCandidates(categories, product)
+				<div class="catalog-picker-empty" data-dependency-no-results hidden>Nenhum produto encontrado.</div>
+			</div>
+		</div>
+
+		<div class="catalog-dependency-human">
+			<span>Resultado desta condição</span>
+			<strong data-dependency-group-summary>{ CatalogDependencyGroupSummary(group) }</strong>
 		</div>
 	</div>
 }
@@ -434,34 +520,75 @@ templ CatalogDependencyGroup(categories []catalog.ManagedCategory, product catal
 templ CatalogDependencyGroupTemplate(categories []catalog.ManagedCategory, product catalog.ManagedProduct) {
 	<div class="catalog-dependency-group" data-dependency-group>
 		<div class="catalog-dependency-group-head">
-			<strong>Grupo de condição</strong>
-			<button class="catalog-remove-dependency" type="button" data-remove-dependency-group aria-label="Remover grupo">×</button>
+			<div>
+				<span class="catalog-condition-number" data-condition-number>Nova condição</span>
+				<strong>Escolha os produtos necessários</strong>
+			</div>
+			<button class="catalog-remove-dependency" type="button" data-remove-dependency-group aria-label="Remover condição">
+				<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
+			</button>
 		</div>
-		<div class="catalog-dependency-grid">
-			<label>
-				<span>Regra</span>
-				<select data-dependency-mode-template>
-					<option value="any">Qualquer um</option>
-					<option value="all">Todos</option>
-				</select>
-			</label>
-			<label>
-				<span>Produtos necessários</span>
-				<select multiple size="6" data-dependency-products-template>
-					for _, category := range categories {
-						if !category.IsDeleted && !category.IsArchived {
-							<optgroup label={ category.Name }>
-								for _, candidate := range category.Products {
-									if candidate.ID != product.ID && !candidate.IsDeleted && candidate.IsActive && !candidate.IsArchived {
-										<option value={ candidate.ID }>{ candidate.Name }</option>
-									}
-								}
-							</optgroup>
-						}
-					}
-				</select>
-				<small>Use Ctrl/Cmd para selecionar mais de um produto.</small>
-			</label>
+
+		<div class="catalog-dependency-rule">
+			<span>A condição será atendida quando:</span>
+			<div class="catalog-rule-segmented">
+				<label>
+					<input type="radio" value="any" checked data-dependency-mode data-dependency-mode-template/>
+					<span>Qualquer um</span>
+				</label>
+				<label>
+					<input type="radio" value="all" data-dependency-mode data-dependency-mode-template/>
+					<span>Todos</span>
+				</label>
+			</div>
+		</div>
+
+		<div class="catalog-selected-products" data-dependency-selected>
+			<div class="catalog-selected-empty" data-dependency-empty>Nenhum produto adicionado a esta condição.</div>
+		</div>
+
+		<div class="catalog-product-picker" data-dependency-picker>
+			<div class="catalog-product-search">
+				<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></svg>
+				<input type="search" autocomplete="off" placeholder="Buscar produto para adicionar..." data-dependency-search/>
+			</div>
+			<div class="catalog-product-options" data-dependency-options hidden>
+				@CatalogDependencyCandidates(categories, product)
+				<div class="catalog-picker-empty" data-dependency-no-results hidden>Nenhum produto encontrado.</div>
+			</div>
+		</div>
+
+		<div class="catalog-dependency-human">
+			<span>Resultado desta condição</span>
+			<strong data-dependency-group-summary>Adicione pelo menos um produto.</strong>
 		</div>
 	</div>
+}
+
+templ CatalogDependencyCandidates(categories []catalog.ManagedCategory, product catalog.ManagedProduct) {
+	for _, category := range categories {
+		if !category.IsDeleted && !category.IsArchived {
+			for _, candidate := range category.Products {
+				if candidate.ID != product.ID && !candidate.IsDeleted && !candidate.IsArchived && candidate.IsActive {
+					<button
+						class="catalog-product-option"
+						type="button"
+						data-dependency-option
+						data-product-id={ candidate.ID }
+						data-product-name={ candidate.Name }
+						data-category-name={ category.Name }
+					>
+						<span class="catalog-product-option-icon" aria-hidden="true">
+							<svg viewBox="0 0 24 24"><path d="M4 7h16v12H4z"/><path d="M8 7V5h8v2"/></svg>
+						</span>
+						<span>
+							<strong>{ candidate.Name }</strong>
+							<small>{ category.Name }</small>
+						</span>
+						<svg class="catalog-product-option-add" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+					</button>
+				}
+			}
+		}
+	}
 }
