@@ -47,7 +47,9 @@ templ ProductCatalogPage(user domain.User, categories []catalog.ManagedCategory,
 								</div>
 								<div class="catalog-category-meta">
 									<span>{ len(category.Products) } produto(s)</span>
-									<span class="catalog-chevron" aria-hidden="true">⌄</span>
+									<span class="catalog-chevron" aria-hidden="true">
+										<svg viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></svg>
+									</span>
 								</div>
 							</summary>
 
