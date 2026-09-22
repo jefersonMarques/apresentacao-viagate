@@ -15,6 +15,7 @@ var (
 	ErrCatalogHasProducts     = errors.New("category has products")
 	ErrCatalogDependencyInUse = errors.New("product is required by dependency")
 	ErrCatalogNotFound        = errors.New("catalog item not found")
+	ErrCatalogArchivedInstead = errors.New("catalog item archived instead of deleted")
 	ErrDependencyCycle        = errors.New("product dependency cycle")
 	ErrInvalidDependency      = errors.New("invalid product dependency")
 )
@@ -76,15 +77,15 @@ func NewStore(pool *pgxpool.Pool) *Store {
 	return &Store{pool: pool}
 }
 
-func (s *Store) ListAdmin(ctx context.Context, showDeleted bool) ([]ManagedCategory, error) {
+func (s *Store) ListAdmin(ctx context.Context, showHidden bool) ([]ManagedCategory, error) {
 	rows, err := s.pool.Query(ctx, `
 		select
 			id::text,code,name,coalesce(description,''),is_active,
 			archived_at is not null,deleted_at is not null,sort_order
 		from product_categories
-		where $1 or deleted_at is null
+		where $1 or (deleted_at is null and archived_at is null)
 		order by sort_order,name
-	`, showDeleted)
+	`, showHidden)
 	if err != nil {
 		return nil, err
 	}
@@ -121,10 +122,10 @@ func (s *Store) ListAdmin(ctx context.Context, showDeleted bool) ([]ManagedCateg
 			p.archived_at is not null,p.deleted_at is not null,p.sort_order
 		from products p
 		join product_categories c on c.id=p.category_id
-		where ($1 or p.deleted_at is null)
-		  and ($1 or c.deleted_at is null)
+		where ($1 or (p.deleted_at is null and p.archived_at is null))
+		  and ($1 or (c.deleted_at is null and c.archived_at is null))
 		order by c.sort_order,c.name,p.sort_order,p.name
-	`, showDeleted)
+	`, showHidden)
 	if err != nil {
 		return nil, err
 	}
@@ -422,7 +423,13 @@ func (s *Store) UpdateProductLifecycle(ctx context.Context, productID, action st
 			return err
 		}
 		if used {
-			return ErrCatalogInUse
+			if err := execLifecycle(ctx, s.pool, `
+				update products set archived_at=coalesce(archived_at,now()),updated_at=now()
+				where id=$1 and deleted_at is null
+			`, productID); err != nil {
+				return err
+			}
+			return ErrCatalogArchivedInstead
 		}
 		var required bool
 		if err := s.pool.QueryRow(ctx, `
@@ -438,7 +445,13 @@ func (s *Store) UpdateProductLifecycle(ctx context.Context, productID, action st
 			return err
 		}
 		if required {
-			return ErrCatalogDependencyInUse
+			if err := execLifecycle(ctx, s.pool, `
+				update products set archived_at=coalesce(archived_at,now()),updated_at=now()
+				where id=$1 and deleted_at is null
+			`, productID); err != nil {
+				return err
+			}
+			return ErrCatalogArchivedInstead
 		}
 		return execLifecycle(ctx, s.pool, `
 			update products set deleted_at=now(),updated_at=now()
@@ -481,7 +494,13 @@ func (s *Store) UpdateCategoryLifecycle(ctx context.Context, categoryID, action 
 			return err
 		}
 		if hasProducts {
-			return ErrCatalogHasProducts
+			if err := execLifecycle(ctx, s.pool, `
+				update product_categories set archived_at=coalesce(archived_at,now()),updated_at=now()
+				where id=$1 and deleted_at is null
+			`, categoryID); err != nil {
+				return err
+			}
+			return ErrCatalogArchivedInstead
 		}
 		var used bool
 		if err := s.pool.QueryRow(ctx, `
@@ -494,7 +513,13 @@ func (s *Store) UpdateCategoryLifecycle(ctx context.Context, categoryID, action 
 			return err
 		}
 		if used {
-			return ErrCatalogInUse
+			if err := execLifecycle(ctx, s.pool, `
+				update product_categories set archived_at=coalesce(archived_at,now()),updated_at=now()
+				where id=$1 and deleted_at is null
+			`, categoryID); err != nil {
+				return err
+			}
+			return ErrCatalogArchivedInstead
 		}
 		return execLifecycle(ctx, s.pool, `
 			update product_categories set deleted_at=now(),updated_at=now()
