@@ -73,3 +73,24 @@ func ProposalContractTemplateID(input proposals.EditorInput) string {
 }
 
 func proposalPublicURL(token string) string { return "/p/" + token }
+
+
+func ProposalShareDialogOpen(input proposals.EditorInput) bool {
+	if input.Content == nil {
+		return false
+	}
+	value, _ := input.Content["__ui_share_dialog"].(bool)
+	return value
+}
+
+func ProposalShareState(input proposals.EditorInput) string {
+	if input.Content == nil {
+		return ""
+	}
+	value, _ := input.Content["__ui_share_state"].(string)
+	return value
+}
+
+func ProposalHasContactEmail(input proposals.EditorInput) bool {
+	return strings.TrimSpace(input.ContactEmail) != ""
+}
