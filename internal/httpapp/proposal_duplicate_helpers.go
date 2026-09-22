@@ -13,6 +13,14 @@ import (
 )
 
 func (a *App) prepareDuplicatedProposalInput(ctx context.Context, source proposals.EditorInput, salesperson domain.User) proposals.EditorInput {
+	return a.prepareProposalSourceInput(ctx, source, salesperson, true)
+}
+
+func (a *App) prepareTemplateProposalInput(ctx context.Context, source proposals.EditorInput, salesperson domain.User) proposals.EditorInput {
+	return a.prepareProposalSourceInput(ctx, source, salesperson, false)
+}
+
+func (a *App) prepareProposalSourceInput(ctx context.Context, source proposals.EditorInput, salesperson domain.User, addCopySuffix bool) proposals.EditorInput {
 	validUntil := time.Now().AddDate(0, 0, 15)
 	contractTemplateID := proposalContentString(source.Content, "proposal", "contract_template_id")
 	contractTemplateVersionID := ""
@@ -37,7 +45,7 @@ func (a *App) prepareDuplicatedProposalInput(ctx context.Context, source proposa
 	if title == "" {
 		title = "Proposta Comercial ViaGate"
 	}
-	if !strings.HasSuffix(strings.ToLower(title), "(cópia)") {
+	if addCopySuffix && !strings.HasSuffix(strings.ToLower(title), "(cópia)") {
 		title += " (cópia)"
 	}
 
