@@ -36,7 +36,7 @@ func (a *App) newProposalPage(w http.ResponseWriter, r *http.Request) {
 			message string
 		)
 		if templateID != "" {
-			source, err = a.proposalStore.TemplateSourceByID(r.Context(), user.ID, templateID, allowAll)
+			source, err = a.proposalStore.TemplateSourceByID(r.Context(), user.ID, templateID)
 			message = "Modelo carregado. Os dados do cliente foram removidos; revise a proposta antes de salvar."
 		} else {
 			source, err = a.proposalStore.DuplicateSourceByID(r.Context(), user.ID, duplicateID, allowAll)
