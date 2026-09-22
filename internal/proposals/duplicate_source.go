@@ -5,6 +5,14 @@ import (
 	"encoding/json"
 )
 
+func (s *Store) TemplateSourceByID(ctx context.Context, userID, proposalID string, allowAll bool) (EditorInput, error) {
+	var isDefault bool
+	if err := s.pool.QueryRow(ctx, `select is_default from proposals where id=$1`, proposalID).Scan(&isDefault); err != nil {
+		return EditorInput{}, err
+	}
+	return s.DuplicateSourceByID(ctx, userID, proposalID, allowAll || isDefault)
+}
+
 func (s *Store) DuplicateSourceByID(ctx context.Context, userID, proposalID string, allowAll bool) (EditorInput, error) {
 	input, _, err := s.EditorByID(ctx, userID, proposalID, allowAll)
 	if err != nil {

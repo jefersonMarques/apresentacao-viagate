@@ -60,7 +60,25 @@
       const model = form.querySelector('[name="pricing_model"]:checked')?.value || 'per_item';
       products.forEach((row) => {
         const models = String(row.dataset.models || '').split(',').filter(Boolean);
-        row.hidden = models.length > 0 && !models.includes(model);
+        const hidden = models.length > 0 && !models.includes(model);
+        row.hidden = hidden;
+
+        if (hidden) {
+          const enabled = row.querySelector('[data-product-enabled]');
+          const optional = row.querySelector('[data-product-optional]');
+          const price = row.querySelector('[name="item_price"]');
+          const status = row.querySelector('[name="item_status"]');
+          if (enabled instanceof HTMLInputElement) enabled.checked = false;
+          if (optional instanceof HTMLInputElement) optional.checked = false;
+          if (canEditPrices && price instanceof HTMLInputElement) price.value = '';
+          if (status instanceof HTMLInputElement) status.value = 'off';
+          updateProduct(row, canEditPrices);
+        }
+      });
+
+      form.querySelectorAll('[data-catalog-group]').forEach((group) => {
+        const visibleProducts = Array.from(group.querySelectorAll('[data-proposal-product]')).some((row) => !row.hidden);
+        group.hidden = !visibleProducts;
       });
     };
 
@@ -69,6 +87,7 @@
       let optional = 0;
       let total = 0;
       products.forEach((row) => {
+        if (row.hidden) return;
         updateProduct(row, canEditPrices);
         const price = parseMoney(row.querySelector('[name="item_price"]')?.value);
         if (row.dataset.productState === 'included') {
@@ -157,6 +176,10 @@
         const optional = row.querySelector('[data-product-optional]');
         const status = row.querySelector('[name="item_status"]');
         if (!enabled || !status) return;
+        if (row.hidden) {
+          status.value = 'off';
+          return;
+        }
         if (canEditPrices) {
           const hasPrice = Boolean(price?.value?.trim());
           enabled.checked = hasPrice;

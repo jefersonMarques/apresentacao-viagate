@@ -1,6 +1,10 @@
 package templates
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
+)
 
 func AdminStatusBadgeClass(status string) string {
 	switch strings.TrimSpace(status) {
@@ -47,4 +51,15 @@ func AdminListNoun(total int, noun string) string {
 		return AdminListSingular(noun)
 	}
 	return AdminListPlural(noun)
+}
+
+
+func ProposalRegularCount(items []domain.Proposal) int {
+	total := 0
+	for _, item := range items {
+		if !item.IsDefault {
+			total++
+		}
+	}
+	return total
 }

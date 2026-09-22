@@ -151,6 +151,7 @@ func (a *App) Routes() http.Handler {
 		admin.With(a.permission("proposal.create")).Get("/admin/proposals/new", a.newProposalPage)
 		admin.With(a.permission("proposal.create")).Get("/admin/proposals/{id}/edit", a.editProposalPage)
 		admin.With(a.permission("proposal.create")).Post("/admin/proposals/save", a.saveProposal)
+		admin.With(a.permission("settings.manage")).Post("/admin/proposals/{id}/default", a.setDefaultProposal)
 
 		admin.Get("/admin/presentations", a.adminPresentations)
 		admin.With(a.permission("presentation.create")).Get("/admin/presentations/new", a.newPresentationPage)

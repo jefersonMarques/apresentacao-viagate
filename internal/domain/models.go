@@ -53,6 +53,7 @@ type Proposal struct {
 	Status         string
 	CurrentVersion int
 	PublicToken    string
+	IsDefault      bool
 	ValidUntil     *time.Time
 	CreatedBy      string
 	CreatedByName  string
