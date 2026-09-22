@@ -12,8 +12,8 @@ templ ProposalEditorPage(user domain.User, input proposals.EditorInput, draft pr
 		<div class="v1-page">
 			@AdminEditorHeader("GERADOR DE PROPOSTA", proposalEditorHeading(input), "Preencha somente o que fizer sentido para a negociação. O cliente completa os dados de contratação que estiverem faltando após o aceite.") {
 				<a class="v1-button" href="/admin/proposals">Voltar</a>
-				if draft.PublicToken != "" {
-					<a class="v1-button dark" target="_blank" rel="noopener" href={ proposalPublicURL(draft.PublicToken) }>Abrir proposta</a>
+				if draft.PublishedPublicToken != "" {
+					<a class="v1-button dark" target="_blank" rel="noopener" href={ proposalPublicURL(draft.PublishedPublicToken) }>Abrir proposta</a>
 				}
 			}
 			@FlashMessages(message, errorMessage)

@@ -54,10 +54,11 @@ type EditorInput struct {
 }
 
 type SavedDraft struct {
-	ProposalID    string
-	VersionID     string
-	VersionNumber int
-	PublicToken   string
+	ProposalID           string
+	VersionID            string
+	VersionNumber        int
+	PublicToken          string
+	PublishedPublicToken string
 }
 
 func (s *Store) SaveDraft(ctx context.Context, userID string, allowAll bool, input EditorInput) (SavedDraft, error) {
@@ -219,6 +220,17 @@ func (s *Store) SaveDraft(ctx context.Context, userID string, allowAll bool, inp
 		}
 	}
 	draft.ProposalID = input.ProposalID
+	if err := tx.QueryRow(ctx, `
+		select coalesce(v.public_token::text,'')
+		from proposals p
+		left join proposal_versions v
+		  on v.proposal_id=p.id
+		 and v.version_number=p.current_version
+		 and v.published_at is not null
+		where p.id=$1
+	`, input.ProposalID).Scan(&draft.PublishedPublicToken); err != nil {
+		return SavedDraft{}, err
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return SavedDraft{}, err
 	}
@@ -302,6 +314,17 @@ func (s *Store) EditorByID(ctx context.Context, userID, proposalID string, allow
 		from proposal_versions where proposal_id=$1 order by version_number desc limit 1
 	`, proposalID).Scan(&draft.VersionID, &draft.VersionNumber, &draft.PublicToken, &input.PricingModel, &input.MinimumInvoice, &input.SetupFee, &contentJSON, &conditionsJSON, &input.ContentHash)
 	if err != nil && err != pgx.ErrNoRows {
+		return EditorInput{}, SavedDraft{}, err
+	}
+	if err := s.pool.QueryRow(ctx, `
+		select coalesce(v.public_token::text,'')
+		from proposals p
+		left join proposal_versions v
+		  on v.proposal_id=p.id
+		 and v.version_number=p.current_version
+		 and v.published_at is not null
+		where p.id=$1
+	`, proposalID).Scan(&draft.PublishedPublicToken); err != nil {
 		return EditorInput{}, SavedDraft{}, err
 	}
 	draft.ProposalID = proposalID
