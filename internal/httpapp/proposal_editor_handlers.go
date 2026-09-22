@@ -407,6 +407,11 @@ func (a *App) proposalInputFromForm(r *http.Request, salesperson domain.User) (p
 	}
 	input.SetupFee = setupFee
 
+	selectedCategories := map[string]bool{}
+	for _, categoryCode := range input.SelectedCategoryCodes {
+		selectedCategories[categoryCode] = true
+	}
+
 	ids := r.Form["catalog_id"]
 	statuses := r.Form["item_status"]
 	prices := r.Form["item_price"]
@@ -424,6 +429,9 @@ func (a *App) proposalInputFromForm(r *http.Request, salesperson domain.User) (p
 		category, product, err := a.catalogStore.ProductForProposal(r.Context(), id, input.ProposalID)
 		if err != nil {
 			return input, fmt.Errorf("Item comercial inválido ou inativo: %s", id)
+		}
+		if !selectedCategories[category.Code] {
+			continue
 		}
 		priceValue := ""
 		if index < len(prices) {
