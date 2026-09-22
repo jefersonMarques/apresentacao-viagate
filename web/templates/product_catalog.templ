@@ -5,7 +5,7 @@ import (
 	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
 )
 
-templ ProductCatalogPage(user domain.User, categories []catalog.ManagedCategory, showHidden bool, message, errorMessage string) {
+templ ProductCatalogPage(user domain.User, categories []catalog.ManagedCategory, showHidden bool, openCategoryID, message, errorMessage string) {
 	@AdminLayout("ViaGate — Produtos", user) {
 		<link rel="stylesheet" href="/commercial-assets/product-catalog.css"/>
 		@AdminPageHeader("CATÁLOGO COMERCIAL", "Produtos", "Organize categorias, produtos e dependências usadas na composição das propostas.") {
@@ -40,7 +40,11 @@ templ ProductCatalogPage(user domain.User, categories []catalog.ManagedCategory,
 			} else {
 				<div class="catalog-category-list">
 					for _, category := range categories {
-						<details class={ "catalog-category " + CatalogLifecycleClass(category.IsActive, category.IsArchived, category.IsDeleted) }>
+						<details
+							id={ "category-" + category.ID }
+							class={ "catalog-category " + CatalogLifecycleClass(category.IsActive, category.IsArchived, category.IsDeleted) }
+							open?={ category.ID == openCategoryID }
+						>
 							<summary class="catalog-category-summary">
 								<div class="catalog-category-main">
 									<span class={ "catalog-status " + CatalogLifecycleClass(category.IsActive, category.IsArchived, category.IsDeleted) }>
