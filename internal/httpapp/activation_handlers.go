@@ -59,7 +59,7 @@ func (a *App) uploadActivationPolicy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Link de ativação inválido ou expirado.", http.StatusGone)
 		return
 	}
-	if access.Section != "all" || access.Profile.Status == "under_internal_setup" || access.Profile.Status == "activated" {
+	if access.Section != "all" || access.Profile.Status == "completed" || access.Profile.Status == "under_internal_setup" || access.Profile.Status == "activated" {
 		http.Error(w, "Este acesso não permite alterar a apólice.", http.StatusForbidden)
 		return
 	}
