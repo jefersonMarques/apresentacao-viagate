@@ -99,3 +99,30 @@ func TestEnsureProposalFinancialTermsPlacesValuesBeforeSignatures(t *testing.T) 
 		t.Fatalf("financial terms must be inserted before signatures: %s", result)
 	}
 }
+
+
+func TestContractCommercialLabels(t *testing.T) {
+	if got := contractPricingModelLabel("catalog"); got != "Tabela comercial por produtos e serviços selecionados" {
+		t.Fatalf("unexpected catalog pricing label: %q", got)
+	}
+	if got := contractMinimumInvoiceLabel(0); got != "Sem fatura mínima" {
+		t.Fatalf("zero minimum invoice = %q", got)
+	}
+	if got := contractSetupFeeLabel(0); got != "ISENTO" {
+		t.Fatalf("zero setup fee = %q", got)
+	}
+	if got := contractSetupFeeLabel(1500); got != "R$ 1.500,00" {
+		t.Fatalf("paid setup fee = %q", got)
+	}
+}
+
+func TestContractOptionalAddressPart(t *testing.T) {
+	for _, value := range []string{"", "-", "Sem complemento", "não informado", "Não se aplica"} {
+		if got := contractOptionalAddressPart(value); got != "" {
+			t.Fatalf("contractOptionalAddressPart(%q) = %q", value, got)
+		}
+	}
+	if got := contractOptionalAddressPart("Sala 12"); got != "Sala 12" {
+		t.Fatalf("meaningful complement changed: %q", got)
+	}
+}
