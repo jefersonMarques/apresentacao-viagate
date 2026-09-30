@@ -12,8 +12,8 @@ import (
 	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/security"
 )
 
-func (a *App) issueActivationOwnerPath(ctx context.Context, access contracts.SignerAccess) (string, error) {
-	profile, err := a.activationStore.EnsureForSignedContract(ctx, access.Contract.ID)
+func (a *App) issueActivationOwnerPath(ctx context.Context, contractID, signerID, signerName, signerEmail string) (string, error) {
+	profile, err := a.activationStore.EnsureForContract(ctx, contractID)
 	if err != nil {
 		return "", err
 	}
@@ -22,14 +22,14 @@ func (a *App) issueActivationOwnerPath(ctx context.Context, access contracts.Sig
 		return "", err
 	}
 	expiresAt := time.Now().Add(activationAccessTTL)
-	if err := a.activationStore.CreateAccessToken(ctx, profile.ID, "owner", "all", access.Signer.Name, access.Signer.Email, access.Signer.ID, hash, expiresAt); err != nil {
+	if err := a.activationStore.CreateAccessToken(ctx, profile.ID, "owner", "all", signerName, signerEmail, signerID, hash, expiresAt); err != nil {
 		return "", err
 	}
 	return "/activation/" + plain, nil
 }
 
 func (a *App) queuePostSignatureActivation(ctx context.Context, access contracts.SignerAccess) error {
-	if _, err := a.activationStore.EnsureForSignedContract(ctx, access.Contract.ID); err != nil {
+	if _, err := a.activationStore.EnsureForContract(ctx, access.Contract.ID); err != nil {
 		return err
 	}
 	proposalPath, err := a.proposalPublicPathByContract(ctx, access.Contract.ID)
