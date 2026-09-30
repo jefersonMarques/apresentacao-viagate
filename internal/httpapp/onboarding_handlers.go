@@ -39,8 +39,6 @@ func (a *App) onboardingPage(w http.ResponseWriter, r *http.Request) {
 		message = "Dados do seguro salvos."
 	case r.URL.Query().Get("saved") == "1":
 		message = "Dados salvos."
-	case r.URL.Query().Get("saved") == "document":
-		message = "Apólice enviada com sucesso."
 	case r.URL.Query().Get("submitted") == "1":
 		message = "Dados e documentos recebidos com sucesso."
 	case r.URL.Query().Get("contract_pending") == "1":
@@ -64,13 +62,7 @@ func (a *App) onboardingPage(w http.ResponseWriter, r *http.Request) {
 		render(r.Context(), w, http.StatusOK, templates.OnboardingStatusPage(onboarding, message, proposalURL))
 		return
 	}
-	hasPolicy, err := a.onboardingStore.HasPolicy(r.Context(), onboarding.ID)
-	if err != nil {
-		a.logger.Error("load onboarding policy status failed", "onboarding_id", onboarding.ID, "error", err)
-		http.Error(w, "Não foi possível carregar a contratação.", http.StatusInternalServerError)
-		return
-	}
-	render(r.Context(), w, http.StatusOK, templates.ContractingJourneyPage(onboarding, hasPolicy, message, "", proposalURL))
+	render(r.Context(), w, http.StatusOK, templates.ContractingJourneyPage(onboarding, message, "", proposalURL))
 }
 
 func (a *App) saveOnboarding(w http.ResponseWriter, r *http.Request) {
@@ -263,7 +255,7 @@ func (a *App) submitOnboarding(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := a.onboardingStore.Submit(r.Context(), current.ID); err != nil {
-		a.renderContractingError(w, r, current, "Complete as etapas e envie a apólice antes de continuar.")
+		a.renderContractingError(w, r, current, "Complete os dados contratuais antes de continuar.")
 		return
 	}
 
