@@ -354,7 +354,7 @@ target as (
   select id,created_by,current_version+1 as next_version
   from contract_templates
   where is_active=true
-  order by is_default desc,created_at
+    and is_default=true
   limit 1
 ),
 inserted as (
