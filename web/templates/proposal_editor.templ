@@ -83,6 +83,9 @@ templ ProposalEditorPage(user domain.User, input proposals.EditorInput, draft pr
 
 						@AdminFormSection("3. Categorias e produtos", "Selecione as categorias desta negociação e informe os produtos e valores que serão oferecidos.") {
 							{{ managedCatalog := ProposalManagedCatalog(input) }}
+							if !UserCan(user, "proposal.price.edit") {
+								<div class="notice">Seu acesso permite montar a proposta, mas não alterar valores. Solicite a um administrador a permissão “Alterar valores de propostas”.</div>
+							}
 							if len(managedCatalog) == 0 {
 								<div class="v1-catalog-empty">
 									<strong>Nenhum produto ativo disponível.</strong>
@@ -165,7 +168,7 @@ templ ProposalEditorPage(user domain.User, input proposals.EditorInput, draft pr
 															<input type="checkbox" data-product-enabled checked?={ found }/>
 															<span class="v1-switch-track"></span>
 														</label>
-														<div class="v1-product-price"><input name="item_price" type="search" inputmode="numeric" autocomplete="off" data-money value={ editorPrice(existing.Price, found) } placeholder="R$ 0,00"/></div>
+														<div class="v1-product-price"><input name="item_price" type="search" inputmode="numeric" autocomplete="off" data-money value={ editorPrice(existing.Price, found) } placeholder="R$ 0,00" readonly?={ !UserCan(user, "proposal.price.edit") }/></div>
 														<label class="v1-optional"><input type="checkbox" data-product-optional checked?={ found && existing.IsOptional }/><span>Opcional</span></label>
 													</div>
 												}
