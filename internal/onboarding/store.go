@@ -111,7 +111,11 @@ func (s *Store) AddDocument(ctx context.Context, onboardingID string, document D
 	if err := tx.QueryRow(ctx, `select status::text from onboardings where id=$1 for update`, onboardingID).Scan(&status); err != nil {
 		return err
 	}
-	if status != "pending" && status != "in_progress" && status != "correction_requested" {
+	editable := status == "pending" || status == "in_progress" || status == "correction_requested"
+	if document.DocumentType == "insurance_policy" && status == "approved" {
+		editable = true
+	}
+	if !editable {
 		return fmt.Errorf("onboarding documents are locked in status %s", status)
 	}
 
@@ -138,10 +142,6 @@ func (s *Store) HasPolicy(ctx context.Context, onboardingID string) (bool,error)
 }
 
 func (s *Store) Submit(ctx context.Context, onboardingID string) error {
-	policy, err := s.HasPolicy(ctx,onboardingID)
-	if err != nil { return err }
-	if !policy { return fmt.Errorf("insurance policy is required") }
-
 	command, err := s.pool.Exec(ctx, `
 		update onboardings set status='submitted',submitted_at=now(),review_notes=null,reviewed_by=null,reviewed_at=null,updated_at=now()
 		where id=$1
