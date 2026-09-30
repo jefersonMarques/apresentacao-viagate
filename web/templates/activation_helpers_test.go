@@ -5,6 +5,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jefersonMarques/apresentacao-viagate/internal/activation"
 )
@@ -39,6 +40,7 @@ func TestActivationPageDisablesEmptyGoodsAndUsersActions(t *testing.T) {
 
 func TestActivationCompleteRequiresGoodsAndUsers(t *testing.T) {
 	profile := activation.Profile{
+		HasPolicy:               true,
 		FinanceResponsibleName:  "Financeiro",
 		FinanceResponsibleEmail: "financeiro@example.com",
 		FinanceResponsiblePhone: "11999999999",
@@ -55,5 +57,34 @@ func TestActivationCompleteRequiresGoodsAndUsers(t *testing.T) {
 	profile.SystemUsers = []activation.SystemUser{{Name: "Maria", Email: "maria@example.com"}}
 	if !ActivationComplete(profile) {
 		t.Fatal("activation should be complete with finance, one good and one user")
+	}
+}
+
+
+func TestActivationCompleteRequiresPolicy(t *testing.T) {
+	profile := activation.Profile{
+		FinanceResponsibleName:  "Financeiro",
+		FinanceResponsibleEmail: "financeiro@example.com",
+		FinanceResponsiblePhone: "11999999999",
+		Goods:                   []string{"Queijos"},
+		SystemUsers:             []activation.SystemUser{{Name: "Maria", Email: "maria@example.com"}},
+	}
+	if ActivationComplete(profile) {
+		t.Fatal("activation must not be complete without an insurance policy")
+	}
+
+	profile.HasPolicy = true
+	if !ActivationComplete(profile) {
+		t.Fatal("activation should be complete when policy and operational data are present")
+	}
+}
+
+func TestActivationContractSigned(t *testing.T) {
+	now := time.Now()
+	if ActivationContractSigned(activation.Profile{ContractStatus: "sent"}) {
+		t.Fatal("sent contract must not unlock internal implementation")
+	}
+	if !ActivationContractSigned(activation.Profile{ContractStatus: "signed", FullySignedAt: &now}) {
+		t.Fatal("fully signed contract should unlock internal implementation")
 	}
 }
