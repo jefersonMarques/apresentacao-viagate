@@ -11,7 +11,7 @@ import (
 
 func TestContractingJourneyRequiresExplicitOperationType(t *testing.T) {
 	var output bytes.Buffer
-	component := ContractingJourneyPage(domain.Onboarding{ID: "onboarding-test"}, false, "", "", "")
+	component := ContractingJourneyPage(domain.Onboarding{ID: "onboarding-test"}, "", "", "")
 	if err := component.Render(context.Background(), &output); err != nil {
 		t.Fatalf("render contracting journey: %v", err)
 	}
@@ -49,12 +49,12 @@ func TestContractingReadyForReview(t *testing.T) {
 		PolicyEndDate:    "2027-09-01",
 	}
 
-	if !ContractingReadyForReview(complete, true) {
-		t.Fatal("complete persisted insurance data with policy should be ready for review")
+	if !ContractingReadyForReview(complete) {
+		t.Fatal("complete persisted contract data should be ready for review without a policy upload")
 	}
 
 	complete.OperationType = ""
-	if ContractingReadyForReview(complete, true) {
+	if ContractingReadyForReview(complete) {
 		t.Fatal("missing operation type must block review")
 	}
 }
