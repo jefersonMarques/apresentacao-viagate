@@ -1,11 +1,8 @@
 package httpapp
 
 import (
-	"bytes"
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/mail"
 	"strings"
@@ -14,7 +11,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/notifications"
-	onboardingpkg "github.com/jefersonMarques/apresentacao-viagate/internal/onboarding"
 	"github.com/jefersonMarques/apresentacao-viagate/web/templates"
 )
 
@@ -205,42 +201,11 @@ func (a *App) uploadOnboardingDocument(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "documentos bloqueados após o envio do cadastro", http.StatusConflict)
 		return
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, (15<<20)+1)
-	if err := r.ParseMultipartForm(15 << 20); err != nil {
-		http.Error(w, "arquivo excede o limite de 15 MB", http.StatusRequestEntityTooLarge)
+	if err := a.storeInsurancePolicyFromRequest(r, current.ID); err != nil {
+		status, message := policyUploadResponse(err)
+		http.Error(w, message, status)
 		return
 	}
-	file, header, err := r.FormFile("document")
-	if err != nil {
-		http.Error(w, "selecione a apólice", http.StatusBadRequest)
-		return
-	}
-	defer file.Close()
-	content, err := io.ReadAll(io.LimitReader(file, (15<<20)+1))
-	if err != nil || len(content) == 0 || len(content) > 15<<20 {
-		http.Error(w, "arquivo inválido", http.StatusBadRequest)
-		return
-	}
-	mimeType := http.DetectContentType(content[:min(512, len(content))])
-	allowed := map[string]bool{"application/pdf": true, "image/jpeg": true, "image/png": true}
-	if !allowed[mimeType] {
-		http.Error(w, "formato não permitido; envie PDF, JPG ou PNG", http.StatusUnsupportedMediaType)
-		return
-	}
-	hash := sha256.Sum256(content)
-	key := fmt.Sprintf("onboarding/%s/insurance_policy/%d-%s", current.ID, time.Now().UTC().UnixNano(), sanitizeFilename(header.Filename))
-	if err := a.storage.Put(r.Context(), key, mimeType, bytes.NewReader(content), int64(len(content))); err != nil {
-		a.logger.Error("upload policy to S3 failed", "error", err)
-		http.Error(w, "não foi possível armazenar o arquivo", http.StatusInternalServerError)
-		return
-	}
-	document := onboardingpkg.Document{DocumentType: "insurance_policy", StorageKey: key, OriginalFilename: header.Filename, MIMEType: mimeType, SizeBytes: int64(len(content)), SHA256: hash[:]}
-	if err := a.onboardingStore.AddDocument(r.Context(), current.ID, document); err != nil {
-		_ = a.storage.Delete(r.Context(), key)
-		http.Error(w, "não foi possível registrar o arquivo", http.StatusInternalServerError)
-		return
-	}
-	_, _ = a.pool.Exec(r.Context(), `insert into audit_events(actor_type,event_type,resource_type,resource_id,ip_address,user_agent,metadata) values('customer','document.uploaded','onboarding',$1,$2,$3,jsonb_build_object('type','insurance_policy','sha256',$4,'filename',$5))`, current.ID, requestIP(r), r.UserAgent(), fmt.Sprintf("%x", hash[:]), header.Filename)
 	http.Redirect(w, r, "/onboarding/"+current.ID+"?saved=document", http.StatusSeeOther)
 }
 
