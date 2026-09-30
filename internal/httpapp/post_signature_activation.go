@@ -47,24 +47,24 @@ func (a *App) queuePostSignatureActivation(ctx context.Context, access contracts
 	contractLink := baseURL + "/sign/" + signerToken + "/contract"
 
 	htmlBody := fmt.Sprintf(
-		"<p>Olá, %s.</p><p>Seu contrato ViaGate foi assinado com sucesso.</p><p><a href=\"%s\">Baixar contrato assinado</a></p><p>Para prepararmos sua operação, faltam apenas três informações:</p><ul><li><strong>Financeiro</strong> — responsável por faturamento</li><li><strong>Operação</strong> — principais mercadorias transportadas</li><li><strong>Acessos</strong> — usuários iniciais do sistema</li></ul><p><a href=\"%s\">Preencher dados para ativação</a></p><p>Se preferir continuar depois, use o mesmo link da proposta. Ele sempre abrirá a etapa atual da contratação.</p>",
+		"<p>Olá, %s.</p><p>Seu contrato ViaGate foi assinado com sucesso.</p><p><a href=\"%s\">Baixar contrato assinado</a></p><p>Se a preparação da implantação ainda não estiver concluída, você ou alguém da sua equipe pode continuar pelo link abaixo.</p><p><a href=\"%s\">Continuar preparação da implantação</a></p><p>Se os dados já tiverem sido concluídos, nenhuma ação adicional é necessária: a ViaGate poderá seguir com a implantação interna.</p>",
 		html.EscapeString(access.Signer.Name),
 		html.EscapeString(contractLink),
 		html.EscapeString(activationLink),
 	)
 
 	textBody := fmt.Sprintf(
-		"Seu contrato ViaGate foi assinado com sucesso.\n\nBaixar contrato assinado: %s\n\nPreencher dados para ativação: %s\n\nO mesmo link da proposta pode ser usado para retomar o processo depois.",
+		"Seu contrato ViaGate foi assinado com sucesso.\n\nBaixar contrato assinado: %s\n\nContinuar preparação da implantação, se necessário: %s",
 		contractLink,
 		activationLink,
 	)
 
 	return notifications.EnqueueWithOptions(ctx, a.pool, notifications.MessageOptions{
-		DedupeKey: "activation-access:" + access.Contract.ID,
+		DedupeKey: "post-signature-customer:" + access.Contract.ID,
 		Kind:      "activation_access",
 		ToName:    access.Signer.Name,
 		ToEmail:   access.Signer.Email,
-		Subject:   "Contrato assinado — próximos passos para ativar a ViaGate",
+		Subject:   "Contrato ViaGate assinado com sucesso",
 		HTMLBody:  htmlBody,
 		TextBody:  textBody,
 		Sensitive: true,
