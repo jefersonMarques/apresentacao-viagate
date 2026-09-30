@@ -64,3 +64,21 @@ func TestRendererAllowsTrustedPricingTableMarkdown(t *testing.T) {
 		t.Fatalf("expected proposal price in rendered HTML: %s", renderedHTML)
 	}
 }
+
+
+func TestRendererDoesNotExposeRawBooleans(t *testing.T) {
+	renderer := NewRenderer()
+	markdown := "Cargo Score: {products.cargo_score}\nMonitoramento: {products.monitoring}"
+	data := Data{"products": map[string]any{"cargo_score": true, "monitoring": false}}
+
+	renderedMarkdown, _, err := renderer.Render(markdown, data)
+	if err != nil {
+		t.Fatalf("Render returned error: %v", err)
+	}
+	if strings.Contains(renderedMarkdown, "true") || strings.Contains(renderedMarkdown, "false") {
+		t.Fatalf("raw boolean values must never be exposed: %s", renderedMarkdown)
+	}
+	if !strings.Contains(renderedMarkdown, "Cargo Score: Contratado") {
+		t.Fatalf("true fallback must be human-readable: %s", renderedMarkdown)
+	}
+}

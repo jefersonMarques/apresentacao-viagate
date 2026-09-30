@@ -96,6 +96,12 @@ func markdownLiteral(value any) string {
 	if raw, ok := value.(RawMarkdown); ok {
 		return string(raw)
 	}
+	if boolean, ok := value.(bool); ok {
+		if boolean {
+			return "Contratado"
+		}
+		return ""
+	}
 
 	text := fmt.Sprint(value)
 	text = strings.Map(func(r rune) rune {

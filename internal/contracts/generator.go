@@ -50,7 +50,7 @@ func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID stri
 
 	err := g.pool.QueryRow(ctx, `
 		select pv.id::text,p.created_by::text,
-		       coalesce(pv.content #>> '{proposal,contract_template_version_id}',''),
+		       coalesce(pv.contract_template_version_id::text,pv.content #>> '{proposal,contract_template_version_id}',''),
 		       o.legal_name,coalesce(o.trade_name,''),o.cnpj,coalesce(o.street,''),coalesce(o.street_number,''),
 		       coalesce(o.complement,''),coalesce(o.district,''),coalesce(o.city,''),coalesce(o.state,''),coalesce(o.postal_code,''),
 		       coalesce(o.operation_type,''),coalesce(o.insurer,''),coalesce(o.policy_start_date::text,''),coalesce(o.policy_end_date::text,''),
@@ -105,7 +105,15 @@ func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID stri
 	}
 
 	formattedPostalCode := brfields.FormatPostalCode(postalCode)
-	address := strings.TrimSpace(strings.Join(nonEmpty(street, number, complement, district, city, state, formattedPostalCode), ", "))
+	address := strings.TrimSpace(strings.Join(nonEmpty(
+		street,
+		number,
+		contractOptionalAddressPart(complement),
+		district,
+		city,
+		state,
+		formattedPostalCode,
+	), ", "))
 	validUntilDisplay := contractDate(validUntilSnapshot)
 	data := Data{
 		"client": map[string]any{
@@ -126,8 +134,8 @@ func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID stri
 		"proposal": map[string]any{
 			"pricing_model":   contractPricingModelLabel(pricingModel),
 			"pricing_table":   pricingData.PricingTable,
-			"minimum_invoice": formatBRL(minimumInvoice),
-			"setup_fee":       formatBRL(setupFee),
+			"minimum_invoice": contractMinimumInvoiceLabel(minimumInvoice),
+			"setup_fee":       contractSetupFeeLabel(setupFee),
 			"accepted_at":     acceptedAt.Format("02/01/2006 15:04"),
 			"valid_until":     validUntilDisplay,
 		},
@@ -222,15 +230,48 @@ func contractDate(value string) string {
 }
 
 func contractPricingModelLabel(value string) string {
+	normalized := strings.ToLower(strings.TrimSpace(value))
 	for _, model := range catalog.PricingModels {
-		if model.ID == value {
+		if model.ID == normalized {
 			return model.Title
 		}
 	}
-	if strings.TrimSpace(value) == "" {
+	switch normalized {
+	case "catalog":
+		return "Tabela comercial por produtos e serviços selecionados"
+	case "item":
+		return "Análise por item"
+	case "conjunto":
+		return "Análise por conjunto"
+	case "":
 		return "Não informado"
+	default:
+		return "Condição comercial personalizada"
 	}
-	return "Condição comercial personalizada"
+}
+
+func contractMinimumInvoiceLabel(value float64) string {
+	if value == 0 {
+		return "Sem fatura mínima"
+	}
+	return formatBRL(value)
+}
+
+func contractSetupFeeLabel(value float64) string {
+	if value == 0 {
+		return "ISENTO"
+	}
+	return formatBRL(value)
+}
+
+func contractOptionalAddressPart(value string) string {
+	trimmed := strings.TrimSpace(value)
+	switch strings.ToLower(trimmed) {
+	case "", "-", "sem complemento", "não informado", "nao informado", "não se aplica", "nao se aplica":
+		return ""
+	default:
+		return trimmed
+	}
 }
 
 func contractOperationTypeLabel(value string) string {
