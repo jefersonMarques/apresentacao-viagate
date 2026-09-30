@@ -77,6 +77,11 @@ jobs:
           RUN_DB_INTEGRATION: '1'
         run: go test ./internal/onboarding -run TestAutoApproveIsIdempotent -count=1
 
+      - name: Test activation signature gate
+        env:
+          RUN_DB_INTEGRATION: '1'
+        run: go test ./internal/activation -run TestInternalSetupRequiresSignedContract -count=1
+
       - name: Test notification scopes
         env:
           RUN_DB_INTEGRATION: '1'
