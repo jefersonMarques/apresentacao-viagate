@@ -21,8 +21,14 @@ func (a *App) signaturePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.URL.Query().Get("continue") == "activation" && access.Signer.Status == "signed" && access.Contract.Status == "signed" {
-		path, activationErr := a.issueActivationOwnerPath(r.Context(), access)
+	if r.URL.Query().Get("continue") == "activation" {
+		path, activationErr := a.issueActivationOwnerPath(
+			r.Context(),
+			access.Contract.ID,
+			access.Signer.ID,
+			access.Signer.Name,
+			access.Signer.Email,
+		)
 		if activationErr != nil {
 			a.logger.Error("resume signed journey into activation failed", "contract_id", access.Contract.ID, "error", activationErr)
 			http.Error(w, "Não foi possível continuar para a ativação.", http.StatusInternalServerError)
@@ -213,6 +219,11 @@ func (a *App) confirmSignature(w http.ResponseWriter, r *http.Request) {
 		a.publishContractEvent(r.Context(), contractID, "contract.signed", "Contrato assinado", contractID)
 		if err := a.queuePostSignatureActivation(r.Context(), access); err != nil {
 			a.logger.Error("queue post-signature activation failed", "contract_id", contractID, "signer_id", access.Signer.ID, "error", err)
+		}
+		if profile, activationErr := a.activationStore.EnsureForContract(r.Context(), contractID); activationErr != nil {
+			a.logger.Error("ensure activation after signature failed", "contract_id", contractID, "error", activationErr)
+		} else {
+			a.notifyActivationReadyIfEligible(r, profile.ID)
 		}
 	}
 
