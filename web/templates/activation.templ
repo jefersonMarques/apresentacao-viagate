@@ -9,13 +9,13 @@ import (
 )
 
 templ ActivationPage(access activation.Access, token, message, errorMessage string) {
-	@PublicFlowLayout("ViaGate — Dados para ativação") {
+	@PublicFlowLayout("ViaGate — Preparação da implantação") {
 		<link rel="stylesheet" href="/commercial-assets/activation.css"/>
 		<link rel="stylesheet" href="/commercial-assets/activation-public.css"/>
 		<div class="public activation-public">
 			<main class="proposal-page activation-page" data-activation-access-section={ access.Section }>
 				<header class="activation-hero">
-					<span class="step-title">DADOS PARA ATIVAÇÃO</span>
+					<span class="step-title">PREPARAÇÃO DA IMPLANTAÇÃO</span>
 					<h1>Vamos preparar sua operação.</h1>
 					<p>O contrato e a preparação da operação seguem em paralelo. Você pode concluir estes dados agora ou encaminhar o preenchimento para alguém da sua equipe.</p>
 					<div class="activation-status-line"><strong>{ ActivationStatusLabel(access.Profile.Status) }</strong> · { access.Profile.LegalName }</div>
@@ -139,7 +139,7 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
 					}
 				</section>
 
-				if access.AccessType == "owner" && access.Section == "all" && access.Profile.Status != "under_internal_setup" && access.Profile.Status != "activated" {
+				if access.AccessType == "owner" && access.Section == "all" && access.Profile.Status != "completed" && access.Profile.Status != "under_internal_setup" && access.Profile.Status != "activated" {
 					<section class="accept-box activation-delegate">
 						<span class="step-title">ENCAMINHAR PREENCHIMENTO</span>
 						<h2>Outra pessoa pode finalizar estes dados</h2>
