@@ -230,15 +230,24 @@ func contractDate(value string) string {
 }
 
 func contractPricingModelLabel(value string) string {
+	normalized := strings.ToLower(strings.TrimSpace(value))
 	for _, model := range catalog.PricingModels {
-		if model.ID == value {
+		if model.ID == normalized {
 			return model.Title
 		}
 	}
-	if strings.TrimSpace(value) == "" {
+	switch normalized {
+	case "catalog":
+		return "Tabela comercial por produtos e serviços selecionados"
+	case "item":
+		return "Análise por item"
+	case "conjunto":
+		return "Análise por conjunto"
+	case "":
 		return "Não informado"
+	default:
+		return "Condição comercial personalizada"
 	}
-	return "Condição comercial personalizada"
 }
 
 func contractMinimumInvoiceLabel(value float64) string {
