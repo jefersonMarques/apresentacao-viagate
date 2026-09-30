@@ -27,8 +27,9 @@
     if (status) status.value = active ? (optional?.checked ? 'optional' : 'included') : 'off';
     if (optional) optional.disabled = !active || !dependencySatisfied;
     if (price) {
-      price.readOnly = !canEditPrices || !dependencySatisfied;
-      price.classList.toggle('is-disabled', !active || !canEditPrices || !dependencySatisfied);
+      const priceLocked = !active || !canEditPrices || !dependencySatisfied;
+      price.readOnly = priceLocked;
+      price.classList.toggle('is-disabled', priceLocked);
     }
 
     const note = row.querySelector('[data-product-dependency-note]');
@@ -205,10 +206,11 @@
         if (!enabled.checked) {
           if (canEditPrices && price) price.value = '';
           if (optional) optional.checked = false;
-        } else if (canEditPrices && price) {
-          price.focus();
         }
         refreshEditor();
+        if (enabled.checked && canEditPrices && price instanceof HTMLInputElement && !price.readOnly) {
+          price.focus();
+        }
       });
       optional?.addEventListener('change', refreshEditor);
       if (canEditPrices) {
