@@ -24,6 +24,7 @@ type Profile struct {
 	ID                       string
 	ContractID               string
 	ClientID                 string
+	ContractStatus           string
 	Status                   string
 	LegalName                string
 	TradeName                string
@@ -51,6 +52,8 @@ type Profile struct {
 	SystemUsers              []SystemUser
 	SubmittedAt              *time.Time
 	ActivatedAt              *time.Time
+	FullySignedAt            *time.Time
+	HasPolicy                bool
 }
 
 type Access struct {
@@ -104,8 +107,8 @@ func validateSectionItems(profile Profile, section string) error {
 	return nil
 }
 
-func (s *Store) EnsureForSignedContract(ctx context.Context, contractID string) (Profile, error) {
-	return s.EnsureForSignedContractWithExistingData(ctx, contractID)
+func (s *Store) EnsureForContract(ctx context.Context, contractID string) (Profile, error) {
+	return s.EnsureForContractWithExistingData(ctx, contractID)
 }
 
 func (s *Store) CreateAccessToken(ctx context.Context, activationID, accessType, section, name, email, signerID string, tokenHash []byte, expiresAt time.Time) error {
@@ -146,7 +149,7 @@ func (s *Store) AccessByToken(ctx context.Context, tokenHash []byte) (Access, er
 func (s *Store) ByID(ctx context.Context, id string) (Profile, error) {
 	var profile Profile
 	err := s.pool.QueryRow(ctx, `
-		select a.id::text,a.contract_id::text,a.client_id::text,a.status,
+		select a.id::text,a.contract_id::text,a.client_id::text,c.status::text,a.status,
 		       o.legal_name,coalesce(o.trade_name,''),o.cnpj,
 		       coalesce(o.street,''),coalesce(o.street_number,''),coalesce(o.complement,''),coalesce(o.district,''),
 		       coalesce(o.city,''),coalesce(o.state,''),coalesce(o.postal_code,''),
@@ -154,13 +157,19 @@ func (s *Store) ByID(ctx context.Context, id string) (Profile, error) {
 		       coalesce(o.broker_company,''),coalesce(o.broker_producer,''),
 		       o.company_responsible_name,o.company_responsible_phone,o.company_responsible_email::text,
 		       coalesce(a.finance_responsible_name,''),coalesce(a.finance_responsible_phone,''),coalesce(a.finance_responsible_email::text,''),
-		       a.submitted_at,a.activated_at
+		       a.submitted_at,a.activated_at,c.fully_signed_at,
+		       exists(
+		           select 1 from uploaded_documents d
+		           where d.onboarding_id=c.onboarding_id
+		             and d.document_type='insurance_policy'
+		             and d.status='uploaded'
+		       )
 		from activation_profiles a
 		join contracts c on c.id=a.contract_id
 		join onboardings o on o.id=c.onboarding_id
 		where a.id=$1
 	`, id).Scan(
-		&profile.ID, &profile.ContractID, &profile.ClientID, &profile.Status,
+		&profile.ID, &profile.ContractID, &profile.ClientID, &profile.ContractStatus, &profile.Status,
 		&profile.LegalName, &profile.TradeName, &profile.CNPJ,
 		&profile.Street, &profile.StreetNumber, &profile.Complement, &profile.District,
 		&profile.City, &profile.State, &profile.PostalCode,
@@ -168,7 +177,7 @@ func (s *Store) ByID(ctx context.Context, id string) (Profile, error) {
 		&profile.BrokerCompany, &profile.BrokerProducer,
 		&profile.CompanyResponsibleName, &profile.CompanyResponsiblePhone, &profile.CompanyResponsibleEmail,
 		&profile.FinanceResponsibleName, &profile.FinanceResponsiblePhone, &profile.FinanceResponsibleEmail,
-		&profile.SubmittedAt, &profile.ActivatedAt,
+		&profile.SubmittedAt, &profile.ActivatedAt, &profile.FullySignedAt, &profile.HasPolicy,
 	)
 	if err != nil {
 		return Profile{}, err
@@ -318,6 +327,25 @@ func (s *Store) Submit(ctx context.Context, tokenID string) error {
 	if usersCount == 0 {
 		return fmt.Errorf("add at least one system user")
 	}
+
+	var hasPolicy bool
+	if err := tx.QueryRow(ctx, `
+		select exists(
+			select 1
+			from activation_profiles a
+			join contracts c on c.id=a.contract_id
+			join uploaded_documents d on d.onboarding_id=c.onboarding_id
+			where a.id=$1
+			  and d.document_type='insurance_policy'
+			  and d.status='uploaded'
+		)
+	`, activationID).Scan(&hasPolicy); err != nil {
+		return err
+	}
+	if !hasPolicy {
+		return fmt.Errorf("insurance policy is required")
+	}
+
 	if _, err := tx.Exec(ctx, `update activation_profiles set status='completed',submitted_at=now(),updated_at=now() where id=$1`, activationID); err != nil {
 		return err
 	}
@@ -352,14 +380,34 @@ func (s *Store) ListAdmin(ctx context.Context) ([]AdminItem, error) {
 	return items, rows.Err()
 }
 
+func (s *Store) ReadyForInternalSetup(ctx context.Context, activationID string) (bool, error) {
+	var ready bool
+	err := s.pool.QueryRow(ctx, `
+		select a.status='completed'
+		   and c.status='signed'
+		   and c.fully_signed_at is not null
+		from activation_profiles a
+		join contracts c on c.id=a.contract_id
+		where a.id=$1
+	`, activationID).Scan(&ready)
+	return ready, err
+}
+
 func (s *Store) SetInternalStatus(ctx context.Context, activationID, status string) error {
 	if status != "under_internal_setup" && status != "activated" {
 		return fmt.Errorf("invalid activation status")
 	}
 	command, err := s.pool.Exec(ctx, `
-		update activation_profiles
-		set status=$2,activated_at=case when $2='activated' then coalesce(activated_at,now()) else activated_at end,updated_at=now()
-		where id=$1 and status in ('completed','under_internal_setup')
+		update activation_profiles a
+		set status=$2,
+		    activated_at=case when $2='activated' then coalesce(a.activated_at,now()) else a.activated_at end,
+		    updated_at=now()
+		from contracts c
+		where a.id=$1
+		  and c.id=a.contract_id
+		  and c.status='signed'
+		  and c.fully_signed_at is not null
+		  and a.status in ('completed','under_internal_setup')
 	`, activationID, status)
 	if err != nil {
 		return err
