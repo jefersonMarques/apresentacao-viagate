@@ -73,46 +73,6 @@
 	font-size: 11px;
 }
 
-.contracting-policy {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 20px;
-	padding: 18px;
-	border: 1px solid var(--line);
-	background: #f8fafb;
-}
-
-.contracting-policy > div {
-	display: grid;
-	gap: 4px;
-}
-
-.contracting-policy > div strong {
-	font-size: 15px;
-}
-
-.contracting-policy > div small {
-	color: #758690;
-	font-size: 11px;
-}
-
-.contracting-policy form {
-	display: flex;
-	align-items: center;
-	gap: 10px;
-}
-
-.contracting-policy input[type="file"] {
-	max-width: 280px;
-	font-size: 11px;
-}
-
-.contracting-policy.is-complete {
-	border-left: 4px solid #159455;
-	background: #f2fbf6;
-}
-
 .contracting-next {
 	justify-content: flex-end;
 }
@@ -150,23 +110,16 @@
 		display: none;
 	}
 
-	.contracting-policy,
-	.contracting-policy form,
 	.field.contracting-actions,
 	.contracting-submit-actions {
 		align-items: stretch;
 		flex-direction: column;
 	}
 
-	.contracting-policy input[type="file"],
 	.contracting-actions .btn,
 	.contracting-submit-actions .btn,
 	.contracting-submit-actions form {
 		width: 100%;
-	}
-
-	.contracting-policy input[type="file"] {
-		max-width: none;
 	}
 
 	.contracting-submit-actions form .btn {

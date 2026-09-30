@@ -64,11 +64,25 @@ func (a *App) ensureContractDelivery(ctx context.Context, onboardingID string) (
 	if err != nil {
 		return access, created, fmt.Errorf("resolve proposal journey link: %w", err)
 	}
-	link := strings.TrimRight(a.cfg.BaseURL, "/") + proposalPath
+	signatureLink := strings.TrimRight(a.cfg.BaseURL, "/") + proposalPath
+
+	activationPath, err := a.issueActivationOwnerPath(
+		ctx,
+		access.ContractID,
+		access.SignerID,
+		access.SignerName,
+		access.SignerEmail,
+	)
+	if err != nil {
+		return access, created, fmt.Errorf("prepare activation access: %w", err)
+	}
+	activationLink := strings.TrimRight(a.cfg.BaseURL, "/") + activationPath
+
 	htmlBody := fmt.Sprintf(
-		"<p>Olá, %s.</p><p>Os dados da operação foram recebidos e o seu contrato ViaGate está pronto para conferência e assinatura.</p><p><a href=\"%s\">Revisar e assinar contrato</a></p><p>Este é o mesmo link da proposta. Ao abri-lo, você será levado diretamente ao contrato e verá o PDF exato que será assinado.</p>",
+		"<p>Olá, %s.</p><p>Seu contrato ViaGate está pronto para conferência e assinatura.</p><p><a href=\"%s\">Revisar e assinar contrato</a></p><p>Enquanto a assinatura estiver pendente, você já pode preparar a implantação ou encaminhar essa etapa para alguém da sua equipe.</p><p><a href=\"%s\">Preparar dados da implantação</a></p><p>A implantação interna só será liberada quando o contrato estiver assinado e os dados operacionais estiverem concluídos.</p>",
 		html.EscapeString(access.SignerName),
-		html.EscapeString(link),
+		html.EscapeString(signatureLink),
+		html.EscapeString(activationLink),
 	)
 	if err := notifications.EnqueueUnique(
 		ctx,
@@ -78,7 +92,7 @@ func (a *App) ensureContractDelivery(ctx context.Context, onboardingID string) (
 		access.SignerEmail,
 		"Seu contrato ViaGate está pronto para assinatura",
 		htmlBody,
-		"Seu contrato ViaGate está pronto. Revise e assine usando o mesmo link da proposta: "+link,
+		"Seu contrato ViaGate está pronto. Assinatura: "+signatureLink+"\nPreparação da implantação: "+activationLink,
 	); err != nil {
 		return access, created, err
 	}

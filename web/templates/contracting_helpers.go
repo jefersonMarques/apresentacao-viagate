@@ -7,34 +7,6 @@ import (
 	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/brfields"
 )
 
-func ContractingPolicyClass(hasPolicy bool) string {
-	if hasPolicy {
-		return "is-complete"
-	}
-	return "is-pending"
-}
-
-func ContractingPolicyTitle(hasPolicy bool) string {
-	if hasPolicy {
-		return "Apólice recebida"
-	}
-	return "Envie a apólice de seguros"
-}
-
-func ContractingPolicyDescription(hasPolicy bool) string {
-	if hasPolicy {
-		return "O arquivo já está vinculado à contratação. Você pode substituí-lo antes do envio final."
-	}
-	return "PDF, JPG ou PNG · máximo 15 MB."
-}
-
-func ContractingPolicyButton(hasPolicy bool) string {
-	if hasPolicy {
-		return "Substituir apólice"
-	}
-	return "Enviar apólice"
-}
-
 func ContractingOperationTypeLabel(value string) string {
 	switch strings.TrimSpace(strings.ToLower(value)) {
 	case "normal":
@@ -46,10 +18,7 @@ func ContractingOperationTypeLabel(value string) string {
 	}
 }
 
-func ContractingReadyForReview(onboarding domain.Onboarding, hasPolicy bool) bool {
-	if !hasPolicy {
-		return false
-	}
+func ContractingReadyForReview(onboarding domain.Onboarding) bool {
 	operationType := strings.TrimSpace(strings.ToLower(onboarding.OperationType))
 	if operationType != "normal" && operationType != "avulsa" {
 		return false

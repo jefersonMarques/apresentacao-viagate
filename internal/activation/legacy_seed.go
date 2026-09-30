@@ -7,10 +7,10 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// EnsureForSignedContractWithExistingData creates the post-signature activation
-// record and, only on its first creation, carries forward operational data that
-// an in-flight customer may already have supplied in the former onboarding form.
-func (s *Store) EnsureForSignedContractWithExistingData(ctx context.Context, contractID string) (Profile, error) {
+// EnsureForContractWithExistingData creates the operational-preparation record
+// as soon as the contract exists and, only on first creation, carries forward
+// legacy operational data supplied by in-flight customers.
+func (s *Store) EnsureForContractWithExistingData(ctx context.Context, contractID string) (Profile, error) {
 	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.Serializable})
 	if err != nil {
 		return Profile{}, err
@@ -25,7 +25,7 @@ func (s *Store) EnsureForSignedContractWithExistingData(ctx context.Context, con
 			       o.finance_responsible_name,o.finance_responsible_phone,o.finance_responsible_email
 			from contracts c
 			join onboardings o on o.id=c.onboarding_id
-			where c.id=$1 and c.status='signed' and c.fully_signed_at is not null
+			where c.id=$1 and c.status in ('generated','sent','partially_signed','signed')
 		), inserted as (
 			insert into activation_profiles(
 				contract_id,client_id,finance_responsible_name,finance_responsible_phone,finance_responsible_email,

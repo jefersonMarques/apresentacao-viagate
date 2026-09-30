@@ -1,10 +1,24 @@
 (() => {
+  const page = document.querySelector('[data-activation-access-section]');
+  if (!(page instanceof HTMLElement)) return;
+
+  const accessSection = page.getAttribute('data-activation-access-section') || 'all';
+  const policy = document.querySelector('#apolice');
+  const finance = document.querySelector('#financeiro');
+  const goods = document.querySelector('#mercadorias');
+  const users = document.querySelector('#usuarios');
   const goodsRoot = document.querySelector('[data-activation-goods]');
   const usersRoot = document.querySelector('[data-activation-users]');
+  const submitBox = document.querySelector('.activation-submit-box');
+  const completeBox = document.querySelector('.activation-complete-box');
+  const progress = Array.from(document.querySelectorAll('.activation-progress-item'));
+
   const goodsPersisted = goodsRoot?.getAttribute('data-persisted-complete') === 'true';
   const usersPersisted = usersRoot?.getAttribute('data-persisted-complete') === 'true';
+  const policyPersisted = policy?.getAttribute('data-policy-present') === 'true';
   let goodsDirty = false;
   let usersDirty = false;
+  let activeStep = '';
 
   function goodsFormReady() {
     if (!goodsRoot) return false;
@@ -102,21 +116,19 @@
     renderProgress();
   });
 
-  const finance = document.querySelector('#financeiro');
-  const goods = document.querySelector('#mercadorias');
-  const users = document.querySelector('#usuarios');
-  const submitBox = document.querySelector('.activation-submit-box');
-  const completeBox = document.querySelector('.activation-complete-box');
-  const progress = Array.from(document.querySelectorAll('.activation-progress-item'));
-  if (!finance || !goods || !users || !progress.length) return;
+  if (!policy || !finance || !goods || !users || !progress.length) return;
 
-  const panels = { finance, goods, users, review: submitBox || completeBox };
+  const panels = { policy, finance, goods, users, review: submitBox || completeBox };
   const params = new URL(window.location.href).searchParams;
-  let activeStep = '';
+  const orderedSteps = ['policy', 'finance', 'goods', 'users'];
 
   function hasValue(selector) {
     const input = document.querySelector(selector);
     return input instanceof HTMLInputElement && input.value.trim() !== '';
+  }
+
+  function policyComplete() {
+    return policyPersisted;
   }
 
   function financeComplete() {
@@ -134,29 +146,51 @@
   }
 
   function completion() {
-    return { finance: financeComplete(), goods: goodsComplete(), users: usersComplete() };
+    return {
+      policy: policyComplete(),
+      finance: financeComplete(),
+      goods: goodsComplete(),
+      users: usersComplete()
+    };
+  }
+
+  function firstIncomplete() {
+    const state = completion();
+    return orderedSteps.find((step) => !state[step]) || 'review';
   }
 
   function initialStep() {
+    if (accessSection !== 'all') {
+      return accessSection === 'finance' || accessSection === 'goods' || accessSection === 'users'
+        ? accessSection
+        : 'policy';
+    }
     if (completeBox) return 'review';
+
     const saved = params.get('saved');
+    if (saved === 'policy') return 'finance';
     if (saved === 'finance') return 'goods';
     if (saved === 'goods') return 'users';
-    if (saved === 'users') return 'review';
+    if (saved === 'users') return firstIncomplete();
 
-    const state = completion();
-    if (!state.finance) return 'finance';
-    if (!state.goods) return 'goods';
-    if (!state.users) return 'users';
-    return 'review';
+    return firstIncomplete();
   }
 
   function resolveStep(step) {
+    if (accessSection !== 'all') {
+      return accessSection === 'finance' || accessSection === 'goods' || accessSection === 'users'
+        ? accessSection
+        : 'policy';
+    }
+
     const state = completion();
-    if (step === 'goods' && !state.finance) return 'finance';
-    if (step === 'users' && (!state.finance || !state.goods)) return !state.finance ? 'finance' : 'goods';
-    if (step === 'review' && (!state.finance || !state.goods || !state.users) && !completeBox) {
-      return !state.finance ? 'finance' : !state.goods ? 'goods' : 'users';
+    if (step === 'finance' && !state.policy) return 'policy';
+    if (step === 'goods' && (!state.policy || !state.finance)) return !state.policy ? 'policy' : 'finance';
+    if (step === 'users' && (!state.policy || !state.finance || !state.goods)) {
+      return !state.policy ? 'policy' : !state.finance ? 'finance' : 'goods';
+    }
+    if (step === 'review' && (!state.policy || !state.finance || !state.goods || !state.users) && !completeBox) {
+      return firstIncomplete();
     }
     return step;
   }
@@ -164,11 +198,11 @@
   function renderProgress() {
     const state = completion();
     progress.forEach((item, index) => {
-      const name = ['finance', 'goods', 'users'][index];
+      const name = orderedSteps[index];
       item.classList.toggle('is-current', name === activeStep);
       item.classList.toggle('is-complete', Boolean(state[name]));
-      item.setAttribute('role', 'button');
-      item.tabIndex = 0;
+      item.setAttribute('role', accessSection === 'all' ? 'button' : 'presentation');
+      item.tabIndex = accessSection === 'all' ? 0 : -1;
       item.setAttribute('aria-current', name === activeStep ? 'step' : 'false');
     });
   }
@@ -188,16 +222,18 @@
     window.history.replaceState({}, '', url);
   }
 
-  progress.forEach((item, index) => {
-    const step = ['finance', 'goods', 'users'][index];
-    const activate = () => setStep(step);
-    item.addEventListener('click', activate);
-    item.addEventListener('keydown', (event) => {
-      if (event.key !== 'Enter' && event.key !== ' ') return;
-      event.preventDefault();
-      activate();
+  if (accessSection === 'all') {
+    progress.forEach((item, index) => {
+      const step = orderedSteps[index];
+      const activate = () => setStep(step);
+      item.addEventListener('click', activate);
+      item.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        activate();
+      });
     });
-  });
+  }
 
   syncSectionSaveButtons();
   setStep(params.get('step') || initialStep());

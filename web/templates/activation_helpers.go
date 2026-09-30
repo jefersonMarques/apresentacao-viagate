@@ -15,10 +15,36 @@ func ActivationCanEdit(access activation.Access, section string) bool {
 }
 
 func ActivationComplete(profile activation.Profile) bool {
-	return strings.TrimSpace(profile.FinanceResponsibleName) != "" &&
+	return profile.HasPolicy &&
+		strings.TrimSpace(profile.FinanceResponsibleName) != "" &&
 		strings.TrimSpace(profile.FinanceResponsibleEmail) != "" &&
 		strings.TrimSpace(profile.FinanceResponsiblePhone) != "" &&
 		len(profile.Goods) > 0 && len(profile.SystemUsers) > 0
+}
+
+func ActivationContractSigned(profile activation.Profile) bool {
+	return profile.ContractStatus == "signed" && profile.FullySignedAt != nil
+}
+
+func ActivationPolicyStatus(hasPolicy bool) string {
+	if hasPolicy {
+		return "Apólice recebida"
+	}
+	return "Apólice pendente"
+}
+
+func ActivationPolicyButton(hasPolicy bool) string {
+	if hasPolicy {
+		return "Substituir apólice"
+	}
+	return "Enviar apólice"
+}
+
+func ActivationContractStatus(profile activation.Profile) string {
+	if ActivationContractSigned(profile) {
+		return "Assinado"
+	}
+	return "Aguardando assinatura"
 }
 
 func activationDoneClass(done bool) string {

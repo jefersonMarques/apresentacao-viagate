@@ -136,6 +136,8 @@ func (a *App) Routes() http.Handler {
 
 	router.Get("/activation/{token}", a.activationPage)
 	router.Get("/activation/{token}/proposal", a.proposalFromActivation)
+	router.Post("/activation/{token}/policy", a.uploadActivationPolicy)
+	router.Post("/activation/{token}/delegate", a.delegateActivation)
 	router.Post("/activation/{token}/{section:finance|goods|users}", a.saveActivationSection)
 	router.Post("/activation/{token}/submit", a.submitActivation)
 

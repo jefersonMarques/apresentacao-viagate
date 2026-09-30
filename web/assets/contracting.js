@@ -6,7 +6,6 @@
   const panels = new Map(steps.map((step) => [step, root.querySelector(`[data-contracting-step="${step}"]`)]));
   const links = new Map(steps.map((step) => [step, root.querySelector(`[data-contracting-step-link="${step}"]`)]));
   const params = new URL(window.location.href).searchParams;
-  const policyPresent = root.getAttribute('data-policy-present') === 'true';
   const insurancePersistedReady = root.getAttribute('data-insurance-ready') === 'true';
   const insuranceForm = panels.get('insurance')?.querySelector('form.grid');
   let insuranceDirty = false;
@@ -23,7 +22,6 @@
   function insuranceComplete() {
     return insurancePersistedReady &&
       !insuranceDirty &&
-      policyPresent &&
       ['operation_type', 'insurer', 'policy_start_date', 'policy_end_date'].every((name) => fieldValue(name));
   }
 
@@ -38,7 +36,6 @@
     if (steps.includes(requested)) return resolveStep(requested);
     const saved = params.get('saved');
     if (saved === 'company') return 'insurance';
-    if (saved === 'document' && insuranceComplete()) return 'review';
     if (saved === 'insurance') return insuranceComplete() ? 'review' : 'insurance';
     if (!companyComplete()) return 'company';
     if (!insuranceComplete()) return 'insurance';
