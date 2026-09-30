@@ -58,7 +58,7 @@ templ ContractTemplatesPage(user domain.User, items []domain.ContractTemplate, v
 										<button class="v1-variable-chip" type="button" data-contract-variable={ "{" + variable + "}" }>{ "{" + variable + "}" }</button>
 									}
 								</div>
-								<div class="v1-help admin-form-help">Clique em uma variável para inseri-la na posição atual do cursor.</div>
+								<div class="v1-help admin-form-help">Clique em uma variável para inseri-la na posição atual do cursor. Variáveis products.* são booleanas e serão inseridas como blocos condicionais.</div>
 							</div>
 							<label class="v1-option-card admin-form-section-gap"><span class="v1-switch"><input type="checkbox" name="make_default" value="1"/><span class="v1-switch-track"></span></span><span><strong>Usar como modelo padrão</strong><small>Novos contratos utilizarão este modelo quando não houver outra regra específica.</small></span></label>
 							<div class="v1-actions admin-form-actions">
