@@ -50,7 +50,7 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
 					</section>
 				}
 
-				<section class="accept-box" id="apolice">
+				<section class="accept-box" id="apolice" data-policy-present={ BoolString(access.Profile.HasPolicy) }>
 					<span class="step-title">1 · APÓLICE</span>
 					<h2>Envie a apólice da operação</h2>
 					<p>O arquivo não faz parte do contrato. Ele será usado pela equipe de implantação e pode ser enviado enquanto o contrato aguarda assinatura.</p>
