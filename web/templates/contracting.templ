@@ -55,17 +55,10 @@ templ ContractingJourneyPage(onboarding domain.Onboarding, message, errorMessage
 							<div class="field"><label>Fim da vigência</label><input name="policy_end_date" type="date" value={ onboarding.PolicyEndDate } required/></div>
 							<div class="field"><label>Corretor parceiro</label><input name="broker_company" value={ onboarding.BrokerCompany }/></div>
 							<div class="field"><label>Produtor do corretor</label><input name="broker_producer" value={ onboarding.BrokerProducer }/></div>
-							<div class="field full contracting-actions"><button class="btn ghost" type="button" data-contracting-previous="company">Voltar</button><button class="btn dark" type="submit" data-processing="Salvando seguro...">Salvar dados do seguro</button></div>
+							<div class="field full contracting-actions"><button class="btn ghost" type="button" data-contracting-previous="company">Voltar</button><button class="btn dark" type="submit" data-processing="Salvando seguro...">Salvar e continuar</button></div>
 						</form>
 
-						<div class={ "contracting-policy " + ContractingPolicyClass(hasPolicy) }>
-							<div><span class="step-title">APÓLICE</span><strong>{ ContractingPolicyTitle(hasPolicy) }</strong><small>{ ContractingPolicyDescription(hasPolicy) }</small></div>
-							<form method="post" action={ templ.SafeURL("/onboarding/" + onboarding.ID + "/documents") } enctype="multipart/form-data">
-								<input name="document" type="file" accept="application/pdf,image/jpeg,image/png" required/>
-								<button class="btn primary" type="submit" data-processing="Enviando apólice...">{ ContractingPolicyButton(hasPolicy) }</button>
-							</form>
-						</div>
-						if ContractingReadyForReview(onboarding,hasPolicy) {
+						if ContractingReadyForReview(onboarding) {
 							<div class="actions contracting-next"><button class="btn primary" type="button" data-contracting-next="review">Revisar contratação</button></div>
 						}
 					</div>
@@ -80,7 +73,7 @@ templ ContractingJourneyPage(onboarding domain.Onboarding, message, errorMessage
 							@PublicDataField("Seguro") { <strong>{ onboarding.Insurer }</strong><span>{ ContractingOperationTypeLabel(onboarding.OperationType) } · { onboarding.PolicyStartDate } a { onboarding.PolicyEndDate }</span> }
 							@PublicDataField("Responsável") { <strong>{ onboarding.CompanyResponsibleName }</strong><span>{ onboarding.CompanyResponsibleEmail } · { brfields.FormatPhone(onboarding.CompanyResponsiblePhone) }</span> }
 						}
-						<p class="public-flow-muted">Depois do envio, os dados serão validados e o contrato será preparado automaticamente. O mesmo link da proposta passará a abrir diretamente a assinatura.</p>
+						<p class="public-flow-muted">Depois do envio, os dados contratuais serão validados e o contrato será preparado automaticamente. A apólice e os demais dados operacionais serão coletados na preparação da implantação.</p>
 						<div class="actions contracting-submit-actions">
 							<button class="btn ghost" type="button" data-contracting-previous="insurance">Voltar</button>
 							<form method="post" action={ templ.SafeURL("/onboarding/" + onboarding.ID + "/submit") }>
