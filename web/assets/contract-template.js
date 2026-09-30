@@ -31,7 +31,7 @@
           editor.focus();
           return;
         }
-        try { await copyText(value); } catch (_) {}
+        try { await copyText(rawValue); } catch (_) {}
       });
     });
   }
