@@ -25,7 +25,10 @@ func (s *Store) EnsureForContractWithExistingData(ctx context.Context, contractI
 			       o.finance_responsible_name,o.finance_responsible_phone,o.finance_responsible_email
 			from contracts c
 			join onboardings o on o.id=c.onboarding_id
-			where c.id=$1 and c.status in ('generated','sent','partially_signed','signed')
+			where c.id=$1
+			  and c.deleted_at is null
+			  and o.deleted_at is null
+			  and c.status in ('generated','sent','partially_signed','signed')
 		), inserted as (
 			insert into activation_profiles(
 				contract_id,client_id,finance_responsible_name,finance_responsible_phone,finance_responsible_email,
@@ -40,7 +43,7 @@ func (s *Store) EnsureForContractWithExistingData(ctx context.Context, contractI
 		select coalesce(i.id,a.id)::text,s.onboarding_id::text,(i.id is not null)
 		from source s
 		left join inserted i on true
-		left join activation_profiles a on a.contract_id=s.contract_id
+		left join activation_profiles a on a.contract_id=s.contract_id and a.deleted_at is null
 	`, contractID).Scan(&activationID, &onboardingID, &inserted)
 	if err != nil {
 		return Profile{}, fmt.Errorf("ensure activation profile: %w", err)
