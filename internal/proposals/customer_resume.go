@@ -25,10 +25,18 @@ func (s *Store) ConsumeCustomerResumeToken(ctx context.Context, tokenHash []byte
 
 	var tokenID, acceptanceID string
 	if err := tx.QueryRow(ctx, `
-		select id::text,proposal_acceptance_id::text
-		from customer_resume_tokens
-		where token_hash=$1 and purpose='correction' and used_at is null and revoked_at is null and expires_at>now()
-		for update
+		select t.id::text,t.proposal_acceptance_id::text
+		from customer_resume_tokens t
+		join proposal_acceptances pa on pa.id=t.proposal_acceptance_id
+		join proposals p on p.id=pa.proposal_id
+		where t.token_hash=$1
+		  and t.purpose='correction'
+		  and t.used_at is null
+		  and t.revoked_at is null
+		  and t.expires_at>now()
+		  and pa.deleted_at is null
+		  and p.deleted_at is null
+		for update of t
 	`, tokenHash).Scan(&tokenID, &acceptanceID); err != nil {
 		return "", err
 	}
@@ -56,9 +64,16 @@ func (s *Store) CreateCustomerJourneyToken(ctx context.Context, acceptanceID str
 func (s *Store) CustomerJourneyAcceptance(ctx context.Context, tokenHash []byte) (string, error) {
 	var tokenID, acceptanceID string
 	err := s.pool.QueryRow(ctx, `
-		select id::text,proposal_acceptance_id::text
-		from customer_resume_tokens
-		where token_hash=$1 and purpose='journey' and revoked_at is null and expires_at>now()
+		select t.id::text,t.proposal_acceptance_id::text
+		from customer_resume_tokens t
+		join proposal_acceptances pa on pa.id=t.proposal_acceptance_id
+		join proposals p on p.id=pa.proposal_id
+		where t.token_hash=$1
+		  and t.purpose='journey'
+		  and t.revoked_at is null
+		  and t.expires_at>now()
+		  and pa.deleted_at is null
+		  and p.deleted_at is null
 	`, tokenHash).Scan(&tokenID, &acceptanceID)
 	if err != nil {
 		return "", err
