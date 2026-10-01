@@ -183,7 +183,7 @@ func (s *Store) AutoApprove(ctx context.Context, onboardingID, source string) (b
 	defer tx.Rollback(ctx)
 
 	var status string
-	if err := tx.QueryRow(ctx, `select status::text from onboardings where id=$1 for update`, onboardingID).Scan(&status); err != nil {
+	if err := tx.QueryRow(ctx, `select status::text from onboardings where id=$1 and deleted_at is null for update`, onboardingID).Scan(&status); err != nil {
 		return false, err
 	}
 	if status == "approved" {
