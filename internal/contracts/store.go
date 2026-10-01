@@ -267,8 +267,6 @@ func (s *Store) CreateChallenge(ctx context.Context, signerID string, otpHash []
 	if command.RowsAffected() != 1 {
 		return fmt.Errorf("contract signer is not available for OTP")
 	}
-		return err
-	}
 	if _, err := tx.Exec(ctx, `
 		insert into identity_verifications(contract_signer_id,mode,status,provider)
 		values($1,'email_otp','pending','brevo')
