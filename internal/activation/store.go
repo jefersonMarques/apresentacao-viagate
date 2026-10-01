@@ -278,7 +278,7 @@ func (s *Store) Save(ctx context.Context, tokenID string, profile Profile, secti
 			}
 		}
 		if err == nil {
-			_, err = tx.Exec(ctx, `update activation_profiles set status=case when status='pending' then 'in_progress' else status end,updated_at=now() where id=$1 and deleted_at is null`, activationID)
+			_, err = tx.Exec(ctx, `update activation_profiles set status=case when status='pending' then 'in_progress' else status end,updated_at=now() where id=$1 and deleted_at is null and deleted_at is null`, activationID)
 		}
 	case "users":
 		if _, err = tx.Exec(ctx, `delete from activation_system_users where activation_id=$1`, activationID); err == nil {
@@ -313,7 +313,10 @@ func (s *Store) Submit(ctx context.Context, tokenID string) error {
 		select a.id::text,a.status,coalesce(a.finance_responsible_name,''),coalesce(a.finance_responsible_email::text,''),coalesce(a.finance_responsible_phone,'')
 		from activation_access_tokens t
 		join activation_profiles a on a.id=t.activation_id
-		where t.id=$1 and t.revoked_at is null and t.expires_at>now()
+		where t.id=$1
+		  and t.revoked_at is null
+		  and t.expires_at>now()
+		  and a.deleted_at is null
 		for update of t,a
 	`, tokenID).Scan(&activationID, &status, &financeName, &financeEmail, &financePhone)
 	if err != nil {
