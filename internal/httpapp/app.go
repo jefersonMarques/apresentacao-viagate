@@ -157,6 +157,7 @@ func (a *App) Routes() http.Handler {
 		admin.With(a.permission("proposal.create")).Post("/admin/proposals/save", a.saveProposal)
 		admin.With(a.permission("proposal.create")).Post("/admin/proposals/{id}/share-email", a.shareProposalByEmail)
 		admin.With(a.permission("settings.manage")).Post("/admin/proposals/{id}/default", a.setDefaultProposal)
+		admin.Post("/admin/proposals/{id}/delete", a.softDeleteProposal)
 
 		admin.With(a.permission("settings.manage")).Get("/admin/products", a.productCatalogPage)
 		admin.With(a.permission("settings.manage")).Post("/admin/products/categories", a.saveProductCategory)
