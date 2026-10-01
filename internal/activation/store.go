@@ -132,7 +132,11 @@ func (s *Store) AccessByToken(ctx context.Context, tokenHash []byte) (Access, er
 	err := s.pool.QueryRow(ctx, `
 		select t.id::text,t.access_type,t.section,coalesce(t.name,''),coalesce(t.email::text,''),t.activation_id::text
 		from activation_access_tokens t
-		where t.token_hash=$1 and t.revoked_at is null and t.expires_at>now()
+		join activation_profiles a on a.id=t.activation_id
+		where t.token_hash=$1
+		  and t.revoked_at is null
+		  and t.expires_at>now()
+		  and a.deleted_at is null
 	`, tokenHash).Scan(&access.TokenID, &access.AccessType, &access.Section, &access.Name, &access.Email, &profileID)
 	if err != nil {
 		return Access{}, err
@@ -163,11 +167,15 @@ func (s *Store) ByID(ctx context.Context, id string) (Profile, error) {
 		           where d.onboarding_id=c.onboarding_id
 		             and d.document_type='insurance_policy'
 		             and d.status='uploaded'
+		             and d.deleted_at is null
 		       )
 		from activation_profiles a
 		join contracts c on c.id=a.contract_id
 		join onboardings o on o.id=c.onboarding_id
 		where a.id=$1
+		  and a.deleted_at is null
+		  and c.deleted_at is null
+		  and o.deleted_at is null
 	`, id).Scan(
 		&profile.ID, &profile.ContractID, &profile.ClientID, &profile.ContractStatus, &profile.Status,
 		&profile.LegalName, &profile.TradeName, &profile.CNPJ,
@@ -237,7 +245,10 @@ func (s *Store) Save(ctx context.Context, tokenID string, profile Profile, secti
 		select activation_id::text,section,a.status
 		from activation_access_tokens t
 		join activation_profiles a on a.id=t.activation_id
-		where t.id=$1 and t.revoked_at is null and t.expires_at>now()
+		where t.id=$1
+		  and t.revoked_at is null
+		  and t.expires_at>now()
+		  and a.deleted_at is null
 		for update of t,a
 	`, tokenID).Scan(&activationID, &allowedSection, &status)
 	if err != nil {
@@ -256,7 +267,7 @@ func (s *Store) Save(ctx context.Context, tokenID string, profile Profile, secti
 			update activation_profiles
 			set finance_responsible_name=nullif($2,''),finance_responsible_phone=nullif($3,''),finance_responsible_email=nullif($4,'')::citext,
 			    status=case when status='pending' then 'in_progress' else status end,updated_at=now()
-			where id=$1
+			where id=$1 and deleted_at is null
 		`, activationID, profile.FinanceResponsibleName, profile.FinanceResponsiblePhone, profile.FinanceResponsibleEmail)
 	case "goods":
 		if _, err = tx.Exec(ctx, `delete from activation_goods where activation_id=$1`, activationID); err == nil {
@@ -267,7 +278,7 @@ func (s *Store) Save(ctx context.Context, tokenID string, profile Profile, secti
 			}
 		}
 		if err == nil {
-			_, err = tx.Exec(ctx, `update activation_profiles set status=case when status='pending' then 'in_progress' else status end,updated_at=now() where id=$1`, activationID)
+			_, err = tx.Exec(ctx, `update activation_profiles set status=case when status='pending' then 'in_progress' else status end,updated_at=now() where id=$1 and deleted_at is null`, activationID)
 		}
 	case "users":
 		if _, err = tx.Exec(ctx, `delete from activation_system_users where activation_id=$1`, activationID); err == nil {
@@ -337,6 +348,9 @@ func (s *Store) Submit(ctx context.Context, tokenID string) error {
 			join uploaded_documents d on d.onboarding_id=c.onboarding_id
 			where a.id=$1
 			  and d.document_type='insurance_policy'
+			  and a.deleted_at is null
+			  and c.deleted_at is null
+			  and d.deleted_at is null
 			  and d.status='uploaded'
 		)
 	`, activationID).Scan(&hasPolicy); err != nil {
@@ -346,7 +360,7 @@ func (s *Store) Submit(ctx context.Context, tokenID string) error {
 		return fmt.Errorf("insurance policy is required")
 	}
 
-	if _, err := tx.Exec(ctx, `update activation_profiles set status='completed',submitted_at=now(),updated_at=now() where id=$1`, activationID); err != nil {
+	if _, err := tx.Exec(ctx, `update activation_profiles set status='completed',submitted_at=now(),updated_at=now() where id=$1 and deleted_at is null`, activationID); err != nil {
 		return err
 	}
 	return tx.Commit(ctx)
@@ -363,6 +377,11 @@ func (s *Store) ListAdmin(ctx context.Context) ([]AdminItem, error) {
 		join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
 		join proposals p on p.id=pa.proposal_id
 		join users u on u.id=p.created_by
+		where a.deleted_at is null
+		  and c.deleted_at is null
+		  and o.deleted_at is null
+		  and pa.deleted_at is null
+		  and p.deleted_at is null
 		order by case a.status when 'completed' then 0 when 'in_progress' then 1 when 'pending' then 2 when 'under_internal_setup' then 3 else 4 end,a.updated_at desc
 	`)
 	if err != nil {
@@ -389,6 +408,8 @@ func (s *Store) ReadyForInternalSetup(ctx context.Context, activationID string) 
 		from activation_profiles a
 		join contracts c on c.id=a.contract_id
 		where a.id=$1
+		  and a.deleted_at is null
+		  and c.deleted_at is null
 	`, activationID).Scan(&ready)
 	return ready, err
 }
@@ -405,6 +426,8 @@ func (s *Store) SetInternalStatus(ctx context.Context, activationID, status stri
 		from contracts c
 		where a.id=$1
 		  and c.id=a.contract_id
+		  and a.deleted_at is null
+		  and c.deleted_at is null
 		  and c.status='signed'
 		  and c.fully_signed_at is not null
 		  and a.status in ('completed','under_internal_setup')
