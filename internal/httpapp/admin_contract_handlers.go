@@ -96,7 +96,12 @@ func (a *App) canAccessContract(ctx context.Context, userID, contractID string) 
 		join onboardings o on o.id=c.onboarding_id
 		join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
 		join proposals p on p.id=pa.proposal_id
-		where c.id=$1 and c.status<>'cancelled'
+		where c.id=$1
+		  and c.status<>'cancelled'
+		  and c.deleted_at is null
+		  and o.deleted_at is null
+		  and pa.deleted_at is null
+		  and p.deleted_at is null
 	`, contractID).Scan(&ownerID)
 	if err != nil {
 		return false
