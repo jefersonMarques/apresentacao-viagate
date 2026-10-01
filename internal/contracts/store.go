@@ -240,13 +240,33 @@ func (s *Store) CreateChallenge(ctx context.Context, signerID string, otpHash []
 	}
 	defer tx.Rollback(ctx)
 
+	var active bool
+	if err := tx.QueryRow(ctx, `
+		select true
+		from contract_signers s
+		join contracts c on c.id=s.contract_id
+		where s.id=$1
+		  and s.deleted_at is null
+		  and c.deleted_at is null
+		  and c.status in ('generated','sent','partially_signed')
+		for update of s,c
+	`, signerID).Scan(&active); err != nil {
+		return err
+	}
+
 	if _, err := tx.Exec(ctx, `delete from signature_challenges where contract_signer_id=$1 and verified_at is null`, signerID); err != nil {
 		return err
 	}
 	if _, err := tx.Exec(ctx, `insert into signature_challenges(contract_signer_id,otp_hash,expires_at) values($1,$2,$3)`, signerID, otpHash, expiresAt); err != nil {
 		return err
 	}
-	if _, err := tx.Exec(ctx, `update contract_signers set status='otp_sent' where id=$1 and status in ('pending','otp_sent')`, signerID); err != nil {
+	command, err := tx.Exec(ctx, `update contract_signers set status='otp_sent' where id=$1 and deleted_at is null and status in ('pending','otp_sent')`, signerID)
+	if err != nil {
+		return err
+	}
+	if command.RowsAffected() != 1 {
+		return fmt.Errorf("contract signer is not available for OTP")
+	}
 		return err
 	}
 	if _, err := tx.Exec(ctx, `
