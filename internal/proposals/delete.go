@@ -27,7 +27,6 @@ type SoftDeleteResult struct {
 	RevokedCustomerSessions   int64
 	RevokedResumeTokens       int64
 	RevokedActivationTokens   int64
-	CancelledFinalizationJobs int64
 	CancelledNotifications    int64
 	HiddenInAppNotifications  int64
 }
@@ -104,23 +103,6 @@ func (s *Store) SoftDeleteCascade(ctx context.Context, input SoftDeleteInput) (S
 	}
 	result.RevokedActivationTokens = command.RowsAffected()
 
-	command, err = tx.Exec(ctx, `
-		update contract_finalization_jobs job
-		set status='cancelled',
-		    processing_at=null,
-		    last_error='proposal soft deleted',
-		    updated_at=now()
-		from contracts c
-		join onboardings o on o.id=c.onboarding_id
-		join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
-		where job.contract_id=c.id
-		  and pa.proposal_id=$1
-		  and job.status in ('pending','processing','failed')
-	`, input.ProposalID)
-	if err != nil {
-		return SoftDeleteResult{}, err
-	}
-	result.CancelledFinalizationJobs = command.RowsAffected()
 
 	command, err = tx.Exec(ctx, `
 		with resources as (
@@ -323,9 +305,8 @@ func (s *Store) SoftDeleteCascade(ctx context.Context, input SoftDeleteInput) (S
 				'revoked_customer_sessions',$13::bigint,
 				'revoked_resume_tokens',$14::bigint,
 				'revoked_activation_tokens',$15::bigint,
-				'cancelled_finalization_jobs',$16::bigint,
-				'cancelled_notifications',$17::bigint,
-				'hidden_in_app_notifications',$18::bigint,
+				'cancelled_notifications',$16::bigint,
+				'hidden_in_app_notifications',$17::bigint,
 				'evidence_retained',true
 			)
 		)
@@ -345,7 +326,6 @@ func (s *Store) SoftDeleteCascade(ctx context.Context, input SoftDeleteInput) (S
 		result.RevokedCustomerSessions,
 		result.RevokedResumeTokens,
 		result.RevokedActivationTokens,
-		result.CancelledFinalizationJobs,
 		result.CancelledNotifications,
 		result.HiddenInAppNotifications,
 	); err != nil {
