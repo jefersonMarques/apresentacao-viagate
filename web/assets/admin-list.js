@@ -216,9 +216,70 @@
     });
   }
 
+  function initProposalDeleteDialog() {
+    const dialog = document.querySelector('[data-proposal-delete-dialog]');
+    if (typeof HTMLDialogElement === 'undefined' || !(dialog instanceof HTMLDialogElement) || typeof dialog.showModal !== 'function') return;
+
+    const form = dialog.querySelector('[data-proposal-delete-form]');
+    const input = dialog.querySelector('[data-proposal-delete-confirmation]');
+    const submit = dialog.querySelector('[data-proposal-delete-submit]');
+    const title = dialog.querySelector('[data-proposal-delete-name]');
+    const client = dialog.querySelector('[data-proposal-delete-client]');
+    const closeButtons = Array.from(dialog.querySelectorAll('[data-proposal-delete-close]'));
+    const openers = Array.from(document.querySelectorAll('[data-proposal-delete-open]'));
+    const requiredPhrase = 'Quero excluir';
+
+    if (!(form instanceof HTMLFormElement) || !(input instanceof HTMLInputElement) || !(submit instanceof HTMLButtonElement)) return;
+
+    const sync = () => {
+      const confirmed = input.value === requiredPhrase;
+      submit.disabled = !confirmed;
+      submit.setAttribute('aria-disabled', confirmed ? 'false' : 'true');
+    };
+
+    const close = () => {
+      dialog.close();
+    };
+
+    openers.forEach((opener) => {
+      opener.addEventListener('click', () => {
+        const proposalID = opener.getAttribute('data-proposal-id') || '';
+        if (!proposalID) return;
+
+        form.action = `/admin/proposals/${encodeURIComponent(proposalID)}/delete`;
+        if (title) title.textContent = opener.getAttribute('data-proposal-title') || 'Proposta';
+        if (client) client.textContent = opener.getAttribute('data-proposal-client') || '';
+        input.value = '';
+        sync();
+        dialog.showModal();
+        window.requestAnimationFrame(() => input.focus());
+      });
+    });
+
+    input.addEventListener('input', sync);
+    closeButtons.forEach((button) => button.addEventListener('click', close));
+    dialog.addEventListener('click', (event) => {
+      if (event.target === dialog) close();
+    });
+    dialog.addEventListener('close', () => {
+      input.value = '';
+      form.removeAttribute('action');
+      sync();
+    });
+    form.addEventListener('submit', (event) => {
+      if (input.value !== requiredPhrase || !form.action) {
+        event.preventDefault();
+        sync();
+      }
+    });
+
+    sync();
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('[data-admin-list]').forEach(initList);
     initActionMenus();
     initProposalSourceDialog();
+    initProposalDeleteDialog();
   });
 })();
