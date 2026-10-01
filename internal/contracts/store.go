@@ -171,7 +171,10 @@ func (s *Store) SignerByPublicToken(ctx context.Context, token string) (SignerAc
 		       coalesce(c.final_package_storage_key,''),c.final_package_sha256,
 		       c.generated_at,c.sent_at,c.fully_signed_at,c.finalized_at
 		from contract_signers s join contracts c on c.id=s.contract_id
-		where s.public_token=$1 and c.status in ('generated','sent','partially_signed','signed')
+		where s.public_token=$1
+		  and s.deleted_at is null
+		  and c.deleted_at is null
+		  and c.status in ('generated','sent','partially_signed','signed')
 	`, token).Scan(
 		&access.Signer.ID,
 		&access.Signer.ContractID,
@@ -207,7 +210,7 @@ func (s *Store) SignerByPublicToken(ctx context.Context, token string) (SignerAc
 
 func (s *Store) SignerPublicToken(ctx context.Context, signerID string) (string, error) {
 	var token string
-	err := s.pool.QueryRow(ctx, `select public_token::text from contract_signers where id=$1`, signerID).Scan(&token)
+	err := s.pool.QueryRow(ctx, `select public_token::text from contract_signers where id=$1 and deleted_at is null`, signerID).Scan(&token)
 	return token, err
 }
 
@@ -217,7 +220,11 @@ func (s *Store) ArtifactKeysBySignerToken(ctx context.Context, token string) (Ar
 	err := s.pool.QueryRow(ctx, `
 		select c.pdf_storage_key,coalesce(c.evidence_report_storage_key,''),coalesce(c.final_package_storage_key,''),c.finalized_at
 		from contract_signers s join contracts c on c.id=s.contract_id
-		where s.public_token=$1 and s.status='signed' and c.status='signed'
+		where s.public_token=$1
+		  and s.deleted_at is null
+		  and c.deleted_at is null
+		  and s.status='signed'
+		  and c.status='signed'
 	`, token).Scan(&keys.ContractKey, &keys.EvidenceKey, &keys.PackageKey, &finalizedAt)
 	if err != nil {
 		return ArtifactKeys{}, err
@@ -268,7 +275,11 @@ func (s *Store) VerifyChallenge(ctx context.Context, signerID string, otpHash []
 		from signature_challenges ch
 		join contract_signers s on s.id=ch.contract_signer_id
 		join contracts c on c.id=s.contract_id
-		where ch.contract_signer_id=$1 and ch.verified_at is null and ch.expires_at>now()
+		where ch.contract_signer_id=$1
+		  and ch.verified_at is null
+		  and ch.expires_at>now()
+		  and s.deleted_at is null
+		  and c.deleted_at is null
 		order by ch.created_at desc limit 1
 		for update of ch,s
 	`, signerID).Scan(&challengeID, &expected, &attempts, &contractID, &documentHash)
@@ -334,7 +345,7 @@ func (s *Store) Sign(ctx context.Context, signerID string, documentHash []byte, 
 	err = tx.QueryRow(ctx, `
 		select c.id::text,c.document_sha256,s.status::text
 		from contract_signers s join contracts c on c.id=s.contract_id
-		where s.id=$1 for update of s,c
+		where s.id=$1 and s.deleted_at is null and c.deleted_at is null for update of s,c
 	`, signerID).Scan(&contractID, &storedHash, &status)
 	if err != nil {
 		return "", false, err
@@ -364,16 +375,16 @@ func (s *Store) Sign(ctx context.Context, signerID string, documentHash []byte, 
 	}
 
 	var pending int
-	if err := tx.QueryRow(ctx, `select count(*) from contract_signers where contract_id=$1 and status<>'signed'`, contractID).Scan(&pending); err != nil {
+	if err := tx.QueryRow(ctx, `select count(*) from contract_signers where contract_id=$1 and deleted_at is null and status<>'signed'`, contractID).Scan(&pending); err != nil {
 		return "", false, err
 	}
 	fullySigned := pending == 0
 	if fullySigned {
-		if _, err := tx.Exec(ctx, `update contracts set status='signed',fully_signed_at=now(),updated_at=now() where id=$1`, contractID); err != nil {
+		if _, err := tx.Exec(ctx, `update contracts set status='signed',fully_signed_at=now(),updated_at=now() where id=$1 and deleted_at is null`, contractID); err != nil {
 			return "", false, err
 		}
 	} else {
-		if _, err := tx.Exec(ctx, `update contracts set status='partially_signed',updated_at=now() where id=$1`, contractID); err != nil {
+		if _, err := tx.Exec(ctx, `update contracts set status='partially_signed',updated_at=now() where id=$1 and deleted_at is null`, contractID); err != nil {
 			return "", false, err
 		}
 	}
@@ -384,7 +395,7 @@ func (s *Store) Sign(ctx context.Context, signerID string, documentHash []byte, 
 }
 
 func (s *Store) MarkSent(ctx context.Context, contractID string) error {
-	_, err := s.pool.Exec(ctx, `update contracts set status='sent',sent_at=coalesce(sent_at,now()),updated_at=now() where id=$1 and status in ('generated','sent')`, contractID)
+	_, err := s.pool.Exec(ctx, `update contracts set status='sent',sent_at=coalesce(sent_at,now()),updated_at=now() where id=$1 and deleted_at is null and status in ('generated','sent')`, contractID)
 	return err
 }
 
