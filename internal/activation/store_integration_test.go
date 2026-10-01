@@ -35,13 +35,15 @@ func TestInternalSetupRequiresSignedContract(t *testing.T) {
 		create table %s.contracts (
 			id text primary key,
 			status text not null,
-			fully_signed_at timestamptz
+			fully_signed_at timestamptz,
+			deleted_at timestamptz
 		);
 
 		create table %s.activation_profiles (
 			id text primary key,
 			contract_id text not null references %s.contracts(id),
 			status text not null,
+			deleted_at timestamptz,
 			activated_at timestamptz,
 			updated_at timestamptz not null default now()
 		);

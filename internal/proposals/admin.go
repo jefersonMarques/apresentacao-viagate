@@ -16,9 +16,10 @@ func (s *Store) List(ctx context.Context, userID string, all bool) ([]domain.Pro
 		join users u on u.id=p.created_by
 		left join proposal_versions v on v.proposal_id=p.id and v.version_number=p.current_version and v.published_at is not null
 	`
+	query += ` where p.deleted_at is null`
 	args := []any{}
 	if !all {
-		query += ` where p.created_by=$1`
+		query += ` and p.created_by=$1`
 		args = append(args, userID)
 	}
 	query += ` order by p.updated_at desc`
@@ -48,6 +49,7 @@ func (s *Store) Defaults(ctx context.Context) ([]domain.Proposal, error) {
 		join users u on u.id=p.created_by
 		left join proposal_versions v on v.proposal_id=p.id and v.version_number=p.current_version and v.published_at is not null
 		where p.is_default = true
+		  and p.deleted_at is null
 		order by p.updated_at desc
 	`)
 	if err != nil {
@@ -93,14 +95,14 @@ func (s *Store) SetDefault(ctx context.Context, proposalID string) error {
 	result, err := s.pool.Exec(ctx, `
 		update proposals
 		set is_default=true,updated_at=now()
-		where id=$1 and is_default=false
+		where id=$1 and is_default=false and deleted_at is null
 	`, proposalID)
 	if err != nil {
 		return err
 	}
 	if result.RowsAffected() == 0 {
 		var exists bool
-		if err := s.pool.QueryRow(ctx, `select exists(select 1 from proposals where id=$1)`, proposalID).Scan(&exists); err != nil {
+		if err := s.pool.QueryRow(ctx, `select exists(select 1 from proposals where id=$1 and deleted_at is null)`, proposalID).Scan(&exists); err != nil {
 			return err
 		}
 		if !exists {
@@ -114,7 +116,7 @@ func (s *Store) ClearDefault(ctx context.Context, proposalID string) error {
 	result, err := s.pool.Exec(ctx, `
 		update proposals
 		set is_default=false,updated_at=now()
-		where id=$1 and is_default=true
+		where id=$1 and is_default=true and deleted_at is null
 	`, proposalID)
 	if err != nil {
 		return err

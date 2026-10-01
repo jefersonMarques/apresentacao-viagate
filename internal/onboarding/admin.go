@@ -45,8 +45,11 @@ func (s *Store) ListVisible(ctx context.Context, userID string, allowAll bool) (
 		join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
 		join proposals p on p.id=pa.proposal_id
 		join users u on u.id=p.created_by
-		left join contracts c on c.onboarding_id=o.id and c.status<>'cancelled'
-		where ($2::boolean or p.created_by=$1)
+		left join contracts c on c.onboarding_id=o.id and c.status<>'cancelled' and c.deleted_at is null
+		where o.deleted_at is null
+		  and pa.deleted_at is null
+		  and p.deleted_at is null
+		  and ($2::boolean or p.created_by=$1)
 		order by coalesce(o.submitted_at,o.updated_at) desc
 	`, userID, allowAll)
 	if err != nil {
@@ -78,8 +81,11 @@ func (s *Store) AdminByID(ctx context.Context, id string) (AdminDetail, error) {
 		join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
 		join proposals p on p.id=pa.proposal_id
 		join users u on u.id=p.created_by
-		left join contracts c on c.onboarding_id=o.id and c.status<>'cancelled'
+		left join contracts c on c.onboarding_id=o.id and c.status<>'cancelled' and c.deleted_at is null
 		where o.id=$1
+		  and o.deleted_at is null
+		  and pa.deleted_at is null
+		  and p.deleted_at is null
 	`, id).Scan(
 		&acceptanceID,
 		&detail.OwnerUserID,
@@ -102,7 +108,7 @@ func (s *Store) AdminByID(ctx context.Context, id string) (AdminDetail, error) {
 
 	rows, err := s.pool.Query(ctx, `
 		select id::text,document_type,storage_key,original_filename,mime_type,size_bytes,sha256
-		from uploaded_documents where onboarding_id=$1 order by uploaded_at desc,id desc
+		from uploaded_documents where onboarding_id=$1 and deleted_at is null order by uploaded_at desc,id desc
 	`, id)
 	if err != nil {
 		return AdminDetail{}, err
@@ -131,8 +137,8 @@ func (s *Store) Review(ctx context.Context, id, userID, status, notes string) er
 	var current string
 	var hasContract bool
 	if err := tx.QueryRow(ctx, `
-		select o.status::text,exists(select 1 from contracts c where c.onboarding_id=o.id and c.status<>'cancelled')
-		from onboardings o where o.id=$1 for update
+		select o.status::text,exists(select 1 from contracts c where c.onboarding_id=o.id and c.status<>'cancelled' and c.deleted_at is null)
+		from onboardings o where o.id=$1 and o.deleted_at is null for update
 	`, id).Scan(&current, &hasContract); err != nil {
 		return err
 	}
@@ -159,7 +165,7 @@ func (s *Store) Review(ctx context.Context, id, userID, status, notes string) er
 		update onboardings set status=$2,review_notes=nullif($3,''),reviewed_by=$4,reviewed_at=now(),
 		       approved_at=case when $2='approved' then coalesce(approved_at,now()) else approved_at end,
 		       updated_at=now()
-		where id=$1
+		where id=$1 and deleted_at is null
 	`, id, status, notes, userID)
 	if err != nil {
 		return err

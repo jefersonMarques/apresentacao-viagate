@@ -35,6 +35,7 @@ func TestAutoApproveIsIdempotent(t *testing.T) {
 		create table %s.onboardings (
 			id text primary key,
 			status text not null,
+			deleted_at timestamptz,
 			approved_at timestamptz,
 			reviewed_at timestamptz,
 			review_notes text,

@@ -32,6 +32,8 @@ func (s *Store) ConfirmAndSign(ctx context.Context, signerID string, otpHash, do
 		where ch.contract_signer_id=$1
 		  and ch.verified_at is null
 		  and ch.expires_at>now()
+		  and s.deleted_at is null
+		  and c.deleted_at is null
 		  and c.status in ('generated','sent','partially_signed')
 		order by ch.created_at desc
 		limit 1
@@ -110,12 +112,12 @@ func (s *Store) ConfirmAndSign(ctx context.Context, signerID string, otpHash, do
 	}
 
 	var pending int
-	if err := tx.QueryRow(ctx, `select count(*) from contract_signers where contract_id=$1 and status<>'signed'`, contractID).Scan(&pending); err != nil {
+	if err := tx.QueryRow(ctx, `select count(*) from contract_signers where contract_id=$1 and deleted_at is null and status<>'signed'`, contractID).Scan(&pending); err != nil {
 		return "", false, err
 	}
 	fullySigned := pending == 0
 	if fullySigned {
-		if _, err := tx.Exec(ctx, `update contracts set status='signed',fully_signed_at=now(),updated_at=now() where id=$1`, contractID); err != nil {
+		if _, err := tx.Exec(ctx, `update contracts set status='signed',fully_signed_at=now(),updated_at=now() where id=$1 and deleted_at is null`, contractID); err != nil {
 			return "", false, err
 		}
 		if _, err := tx.Exec(ctx, `
@@ -131,7 +133,7 @@ func (s *Store) ConfirmAndSign(ctx context.Context, signerID string, otpHash, do
 			return "", false, fmt.Errorf("queue contract evidence finalization: %w", err)
 		}
 	} else {
-		if _, err := tx.Exec(ctx, `update contracts set status='partially_signed',updated_at=now() where id=$1`, contractID); err != nil {
+		if _, err := tx.Exec(ctx, `update contracts set status='partially_signed',updated_at=now() where id=$1 and deleted_at is null`, contractID); err != nil {
 			return "", false, err
 		}
 	}

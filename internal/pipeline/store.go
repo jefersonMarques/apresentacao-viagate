@@ -34,28 +34,29 @@ func (s *Store) List(ctx context.Context, userID string, all bool) ([]domain.Pip
 		left join lateral (
 			select pa.id,pa.accepted_by_name,pa.accepted_at
 			from proposal_acceptances pa
-			where pa.proposal_id=p.id
+			where pa.proposal_id=p.id and pa.deleted_at is null
 			order by pa.accepted_at desc limit 1
 		) a on true
-		left join onboardings o on o.proposal_acceptance_id=a.id
+		left join onboardings o on o.proposal_acceptance_id=a.id and o.deleted_at is null
 		left join lateral (
 			select c.id,c.status,c.fully_signed_at,c.finalized_at,c.updated_at,
 			       coalesce((
 			           select cs.name
 			           from contract_signers cs
-			           where cs.contract_id=c.id and cs.status='signed'
+			           where cs.contract_id=c.id and cs.status='signed' and cs.deleted_at is null
 			           order by cs.sign_order,cs.signed_at
 			           limit 1
 			       ),'') as signed_by_name
 			from contracts c
-			where c.onboarding_id=o.id
+			where c.onboarding_id=o.id and c.deleted_at is null
 			order by c.created_at desc limit 1
 		) ct on true
-		left join activation_profiles act on act.contract_id=ct.id
+		left join activation_profiles act on act.contract_id=ct.id and act.deleted_at is null
 	`
+	query += ` where p.deleted_at is null`
 	args := []any{}
 	if !all {
-		query += ` where p.created_by=$1`
+		query += ` and p.created_by=$1`
 		args = append(args, userID)
 	}
 	query += ` order by greatest(p.updated_at,coalesce(o.updated_at,p.updated_at),coalesce(ct.updated_at,p.updated_at),coalesce(act.updated_at,p.updated_at)) desc`
@@ -85,21 +86,36 @@ func (s *Store) List(ctx context.Context, userID string, all bool) ([]domain.Pip
 
 func (s *Store) Timeline(ctx context.Context, proposalID string) ([]domain.PipelineEvent, error) {
 	rows, err := s.pool.Query(ctx, `
-		with resources as (
-			select p.id as resource_id from proposals p where p.id=$1
+		with target as (
+			select id from proposals where id=$1 and deleted_at is null
+		), resources as (
+			select t.id as resource_id from target t
 			union
-			select pa.id from proposal_acceptances pa where pa.proposal_id=$1
+			select pa.id
+			from proposal_acceptances pa
+			join target t on t.id=pa.proposal_id
+			where pa.deleted_at is null
 			union
-			select o.id from onboardings o join proposal_acceptances pa on pa.id=o.proposal_acceptance_id where pa.proposal_id=$1
+			select o.id
+			from onboardings o
+			join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
+			join target t on t.id=pa.proposal_id
+			where pa.deleted_at is null and o.deleted_at is null
 			union
-			select c.id from contracts c join onboardings o on o.id=c.onboarding_id join proposal_acceptances pa on pa.id=o.proposal_acceptance_id where pa.proposal_id=$1
+			select c.id
+			from contracts c
+			join onboardings o on o.id=c.onboarding_id
+			join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
+			join target t on t.id=pa.proposal_id
+			where pa.deleted_at is null and o.deleted_at is null and c.deleted_at is null
 			union
 			select act.id
 			from activation_profiles act
 			join contracts c on c.id=act.contract_id
 			join onboardings o on o.id=c.onboarding_id
 			join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
-			where pa.proposal_id=$1
+			join target t on t.id=pa.proposal_id
+			where pa.deleted_at is null and o.deleted_at is null and c.deleted_at is null and act.deleted_at is null
 		)
 		select a.event_type,a.actor_type,coalesce(u.name,''),a.metadata,a.created_at
 		from audit_events a

@@ -61,7 +61,11 @@ func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID stri
 		join proposal_acceptances a on a.id=o.proposal_acceptance_id
 		join proposal_versions pv on pv.id=a.proposal_version_id
 		join proposals p on p.id=pv.proposal_id
-		where o.id=$1 and o.status='approved'
+		where o.id=$1
+		  and o.status='approved'
+		  and o.deleted_at is null
+		  and a.deleted_at is null
+		  and p.deleted_at is null
 	`, onboardingID).Scan(
 		&proposalVersionID, &createdBy, &assignedTemplateVersionID,
 		&legalName, &tradeName, &cnpj, &street, &number, &complement, &district, &city, &state, &postalCode,

@@ -8,7 +8,7 @@ import (
 
 func (s *Store) TemplateSourceByID(ctx context.Context, userID, proposalID string) (EditorInput, error) {
 	var isDefault bool
-	if err := s.pool.QueryRow(ctx, `select is_default from proposals where id=$1`, proposalID).Scan(&isDefault); err != nil {
+	if err := s.pool.QueryRow(ctx, `select is_default from proposals where id=$1 and deleted_at is null`, proposalID).Scan(&isDefault); err != nil {
 		return EditorInput{}, err
 	}
 	if !isDefault {
@@ -28,7 +28,7 @@ func (s *Store) DuplicateSourceByID(ctx context.Context, userID, proposalID stri
 	if err := s.pool.QueryRow(ctx, `
 		select status::text,current_version
 		from proposals
-		where id=$1
+		where id=$1 and deleted_at is null
 	`, proposalID).Scan(&status, &currentVersion); err != nil {
 		return EditorInput{}, err
 	}

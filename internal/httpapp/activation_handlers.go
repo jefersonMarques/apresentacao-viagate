@@ -65,7 +65,7 @@ func (a *App) uploadActivationPolicy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var onboardingID string
-	if err := a.pool.QueryRow(r.Context(), `select onboarding_id::text from contracts where id=$1`, access.Profile.ContractID).Scan(&onboardingID); err != nil {
+	if err := a.pool.QueryRow(r.Context(), `select onboarding_id::text from contracts where id=$1 and deleted_at is null`, access.Profile.ContractID).Scan(&onboardingID); err != nil {
 		a.logger.Error("resolve onboarding for activation policy failed", "contract_id", access.Profile.ContractID, "error", err)
 		http.Error(w, "Não foi possível localizar a contratação.", http.StatusInternalServerError)
 		return
@@ -311,6 +311,11 @@ func (a *App) queueActivationCompletedNotification(r *http.Request, activationID
 		join proposals p on p.id=pa.proposal_id
 		join users u on u.id=p.created_by
 		where a.id=$1
+		  and a.deleted_at is null
+		  and c.deleted_at is null
+		  and o.deleted_at is null
+		  and pa.deleted_at is null
+		  and p.deleted_at is null
 	`, activationID).Scan(&name, &emailAddress, &clientName)
 	if err != nil {
 		a.logger.Error("resolve activation notification recipient failed", "error", err, "activation_id", activationID)

@@ -37,7 +37,7 @@ func (s *Store) ByAcceptance(ctx context.Context, acceptanceID string) (domain.O
 		       company_responsible_name,company_responsible_cpf,company_responsible_phone,
 		       company_responsible_email::text,coalesce(company_responsible_role,''),company_responsible_authority_declared,
 		       coalesce(finance_responsible_name,''),coalesce(finance_responsible_phone,''),coalesce(finance_responsible_email::text,'')
-		from onboardings where proposal_acceptance_id=$1
+		from onboardings where proposal_acceptance_id=$1 and deleted_at is null
 	`, acceptanceID).Scan(
 		&o.ID,&o.ProposalAcceptanceID,&o.ClientID,&o.Status,&o.ReviewNotes,
 		&o.CNPJ,&o.LegalName,&o.TradeName,&o.Street,&o.StreetNumber,&o.Complement,&o.District,&o.City,&o.State,&o.PostalCode,
@@ -90,7 +90,7 @@ func (s *Store) Save(ctx context.Context, o domain.Onboarding) error {
 		  company_responsible_name=$18,company_responsible_cpf=$19,company_responsible_phone=$20,
 		  company_responsible_email=$21,company_responsible_role=nullif($22,''),company_responsible_authority_declared=$23,
 		  updated_at=now()
-		where id=$1 and status in ('pending','in_progress','correction_requested')
+		where id=$1 and deleted_at is null and status in ('pending','in_progress','correction_requested')
 	`,o.ID,o.CNPJ,o.LegalName,o.TradeName,o.Street,o.StreetNumber,o.Complement,o.District,o.City,o.State,o.PostalCode,
 		o.OperationType,o.Insurer,o.PolicyStartDate,o.PolicyEndDate,o.BrokerCompany,o.BrokerProducer,
 		o.CompanyResponsibleName,o.CompanyResponsibleCPF,o.CompanyResponsiblePhone,o.CompanyResponsibleEmail,o.CompanyResponsibleRole,o.AuthorityDeclared)
@@ -108,7 +108,7 @@ func (s *Store) AddDocument(ctx context.Context, onboardingID string, document D
 	defer tx.Rollback(ctx)
 
 	var status string
-	if err := tx.QueryRow(ctx, `select status::text from onboardings where id=$1 for update`, onboardingID).Scan(&status); err != nil {
+	if err := tx.QueryRow(ctx, `select status::text from onboardings where id=$1 and deleted_at is null for update`, onboardingID).Scan(&status); err != nil {
 		return err
 	}
 	editable := status == "pending" || status == "in_progress" || status == "correction_requested"
@@ -122,7 +122,7 @@ func (s *Store) AddDocument(ctx context.Context, onboardingID string, document D
 	if document.DocumentType == "insurance_policy" {
 		if _, err := tx.Exec(ctx, `
 			update uploaded_documents set status='superseded'
-			where onboarding_id=$1 and document_type='insurance_policy' and status='uploaded'
+			where onboarding_id=$1 and document_type='insurance_policy' and status='uploaded' and deleted_at is null
 		`, onboardingID); err != nil { return err }
 	}
 
@@ -137,7 +137,18 @@ func (s *Store) AddDocument(ctx context.Context, onboardingID string, document D
 
 func (s *Store) HasPolicy(ctx context.Context, onboardingID string) (bool,error) {
 	var exists bool
-	err := s.pool.QueryRow(ctx, `select exists(select 1 from uploaded_documents where onboarding_id=$1 and document_type='insurance_policy' and status='uploaded')`,onboardingID).Scan(&exists)
+	err := s.pool.QueryRow(ctx, `
+		select exists(
+			select 1
+			from onboardings o
+			join uploaded_documents d on d.onboarding_id=o.id
+			where o.id=$1
+			  and o.deleted_at is null
+			  and d.deleted_at is null
+			  and d.document_type='insurance_policy'
+			  and d.status='uploaded'
+		)
+	`,onboardingID).Scan(&exists)
 	return exists,err
 }
 
@@ -145,6 +156,7 @@ func (s *Store) Submit(ctx context.Context, onboardingID string) error {
 	command, err := s.pool.Exec(ctx, `
 		update onboardings set status='submitted',submitted_at=now(),review_notes=null,reviewed_by=null,reviewed_at=null,updated_at=now()
 		where id=$1
+		  and deleted_at is null
 		  and status in ('pending','in_progress','correction_requested')
 		  and length(cnpj)=14
 		  and btrim(legal_name)<>''
@@ -171,7 +183,7 @@ func (s *Store) AutoApprove(ctx context.Context, onboardingID, source string) (b
 	defer tx.Rollback(ctx)
 
 	var status string
-	if err := tx.QueryRow(ctx, `select status::text from onboardings where id=$1 for update`, onboardingID).Scan(&status); err != nil {
+	if err := tx.QueryRow(ctx, `select status::text from onboardings where id=$1 and deleted_at is null for update`, onboardingID).Scan(&status); err != nil {
 		return false, err
 	}
 	if status == "approved" {
@@ -191,7 +203,7 @@ func (s *Store) AutoApprove(ctx context.Context, onboardingID, source string) (b
 		    reviewed_at=now(),
 		    review_notes='Aprovação automática após validação dos dados da contratação.',
 		    updated_at=now()
-		where id=$1
+		where id=$1 and deleted_at is null
 	`, onboardingID); err != nil {
 		return false, err
 	}

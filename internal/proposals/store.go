@@ -94,6 +94,7 @@ func (s *Store) PublicByToken(ctx context.Context, token string) (PublicProposal
 		join clients c on c.id=p.client_id
 		where v.public_token=$1 and v.published_at is not null
 		  and v.version_number=p.current_version
+		  and p.deleted_at is null
 		  and p.status in ('published','accepted')
 	`, token).Scan(
 		&result.ProposalID,
@@ -199,7 +200,7 @@ func (s *Store) Accept(ctx context.Context, proposal PublicProposal, input Accep
 
 	var currentStatus string
 	var currentVersion int
-	if err := tx.QueryRow(ctx, `select status::text,current_version from proposals where id=$1 for update`, proposal.ProposalID).Scan(&currentStatus, &currentVersion); err != nil {
+	if err := tx.QueryRow(ctx, `select status::text,current_version from proposals where id=$1 and deleted_at is null for update`, proposal.ProposalID).Scan(&currentStatus, &currentVersion); err != nil {
 		return AcceptanceResult{}, err
 	}
 
@@ -216,6 +217,8 @@ func (s *Store) Accept(ctx context.Context, proposal PublicProposal, input Accep
 		select pa.id::text,o.id::text,pa.accepted_by_name,pa.accepted_by_email::text,pa.accepted_by_cpf
 		from proposal_acceptances pa join onboardings o on o.proposal_acceptance_id=pa.id
 		where pa.proposal_version_id=$1
+		  and pa.deleted_at is null
+		  and o.deleted_at is null
 	`, proposal.VersionID).Scan(&existing.AcceptanceID, &existing.OnboardingID, &existingName, &existingEmail, &existingCPF)
 	if err == nil {
 		if strings.EqualFold(strings.TrimSpace(existingEmail), strings.TrimSpace(input.Email)) &&
@@ -342,9 +345,15 @@ func (s *Store) CreateCustomerSession(ctx context.Context, acceptanceID string, 
 func (s *Store) CustomerSessionAcceptance(ctx context.Context, tokenHash []byte) (string, error) {
 	var acceptanceID string
 	err := s.pool.QueryRow(ctx, `
-		select proposal_acceptance_id::text
-		from customer_sessions
-		where token_hash=$1 and revoked_at is null and expires_at > now()
+		select cs.proposal_acceptance_id::text
+		from customer_sessions cs
+		join proposal_acceptances pa on pa.id=cs.proposal_acceptance_id
+		join proposals p on p.id=pa.proposal_id
+		where cs.token_hash=$1
+		  and cs.revoked_at is null
+		  and cs.expires_at > now()
+		  and pa.deleted_at is null
+		  and p.deleted_at is null
 	`, tokenHash).Scan(&acceptanceID)
 	return acceptanceID, err
 }

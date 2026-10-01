@@ -5,13 +5,14 @@ import (
 	"github.com/jefersonMarques/apresentacao-viagate/internal/presentations"
 )
 
-templ ProposalListPage(user domain.User, items []domain.Proposal, defaultProposals []domain.Proposal) {
+templ ProposalListPage(user domain.User, items []domain.Proposal, defaultProposals []domain.Proposal, message string) {
 	@AdminLayout("ViaGate — Propostas", user) {
 		@AdminPageHeader("PROPOSTAS", "Propostas comerciais", "Defina propostas como padrão para disponibilizá-las como modelos na criação de novas propostas.") {
 			if UserCan(user, "proposal.create") {
 				<a class="btn primary" href="/admin/proposals/new" data-proposal-source-open>Nova proposta</a>
 			}
 		}
+		@FlashMessages(message, "")
 
 		<section class="proposal-list-section">
 			<div class="proposal-list-section-heading">
@@ -45,6 +46,16 @@ templ ProposalListPage(user domain.User, items []domain.Proposal, defaultProposa
 											<input type="hidden" name="action" value="clear"/>
 											<button class="btn" type="submit">Remover padrão</button>
 										</form>
+									}
+									if HasRole(user, "super_admin") {
+										<button
+											class="btn proposal-delete-trigger"
+											type="button"
+											data-proposal-delete-open
+											data-proposal-id={ item.ID }
+											data-proposal-title={ item.Title }
+											data-proposal-client={ item.ClientName }
+										>Excluir</button>
 									}
 								</div>
 							</td>
@@ -112,6 +123,16 @@ templ ProposalListPage(user domain.User, items []domain.Proposal, defaultProposa
 													<button type="submit">Tornar padrão</button>
 												</form>
 											}
+											if HasRole(user, "super_admin") {
+												<button
+													class="danger"
+													type="button"
+													data-proposal-delete-open
+													data-proposal-id={ item.ID }
+													data-proposal-title={ item.Title }
+													data-proposal-client={ item.ClientName }
+												>Excluir proposta</button>
+											}
 											if item.PublicToken != "" {
 												<a
 													href={ templ.SafeURL("/admin/proposals?pdf=" + item.ID) }
@@ -132,6 +153,36 @@ templ ProposalListPage(user domain.User, items []domain.Proposal, defaultProposa
 				}
 			</div>
 		</section>
+
+		if HasRole(user, "super_admin") {
+			<dialog class="proposal-delete-dialog" data-proposal-delete-dialog aria-labelledby="proposal-delete-title">
+				<div class="proposal-delete-dialog-card">
+					<header class="proposal-delete-dialog-head">
+						<div>
+							<span class="eyebrow">EXCLUSÃO DA JORNADA</span>
+							<h2 id="proposal-delete-title">Excluir proposta?</h2>
+						</div>
+						<button type="button" class="proposal-source-close" data-proposal-delete-close aria-label="Fechar">×</button>
+					</header>
+					<form method="post" class="proposal-delete-form" data-proposal-delete-form>
+						<div class="proposal-delete-warning">
+							<strong data-proposal-delete-name>Proposta</strong>
+							<span data-proposal-delete-client></span>
+							<p>Esta ação remove logicamente a proposta e a jornada relacionada das áreas operacionais, inclusive dados enviados, contrato e ativação. Links públicos e acessos delegados serão revogados.</p>
+							<p><strong>Contratos assinados, eventos de assinatura, auditoria, hashes e arquivos de evidência não serão apagados fisicamente.</strong></p>
+						</div>
+						<label class="proposal-delete-confirmation">
+							<span>Para confirmar, digite exatamente <strong>Quero excluir</strong></span>
+							<input name="confirmation" type="text" autocomplete="off" spellcheck="false" required data-proposal-delete-confirmation/>
+						</label>
+						<div class="proposal-delete-actions">
+							<button class="btn" type="button" data-proposal-delete-close>Cancelar</button>
+							<button class="btn proposal-delete-confirm" type="submit" data-proposal-delete-submit disabled>Excluir definitivamente da operação</button>
+						</div>
+					</form>
+				</div>
+			</dialog>
+		}
 
 		if UserCan(user, "proposal.create") {
 			<dialog class="proposal-source-dialog" data-proposal-source-dialog aria-labelledby="proposal-source-title">

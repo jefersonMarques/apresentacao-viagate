@@ -44,7 +44,10 @@ func (a *App) proposalAcceptanceForVersion(ctx context.Context, proposalVersionI
 	err := a.pool.QueryRow(ctx, `
 		select pa.id::text
 		from proposal_acceptances pa
+		join proposals p on p.id=pa.proposal_id
 		where pa.proposal_version_id=$1
+		  and pa.deleted_at is null
+		  and p.deleted_at is null
 		order by pa.accepted_at desc
 		limit 1
 	`, proposalVersionID).Scan(&acceptanceID)
@@ -58,6 +61,8 @@ func (a *App) proposalJourneyForAcceptance(ctx context.Context, acceptanceID str
 		from proposal_acceptances pa
 		join onboardings o on o.proposal_acceptance_id=pa.id
 		where pa.id=$1
+		  and pa.deleted_at is null
+		  and o.deleted_at is null
 	`, acceptanceID).Scan(&proposalID, &onboardingID, &onboardingStatus); err != nil || proposalID != proposal.ProposalID {
 		return proposalJourney{}, false
 	}
@@ -91,7 +96,11 @@ func (a *App) proposalPublicPathByOnboarding(ctx context.Context, onboardingID s
 		from onboardings o
 		join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
 		join proposal_versions pv on pv.id=pa.proposal_version_id
+		join proposals p on p.id=pa.proposal_id
 		where o.id=$1
+		  and o.deleted_at is null
+		  and pa.deleted_at is null
+		  and p.deleted_at is null
 	`, onboardingID).Scan(&token)
 	if err != nil {
 		return "", err
@@ -101,7 +110,7 @@ func (a *App) proposalPublicPathByOnboarding(ctx context.Context, onboardingID s
 
 func (a *App) proposalPublicPathByContract(ctx context.Context, contractID string) (string, error) {
 	var onboardingID string
-	if err := a.pool.QueryRow(ctx, `select onboarding_id::text from contracts where id=$1`, contractID).Scan(&onboardingID); err != nil {
+	if err := a.pool.QueryRow(ctx, `select onboarding_id::text from contracts where id=$1 and deleted_at is null`, contractID).Scan(&onboardingID); err != nil {
 		return "", err
 	}
 	return a.proposalPublicPathByOnboarding(ctx, onboardingID)

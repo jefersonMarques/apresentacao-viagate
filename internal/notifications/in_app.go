@@ -138,7 +138,7 @@ func (s *InAppStore) List(ctx context.Context, userID string, limit int) ([]doma
 		       case when event_type='presentation.opened' then '/admin/pipeline' else coalesce(target_url,'') end,
 		       read_at,created_at
 		from in_app_notifications
-		where recipient_user_id=$1
+		where recipient_user_id=$1 and deleted_at is null
 		order by created_at desc
 		limit $2
 	`, userID, limit)
@@ -160,7 +160,7 @@ func (s *InAppStore) List(ctx context.Context, userID string, limit int) ([]doma
 func (s *InAppStore) MarkRead(ctx context.Context, userID, notificationID string) error {
 	_, err := s.pool.Exec(ctx, `
 		update in_app_notifications set read_at=coalesce(read_at,now())
-		where id=$1 and recipient_user_id=$2
+		where id=$1 and recipient_user_id=$2 and deleted_at is null
 	`, notificationID, userID)
 	return err
 }
@@ -168,7 +168,7 @@ func (s *InAppStore) MarkRead(ctx context.Context, userID, notificationID string
 func (s *InAppStore) MarkAllRead(ctx context.Context, userID string) error {
 	_, err := s.pool.Exec(ctx, `
 		update in_app_notifications set read_at=now()
-		where recipient_user_id=$1 and read_at is null
+		where recipient_user_id=$1 and read_at is null and deleted_at is null
 	`, userID)
 	return err
 }

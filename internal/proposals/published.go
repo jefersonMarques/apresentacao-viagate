@@ -28,6 +28,7 @@ func (s *Store) PublishedByToken(ctx context.Context, token string) (PublicPropo
 		join clients c on c.id=p.client_id
 		where v.public_token=$1 and v.published_at is not null
 		  and v.version_number=p.current_version
+		  and p.deleted_at is null
 	`, token).Scan(
 		&result.ProposalID,
 		&result.VersionID,
