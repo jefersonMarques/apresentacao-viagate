@@ -118,12 +118,24 @@ func (s *Store) CreateAccessToken(ctx context.Context, activationID, accessType,
 	if section == "" {
 		section = "all"
 	}
-	_, err := s.pool.Exec(ctx, `
+	command, err := s.pool.Exec(ctx, `
 		insert into activation_access_tokens(
 			activation_id,token_hash,access_type,section,name,email,created_by_signer_id,expires_at
-		) values($1,$2,$3,$4,nullif($5,''),nullif($6,''),nullif($7,'')::uuid,$8)
+		)
+		select a.id,$2,$3,$4,nullif($5,''),nullif($6,''),nullif($7,'')::uuid,$8
+		from activation_profiles a
+		join contracts c on c.id=a.contract_id
+		where a.id=$1
+		  and a.deleted_at is null
+		  and c.deleted_at is null
 	`, activationID, tokenHash, accessType, section, name, email, signerID, expiresAt)
-	return err
+	if err != nil {
+		return err
+	}
+	if command.RowsAffected() != 1 {
+		return fmt.Errorf("activation is no longer available")
+	}
+	return nil
 }
 
 func (s *Store) AccessByToken(ctx context.Context, tokenHash []byte) (Access, error) {
