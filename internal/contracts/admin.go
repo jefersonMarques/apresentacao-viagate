@@ -40,7 +40,7 @@ func (s *Store) ActiveByOnboarding(ctx context.Context, onboardingID string) (do
 		       coalesce(evidence_report_storage_key,''),coalesce(evidence_report_sha256,'\\x'::bytea),
 		       coalesce(final_package_storage_key,''),coalesce(final_package_sha256,'\\x'::bytea)
 		from contracts
-		where onboarding_id=$1 and status<>'cancelled'
+		where onboarding_id=$1 and status<>'cancelled' and deleted_at is null
 		order by created_at desc limit 1
 	`, onboardingID).Scan(
 		&contract.ID, &contract.OnboardingID, &contract.ProposalVersionID, &contract.TemplateVersionID, &contract.Status,
@@ -67,8 +67,8 @@ func (s *Store) DeliveryByOnboarding(ctx context.Context, onboardingID string) (
 	err := s.pool.QueryRow(ctx, `
 		select c.id::text,c.status::text,s.id::text,s.public_token::text,s.name,s.email::text,s.status::text
 		from contracts c
-		join contract_signers s on s.contract_id=c.id and s.signer_type='client'
-		where c.onboarding_id=$1 and c.status<>'cancelled'
+		join contract_signers s on s.contract_id=c.id and s.signer_type='client' and s.deleted_at is null
+		where c.onboarding_id=$1 and c.status<>'cancelled' and c.deleted_at is null
 		order by c.created_at desc,s.sign_order,s.id
 		limit 1
 	`, onboardingID).Scan(&access.ContractID, &access.ContractStatus, &access.SignerID, &access.SignerToken, &access.SignerName, &access.SignerEmail, &access.SignerStatus)
@@ -83,7 +83,7 @@ func (s *Store) ListAdminContracts(ctx context.Context) ([]AdminContractItem, er
 		       coalesce((
 		           select cs.name
 		           from contract_signers cs
-		           where cs.contract_id=c.id and cs.signer_type='client'
+		           where cs.contract_id=c.id and cs.signer_type='client' and cs.deleted_at is null
 		           order by cs.sign_order,cs.id
 		           limit 1
 		       ),''),
@@ -95,6 +95,10 @@ func (s *Store) ListAdminContracts(ctx context.Context) ([]AdminContractItem, er
 		join clients cl on cl.id=o.client_id
 		join users u on u.id=p.created_by
 		where c.status<>'cancelled'
+		  and c.deleted_at is null
+		  and o.deleted_at is null
+		  and pa.deleted_at is null
+		  and p.deleted_at is null
 		order by coalesce(c.fully_signed_at,c.sent_at,c.generated_at,c.created_at) desc,c.id desc
 	`)
 	if err != nil {
@@ -133,7 +137,7 @@ func (s *Store) ArtifactKeysByContractID(ctx context.Context, contractID string)
 		       coalesce(final_package_storage_key,''),
 		       finalized_at
 		from contracts
-		where id=$1 and status<>'cancelled'
+		where id=$1 and status<>'cancelled' and deleted_at is null
 	`, contractID).Scan(&keys.ContractKey, &keys.EvidenceKey, &keys.PackageKey, &finalizedAt)
 	if err != nil {
 		return ArtifactKeys{}, err
