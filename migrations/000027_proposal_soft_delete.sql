@@ -33,13 +33,6 @@ alter table activation_profiles
 alter table in_app_notifications
   add column if not exists deleted_at timestamptz;
 
-alter table contract_finalization_jobs
-  drop constraint if exists contract_finalization_jobs_status_check;
-
-alter table contract_finalization_jobs
-  add constraint contract_finalization_jobs_status_check
-  check (status in ('pending','processing','completed','failed','cancelled'));
-
 create index if not exists proposals_active_updated_idx
   on proposals(updated_at desc)
   where deleted_at is null;
