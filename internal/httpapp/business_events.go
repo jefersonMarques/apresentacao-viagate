@@ -12,7 +12,7 @@ func (a *App) publishProposalEvent(ctx context.Context, proposalID, eventType, t
 	var ownerID, proposalTitle, clientName string
 	if err := a.pool.QueryRow(ctx, `
 		select p.created_by::text,p.title,coalesce(nullif(c.trade_name,''),c.legal_name)
-		from proposals p join clients c on c.id=p.client_id where p.id=$1
+		from proposals p join clients c on c.id=p.client_id where p.id=$1 and p.deleted_at is null
 	`, proposalID).Scan(&ownerID, &proposalTitle, &clientName); err != nil {
 		a.logger.Warn("load proposal event owner failed", "proposal_id", proposalID, "event_type", eventType, "error", err)
 		return
@@ -78,6 +78,10 @@ func (a *App) publishContractEvent(ctx context.Context, contractID, eventType, t
 		join proposals p on p.id=pa.proposal_id
 		join clients cl on cl.id=o.client_id
 		where c.id=$1
+		  and c.deleted_at is null
+		  and o.deleted_at is null
+		  and pa.deleted_at is null
+		  and p.deleted_at is null
 	`, contractID).Scan(&ownerID, &proposalID, &clientName); err != nil {
 		a.logger.Warn("load contract event owner failed", "contract_id", contractID, "event_type", eventType, "error", err)
 		return
@@ -108,6 +112,9 @@ func (a *App) publishOnboardingEvent(ctx context.Context, onboardingID string) {
 		join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
 		join proposals p on p.id=pa.proposal_id
 		where o.id=$1
+		  and o.deleted_at is null
+		  and pa.deleted_at is null
+		  and p.deleted_at is null
 	`, onboardingID).Scan(&ownerID, &proposalID, &clientName); err != nil {
 		a.logger.Warn("load onboarding event owner failed", "onboarding_id", onboardingID, "error", err)
 		return
@@ -137,6 +144,11 @@ func (a *App) publishActivationEvent(ctx context.Context, activationID, eventTyp
 		join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
 		join proposals p on p.id=pa.proposal_id
 		where a.id=$1
+		  and a.deleted_at is null
+		  and c.deleted_at is null
+		  and o.deleted_at is null
+		  and pa.deleted_at is null
+		  and p.deleted_at is null
 	`, activationID).Scan(&ownerID, &proposalID, &clientName); err != nil {
 		a.logger.Warn("load activation event owner failed", "activation_id", activationID, "event_type", eventType, "error", err)
 		return
