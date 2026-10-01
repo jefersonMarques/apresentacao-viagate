@@ -178,6 +178,11 @@ func (a *App) publishActivationActionRequired(ctx context.Context, activationID 
 		join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
 		join proposals p on p.id=pa.proposal_id
 		where a.id=$1
+		  and a.deleted_at is null
+		  and c.deleted_at is null
+		  and o.deleted_at is null
+		  and pa.deleted_at is null
+		  and p.deleted_at is null
 	`, activationID).Scan(&ownerID, &clientName); err != nil {
 		a.logger.Warn("load activation action recipients failed", "activation_id", activationID, "error", err)
 		return
