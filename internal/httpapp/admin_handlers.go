@@ -200,7 +200,11 @@ func (a *App) adminProposals(w http.ResponseWriter, r *http.Request) {
 		a.downloadProposalPDF(w, r, items, proposalID)
 		return
 	}
-	render(r.Context(), w, http.StatusOK, templates.ProposalListPage(user, items, defaultProposals))
+	message := ""
+	if r.URL.Query().Get("deleted") == "1" {
+		message = "Proposta excluída. A jornada relacionada foi removida das áreas operacionais e os acessos públicos foram revogados; evidências históricas permanecem preservadas."
+	}
+	render(r.Context(), w, http.StatusOK, templates.ProposalListPage(user, items, defaultProposals, message))
 }
 
 func (a *App) setDefaultProposal(w http.ResponseWriter, r *http.Request) {
