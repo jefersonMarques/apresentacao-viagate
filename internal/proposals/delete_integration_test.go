@@ -163,28 +163,29 @@ func TestSoftDeleteCascadePreservesSignedEvidence(t *testing.T) {
 	)
 
 	documentHash := []byte{0x01, 0x02, 0x03, 0x04}
-	if _, err := pool.Exec(ctx, `
-		insert into proposals(id,status,is_default) values($1,'accepted',true);
-		insert into proposal_acceptances(id,proposal_id) values($2,$1);
-		insert into onboardings(id,proposal_acceptance_id) values($3,$2);
-		insert into uploaded_documents(id,onboarding_id) values($4,$3);
-		insert into contracts(id,onboarding_id,status,fully_signed_at,document_sha256) values($5,$3,'signed',now(),$8);
-		insert into contract_signers(id,contract_id) values($6,$5);
-		insert into activation_profiles(id,contract_id) values($7,$5);
-		insert into customer_sessions(id,proposal_acceptance_id)
-			values('99999999-9999-9999-9999-999999999999',$2);
-		insert into customer_resume_tokens(id,proposal_acceptance_id)
-			values('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',$2);
-		insert into activation_access_tokens(id,activation_id)
-			values('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',$7);
-		insert into notification_outbox(id,status,dedupe_key)
-			values('cccccccc-cccc-cccc-cccc-cccccccccccc','pending','contract-signature:' || $5::text);
-		insert into in_app_notifications(id,resource_type,resource_id)
-			values('dddddddd-dddd-dddd-dddd-dddddddddddd','contract',$5);
-		insert into signature_events(contract_id,event_type) values($5,'contract.signed');
-		insert into contract_finalization_jobs(contract_id,status) values($5,'pending');
-	`, proposalID, acceptanceID, onboardingID, documentID, contractID, signerID, activationID, documentHash); err != nil {
-		t.Fatalf("seed proposal lifecycle: %v", err)
+	seedStatements := []struct {
+		query string
+		args  []any
+	}{
+		{`insert into proposals(id,status,is_default) values($1,'accepted',true)`, []any{proposalID}},
+		{`insert into proposal_acceptances(id,proposal_id) values($1,$2)`, []any{acceptanceID, proposalID}},
+		{`insert into onboardings(id,proposal_acceptance_id) values($1,$2)`, []any{onboardingID, acceptanceID}},
+		{`insert into uploaded_documents(id,onboarding_id) values($1,$2)`, []any{documentID, onboardingID}},
+		{`insert into contracts(id,onboarding_id,status,fully_signed_at,document_sha256) values($1,$2,'signed',now(),$3)`, []any{contractID, onboardingID, documentHash}},
+		{`insert into contract_signers(id,contract_id) values($1,$2)`, []any{signerID, contractID}},
+		{`insert into activation_profiles(id,contract_id) values($1,$2)`, []any{activationID, contractID}},
+		{`insert into customer_sessions(id,proposal_acceptance_id) values('99999999-9999-9999-9999-999999999999',$1)`, []any{acceptanceID}},
+		{`insert into customer_resume_tokens(id,proposal_acceptance_id) values('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',$1)`, []any{acceptanceID}},
+		{`insert into activation_access_tokens(id,activation_id) values('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',$1)`, []any{activationID}},
+		{`insert into notification_outbox(id,status,dedupe_key) values('cccccccc-cccc-cccc-cccc-cccccccccccc','pending','contract-signature:' || $1::text)`, []any{contractID}},
+		{`insert into in_app_notifications(id,resource_type,resource_id) values('dddddddd-dddd-dddd-dddd-dddddddddddd','contract',$1)`, []any{contractID}},
+		{`insert into signature_events(contract_id,event_type) values($1,'contract.signed')`, []any{contractID}},
+		{`insert into contract_finalization_jobs(contract_id,status) values($1,'pending')`, []any{contractID}},
+	}
+	for _, statement := range seedStatements {
+		if _, err := pool.Exec(ctx, statement.query, statement.args...); err != nil {
+			t.Fatalf("seed proposal lifecycle: %v", err)
+		}
 	}
 
 	store := NewStore(pool)
