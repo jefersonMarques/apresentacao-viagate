@@ -135,7 +135,7 @@ func (s *Store) SaveDraft(ctx context.Context, userID string, allowAll bool, inp
 		}
 	} else {
 		var owner, status string
-		if err := tx.QueryRow(ctx, `select client_id::text,created_by::text,status::text from proposals where id=$1 for update`, input.ProposalID).Scan(&clientID, &owner, &status); err != nil {
+		if err := tx.QueryRow(ctx, `select client_id::text,created_by::text,status::text from proposals where id=$1 and deleted_at is null for update`, input.ProposalID).Scan(&clientID, &owner, &status); err != nil {
 			return SavedDraft{}, err
 		}
 		if !allowAll && owner != userID {
@@ -167,7 +167,7 @@ func (s *Store) SaveDraft(ctx context.Context, userID string, allowAll bool, inp
 		); err != nil {
 			return SavedDraft{}, err
 		}
-		if _, err := tx.Exec(ctx, `update proposals set title=$2,valid_until=$3,updated_at=now() where id=$1`, input.ProposalID, input.Title, input.ValidUntil); err != nil {
+		if _, err := tx.Exec(ctx, `update proposals set title=$2,valid_until=$3,updated_at=now() where id=$1 and deleted_at is null`, input.ProposalID, input.Title, input.ValidUntil); err != nil {
 			return SavedDraft{}, err
 		}
 	}
@@ -239,7 +239,7 @@ func (s *Store) SaveDraft(ctx context.Context, userID string, allowAll bool, inp
 		  on v.proposal_id=p.id
 		 and v.version_number=p.current_version
 		 and v.published_at is not null
-		where p.id=$1
+		where p.id=$1 and p.deleted_at is null
 	`, input.ProposalID).Scan(&draft.PublishedPublicToken); err != nil {
 		return SavedDraft{}, err
 	}
@@ -260,7 +260,7 @@ func (s *Store) Publish(ctx context.Context, userID string, allowAll bool, versi
 	err = tx.QueryRow(ctx, `
 		select v.proposal_id::text,p.created_by::text,v.version_number,v.public_token::text,p.status::text
 		from proposal_versions v join proposals p on p.id=v.proposal_id
-		where v.id=$1 and v.published_at is null for update of v,p
+		where v.id=$1 and v.published_at is null and p.deleted_at is null for update of v,p
 	`, versionID).Scan(&proposalID, &owner, &versionNumber, &token, &status)
 	if err != nil {
 		return "", err
@@ -274,7 +274,7 @@ func (s *Store) Publish(ctx context.Context, userID string, allowAll bool, versi
 	if _, err := tx.Exec(ctx, `update proposal_versions set published_at=now() where id=$1`, versionID); err != nil {
 		return "", err
 	}
-	if _, err := tx.Exec(ctx, `update proposals set status='published',current_version=$2,updated_at=now() where id=$1`, proposalID, versionNumber); err != nil {
+	if _, err := tx.Exec(ctx, `update proposals set status='published',current_version=$2,updated_at=now() where id=$1 and deleted_at is null`, proposalID, versionNumber); err != nil {
 		return "", err
 	}
 	if _, err := tx.Exec(ctx, `insert into audit_events(actor_user_id,event_type,resource_type,resource_id,metadata) values($1,'proposal.published','proposal',$2,jsonb_build_object('version',$3::integer,'version_id',$4::uuid))`, userID, proposalID, versionNumber, versionID); err != nil {
@@ -295,7 +295,7 @@ func (s *Store) EditorByID(ctx context.Context, userID, proposalID string, allow
 		       coalesce(c.legal_name,''),coalesce(c.trade_name,''),coalesce(c.cnpj,''),coalesce(c.email::text,''),coalesce(c.phone,''),
 		       coalesce(c.street,''),coalesce(c.street_number,''),coalesce(c.complement,''),coalesce(c.district,''),
 		       coalesce(c.city,''),coalesce(c.state,''),coalesce(c.postal_code,'')
-		from proposals p join clients c on c.id=p.client_id where p.id=$1
+		from proposals p join clients c on c.id=p.client_id where p.id=$1 and p.deleted_at is null
 	`, proposalID).Scan(
 		&input.ProposalID,
 		&input.Title,
