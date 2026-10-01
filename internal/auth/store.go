@@ -69,7 +69,7 @@ func (s *Store) SessionUser(ctx context.Context, tokenHash []byte) (domain.User,
 		select u.id::text, u.email::text, u.name, u.status::text, u.created_at,
 		       coalesce(array_agg(distinct r.code) filter (where r.code is not null), '{}'),
 		       coalesce(array(select permission_code from effective_user_permissions(u.id) order by permission_code), '{}'),
-		       (select count(*)::int from in_app_notifications n where n.recipient_user_id=u.id and n.read_at is null),
+		       (select count(*)::int from in_app_notifications n where n.recipient_user_id=u.id and n.read_at is null and n.deleted_at is null),
 		       case
 		         when exists(select 1 from effective_user_permissions(u.id) where permission_code='activation.manage')
 		         then (select count(*)::int from activation_profiles a where a.status='completed')
