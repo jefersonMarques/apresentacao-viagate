@@ -19,6 +19,9 @@ func ContractingOperationTypeLabel(value string) string {
 }
 
 func ContractingReadyForReview(onboarding domain.Onboarding) bool {
+	if !onboarding.RequiresPolicy {
+		return true
+	}
 	operationType := strings.TrimSpace(strings.ToLower(onboarding.OperationType))
 	if operationType != "normal" && operationType != "avulsa" {
 		return false
