@@ -37,7 +37,7 @@ var allowedVariables = []string{
 }
 
 var variablePattern = regexp.MustCompile("\\{([a-zA-Z0-9_.-]+)\\}")
-var unsafeHTMLPattern = regexp.MustCompile("(?is)<\\s*(script|iframe|object|embed|form|base)\\b|on[a-z]+\\s*=|javascript\\s*:")
+var unsafeHTMLPattern = regexp.MustCompile("(?is)<\\s*(script|iframe|object|embed|form|base|meta|link)\\b|on[a-z]+\\s*=|javascript\\s*:")
 
 func AllowedVariables() []string {
 	result := make([]string, len(allowedVariables))
