@@ -68,6 +68,10 @@ func (a *App) saveOnboardingInsurance(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "acesso negado", http.StatusForbidden)
 		return
 	}
+	if !current.RequiresPolicy {
+		http.Error(w, "Esta contratação não exige dados de apólice.", http.StatusConflict)
+		return
+	}
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "dados inválidos", http.StatusBadRequest)
 		return
