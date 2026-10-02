@@ -30,6 +30,10 @@ templ ProposalListPage(user domain.User, items []domain.Proposal, defaultProposa
 							<td data-label="Proposta" data-primary="true">
 								<strong>{ item.Title }</strong>
 								<small>{ item.ClientName }</small>
+								<small>Dono: { item.CreatedByName }</small>
+								if item.UpdatedBy != "" && item.UpdatedBy != item.CreatedBy {
+									<small>Última alteração: { item.UpdatedByName }</small>
+								}
 							</td>
 							<td data-label="Status"><span class={ "badge status-badge " + AdminStatusBadgeClass(item.Status) }>{ humanStatus(item.Status) }</span></td>
 							<td data-label="Versão">v{ item.CurrentVersion }</td>
@@ -100,7 +104,13 @@ templ ProposalListPage(user domain.User, items []domain.Proposal, defaultProposa
 						if !item.IsDefault {
 							<tr data-admin-list-row data-search={ item.ClientName + " " + item.Title } data-filter-status={ item.Status }>
 								<td data-label="Cliente" data-primary="true"><strong>{ item.ClientName }</strong></td>
-								<td data-label="Proposta">{ item.Title }</td>
+								<td data-label="Proposta">
+									<strong>{ item.Title }</strong>
+									<small>Dono: { item.CreatedByName }</small>
+									if item.UpdatedBy != "" && item.UpdatedBy != item.CreatedBy {
+										<small>Última alteração: { item.UpdatedByName }</small>
+									}
+								</td>
 								<td data-label="Status">
 									<span class={ "badge status-badge " + AdminStatusBadgeClass(item.Status) }>{ humanStatus(item.Status) }</span>
 								</td>
