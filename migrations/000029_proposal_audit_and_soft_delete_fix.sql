@@ -17,17 +17,18 @@ alter table proposal_versions
   add column if not exists updated_by uuid references users(id) on delete set null,
   add column if not exists updated_at timestamptz;
 
+-- Versões publicadas são evidências históricas imutáveis e não podem ser
+-- atualizadas para preencher metadados retroativos. O backfill é restrito aos
+-- rascunhos existentes; versões publicadas anteriores permanecem sem editor
+-- retroativo, e novos registros passam a receber updated_at por padrão.
 update proposal_versions
-set updated_by=created_by
-where updated_by is null;
-
-update proposal_versions
-set updated_at=created_at
-where updated_at is null;
+set updated_by=coalesce(updated_by,created_by),
+    updated_at=coalesce(updated_at,created_at)
+where published_at is null
+  and (updated_by is null or updated_at is null);
 
 alter table proposal_versions
-  alter column updated_at set default now(),
-  alter column updated_at set not null;
+  alter column updated_at set default now();
 
 create index if not exists proposal_versions_updated_by_idx
   on proposal_versions(updated_by,updated_at desc);
