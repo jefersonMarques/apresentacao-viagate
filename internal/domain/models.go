@@ -121,6 +121,7 @@ type Onboarding struct {
 	FinanceResponsiblePhone    string
 	FinanceResponsibleEmail    string
 	Goods                      []string
+	RequiresPolicy             bool
 	SystemUsers                []OnboardingSystemUser
 }
 
