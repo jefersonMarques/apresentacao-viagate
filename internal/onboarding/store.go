@@ -28,15 +28,15 @@ func NewStore(pool *pgxpool.Pool) *Store { return &Store{pool: pool} }
 func (s *Store) ByAcceptance(ctx context.Context, acceptanceID string) (domain.Onboarding, error) {
 	var o domain.Onboarding
 	err := s.pool.QueryRow(ctx, `
-		select id::text,proposal_acceptance_id::text,client_id::text,status::text,coalesce(review_notes,''),
-		       coalesce(cnpj,''),coalesce(legal_name,''),coalesce(trade_name,''),coalesce(street,''),coalesce(street_number,''),
-		       coalesce(complement,''),coalesce(district,''),coalesce(city,''),coalesce(state,''),coalesce(postal_code,''),
-		       coalesce(operation_type,''),coalesce(insurer,''),
-		       coalesce(policy_start_date::text,''),coalesce(policy_end_date::text,''),
-		       coalesce(broker_company,''),coalesce(broker_producer,''),
-		       company_responsible_name,company_responsible_cpf,company_responsible_phone,
-		       company_responsible_email::text,coalesce(company_responsible_role,''),company_responsible_authority_declared,
-		       coalesce(finance_responsible_name,''),coalesce(finance_responsible_phone,''),coalesce(finance_responsible_email::text,''),
+		select o.id::text,o.proposal_acceptance_id::text,o.client_id::text,o.status::text,coalesce(o.review_notes,''),
+		       coalesce(o.cnpj,''),coalesce(o.legal_name,''),coalesce(o.trade_name,''),coalesce(o.street,''),coalesce(o.street_number,''),
+		       coalesce(o.complement,''),coalesce(o.district,''),coalesce(o.city,''),coalesce(o.state,''),coalesce(o.postal_code,''),
+		       coalesce(o.operation_type,''),coalesce(o.insurer,''),
+		       coalesce(o.policy_start_date::text,''),coalesce(o.policy_end_date::text,''),
+		       coalesce(o.broker_company,''),coalesce(o.broker_producer,''),
+		       o.company_responsible_name,o.company_responsible_cpf,o.company_responsible_phone,
+		       o.company_responsible_email::text,coalesce(o.company_responsible_role,''),o.company_responsible_authority_declared,
+		       coalesce(o.finance_responsible_name,''),coalesce(o.finance_responsible_phone,''),coalesce(o.finance_responsible_email::text,''),
 		       pv.requires_policy
 		from onboardings o
 		join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
