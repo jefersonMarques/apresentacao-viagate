@@ -2,10 +2,18 @@ package templates
 
 func AuditEventLabel(value string) string {
 	switch value {
+	case "proposal.draft_saved":
+		return "Rascunho da proposta salvo"
 	case "proposal.published":
 		return "Proposta publicada"
 	case "proposal.accepted":
 		return "Proposta aceita"
+	case "proposal.default_set":
+		return "Proposta definida como modelo"
+	case "proposal.default_cleared":
+		return "Proposta removida dos modelos"
+	case "proposal.soft_deleted":
+		return "Proposta excluída da operação"
 	case "onboarding.submitted":
 		return "Dados da contratação enviados"
 	case "onboarding.approved", "onboarding.auto_approved":
