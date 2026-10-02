@@ -258,12 +258,11 @@ templ ProposalEditorPage(user domain.User, input proposals.EditorInput, draft pr
 										<label>Modelo de e-mail</label>
 										<select data-proposal-email-template>
 											for _, emailTemplate := range emailTemplates {
-												<option value={ emailTemplate.ID } selected?={ emailTemplate.IsDefault }>
-													{ emailTemplate.Name }
-													if emailTemplate.IsDefault {
-														<span> · padrão</span>
-													}
-												</option>
+												if emailTemplate.IsDefault {
+													<option value={ emailTemplate.ID } selected>{ emailTemplate.Name } · padrão</option>
+												} else {
+													<option value={ emailTemplate.ID }>{ emailTemplate.Name }</option>
+												}
 											}
 										</select>
 									</div>
