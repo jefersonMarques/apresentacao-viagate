@@ -465,13 +465,7 @@ func (a *App) proposalInputFromForm(r *http.Request, salesperson domain.User) (p
 			SortOrder:      index,
 		})
 	}
-	input.RequiresPolicy = false
-	for _, item := range input.Items {
-		if !item.IsOptional && item.RequiresPolicy {
-			input.RequiresPolicy = true
-			break
-		}
-	}
+	input.RequiresPolicy = proposals.RequiresPolicy(input.Items)
 	selectedProductCodes := make([]string, 0, len(input.Items))
 	for _, item := range input.Items {
 		selectedProductCodes = append(selectedProductCodes, item.CatalogID)
