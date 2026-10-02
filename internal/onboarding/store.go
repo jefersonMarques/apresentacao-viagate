@@ -36,14 +36,18 @@ func (s *Store) ByAcceptance(ctx context.Context, acceptanceID string) (domain.O
 		       coalesce(broker_company,''),coalesce(broker_producer,''),
 		       company_responsible_name,company_responsible_cpf,company_responsible_phone,
 		       company_responsible_email::text,coalesce(company_responsible_role,''),company_responsible_authority_declared,
-		       coalesce(finance_responsible_name,''),coalesce(finance_responsible_phone,''),coalesce(finance_responsible_email::text,'')
-		from onboardings where proposal_acceptance_id=$1 and deleted_at is null
+		       coalesce(finance_responsible_name,''),coalesce(finance_responsible_phone,''),coalesce(finance_responsible_email::text,''),
+		       pv.requires_policy
+		from onboardings o
+		join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
+		join proposal_versions pv on pv.id=pa.proposal_version_id
+		where o.proposal_acceptance_id=$1 and o.deleted_at is null
 	`, acceptanceID).Scan(
 		&o.ID,&o.ProposalAcceptanceID,&o.ClientID,&o.Status,&o.ReviewNotes,
 		&o.CNPJ,&o.LegalName,&o.TradeName,&o.Street,&o.StreetNumber,&o.Complement,&o.District,&o.City,&o.State,&o.PostalCode,
 		&o.OperationType,&o.Insurer,&o.PolicyStartDate,&o.PolicyEndDate,&o.BrokerCompany,&o.BrokerProducer,
 		&o.CompanyResponsibleName,&o.CompanyResponsibleCPF,&o.CompanyResponsiblePhone,&o.CompanyResponsibleEmail,&o.CompanyResponsibleRole,&o.AuthorityDeclared,
-		&o.FinanceResponsibleName,&o.FinanceResponsiblePhone,&o.FinanceResponsibleEmail,
+		&o.FinanceResponsibleName,&o.FinanceResponsiblePhone,&o.FinanceResponsibleEmail,&o.RequiresPolicy,
 	)
 	if err != nil { return domain.Onboarding{}, err }
 
@@ -154,21 +158,30 @@ func (s *Store) HasPolicy(ctx context.Context, onboardingID string) (bool,error)
 
 func (s *Store) Submit(ctx context.Context, onboardingID string) error {
 	command, err := s.pool.Exec(ctx, `
-		update onboardings set status='submitted',submitted_at=now(),review_notes=null,reviewed_by=null,reviewed_at=null,updated_at=now()
-		where id=$1
-		  and deleted_at is null
-		  and status in ('pending','in_progress','correction_requested')
-		  and length(cnpj)=14
-		  and btrim(legal_name)<>''
-		  and operation_type in ('normal','avulsa')
-		  and insurer is not null and btrim(insurer)<>''
-		  and policy_start_date is not null and policy_end_date is not null
-		  and policy_end_date >= policy_start_date
-		  and btrim(company_responsible_name)<>''
-		  and length(company_responsible_cpf)=11
-		  and btrim(company_responsible_phone)<>''
-		  and company_responsible_email is not null
-		  and company_responsible_authority_declared=true
+		update onboardings o
+		set status='submitted',submitted_at=now(),review_notes=null,reviewed_by=null,reviewed_at=null,updated_at=now()
+		from proposal_acceptances pa
+		join proposal_versions pv on pv.id=pa.proposal_version_id
+		where o.id=$1
+		  and o.proposal_acceptance_id=pa.id
+		  and o.deleted_at is null
+		  and o.status in ('pending','in_progress','correction_requested')
+		  and length(o.cnpj)=14
+		  and btrim(o.legal_name)<>''
+		  and (
+		    pv.requires_policy=false
+		    or (
+		      o.operation_type in ('normal','avulsa')
+		      and o.insurer is not null and btrim(o.insurer)<>''
+		      and o.policy_start_date is not null and o.policy_end_date is not null
+		      and o.policy_end_date >= o.policy_start_date
+		    )
+		  )
+		  and btrim(o.company_responsible_name)<>''
+		  and length(o.company_responsible_cpf)=11
+		  and btrim(o.company_responsible_phone)<>''
+		  and o.company_responsible_email is not null
+		  and o.company_responsible_authority_declared=true
 	`,onboardingID)
 	if err != nil { return err }
 	if command.RowsAffected() != 1 { return fmt.Errorf("onboarding is incomplete or cannot be submitted in its current state") }
