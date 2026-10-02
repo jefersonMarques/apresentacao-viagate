@@ -401,11 +401,13 @@ func (s *Store) ListAdmin(ctx context.Context) ([]AdminItem, error) {
 	rows, err := s.pool.Query(ctx, `
 		select a.id::text,a.contract_id::text,o.legal_name,u.name,a.status,c.fully_signed_at,a.submitted_at,a.activated_at,a.updated_at,
 		       (select count(*) from activation_goods g where g.activation_id=a.id),
-		       (select count(*) from activation_system_users su where su.activation_id=a.id)
+		       (select count(*) from activation_system_users su where su.activation_id=a.id),
+		       pv.requires_policy
 		from activation_profiles a
 		join contracts c on c.id=a.contract_id
 		join onboardings o on o.id=c.onboarding_id
 		join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
+		join proposal_versions pv on pv.id=pa.proposal_version_id
 		join proposals p on p.id=pa.proposal_id
 		join users u on u.id=p.created_by
 		where a.deleted_at is null
@@ -422,7 +424,7 @@ func (s *Store) ListAdmin(ctx context.Context) ([]AdminItem, error) {
 	items := []AdminItem{}
 	for rows.Next() {
 		var item AdminItem
-		if err := rows.Scan(&item.ProfileID, &item.ContractID, &item.ClientName, &item.CommercialName, &item.Status, &item.FullySignedAt, &item.SubmittedAt, &item.ActivatedAt, &item.UpdatedAt, &item.GoodsCount, &item.SystemUserCount); err != nil {
+		if err := rows.Scan(&item.ProfileID, &item.ContractID, &item.ClientName, &item.CommercialName, &item.Status, &item.FullySignedAt, &item.SubmittedAt, &item.ActivatedAt, &item.UpdatedAt, &item.GoodsCount, &item.SystemUserCount, &item.RequiresPolicy); err != nil {
 			return nil, err
 		}
 		items = append(items, item)
