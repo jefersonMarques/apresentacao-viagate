@@ -227,7 +227,13 @@ templ ActivationsAdminPage(user domain.User, items []activation.AdminItem) {
 						<td data-label="Cliente" data-primary="true"><strong>{ item.ClientName }</strong></td>
 						<td data-label="Comercial">{ item.CommercialName }</td>
 						<td data-label="Status"><span class={ "badge status-badge " + AdminStatusBadgeClass(item.Status) }>{ ActivationStatusLabel(item.Status) }</span></td>
-						<td data-label="Dados">{ fmt.Sprintf("%d mercadorias · %d usuários", item.GoodsCount, item.SystemUserCount) }</td>
+						<td data-label="Dados">
+							if item.RequiresPolicy {
+								{ fmt.Sprintf("%d mercadorias · %d usuários", item.GoodsCount, item.SystemUserCount) }
+							} else {
+								{ fmt.Sprintf("%d usuários", item.SystemUserCount) }
+							}
+						</td>
 						<td data-label="Contrato">{ DateTime(item.FullySignedAt) }</td>
 						<td data-label="Ações" data-actions="true"><div class="admin-list-actions"><a class="btn" href={ templ.SafeURL("/admin/activations/" + item.ProfileID) }>Abrir</a></div></td>
 					</tr>
