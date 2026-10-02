@@ -48,11 +48,6 @@ func (a *App) proposalEmailDraft(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "publique a proposta antes de preparar o e-mail", http.StatusConflict)
 		return
 	}
-	if strings.TrimSpace(input.ContactEmail) == "" {
-		http.Error(w, "informe o e-mail do contato da negociação antes de abrir o cliente de e-mail", http.StatusUnprocessableEntity)
-		return
-	}
-
 	seller, err := a.authStore.Profile(r.Context(), ownerID)
 	if err != nil {
 		a.logger.Error("load proposal seller profile for email draft failed", "proposal_id", proposalID, "seller_id", ownerID, "error", err)
