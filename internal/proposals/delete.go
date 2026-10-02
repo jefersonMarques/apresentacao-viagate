@@ -276,6 +276,7 @@ func (s *Store) SoftDeleteCascade(ctx context.Context, input SoftDeleteInput) (S
 		update proposals
 		set deleted_at=now(),
 		    deleted_by=$2,
+		    updated_by=$2,
 		    is_default=false,
 		    updated_at=now()
 		where id=$1 and deleted_at is null
