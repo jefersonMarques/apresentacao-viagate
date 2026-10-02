@@ -54,6 +54,7 @@ type Profile struct {
 	ActivatedAt              *time.Time
 	FullySignedAt            *time.Time
 	HasPolicy                bool
+	RequiresPolicy           bool
 }
 
 type Access struct {
@@ -77,6 +78,7 @@ type AdminItem struct {
 	UpdatedAt       time.Time
 	GoodsCount      int
 	SystemUserCount int
+	RequiresPolicy  bool
 }
 
 func NewStore(pool *pgxpool.Pool) *Store {
@@ -86,6 +88,9 @@ func NewStore(pool *pgxpool.Pool) *Store {
 func validateSectionItems(profile Profile, section string) error {
 	switch section {
 	case "goods":
+		if !profile.RequiresPolicy {
+			return fmt.Errorf("transported goods are not required for this activation")
+		}
 		if len(profile.Goods) == 0 {
 			return fmt.Errorf("at least one transported good is required")
 		}
@@ -173,7 +178,7 @@ func (s *Store) ByID(ctx context.Context, id string) (Profile, error) {
 		       coalesce(o.broker_company,''),coalesce(o.broker_producer,''),
 		       o.company_responsible_name,o.company_responsible_phone,o.company_responsible_email::text,
 		       coalesce(a.finance_responsible_name,''),coalesce(a.finance_responsible_phone,''),coalesce(a.finance_responsible_email::text,''),
-		       a.submitted_at,a.activated_at,c.fully_signed_at,
+		       a.submitted_at,a.activated_at,c.fully_signed_at,pv.requires_policy,
 		       exists(
 		           select 1 from uploaded_documents d
 		           where d.onboarding_id=c.onboarding_id
@@ -184,6 +189,8 @@ func (s *Store) ByID(ctx context.Context, id string) (Profile, error) {
 		from activation_profiles a
 		join contracts c on c.id=a.contract_id
 		join onboardings o on o.id=c.onboarding_id
+		join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
+		join proposal_versions pv on pv.id=pa.proposal_version_id
 		where a.id=$1
 		  and a.deleted_at is null
 		  and c.deleted_at is null
@@ -197,7 +204,7 @@ func (s *Store) ByID(ctx context.Context, id string) (Profile, error) {
 		&profile.BrokerCompany, &profile.BrokerProducer,
 		&profile.CompanyResponsibleName, &profile.CompanyResponsiblePhone, &profile.CompanyResponsibleEmail,
 		&profile.FinanceResponsibleName, &profile.FinanceResponsiblePhone, &profile.FinanceResponsibleEmail,
-		&profile.SubmittedAt, &profile.ActivatedAt, &profile.FullySignedAt, &profile.HasPolicy,
+		&profile.SubmittedAt, &profile.ActivatedAt, &profile.FullySignedAt, &profile.RequiresPolicy, &profile.HasPolicy,
 	)
 	if err != nil {
 		return Profile{}, err
@@ -321,16 +328,23 @@ func (s *Store) Submit(ctx context.Context, tokenID string) error {
 
 	var activationID, status string
 	var financeName, financeEmail, financePhone string
+	var requiresPolicy bool
 	err = tx.QueryRow(ctx, `
-		select a.id::text,a.status,coalesce(a.finance_responsible_name,''),coalesce(a.finance_responsible_email::text,''),coalesce(a.finance_responsible_phone,'')
+		select a.id::text,a.status,coalesce(a.finance_responsible_name,''),coalesce(a.finance_responsible_email::text,''),coalesce(a.finance_responsible_phone,''),pv.requires_policy
 		from activation_access_tokens t
 		join activation_profiles a on a.id=t.activation_id
+		join contracts c on c.id=a.contract_id
+		join onboardings o on o.id=c.onboarding_id
+		join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
+		join proposal_versions pv on pv.id=pa.proposal_version_id
 		where t.id=$1
 		  and t.revoked_at is null
 		  and t.expires_at>now()
 		  and a.deleted_at is null
+		  and c.deleted_at is null
+		  and o.deleted_at is null
 		for update of t,a
-	`, tokenID).Scan(&activationID, &status, &financeName, &financeEmail, &financePhone)
+	`, tokenID).Scan(&activationID, &status, &financeName, &financeEmail, &financePhone, &requiresPolicy)
 	if err != nil {
 		return err
 	}
@@ -347,32 +361,34 @@ func (s *Store) Submit(ctx context.Context, tokenID string) error {
 	if err := tx.QueryRow(ctx, `select count(*) from activation_system_users where activation_id=$1`, activationID).Scan(&usersCount); err != nil {
 		return err
 	}
-	if goodsCount == 0 {
+	if requiresPolicy && goodsCount == 0 {
 		return fmt.Errorf("add at least one transported good")
 	}
 	if usersCount == 0 {
 		return fmt.Errorf("add at least one system user")
 	}
 
-	var hasPolicy bool
-	if err := tx.QueryRow(ctx, `
-		select exists(
-			select 1
-			from activation_profiles a
-			join contracts c on c.id=a.contract_id
-			join uploaded_documents d on d.onboarding_id=c.onboarding_id
-			where a.id=$1
-			  and d.document_type='insurance_policy'
-			  and a.deleted_at is null
-			  and c.deleted_at is null
-			  and d.deleted_at is null
-			  and d.status='uploaded'
-		)
-	`, activationID).Scan(&hasPolicy); err != nil {
-		return err
-	}
-	if !hasPolicy {
-		return fmt.Errorf("insurance policy is required")
+	if requiresPolicy {
+		var hasPolicy bool
+		if err := tx.QueryRow(ctx, `
+			select exists(
+				select 1
+				from activation_profiles a
+				join contracts c on c.id=a.contract_id
+				join uploaded_documents d on d.onboarding_id=c.onboarding_id
+				where a.id=$1
+				  and d.document_type='insurance_policy'
+				  and a.deleted_at is null
+				  and c.deleted_at is null
+				  and d.deleted_at is null
+				  and d.status='uploaded'
+			)
+		`, activationID).Scan(&hasPolicy); err != nil {
+			return err
+		}
+		if !hasPolicy {
+			return fmt.Errorf("insurance policy is required")
+		}
 	}
 
 	if _, err := tx.Exec(ctx, `update activation_profiles set status='completed',submitted_at=now(),updated_at=now() where id=$1 and deleted_at is null`, activationID); err != nil {
@@ -385,11 +401,13 @@ func (s *Store) ListAdmin(ctx context.Context) ([]AdminItem, error) {
 	rows, err := s.pool.Query(ctx, `
 		select a.id::text,a.contract_id::text,o.legal_name,u.name,a.status,c.fully_signed_at,a.submitted_at,a.activated_at,a.updated_at,
 		       (select count(*) from activation_goods g where g.activation_id=a.id),
-		       (select count(*) from activation_system_users su where su.activation_id=a.id)
+		       (select count(*) from activation_system_users su where su.activation_id=a.id),
+		       pv.requires_policy
 		from activation_profiles a
 		join contracts c on c.id=a.contract_id
 		join onboardings o on o.id=c.onboarding_id
 		join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
+		join proposal_versions pv on pv.id=pa.proposal_version_id
 		join proposals p on p.id=pa.proposal_id
 		join users u on u.id=p.created_by
 		where a.deleted_at is null
@@ -406,7 +424,7 @@ func (s *Store) ListAdmin(ctx context.Context) ([]AdminItem, error) {
 	items := []AdminItem{}
 	for rows.Next() {
 		var item AdminItem
-		if err := rows.Scan(&item.ProfileID, &item.ContractID, &item.ClientName, &item.CommercialName, &item.Status, &item.FullySignedAt, &item.SubmittedAt, &item.ActivatedAt, &item.UpdatedAt, &item.GoodsCount, &item.SystemUserCount); err != nil {
+		if err := rows.Scan(&item.ProfileID, &item.ContractID, &item.ClientName, &item.CommercialName, &item.Status, &item.FullySignedAt, &item.SubmittedAt, &item.ActivatedAt, &item.UpdatedAt, &item.GoodsCount, &item.SystemUserCount, &item.RequiresPolicy); err != nil {
 			return nil, err
 		}
 		items = append(items, item)

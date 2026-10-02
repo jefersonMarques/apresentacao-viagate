@@ -11,7 +11,7 @@ import (
 
 func TestContractingJourneyRequiresExplicitOperationType(t *testing.T) {
 	var output bytes.Buffer
-	component := ContractingJourneyPage(domain.Onboarding{ID: "onboarding-test"}, "", "", "")
+	component := ContractingJourneyPage(domain.Onboarding{ID: "onboarding-test", RequiresPolicy: true}, "", "", "")
 	if err := component.Render(context.Background(), &output); err != nil {
 		t.Fatalf("render contracting journey: %v", err)
 	}
@@ -43,6 +43,7 @@ func TestContractingOperationTypeLabel(t *testing.T) {
 
 func TestContractingReadyForReview(t *testing.T) {
 	complete := domain.Onboarding{
+		RequiresPolicy:   true,
 		OperationType:    "normal",
 		Insurer:          "Seguradora Teste",
 		PolicyStartDate:  "2026-09-01",
@@ -56,5 +57,23 @@ func TestContractingReadyForReview(t *testing.T) {
 	complete.OperationType = ""
 	if ContractingReadyForReview(complete) {
 		t.Fatal("missing operation type must block review")
+	}
+}
+
+
+func TestContractingReadyForReviewSkipsInsuranceWhenNotRequired(t *testing.T) {
+	onboarding := domain.Onboarding{RequiresPolicy: false}
+	if !ContractingReadyForReview(onboarding) {
+		t.Fatal("insurance must not block review when proposal does not require policy")
+	}
+
+	var output bytes.Buffer
+	component := ContractingJourneyPage(domain.Onboarding{ID: "onboarding-test", RequiresPolicy: false}, "", "", "")
+	if err := component.Render(context.Background(), &output); err != nil {
+		t.Fatalf("render contracting journey: %v", err)
+	}
+	html := output.String()
+	if strings.Contains(html, `data-contracting-step="insurance"`) || strings.Contains(html, `name="insurer"`) {
+		t.Fatal("insurance step must not render when proposal does not require policy")
 	}
 }

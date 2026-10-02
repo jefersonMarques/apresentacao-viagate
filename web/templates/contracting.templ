@@ -9,21 +9,32 @@ templ ContractingJourneyPage(onboarding domain.Onboarding, message, errorMessage
 	@PublicFlowLayout("ViaGate — Continuar contratação") {
 		<link rel="stylesheet" href="/commercial-assets/contracting.css"/>
 		<div class="public contracting-public">
-			<main class="shell public-flow-stack contracting-page" data-contracting-wizard data-insurance-ready={ BoolString(ContractingReadyForReview(onboarding)) }>
-				@PublicFlowHeader("CONTRATAÇÃO", "Prepare o contrato em poucos passos", "A proposta já foi aceita. Agora confirme os dados da empresa e do seguro para gerarmos o contrato.") {
+			<main class="shell public-flow-stack contracting-page" data-contracting-wizard data-insurance-ready={ BoolString(ContractingReadyForReview(onboarding)) } data-requires-policy={ BoolString(onboarding.RequiresPolicy) }>
+				@PublicFlowHeader("CONTRATAÇÃO", "Prepare o contrato em poucos passos", "A proposta já foi aceita. Agora confirme os dados necessários para gerarmos o contrato.") {
 					@PublicProposalLink(proposalURL)
 				}
 				@PublicFlashMessages(message, errorMessage)
 
 				<nav class="contracting-progress" aria-label="Etapas da contratação">
 					<button type="button" data-contracting-step-link="company"><span>1</span><strong>Empresa</strong></button>
-					<button type="button" data-contracting-step-link="insurance"><span>2</span><strong>Seguro</strong></button>
-					<button type="button" data-contracting-step-link="review"><span>3</span><strong>Revisar</strong></button>
+					if onboarding.RequiresPolicy {
+						<button type="button" data-contracting-step-link="insurance"><span>2</span><strong>Seguro</strong></button>
+						<button type="button" data-contracting-step-link="review"><span>3</span><strong>Revisar</strong></button>
+					} else {
+						<button type="button" data-contracting-step-link="review"><span>2</span><strong>Revisar</strong></button>
+					}
 				</nav>
 
 				<section class="panel contracting-step" data-contracting-step="company">
 					<div class="panel-head">
-						<div><span class="step-title">ETAPA 1 DE 3</span><h2>Empresa contratante</h2><p>Use o CNPJ para preencher os dados públicos e revise antes de continuar.</p></div>
+						<div>
+							if onboarding.RequiresPolicy {
+								<span class="step-title">ETAPA 1 DE 3</span>
+							} else {
+								<span class="step-title">ETAPA 1 DE 2</span>
+							}
+							<h2>Empresa contratante</h2><p>Use o CNPJ para preencher os dados públicos e revise antes de continuar.</p>
+						</div>
 						<button class="btn" type="button" data-cnpj-lookup data-cnpj-field="cnpj" data-cnpj-prefix="" data-cnpj-endpoint="/api/cnpj/">Preencher pelo CNPJ</button>
 					</div>
 					<div class="panel-body">
@@ -44,38 +55,57 @@ templ ContractingJourneyPage(onboarding domain.Onboarding, message, errorMessage
 					</div>
 				</section>
 
-				<section class="panel contracting-step" data-contracting-step="insurance" hidden>
-					<div class="panel-head"><div><span class="step-title">ETAPA 2 DE 3</span><h2>Operação e seguro</h2><p>Esses dados serão usados na geração do contrato.</p></div></div>
-					<div class="panel-body public-flow-stack">
-						<form method="post" action={ templ.SafeURL("/onboarding/" + onboarding.ID) } class="grid">
-							<input type="hidden" name="step" value="insurance"/>
-							<div class="field"><label>Tipo de operação</label><select name="operation_type" required><option value="" disabled selected?={ onboarding.OperationType == "" }>Selecione...</option><option value="normal" selected?={ onboarding.OperationType == "normal" }>Normal</option><option value="avulsa" selected?={ onboarding.OperationType == "avulsa" }>Avulsa</option></select></div>
-							<div class="field"><label>Seguradora</label><input name="insurer" value={ onboarding.Insurer } required/></div>
-							<div class="field"><label>Início da vigência</label><input name="policy_start_date" type="date" value={ onboarding.PolicyStartDate } required/></div>
-							<div class="field"><label>Fim da vigência</label><input name="policy_end_date" type="date" value={ onboarding.PolicyEndDate } required/></div>
-							<div class="field"><label>Corretor parceiro</label><input name="broker_company" value={ onboarding.BrokerCompany }/></div>
-							<div class="field"><label>Produtor do corretor</label><input name="broker_producer" value={ onboarding.BrokerProducer }/></div>
-							<div class="field full contracting-actions"><button class="btn ghost" type="button" data-contracting-previous="company">Voltar</button><button class="btn dark" type="submit" data-processing="Salvando seguro...">Salvar e continuar</button></div>
-						</form>
+				if onboarding.RequiresPolicy {
+					<section class="panel contracting-step" data-contracting-step="insurance" hidden>
+						<div class="panel-head"><div><span class="step-title">ETAPA 2 DE 3</span><h2>Operação e seguro</h2><p>Este produto exige dados de apólice para a contratação.</p></div></div>
+						<div class="panel-body public-flow-stack">
+							<form method="post" action={ templ.SafeURL("/onboarding/" + onboarding.ID) } class="grid">
+								<input type="hidden" name="step" value="insurance"/>
+								<div class="field"><label>Tipo de operação</label><select name="operation_type" required><option value="" disabled selected?={ onboarding.OperationType == "" }>Selecione...</option><option value="normal" selected?={ onboarding.OperationType == "normal" }>Normal</option><option value="avulsa" selected?={ onboarding.OperationType == "avulsa" }>Avulsa</option></select></div>
+								<div class="field"><label>Seguradora</label><input name="insurer" value={ onboarding.Insurer } required/></div>
+								<div class="field"><label>Início da vigência</label><input name="policy_start_date" type="date" value={ onboarding.PolicyStartDate } required/></div>
+								<div class="field"><label>Fim da vigência</label><input name="policy_end_date" type="date" value={ onboarding.PolicyEndDate } required/></div>
+								<div class="field"><label>Corretor parceiro</label><input name="broker_company" value={ onboarding.BrokerCompany }/></div>
+								<div class="field"><label>Produtor do corretor</label><input name="broker_producer" value={ onboarding.BrokerProducer }/></div>
+								<div class="field full contracting-actions"><button class="btn ghost" type="button" data-contracting-previous="company">Voltar</button><button class="btn dark" type="submit" data-processing="Salvando seguro...">Salvar e continuar</button></div>
+							</form>
 
-						if ContractingReadyForReview(onboarding) {
-							<div class="actions contracting-next"><button class="btn primary" type="button" data-contracting-next="review">Revisar contratação</button></div>
-						}
-					</div>
-				</section>
+							if ContractingReadyForReview(onboarding) {
+								<div class="actions contracting-next"><button class="btn primary" type="button" data-contracting-next="review">Revisar contratação</button></div>
+							}
+						</div>
+					</section>
+				}
 
 				<section class="panel contracting-step" data-contracting-step="review" hidden>
-					<div class="panel-head"><div><span class="step-title">ETAPA 3 DE 3</span><h2>Revise antes de gerar o contrato</h2><p>O responsável abaixo foi identificado no aceite da proposta e não precisa preencher seus dados novamente.</p></div></div>
+					<div class="panel-head"><div>
+						if onboarding.RequiresPolicy {
+							<span class="step-title">ETAPA 3 DE 3</span>
+						} else {
+							<span class="step-title">ETAPA 2 DE 2</span>
+						}
+						<h2>Revise antes de gerar o contrato</h2><p>O responsável abaixo foi identificado no aceite da proposta e não precisa preencher seus dados novamente.</p>
+					</div></div>
 					<div class="panel-body public-flow-stack">
 						@PublicDataGrid() {
 							@PublicDataField("Empresa") { <strong>{ onboarding.LegalName }</strong><span>{ brfields.FormatCNPJ(onboarding.CNPJ) }</span> }
 							@PublicDataField("Endereço") { <strong>{ ContractingAddress(onboarding) }</strong> }
-							@PublicDataField("Seguro") { <strong>{ onboarding.Insurer }</strong><span>{ ContractingOperationTypeLabel(onboarding.OperationType) } · { onboarding.PolicyStartDate } a { onboarding.PolicyEndDate }</span> }
+							if onboarding.RequiresPolicy {
+								@PublicDataField("Seguro") { <strong>{ onboarding.Insurer }</strong><span>{ ContractingOperationTypeLabel(onboarding.OperationType) } · { onboarding.PolicyStartDate } a { onboarding.PolicyEndDate }</span> }
+							}
 							@PublicDataField("Responsável") { <strong>{ onboarding.CompanyResponsibleName }</strong><span>{ onboarding.CompanyResponsibleEmail } · { brfields.FormatPhone(onboarding.CompanyResponsiblePhone) }</span> }
 						}
-						<p class="public-flow-muted">Depois do envio, os dados contratuais serão validados e o contrato será preparado automaticamente. A apólice e os demais dados operacionais serão coletados na preparação da implantação.</p>
+						if onboarding.RequiresPolicy {
+							<p class="public-flow-muted">Depois do envio, os dados contratuais serão validados e o contrato será preparado automaticamente. O documento da apólice e as mercadorias transportadas serão exigidos na preparação da implantação.</p>
+						} else {
+							<p class="public-flow-muted">Depois do envio, os dados contratuais serão validados e o contrato será preparado automaticamente. Esta contratação não exige apólice nem cadastro de mercadorias.</p>
+						}
 						<div class="actions contracting-submit-actions">
-							<button class="btn ghost" type="button" data-contracting-previous="insurance">Voltar</button>
+							if onboarding.RequiresPolicy {
+								<button class="btn ghost" type="button" data-contracting-previous="insurance">Voltar</button>
+							} else {
+								<button class="btn ghost" type="button" data-contracting-previous="company">Voltar</button>
+							}
 							<form method="post" action={ templ.SafeURL("/onboarding/" + onboarding.ID + "/submit") }>
 								<button class="btn primary" type="submit" data-processing="Preparando contrato..." disabled?={ !ContractingReadyForReview(onboarding) }>Gerar contrato para assinatura</button>
 							</form>

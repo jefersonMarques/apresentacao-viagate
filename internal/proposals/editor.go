@@ -20,6 +20,7 @@ type EditorItem struct {
 	Unit                 string
 	Price                float64
 	IsOptional           bool
+	RequiresPolicy       bool
 	SortOrder            int
 }
 
@@ -54,6 +55,7 @@ type EditorInput struct {
 	SetupFee            float64
 	Conditions          []string
 	Items               []EditorItem
+	RequiresPolicy      bool
 	Content             map[string]any
 	ContentHash         []byte
 }
@@ -64,6 +66,15 @@ type SavedDraft struct {
 	VersionNumber        int
 	PublicToken          string
 	PublishedPublicToken string
+}
+
+func RequiresPolicy(items []EditorItem) bool {
+	for _, item := range items {
+		if !item.IsOptional && item.RequiresPolicy {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Store) SaveDraft(ctx context.Context, userID string, allowAll bool, input EditorInput) (SavedDraft, error) {
@@ -197,10 +208,10 @@ func (s *Store) SaveDraft(ctx context.Context, userID string, allowAll bool, inp
 			return SavedDraft{}, err
 		}
 		err = tx.QueryRow(ctx, `
-			insert into proposal_versions(proposal_id,version_number,pricing_model,content,conditions,minimum_invoice,setup_fee,content_hash,created_by,updated_by)
-			values($1,$2,$3,$4,$5,$6,$7,$8,$9,$9)
+			insert into proposal_versions(proposal_id,version_number,pricing_model,content,conditions,minimum_invoice,setup_fee,content_hash,requires_policy,created_by,updated_by)
+			values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$10)
 			returning id::text,public_token::text
-		`, input.ProposalID, draft.VersionNumber, input.PricingModel, contentJSON, conditionsJSON, input.MinimumInvoice, input.SetupFee, input.ContentHash, userID).Scan(&draft.VersionID, &draft.PublicToken)
+		`, input.ProposalID, draft.VersionNumber, input.PricingModel, contentJSON, conditionsJSON, input.MinimumInvoice, input.SetupFee, input.ContentHash, input.RequiresPolicy, userID).Scan(&draft.VersionID, &draft.PublicToken)
 		if err != nil {
 			return SavedDraft{}, err
 		}
@@ -210,9 +221,9 @@ func (s *Store) SaveDraft(ctx context.Context, userID string, allowAll bool, inp
 		if _, err := tx.Exec(ctx, `
 			update proposal_versions
 			set pricing_model=$2,content=$3,conditions=$4,minimum_invoice=$5,setup_fee=$6,content_hash=$7,
-			    updated_by=$8,updated_at=now()
+			    requires_policy=$8,updated_by=$9,updated_at=now()
 			where id=$1 and published_at is null
-		`, draft.VersionID, input.PricingModel, contentJSON, conditionsJSON, input.MinimumInvoice, input.SetupFee, input.ContentHash, userID); err != nil {
+		`, draft.VersionID, input.PricingModel, contentJSON, conditionsJSON, input.MinimumInvoice, input.SetupFee, input.ContentHash, input.RequiresPolicy, userID); err != nil {
 			return SavedDraft{}, err
 		}
 		if _, err := tx.Exec(ctx, `delete from proposal_items where proposal_version_id=$1`, draft.VersionID); err != nil {
@@ -228,6 +239,7 @@ func (s *Store) SaveDraft(ctx context.Context, userID string, allowAll bool, inp
 			"category_code":        item.CategoryCode,
 			"category_description": item.CategoryDescription,
 			"product_description":  item.Description,
+			"requires_policy":     item.RequiresPolicy,
 		})
 		if _, err := tx.Exec(ctx, `
 			insert into proposal_items(proposal_version_id,group_name,label,unit,price,is_optional,sort_order,metadata)
@@ -355,9 +367,9 @@ func (s *Store) EditorByID(ctx context.Context, userID, proposalID string, allow
 	}
 	var contentJSON, conditionsJSON []byte
 	err = s.pool.QueryRow(ctx, `
-		select id::text,version_number,public_token::text,pricing_model,minimum_invoice,setup_fee,content,conditions,content_hash
+		select id::text,version_number,public_token::text,pricing_model,minimum_invoice,setup_fee,content,conditions,content_hash,requires_policy
 		from proposal_versions where proposal_id=$1 order by version_number desc limit 1
-	`, proposalID).Scan(&draft.VersionID, &draft.VersionNumber, &draft.PublicToken, &input.PricingModel, &input.MinimumInvoice, &input.SetupFee, &contentJSON, &conditionsJSON, &input.ContentHash)
+	`, proposalID).Scan(&draft.VersionID, &draft.VersionNumber, &draft.PublicToken, &input.PricingModel, &input.MinimumInvoice, &input.SetupFee, &contentJSON, &conditionsJSON, &input.ContentHash, &input.RequiresPolicy)
 	if err != nil && err != pgx.ErrNoRows {
 		return EditorInput{}, SavedDraft{}, err
 	}
@@ -397,7 +409,7 @@ func (s *Store) EditorByID(ctx context.Context, userID, proposalID string, allow
 				coalesce(metadata->>'category_description',''),
 				group_name,label,
 				coalesce(metadata->>'product_description',''),
-				coalesce(unit,''),price,is_optional,sort_order
+				coalesce(unit,''),price,is_optional,coalesce((metadata->>'requires_policy')::boolean,false),sort_order
 			from proposal_items
 			where proposal_version_id=$1
 			order by sort_order,id
@@ -419,6 +431,7 @@ func (s *Store) EditorByID(ctx context.Context, userID, proposalID string, allow
 				&item.Unit,
 				&item.Price,
 				&item.IsOptional,
+				&item.RequiresPolicy,
 				&item.SortOrder,
 			); err != nil {
 				return EditorInput{}, SavedDraft{}, err

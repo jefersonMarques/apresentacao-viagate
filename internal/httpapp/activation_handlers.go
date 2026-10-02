@@ -59,6 +59,10 @@ func (a *App) uploadActivationPolicy(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Link de ativação inválido ou expirado.", http.StatusGone)
 		return
 	}
+	if !access.Profile.RequiresPolicy {
+		http.Error(w, "Esta contratação não exige apólice.", http.StatusConflict)
+		return
+	}
 	if access.Section != "all" || access.Profile.Status == "completed" || access.Profile.Status == "under_internal_setup" || access.Profile.Status == "activated" {
 		http.Error(w, "Este acesso não permite alterar a apólice.", http.StatusForbidden)
 		return
@@ -114,6 +118,10 @@ func (a *App) saveActivationSection(w http.ResponseWriter, r *http.Request) {
 		}
 		profile.FinanceResponsiblePhone = phone
 	case "goods":
+		if !profile.RequiresPolicy {
+			render(r.Context(), w, http.StatusConflict, templates.ActivationPage(access, token, "", "Esta contratação não exige cadastro de mercadorias."))
+			return
+		}
 		profile.Goods = nil
 		for _, value := range r.Form["goods"] {
 			value = strings.TrimSpace(value)
@@ -192,6 +200,10 @@ func (a *App) delegateActivation(w http.ResponseWriter, r *http.Request) {
 	if section != "all" && section != "finance" && section != "goods" && section != "users" {
 		section = "all"
 	}
+	if section == "goods" && !access.Profile.RequiresPolicy {
+		render(r.Context(), w, http.StatusConflict, templates.ActivationPage(access, token, "", "Esta contratação não exige cadastro de mercadorias."))
+		return
+	}
 	plain, hash, err := security.RandomToken(32)
 	if err != nil {
 		http.Error(w, "erro interno", http.StatusInternalServerError)
@@ -234,7 +246,11 @@ func (a *App) submitActivation(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := a.activationStore.Submit(r.Context(), access.TokenID); err != nil {
 		access, _ = a.activationStore.AccessByToken(r.Context(), hashToken(token))
-		render(r.Context(), w, http.StatusBadRequest, templates.ActivationPage(access, token, "", "Ainda faltam informações. Preencha o contato financeiro, ao menos uma mercadoria e um usuário do sistema."))
+		message := "Ainda faltam informações. Preencha o contato financeiro e ao menos um usuário do sistema."
+		if access.Profile.RequiresPolicy {
+			message = "Ainda faltam informações. Envie a apólice, preencha o contato financeiro, informe ao menos uma mercadoria e um usuário do sistema."
+		}
+		render(r.Context(), w, http.StatusBadRequest, templates.ActivationPage(access, token, "", message))
 		return
 	}
 	_, _ = a.pool.Exec(r.Context(), `

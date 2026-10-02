@@ -41,6 +41,7 @@ type ManagedProduct struct {
 	Description      string
 	Unit             string
 	IsActive         bool
+	RequiresPolicy   bool
 	IsArchived       bool
 	IsDeleted        bool
 	SortOrder        int
@@ -118,7 +119,7 @@ func (s *Store) ListAdmin(ctx context.Context, showHidden bool) ([]ManagedCatego
 	productRows, err := s.pool.Query(ctx, `
 		select
 			p.id::text,p.category_id::text,c.code,p.code,p.name,
-			coalesce(p.description,''),coalesce(p.unit,''),p.is_active,
+			coalesce(p.description,''),coalesce(p.unit,''),p.is_active,p.requires_policy,
 			p.archived_at is not null,p.deleted_at is not null,p.sort_order
 		from products p
 		join product_categories c on c.id=p.category_id
@@ -142,6 +143,7 @@ func (s *Store) ListAdmin(ctx context.Context, showHidden bool) ([]ManagedCatego
 			&product.Description,
 			&product.Unit,
 			&product.IsActive,
+			&product.RequiresPolicy,
 			&product.IsArchived,
 			&product.IsDeleted,
 			&product.SortOrder,
@@ -167,7 +169,7 @@ func (s *Store) ListForProposal(ctx context.Context, selectedCodes []string) ([]
 			c.id::text,c.code,c.name,coalesce(c.description,''),c.is_active,
 			c.archived_at is not null,c.deleted_at is not null,c.sort_order,
 			p.id::text,p.category_id::text,p.code,p.name,coalesce(p.description,''),coalesce(p.unit,''),
-			p.is_active,p.archived_at is not null,p.deleted_at is not null,p.sort_order
+			p.is_active,p.requires_policy,p.archived_at is not null,p.deleted_at is not null,p.sort_order
 		from product_categories c
 		join products p on p.category_id=c.id
 		where (
@@ -203,6 +205,7 @@ func (s *Store) ListForProposal(ctx context.Context, selectedCodes []string) ([]
 			&product.Description,
 			&product.Unit,
 			&product.IsActive,
+			&product.RequiresPolicy,
 			&product.IsArchived,
 			&product.IsDeleted,
 			&product.SortOrder,
@@ -235,7 +238,7 @@ func (s *Store) ProductForProposal(ctx context.Context, code, proposalID string)
 			c.id::text,c.code,c.name,coalesce(c.description,''),c.is_active,
 			c.archived_at is not null,c.deleted_at is not null,c.sort_order,
 			p.id::text,p.category_id::text,p.code,p.name,coalesce(p.description,''),coalesce(p.unit,''),
-			p.is_active,p.archived_at is not null,p.deleted_at is not null,p.sort_order
+			p.is_active,p.requires_policy,p.archived_at is not null,p.deleted_at is not null,p.sort_order
 		from products p
 		join product_categories c on c.id=p.category_id
 		where p.code=$1
@@ -271,6 +274,7 @@ func (s *Store) ProductForProposal(ctx context.Context, code, proposalID string)
 		&product.Description,
 		&product.Unit,
 		&product.IsActive,
+		&product.RequiresPolicy,
 		&product.IsArchived,
 		&product.IsDeleted,
 		&product.SortOrder,
@@ -316,7 +320,7 @@ func (s *Store) SaveCategory(ctx context.Context, id, name, description string, 
 func (s *Store) SaveProduct(
 	ctx context.Context,
 	id, categoryID, name, description, unit string,
-	isActive bool,
+	isActive, requiresPolicy bool,
 	sortOrder int,
 	dependencies []DependencyInput,
 ) (string, error) {
@@ -345,23 +349,23 @@ func (s *Store) SaveProduct(
 	productID := strings.TrimSpace(id)
 	if productID == "" {
 		if err := tx.QueryRow(ctx, `
-			insert into products(category_id,code,name,description,unit,is_active,sort_order)
+			insert into products(category_id,code,name,description,unit,is_active,requires_policy,sort_order)
 			select
 				c.id,
 				'product-' || substr(replace(gen_random_uuid()::text,'-',''),1,12),
-				$2,nullif($3,''),nullif($4,''),$5,$6
+				$2,nullif($3,''),nullif($4,''),$5,$6,$7
 			from product_categories c
 			where c.id=$1 and c.deleted_at is null
 			returning id::text
-		`, categoryID, name, strings.TrimSpace(description), strings.TrimSpace(unit), isActive, sortOrder).Scan(&productID); err != nil {
+		`, categoryID, name, strings.TrimSpace(description), strings.TrimSpace(unit), isActive, requiresPolicy, sortOrder).Scan(&productID); err != nil {
 			return "", err
 		}
 	} else {
 		result, err := tx.Exec(ctx, `
 			update products
-			set category_id=$2,name=$3,description=nullif($4,''),unit=nullif($5,''),is_active=$6,sort_order=$7,updated_at=now()
+			set category_id=$2,name=$3,description=nullif($4,''),unit=nullif($5,''),is_active=$6,requires_policy=$7,sort_order=$8,updated_at=now()
 			where id=$1 and deleted_at is null
-		`, productID, categoryID, name, strings.TrimSpace(description), strings.TrimSpace(unit), isActive, sortOrder)
+		`, productID, categoryID, name, strings.TrimSpace(description), strings.TrimSpace(unit), isActive, requiresPolicy, sortOrder)
 		if err != nil {
 			return "", err
 		}

@@ -14,8 +14,9 @@ func TestActivationPageDisablesEmptyGoodsAndUsersActions(t *testing.T) {
 	access := activation.Access{
 		Section: "all",
 		Profile: activation.Profile{
-			ID:     "activation-test",
-			Status: "in_progress",
+			ID:             "activation-test",
+			Status:         "in_progress",
+			RequiresPolicy: true,
 		},
 	}
 
@@ -41,6 +42,7 @@ func TestActivationPageDisablesEmptyGoodsAndUsersActions(t *testing.T) {
 func TestActivationCompleteRequiresGoodsAndUsers(t *testing.T) {
 	profile := activation.Profile{
 		HasPolicy:               true,
+		RequiresPolicy:          true,
 		FinanceResponsibleName:  "Financeiro",
 		FinanceResponsibleEmail: "financeiro@example.com",
 		FinanceResponsiblePhone: "11999999999",
@@ -63,6 +65,7 @@ func TestActivationCompleteRequiresGoodsAndUsers(t *testing.T) {
 
 func TestActivationCompleteRequiresPolicy(t *testing.T) {
 	profile := activation.Profile{
+		RequiresPolicy:          true,
 		FinanceResponsibleName:  "Financeiro",
 		FinanceResponsibleEmail: "financeiro@example.com",
 		FinanceResponsiblePhone: "11999999999",
@@ -86,5 +89,37 @@ func TestActivationContractSigned(t *testing.T) {
 	}
 	if !ActivationContractSigned(activation.Profile{ContractStatus: "signed", FullySignedAt: &now}) {
 		t.Fatal("fully signed contract should unlock internal implementation")
+	}
+}
+
+
+func TestActivationCompleteSkipsPolicyAndGoodsWhenNotRequired(t *testing.T) {
+	profile := activation.Profile{
+		RequiresPolicy:          false,
+		FinanceResponsibleName:  "Financeiro",
+		FinanceResponsibleEmail: "financeiro@example.com",
+		FinanceResponsiblePhone: "11999999999",
+		SystemUsers:             []activation.SystemUser{{Name: "Maria", Email: "maria@example.com"}},
+	}
+	if !ActivationComplete(profile) {
+		t.Fatal("activation should be complete without policy and goods when proposal does not require them")
+	}
+}
+
+func TestActivationPageHidesPolicyAndGoodsWhenNotRequired(t *testing.T) {
+	access := activation.Access{
+		Section: "all",
+		Profile: activation.Profile{
+			ID:     "activation-test",
+			Status: "in_progress",
+		},
+	}
+	var output bytes.Buffer
+	if err := ActivationPage(access, "token-test", "", "").Render(context.Background(), &output); err != nil {
+		t.Fatalf("render activation page: %v", err)
+	}
+	html := output.String()
+	if strings.Contains(html, `id="apolice"`) || strings.Contains(html, `id="mercadorias"`) {
+		t.Fatal("policy and goods sections must be hidden when not required")
 	}
 }

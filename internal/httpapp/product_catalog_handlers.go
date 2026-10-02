@@ -114,6 +114,7 @@ func (a *App) saveProductItem(w http.ResponseWriter, r *http.Request) {
 		strings.TrimSpace(r.FormValue("description")),
 		strings.TrimSpace(r.FormValue("unit")),
 		r.FormValue("is_active") == "1",
+		r.FormValue("requires_policy") == "1",
 		sortOrder,
 		dependencies,
 	)
@@ -132,8 +133,8 @@ func (a *App) saveProductItem(w http.ResponseWriter, r *http.Request) {
 
 	_, _ = a.pool.Exec(r.Context(), `
 		insert into audit_events(actor_user_id,event_type,resource_type,resource_id,metadata)
-		values($1,'catalog.product_saved','product',$2,'{}'::jsonb)
-	`, user.ID, id)
+		values($1,'catalog.product_saved','product',$2,jsonb_build_object('requires_policy',$3::boolean))
+	`, user.ID, id, r.FormValue("requires_policy") == "1")
 	redirectProductCatalogWithOpenCategory(w, r, false, "", "product", categoryID)
 }
 

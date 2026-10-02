@@ -44,6 +44,7 @@ func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID stri
 	var operationType, insurer, policyStartDate, policyEndDate, brokerCompany, brokerProducer string
 	var repName, repCPF, repEmail, repPhone, repRole string
 	var pricingModel string
+	var requiresPolicy bool
 	var minimumInvoice, setupFee float64
 	var acceptedAt time.Time
 	var validUntilSnapshot string
@@ -56,7 +57,7 @@ func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID stri
 		       coalesce(o.operation_type,''),coalesce(o.insurer,''),coalesce(o.policy_start_date::text,''),coalesce(o.policy_end_date::text,''),
 		       coalesce(o.broker_company,''),coalesce(o.broker_producer,''),
 		       o.company_responsible_name,o.company_responsible_cpf,o.company_responsible_email::text,o.company_responsible_phone,coalesce(o.company_responsible_role,''),
-		       pv.pricing_model,pv.minimum_invoice,pv.setup_fee,a.accepted_at,coalesce(pv.content #>> '{proposal,valid_until}','')
+		       pv.pricing_model,pv.requires_policy,pv.minimum_invoice,pv.setup_fee,a.accepted_at,coalesce(pv.content #>> '{proposal,valid_until}','')
 		from onboardings o
 		join proposal_acceptances a on a.id=o.proposal_acceptance_id
 		join proposal_versions pv on pv.id=a.proposal_version_id
@@ -71,7 +72,7 @@ func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID stri
 		&legalName, &tradeName, &cnpj, &street, &number, &complement, &district, &city, &state, &postalCode,
 		&operationType, &insurer, &policyStartDate, &policyEndDate, &brokerCompany, &brokerProducer,
 		&repName, &repCPF, &repEmail, &repPhone, &repRole,
-		&pricingModel, &minimumInvoice, &setupFee, &acceptedAt, &validUntilSnapshot,
+		&pricingModel, &requiresPolicy, &minimumInvoice, &setupFee, &acceptedAt, &validUntilSnapshot,
 	)
 	if err != nil {
 		return Generated{}, fmt.Errorf("load approved contract data: %w", err)
@@ -119,6 +120,24 @@ func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID stri
 		formattedPostalCode,
 	), ", "))
 	validUntilDisplay := contractDate(validUntilSnapshot)
+	operationTypeDisplay := contractOperationTypeLabel(operationType)
+	insuranceData := map[string]any{
+		"insurer":           insurer,
+		"policy_start_date": contractDate(policyStartDate),
+		"policy_end_date":   contractDate(policyEndDate),
+		"broker_company":    brokerCompany,
+		"broker_producer":   brokerProducer,
+	}
+	if !requiresPolicy {
+		operationTypeDisplay = "Não se aplica"
+		insuranceData = map[string]any{
+			"insurer":           "Não se aplica",
+			"policy_start_date": "Não se aplica",
+			"policy_end_date":   "Não se aplica",
+			"broker_company":    "",
+			"broker_producer":   "",
+		}
+	}
 	data := Data{
 		"client": map[string]any{
 			"legal_name": legalName,
@@ -145,15 +164,9 @@ func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID stri
 		},
 		"pricing": pricingData.Prices,
 		"operation": map[string]any{
-			"type": contractOperationTypeLabel(operationType),
+			"type": operationTypeDisplay,
 		},
-		"insurance": map[string]any{
-			"insurer":           insurer,
-			"policy_start_date": contractDate(policyStartDate),
-			"policy_end_date":   contractDate(policyEndDate),
-			"broker_company":    brokerCompany,
-			"broker_producer":   brokerProducer,
-		},
+		"insurance": insuranceData,
 		"viagate": map[string]any{
 			"legal_name": g.company.LegalName,
 			"cnpj":       brfields.FormatCNPJ(g.company.CNPJ),

@@ -75,6 +75,7 @@ func TestProposalDraftOwnershipAndAudit(t *testing.T) {
 			minimum_invoice numeric(14,2) not null default 0,
 			setup_fee numeric(14,2) not null default 0,
 			content_hash bytea not null,
+			requires_policy boolean not null default false,
 			published_at timestamptz,
 			created_by uuid not null,
 			updated_by uuid,

@@ -123,6 +123,14 @@ func (a *App) saveOnboarding(w http.ResponseWriter, r *http.Request) {
 	current.CompanyResponsibleEmail = strings.TrimSpace(strings.ToLower(r.FormValue("responsible_email")))
 	current.CompanyResponsibleRole = strings.TrimSpace(r.FormValue("responsible_role"))
 	current.AuthorityDeclared = r.FormValue("responsible_authority") == "1"
+	if !current.RequiresPolicy {
+		current.OperationType = ""
+		current.Insurer = ""
+		current.PolicyStartDate = ""
+		current.PolicyEndDate = ""
+		current.BrokerCompany = ""
+		current.BrokerProducer = ""
+	}
 
 	if validationError := validateOnboarding(current); validationError != "" {
 		a.renderContractingError(w, r, current, validationError)
@@ -143,22 +151,27 @@ func validateOnboarding(current domain.Onboarding) string {
 	if _, err := mail.ParseAddress(current.CompanyResponsibleEmail); err != nil {
 		return "O e-mail do responsável é inválido."
 	}
-	if _, valid := normalizeOperationType(current.OperationType); !valid {
-		return "Volte à etapa Seguro, selecione o tipo de operação e salve os dados antes de gerar o contrato."
-	}
 	if len(current.State) != 2 {
 		return "UF inválida."
 	}
-	if current.PolicyStartDate == "" || current.PolicyEndDate == "" {
-		return "Informe a vigência da apólice."
-	}
-	start, err1 := time.Parse("2006-01-02", current.PolicyStartDate)
-	end, err2 := time.Parse("2006-01-02", current.PolicyEndDate)
-	if err1 != nil || err2 != nil {
-		return "A vigência da apólice é inválida."
-	}
-	if end.Before(start) {
-		return "O fim da vigência da apólice não pode ser anterior ao início."
+	if current.RequiresPolicy {
+		if _, valid := normalizeOperationType(current.OperationType); !valid {
+			return "Volte à etapa Seguro, selecione o tipo de operação e salve os dados antes de gerar o contrato."
+		}
+		if current.Insurer == "" {
+			return "Informe a seguradora."
+		}
+		if current.PolicyStartDate == "" || current.PolicyEndDate == "" {
+			return "Informe a vigência da apólice."
+		}
+		start, err1 := time.Parse("2006-01-02", current.PolicyStartDate)
+		end, err2 := time.Parse("2006-01-02", current.PolicyEndDate)
+		if err1 != nil || err2 != nil {
+			return "A vigência da apólice é inválida."
+		}
+		if end.Before(start) {
+			return "O fim da vigência da apólice não pode ser anterior ao início."
+		}
 	}
 	return ""
 }
@@ -199,6 +212,10 @@ func (a *App) uploadOnboardingDocument(w http.ResponseWriter, r *http.Request) {
 	}
 	if current.Status != "pending" && current.Status != "in_progress" && current.Status != "correction_requested" {
 		http.Error(w, "documentos bloqueados após o envio do cadastro", http.StatusConflict)
+		return
+	}
+	if !current.RequiresPolicy {
+		http.Error(w, "Esta contratação não exige apólice.", http.StatusConflict)
 		return
 	}
 	if err := a.storeInsurancePolicyFromRequest(r, current.ID); err != nil {

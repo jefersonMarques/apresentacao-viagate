@@ -9,9 +9,10 @@ func TestValidateSectionItemsRequiresGoodsAndUsers(t *testing.T) {
 		profile Profile
 		wantErr bool
 	}{
-		{name: "goods empty", section: "goods", profile: Profile{}, wantErr: true},
-		{name: "goods blank", section: "goods", profile: Profile{Goods: []string{" "}}, wantErr: true},
-		{name: "goods valid", section: "goods", profile: Profile{Goods: []string{"Queijos"}}, wantErr: false},
+		{name: "goods not required", section: "goods", profile: Profile{}, wantErr: true},
+		{name: "goods empty", section: "goods", profile: Profile{RequiresPolicy: true}, wantErr: true},
+		{name: "goods blank", section: "goods", profile: Profile{RequiresPolicy: true, Goods: []string{" "}}, wantErr: true},
+		{name: "goods valid", section: "goods", profile: Profile{RequiresPolicy: true, Goods: []string{"Queijos"}}, wantErr: false},
 		{name: "users empty", section: "users", profile: Profile{}, wantErr: true},
 		{name: "users missing email", section: "users", profile: Profile{SystemUsers: []SystemUser{{Name: "Maria"}}}, wantErr: true},
 		{name: "users valid", section: "users", profile: Profile{SystemUsers: []SystemUser{{Name: "Maria", Email: "maria@example.com"}}}, wantErr: false},
