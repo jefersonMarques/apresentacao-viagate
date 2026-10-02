@@ -155,7 +155,7 @@ func TestSoftDeleteCascadePreservesSignedEvidence(t *testing.T) {
 
 	if _, err := pool.Exec(ctx, `
 		create or replace function prevent_proposal_acceptance_mutation()
-		returns trigger language plpgsql as $
+		returns trigger language plpgsql as $acceptance$
 		begin
 			if tg_op = 'DELETE' then
 				raise exception 'proposal acceptances are immutable';
@@ -165,7 +165,7 @@ func TestSoftDeleteCascadePreservesSignedEvidence(t *testing.T) {
 			end if;
 			return new;
 		end;
-		$;
+		$acceptance$;
 		create trigger proposal_acceptances_immutable
 		before update or delete on proposal_acceptances
 		for each row execute function prevent_proposal_acceptance_mutation();
