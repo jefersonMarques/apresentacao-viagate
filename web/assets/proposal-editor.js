@@ -295,13 +295,72 @@
     if (typeof HTMLDialogElement === 'undefined' || !(dialog instanceof HTMLDialogElement)) return;
 
     const status = dialog.querySelector('[data-proposal-share-status]');
+    const templateSelect = dialog.querySelector('[data-proposal-email-template]');
     const setStatus = (message, state = '') => {
       if (!status) return;
       status.textContent = message;
       status.dataset.state = state;
     };
 
-    const fullURL = (path) => new URL(path, window.location.origin).toString();
+    const selectedTemplateID = () => (
+      templateSelect instanceof HTMLSelectElement ? templateSelect.value : ''
+    );
+
+    const loadEmailDraft = async (button) => {
+      const endpoint = button?.getAttribute('data-endpoint');
+      if (!endpoint) throw new Error('Endpoint de e-mail indisponível.');
+
+      const url = new URL(endpoint, window.location.origin);
+      const templateID = selectedTemplateID();
+      if (templateID) url.searchParams.set('template', templateID);
+
+      const response = await fetch(url.toString(), {
+        method: 'GET',
+        credentials: 'same-origin',
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'ViaGate-Proposal-Email-Draft',
+        },
+      });
+      if (!response.ok) {
+        const detail = (await response.text()).trim();
+        throw new Error(detail || 'Não foi possível preparar o e-mail.');
+      }
+      return response.json();
+    };
+
+    const copyRichEmail = async (htmlBody, textBody) => {
+      if (navigator.clipboard?.write && window.ClipboardItem && window.isSecureContext) {
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            'text/html': new Blob([htmlBody], { type: 'text/html' }),
+            'text/plain': new Blob([textBody], { type: 'text/plain' }),
+          }),
+        ]);
+        return 'html';
+      }
+
+      const container = document.createElement('div');
+      container.contentEditable = 'true';
+      container.style.position = 'fixed';
+      container.style.left = '-10000px';
+      container.style.top = '0';
+      container.innerHTML = htmlBody;
+      document.body.appendChild(container);
+
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(container);
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      const copied = document.execCommand('copy');
+      selection?.removeAllRanges();
+      container.remove();
+
+      if (copied) return 'html';
+      if (await window.ViaGate?.copyText?.(textBody)) return 'text';
+      throw new Error('Área de transferência indisponível.');
+    };
 
     dialog.querySelectorAll('[data-proposal-share-close]').forEach((button) => {
       button.addEventListener('click', () => dialog.close());
@@ -311,23 +370,25 @@
       if (event.target === dialog) dialog.close();
     });
 
+    templateSelect?.addEventListener('change', () => setStatus(''));
+
     const copyButton = dialog.querySelector('[data-proposal-share-copy]');
     copyButton?.addEventListener('click', async () => {
-      const path = copyButton.getAttribute('data-share-path');
-      if (!path) return;
+      const url = copyButton.getAttribute('data-share-url');
+      if (!url) return;
       try {
-        await window.ViaGate?.copyText?.(fullURL(path));
-        setStatus('Link copiado.', 'success');
+        const copied = await window.ViaGate?.copyText?.(url);
+        if (!copied) throw new Error('clipboard unavailable');
+        setStatus('Link público copiado.', 'success');
       } catch (_) {
-        setStatus('Não foi possível copiar o link.', 'error');
+        window.prompt('Copie o link:', url);
       }
     });
 
     const shareButton = dialog.querySelector('[data-proposal-share-native]');
     shareButton?.addEventListener('click', async () => {
-      const path = shareButton.getAttribute('data-share-path');
-      if (!path) return;
-      const url = fullURL(path);
+      const url = shareButton.getAttribute('data-share-url');
+      if (!url) return;
       const title = shareButton.getAttribute('data-share-title') || 'Proposta ViaGate';
 
       if (navigator.share) {
@@ -345,44 +406,62 @@
       }
 
       try {
-        await window.ViaGate?.copyText?.(url);
+        const copied = await window.ViaGate?.copyText?.(url);
+        if (!copied) throw new Error('clipboard unavailable');
         setStatus('Compartilhamento nativo indisponível. Link copiado.', 'success');
       } catch (_) {
-        setStatus('Não foi possível compartilhar o link.', 'error');
+        window.prompt('Copie o link:', url);
       }
     });
 
-    const emailButton = dialog.querySelector('[data-proposal-share-email]');
-    emailButton?.addEventListener('click', async () => {
-      if (!(emailButton instanceof HTMLButtonElement) || emailButton.disabled) return;
-      const endpoint = emailButton.dataset.endpoint;
-      if (!endpoint) return;
+    const openEmailButton = dialog.querySelector('[data-proposal-share-email-open]');
+    openEmailButton?.addEventListener('click', async () => {
+      if (!(openEmailButton instanceof HTMLButtonElement) || openEmailButton.disabled) return;
 
-      const original = emailButton.textContent;
-      emailButton.disabled = true;
-      emailButton.textContent = 'Agendando envio...';
+      const original = openEmailButton.textContent;
+      openEmailButton.disabled = true;
+      openEmailButton.textContent = 'Preparando...';
       setStatus('');
 
       try {
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: {
-            'Accept': 'application/json',
-            'X-Requested-With': 'ViaGate-Proposal-Share',
-          },
-        });
-        if (!response.ok) {
-          const detail = (await response.text()).trim();
-          throw new Error(detail || 'Não foi possível enviar o e-mail.');
-        }
-        const payload = await response.json();
-        emailButton.textContent = 'E-mail na fila';
-        setStatus(payload.message || 'E-mail adicionado à fila de envio.', 'success');
+        const draft = await loadEmailDraft(openEmailButton);
+        const query = new URLSearchParams();
+        if (draft.subject) query.set('subject', draft.subject);
+        if (draft.text_body) query.set('body', draft.text_body);
+        const recipient = String(draft.to || '').trim();
+        const mailto = `mailto:${encodeURIComponent(recipient)}?${query.toString()}`;
+        window.location.href = mailto;
+        setStatus('Cliente de e-mail aberto. Para manter o layout da marca, use “Copiar e-mail em HTML” e cole no corpo da mensagem.', 'success');
       } catch (error) {
-        emailButton.disabled = false;
-        emailButton.textContent = original;
-        setStatus(error?.message || 'Não foi possível agendar o e-mail.', 'error');
+        setStatus(error?.message || 'Não foi possível preparar o e-mail.', 'error');
+      } finally {
+        openEmailButton.disabled = false;
+        openEmailButton.textContent = original;
+      }
+    });
+
+    const copyEmailButton = dialog.querySelector('[data-proposal-share-email-copy]');
+    copyEmailButton?.addEventListener('click', async () => {
+      if (!(copyEmailButton instanceof HTMLButtonElement) || copyEmailButton.disabled) return;
+
+      const original = copyEmailButton.textContent;
+      copyEmailButton.disabled = true;
+      copyEmailButton.textContent = 'Preparando HTML...';
+      setStatus('');
+
+      try {
+        const draft = await loadEmailDraft(copyEmailButton);
+        const copiedFormat = await copyRichEmail(draft.html_body || '', draft.text_body || '');
+        if (copiedFormat === 'html') {
+          setStatus('E-mail em HTML copiado. Abra uma nova mensagem no Outlook e cole no corpo do e-mail.', 'success');
+        } else {
+          setStatus('O navegador não permitiu HTML; a versão em texto foi copiada.', 'success');
+        }
+      } catch (error) {
+        setStatus(error?.message || 'Não foi possível copiar o e-mail.', 'error');
+      } finally {
+        copyEmailButton.disabled = false;
+        copyEmailButton.textContent = original;
       }
     });
 
