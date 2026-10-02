@@ -92,6 +92,11 @@ jobs:
           RUN_DB_INTEGRATION: '1'
         run: go test ./internal/proposals -run TestProposalDraftOwnershipAndAudit -count=1
 
+      - name: Test migration 000029 with published proposal versions
+        env:
+          RUN_DB_INTEGRATION: '1'
+        run: go test ./internal/platform/database -run TestMigration000029PreservesPublishedProposalVersions -count=1
+
       - name: Test notification scopes
         env:
           RUN_DB_INTEGRATION: '1'
