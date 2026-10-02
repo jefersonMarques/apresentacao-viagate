@@ -11,15 +11,23 @@ func ActivationCanEdit(access activation.Access, section string) bool {
 	if access.Profile.Status == "completed" || access.Profile.Status == "under_internal_setup" || access.Profile.Status == "activated" {
 		return false
 	}
+	if (section == "policy" || section == "goods") && !access.Profile.RequiresPolicy {
+		return false
+	}
 	return access.Section == "all" || access.Section == section
 }
 
 func ActivationComplete(profile activation.Profile) bool {
-	return profile.HasPolicy &&
-		strings.TrimSpace(profile.FinanceResponsibleName) != "" &&
+	financeComplete := strings.TrimSpace(profile.FinanceResponsibleName) != "" &&
 		strings.TrimSpace(profile.FinanceResponsibleEmail) != "" &&
-		strings.TrimSpace(profile.FinanceResponsiblePhone) != "" &&
-		len(profile.Goods) > 0 && len(profile.SystemUsers) > 0
+		strings.TrimSpace(profile.FinanceResponsiblePhone) != ""
+	if !financeComplete || len(profile.SystemUsers) == 0 {
+		return false
+	}
+	if !profile.RequiresPolicy {
+		return true
+	}
+	return profile.HasPolicy && len(profile.Goods) > 0
 }
 
 func ActivationContractSigned(profile activation.Profile) bool {
