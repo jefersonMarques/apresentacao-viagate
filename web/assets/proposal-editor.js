@@ -329,39 +329,6 @@
       return response.json();
     };
 
-    const copyRichEmail = async (htmlBody, textBody) => {
-      if (navigator.clipboard?.write && window.ClipboardItem && window.isSecureContext) {
-        await navigator.clipboard.write([
-          new ClipboardItem({
-            'text/html': new Blob([htmlBody], { type: 'text/html' }),
-            'text/plain': new Blob([textBody], { type: 'text/plain' }),
-          }),
-        ]);
-        return 'html';
-      }
-
-      const container = document.createElement('div');
-      container.contentEditable = 'true';
-      container.style.position = 'fixed';
-      container.style.left = '-10000px';
-      container.style.top = '0';
-      container.innerHTML = htmlBody;
-      document.body.appendChild(container);
-
-      const selection = window.getSelection();
-      const range = document.createRange();
-      range.selectNodeContents(container);
-      selection?.removeAllRanges();
-      selection?.addRange(range);
-      const copied = document.execCommand('copy');
-      selection?.removeAllRanges();
-      container.remove();
-
-      if (copied) return 'html';
-      if (await window.ViaGate?.copyText?.(textBody)) return 'text';
-      throw new Error('Área de transferência indisponível.');
-    };
-
     dialog.querySelectorAll('[data-proposal-share-close]').forEach((button) => {
       button.addEventListener('click', () => dialog.close());
     });
@@ -451,7 +418,7 @@
 
       try {
         const draft = await loadEmailDraft(copyEmailButton);
-        const copiedFormat = await copyRichEmail(draft.html_body || '', draft.text_body || '');
+        const copiedFormat = await window.ViaGate?.copyRichHTML?.(draft.html_body || '', draft.text_body || '');
         if (copiedFormat === 'html') {
           setStatus('E-mail em HTML copiado. Abra uma nova mensagem no Outlook e cole no corpo do e-mail.', 'success');
         } else {

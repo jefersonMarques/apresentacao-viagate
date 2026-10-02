@@ -25,6 +25,40 @@
     return fallbackCopy(value);
   }
 
+
+  async function copyRichHTML(htmlBody, textBody = '') {
+    if (navigator.clipboard?.write && window.ClipboardItem && window.isSecureContext) {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/html': new Blob([htmlBody], { type: 'text/html' }),
+          'text/plain': new Blob([textBody], { type: 'text/plain' }),
+        }),
+      ]);
+      return 'html';
+    }
+
+    const container = document.createElement('div');
+    container.contentEditable = 'true';
+    container.style.position = 'fixed';
+    container.style.left = '-10000px';
+    container.style.top = '0';
+    container.innerHTML = htmlBody;
+    document.body.appendChild(container);
+
+    const selection = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(container);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    const copied = document.execCommand('copy');
+    selection?.removeAllRanges();
+    container.remove();
+
+    if (copied) return 'html';
+    if (await copyText(textBody)) return 'text';
+    throw new Error('Área de transferência indisponível.');
+  }
+
   function ensureActionFeedback() {
     let root = document.querySelector('[data-action-feedback]');
     if (root) return root;
@@ -217,6 +251,7 @@
 
   window.ViaGate = Object.assign(window.ViaGate || {}, {
     copyText,
+    copyRichHTML,
     actionFeedback,
     downloadWithFeedback,
   });

@@ -2,10 +2,11 @@ package templates
 
 import (
 	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/emailtemplates"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/presentations"
 )
 
-templ ProposalListPage(user domain.User, items []domain.Proposal, defaultProposals []domain.Proposal, message string) {
+templ ProposalListPage(user domain.User, items []domain.Proposal, defaultProposals []domain.Proposal, emailTemplateItems []emailtemplates.Template, message string) {
 	@AdminLayout("ViaGate — Propostas", user) {
 		@AdminPageHeader("PROPOSTAS", "Propostas comerciais", "Defina propostas como padrão para disponibilizá-las como modelos na criação de novas propostas.") {
 			if UserCan(user, "proposal.create") {
@@ -133,6 +134,15 @@ templ ProposalListPage(user domain.User, items []domain.Proposal, defaultProposa
 													data-proposal-client={ item.ClientName }
 												>Excluir proposta</button>
 											}
+											if item.Status == "published" && item.PublicToken != "" && UserCan(user, "proposal.create") && len(emailTemplateItems) > 0 {
+												<button
+													type="button"
+													data-proposal-email-copy-open
+													data-proposal-id={ item.ID }
+													data-proposal-title={ item.Title }
+													data-proposal-client={ item.ClientName }
+												>Copiar para e-mail</button>
+											}
 											if item.PublicToken != "" {
 												<a
 													href={ templ.SafeURL("/admin/proposals?pdf=" + item.ID) }
@@ -153,6 +163,49 @@ templ ProposalListPage(user domain.User, items []domain.Proposal, defaultProposa
 				}
 			</div>
 		</section>
+
+		if UserCan(user, "proposal.create") && len(emailTemplateItems) > 0 {
+			<dialog class="proposal-email-copy-dialog" data-proposal-email-copy-dialog aria-labelledby="proposal-email-copy-title">
+				<div class="proposal-email-copy-card">
+					<header class="proposal-email-copy-head">
+						<div>
+							<span class="eyebrow">COPIAR PARA E-MAIL</span>
+							<h2 id="proposal-email-copy-title">Escolha o modelo</h2>
+							<p><strong data-proposal-email-copy-name>Proposta</strong><span data-proposal-email-copy-client></span></p>
+						</div>
+						<button type="button" class="proposal-source-close" data-proposal-email-copy-close aria-label="Fechar">×</button>
+					</header>
+					<div class="proposal-email-copy-body">
+						<div class="proposal-email-copy-options">
+							for _, emailTemplate := range emailTemplateItems {
+								<label class="proposal-email-copy-option">
+									<input
+										type="radio"
+										name="proposal_email_template"
+										value={ emailTemplate.ID }
+										checked?={ emailTemplate.IsDefault }
+									/>
+									<span>
+										<strong>{ emailTemplate.Name }</strong>
+										if emailTemplate.Description != "" {
+											<small>{ emailTemplate.Description }</small>
+										}
+										if emailTemplate.IsDefault {
+											<em>Padrão</em>
+										}
+									</span>
+								</label>
+							}
+						</div>
+						<div class="proposal-email-copy-status" data-proposal-email-copy-status aria-live="polite"></div>
+						<div class="proposal-email-copy-actions">
+							<button class="btn" type="button" data-proposal-email-copy-close>Cancelar</button>
+							<button class="btn primary" type="button" data-proposal-email-copy-submit>Copiar HTML para e-mail</button>
+						</div>
+					</div>
+				</div>
+			</dialog>
+		}
 
 		if HasRole(user, "super_admin") {
 			<dialog class="proposal-delete-dialog" data-proposal-delete-dialog aria-labelledby="proposal-delete-title">
