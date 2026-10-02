@@ -98,17 +98,20 @@ func TestMigration000029PreservesPublishedProposalVersions(t *testing.T) {
 	)
 
 	createdAt := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
-	if _, err := pool.Exec(ctx, `
-		insert into users(id) values($1),($2);
-		insert into proposals(id,created_by) values($3,$1);
-		insert into proposal_versions(id,proposal_id,created_by,created_at,published_at)
-		values
-			($4,$3,$1,$6,now()),
-			($5,$3,$1,$6,null);
-		insert into proposal_acceptances(id,evidence_value)
-		values($7,'original');
-	`, ownerID, editorID, proposalID, publishedID, draftID, createdAt, acceptID); err != nil {
-		t.Fatalf("seed migration scenario: %v", err)
+	seedStatements := []struct {
+		query string
+		args  []any
+	}{
+		{`insert into users(id) values($1),($2)`, []any{ownerID, editorID}},
+		{`insert into proposals(id,created_by) values($1,$2)`, []any{proposalID, ownerID}},
+		{`insert into proposal_versions(id,proposal_id,created_by,created_at,published_at) values($1,$2,$3,$4,now())`, []any{publishedID, proposalID, ownerID, createdAt}},
+		{`insert into proposal_versions(id,proposal_id,created_by,created_at,published_at) values($1,$2,$3,$4,null)`, []any{draftID, proposalID, ownerID, createdAt}},
+		{`insert into proposal_acceptances(id,evidence_value) values($1,'original')`, []any{acceptID}},
+	}
+	for _, statement := range seedStatements {
+		if _, err := pool.Exec(ctx, statement.query, statement.args...); err != nil {
+			t.Fatalf("seed migration scenario: %v", err)
+		}
 	}
 
 	_, currentFile, _, ok := runtime.Caller(0)
