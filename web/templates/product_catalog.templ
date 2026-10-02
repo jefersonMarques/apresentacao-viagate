@@ -364,6 +364,11 @@ templ CatalogProductFields(categories []catalog.ManagedCategory, product catalog
 			<input type="checkbox" name="is_active" value="1" checked?={ product.IsActive }/>
 			<span>Produto ativo</span>
 		</label>
+		<label class="catalog-check full">
+			<input type="checkbox" name="requires_policy" value="1" checked?={ product.RequiresPolicy }/>
+			<span>Exigir apólice</span>
+			<small>Quando este produto estiver incluído na proposta, a contratação exigirá a apólice e o cadastro das mercadorias transportadas.</small>
+		</label>
 	</div>
 
 	<details class="catalog-dependencies" open?={ len(product.DependencyGroups) > 0 }>
