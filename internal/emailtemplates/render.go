@@ -22,6 +22,7 @@ var allowedVariables = []string{
 	"contact.name",
 	"contact.role",
 	"contact.email",
+	"contact.greeting",
 	"contact.phone",
 	"proposal.title",
 	"proposal.url",
@@ -97,8 +98,10 @@ func Render(template Template, variables map[string]string) (Draft, error) {
 		htmlBody = strings.ReplaceAll(htmlBody, token, html.EscapeString(value))
 	}
 
+	subject = strings.Join(strings.Fields(subject), " ")
+
 	return Draft{
-		Subject:  strings.TrimSpace(subject),
+		Subject:  subject,
 		HTMLBody: strings.TrimSpace(htmlBody),
 		TextBody: strings.TrimSpace(textBody),
 	}, nil
