@@ -230,9 +230,9 @@ func (a *App) setDefaultProposal(w http.ResponseWriter, r *http.Request) {
 	var err error
 	switch action {
 	case "", "set":
-		err = a.proposalStore.SetDefault(r.Context(), proposalID)
+		err = a.proposalStore.SetDefault(r.Context(), proposalID, user.ID)
 	case "clear":
-		err = a.proposalStore.ClearDefault(r.Context(), proposalID)
+		err = a.proposalStore.ClearDefault(r.Context(), proposalID, user.ID)
 	default:
 		http.Error(w, "ação inválida", http.StatusBadRequest)
 		return
