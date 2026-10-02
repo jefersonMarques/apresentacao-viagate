@@ -115,6 +115,7 @@ func (a *App) saveProductItem(w http.ResponseWriter, r *http.Request) {
 		strings.TrimSpace(r.FormValue("description")),
 		strings.TrimSpace(r.FormValue("unit")),
 		r.FormValue("is_active") == "1",
+		r.FormValue("requires_policy") == "1",
 		sortOrder,
 		dependencies,
 	)
