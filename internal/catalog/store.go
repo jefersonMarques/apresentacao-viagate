@@ -238,7 +238,7 @@ func (s *Store) ProductForProposal(ctx context.Context, code, proposalID string)
 			c.id::text,c.code,c.name,coalesce(c.description,''),c.is_active,
 			c.archived_at is not null,c.deleted_at is not null,c.sort_order,
 			p.id::text,p.category_id::text,p.code,p.name,coalesce(p.description,''),coalesce(p.unit,''),
-			p.is_active,p.archived_at is not null,p.deleted_at is not null,p.sort_order
+			p.is_active,p.requires_policy,p.archived_at is not null,p.deleted_at is not null,p.sort_order
 		from products p
 		join product_categories c on c.id=p.category_id
 		where p.code=$1
@@ -274,6 +274,7 @@ func (s *Store) ProductForProposal(ctx context.Context, code, proposalID string)
 		&product.Description,
 		&product.Unit,
 		&product.IsActive,
+		&product.RequiresPolicy,
 		&product.IsArchived,
 		&product.IsDeleted,
 		&product.SortOrder,
