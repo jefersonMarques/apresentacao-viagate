@@ -2,7 +2,8 @@
   const root = document.querySelector('[data-contracting-wizard]');
   if (!root) return;
 
-  const steps = ['company', 'insurance', 'review'];
+  const requiresPolicy = root.getAttribute('data-requires-policy') === 'true';
+  const steps = requiresPolicy ? ['company', 'insurance', 'review'] : ['company', 'review'];
   const panels = new Map(steps.map((step) => [step, root.querySelector(`[data-contracting-step="${step}"]`)]));
   const links = new Map(steps.map((step) => [step, root.querySelector(`[data-contracting-step-link="${step}"]`)]));
   const params = new URL(window.location.href).searchParams;
@@ -20,6 +21,7 @@
   }
 
   function insuranceComplete() {
+    if (!requiresPolicy) return true;
     return insurancePersistedReady &&
       !insuranceDirty &&
       ['operation_type', 'insurer', 'policy_start_date', 'policy_end_date'].every((name) => fieldValue(name));
@@ -27,7 +29,7 @@
 
   function resolveStep(step) {
     if (step === 'insurance' && !companyComplete()) return 'company';
-    if (step === 'review' && !insuranceComplete()) return companyComplete() ? 'insurance' : 'company';
+    if (step === 'review' && !insuranceComplete()) return requiresPolicy && companyComplete() ? 'insurance' : 'company';
     return step;
   }
 
@@ -35,7 +37,7 @@
     const requested = params.get('step');
     if (steps.includes(requested)) return resolveStep(requested);
     const saved = params.get('saved');
-    if (saved === 'company') return 'insurance';
+    if (saved === 'company') return requiresPolicy ? 'insurance' : 'review';
     if (saved === 'insurance') return insuranceComplete() ? 'review' : 'insurance';
     if (!companyComplete()) return 'company';
     if (!insuranceComplete()) return 'insurance';
