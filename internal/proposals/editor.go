@@ -128,8 +128,8 @@ func (s *Store) SaveDraft(ctx context.Context, userID string, allowAll bool, inp
 			}
 		}
 		if err := tx.QueryRow(ctx, `
-			insert into proposals(client_id,title,status,valid_until,created_by)
-			values($1,$2,'draft',$3,$4) returning id::text
+			insert into proposals(client_id,title,status,valid_until,created_by,updated_by)
+			values($1,$2,'draft',$3,$4,$4) returning id::text
 		`, clientID, input.Title, input.ValidUntil, userID).Scan(&input.ProposalID); err != nil {
 			return SavedDraft{}, fmt.Errorf("create proposal: %w", err)
 		}
@@ -167,7 +167,7 @@ func (s *Store) SaveDraft(ctx context.Context, userID string, allowAll bool, inp
 		); err != nil {
 			return SavedDraft{}, err
 		}
-		if _, err := tx.Exec(ctx, `update proposals set title=$2,valid_until=$3,updated_at=now() where id=$1 and deleted_at is null`, input.ProposalID, input.Title, input.ValidUntil); err != nil {
+		if _, err := tx.Exec(ctx, `update proposals set title=$2,valid_until=$3,updated_by=$4,updated_at=now() where id=$1 and deleted_at is null`, input.ProposalID, input.Title, input.ValidUntil, userID); err != nil {
 			return SavedDraft{}, err
 		}
 	}
@@ -182,20 +182,23 @@ func (s *Store) SaveDraft(ctx context.Context, userID string, allowAll bool, inp
 	}
 
 	var draft SavedDraft
+	var previousHash []byte
+	draftCreated := false
 	err = tx.QueryRow(ctx, `
-		select id::text,version_number,public_token::text
+		select id::text,version_number,public_token::text,content_hash
 		from proposal_versions
 		where proposal_id=$1 and published_at is null
 		order by version_number desc limit 1 for update
-	`, input.ProposalID).Scan(&draft.VersionID, &draft.VersionNumber, &draft.PublicToken)
+	`, input.ProposalID).Scan(&draft.VersionID, &draft.VersionNumber, &draft.PublicToken, &previousHash)
 	if err == pgx.ErrNoRows {
+		draftCreated = true
 		err = tx.QueryRow(ctx, `select coalesce(max(version_number),0)+1 from proposal_versions where proposal_id=$1`, input.ProposalID).Scan(&draft.VersionNumber)
 		if err != nil {
 			return SavedDraft{}, err
 		}
 		err = tx.QueryRow(ctx, `
-			insert into proposal_versions(proposal_id,version_number,pricing_model,content,conditions,minimum_invoice,setup_fee,content_hash,created_by)
-			values($1,$2,$3,$4,$5,$6,$7,$8,$9)
+			insert into proposal_versions(proposal_id,version_number,pricing_model,content,conditions,minimum_invoice,setup_fee,content_hash,created_by,updated_by)
+			values($1,$2,$3,$4,$5,$6,$7,$8,$9,$9)
 			returning id::text,public_token::text
 		`, input.ProposalID, draft.VersionNumber, input.PricingModel, contentJSON, conditionsJSON, input.MinimumInvoice, input.SetupFee, input.ContentHash, userID).Scan(&draft.VersionID, &draft.PublicToken)
 		if err != nil {
@@ -205,9 +208,11 @@ func (s *Store) SaveDraft(ctx context.Context, userID string, allowAll bool, inp
 		return SavedDraft{}, err
 	} else {
 		if _, err := tx.Exec(ctx, `
-			update proposal_versions set pricing_model=$2,content=$3,conditions=$4,minimum_invoice=$5,setup_fee=$6,content_hash=$7
+			update proposal_versions
+			set pricing_model=$2,content=$3,conditions=$4,minimum_invoice=$5,setup_fee=$6,content_hash=$7,
+			    updated_by=$8,updated_at=now()
 			where id=$1 and published_at is null
-		`, draft.VersionID, input.PricingModel, contentJSON, conditionsJSON, input.MinimumInvoice, input.SetupFee, input.ContentHash); err != nil {
+		`, draft.VersionID, input.PricingModel, contentJSON, conditionsJSON, input.MinimumInvoice, input.SetupFee, input.ContentHash, userID); err != nil {
 			return SavedDraft{}, err
 		}
 		if _, err := tx.Exec(ctx, `delete from proposal_items where proposal_version_id=$1`, draft.VersionID); err != nil {
@@ -231,6 +236,34 @@ func (s *Store) SaveDraft(ctx context.Context, userID string, allowAll bool, inp
 			return SavedDraft{}, err
 		}
 	}
+	previousHashText := ""
+	if len(previousHash) > 0 {
+		previousHashText = fmt.Sprintf("%x", previousHash)
+	}
+	if _, err := tx.Exec(ctx, `
+		insert into audit_events(actor_user_id,event_type,resource_type,resource_id,metadata)
+		values(
+			$1,'proposal.draft_saved','proposal',$2,
+			jsonb_build_object(
+				'version',$3::integer,
+				'version_id',$4::uuid,
+				'draft_created',$5::boolean,
+				'previous_hash',nullif($6::text,''),
+				'current_hash',$7::text
+			)
+		)
+	`,
+		userID,
+		input.ProposalID,
+		draft.VersionNumber,
+		draft.VersionID,
+		draftCreated,
+		previousHashText,
+		fmt.Sprintf("%x", input.ContentHash),
+	); err != nil {
+		return SavedDraft{}, fmt.Errorf("record proposal draft audit: %w", err)
+	}
+
 	draft.ProposalID = input.ProposalID
 	if err := tx.QueryRow(ctx, `
 		select coalesce(v.public_token::text,'')
@@ -271,10 +304,10 @@ func (s *Store) Publish(ctx context.Context, userID string, allowAll bool, versi
 	if status == "accepted" || status == "cancelled" {
 		return "", fmt.Errorf("proposal cannot be published in its current state")
 	}
-	if _, err := tx.Exec(ctx, `update proposal_versions set published_at=now() where id=$1`, versionID); err != nil {
+	if _, err := tx.Exec(ctx, `update proposal_versions set published_at=now(),updated_by=$2,updated_at=now() where id=$1`, versionID, userID); err != nil {
 		return "", err
 	}
-	if _, err := tx.Exec(ctx, `update proposals set status='published',current_version=$2,updated_at=now() where id=$1 and deleted_at is null`, proposalID, versionNumber); err != nil {
+	if _, err := tx.Exec(ctx, `update proposals set status='published',current_version=$2,updated_by=$3,updated_at=now() where id=$1 and deleted_at is null`, proposalID, versionNumber, userID); err != nil {
 		return "", err
 	}
 	if _, err := tx.Exec(ctx, `insert into audit_events(actor_user_id,event_type,resource_type,resource_id,metadata) values($1,'proposal.published','proposal',$2,jsonb_build_object('version',$3::integer,'version_id',$4::uuid))`, userID, proposalID, versionNumber, versionID); err != nil {

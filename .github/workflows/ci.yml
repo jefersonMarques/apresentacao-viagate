@@ -87,6 +87,11 @@ jobs:
           RUN_DB_INTEGRATION: '1'
         run: go test ./internal/proposals -run TestSoftDeleteCascadePreservesSignedEvidence -count=1
 
+      - name: Test proposal ownership audit
+        env:
+          RUN_DB_INTEGRATION: '1'
+        run: go test ./internal/proposals -run TestProposalDraftOwnershipAndAudit -count=1
+
       - name: Test notification scopes
         env:
           RUN_DB_INTEGRATION: '1'

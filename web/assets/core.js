@@ -1,7 +1,7 @@
 (() => {
   const feedbackStyles = document.createElement('link');
   feedbackStyles.rel = 'stylesheet';
-  feedbackStyles.href = '/assets/action-feedback.css';
+  feedbackStyles.href = '/commercial-assets/action-feedback.css';
   document.head.appendChild(feedbackStyles);
 
   function fallbackCopy(value) {
@@ -109,6 +109,7 @@
       element.querySelector('[data-action-feedback-title]').textContent = title;
       element.querySelector('[data-action-feedback-message]').textContent = message;
       setProgress(8);
+      document.documentElement.classList.add('action-feedback-active');
       window.requestAnimationFrame(() => element.classList.add('is-visible'));
 
       timer = window.setInterval(() => {
@@ -149,6 +150,7 @@
       stopTimer();
       const element = root();
       element.classList.remove('is-visible');
+      document.documentElement.classList.remove('action-feedback-active');
       window.setTimeout(() => {
         element.dataset.state = 'working';
         setProgress(0);

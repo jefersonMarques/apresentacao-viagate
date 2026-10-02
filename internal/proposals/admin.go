@@ -10,10 +10,12 @@ import (
 func (s *Store) List(ctx context.Context, userID string, all bool) ([]domain.Proposal, error) {
 	query := `
 		select p.id::text,p.client_id::text,coalesce(nullif(c.trade_name,''),nullif(c.legal_name,''),'Cliente não identificado'),p.title,p.status::text,p.current_version,
-		       coalesce(v.public_token::text,''),p.is_default,p.valid_until,p.created_by::text,u.name,p.updated_at
+		       coalesce(v.public_token::text,''),p.is_default,p.valid_until,p.created_by::text,u.name,
+		       coalesce(p.updated_by::text,p.created_by::text),coalesce(editor.name,u.name),p.updated_at
 		from proposals p
 		join clients c on c.id=p.client_id
 		join users u on u.id=p.created_by
+		left join users editor on editor.id=p.updated_by
 		left join proposal_versions v on v.proposal_id=p.id and v.version_number=p.current_version and v.published_at is not null
 	`
 	query += ` where p.deleted_at is null`
@@ -43,10 +45,12 @@ func (s *Store) List(ctx context.Context, userID string, all bool) ([]domain.Pro
 func (s *Store) Defaults(ctx context.Context) ([]domain.Proposal, error) {
 	rows, err := s.pool.Query(ctx, `
 		select p.id::text,p.client_id::text,coalesce(nullif(c.trade_name,''),nullif(c.legal_name,''),'Cliente não identificado'),p.title,p.status::text,p.current_version,
-		       coalesce(v.public_token::text,''),p.is_default,p.valid_until,p.created_by::text,u.name,p.updated_at
+		       coalesce(v.public_token::text,''),p.is_default,p.valid_until,p.created_by::text,u.name,
+		       coalesce(p.updated_by::text,p.created_by::text),coalesce(editor.name,u.name),p.updated_at
 		from proposals p
 		join clients c on c.id=p.client_id
 		join users u on u.id=p.created_by
+		left join users editor on editor.id=p.updated_by
 		left join proposal_versions v on v.proposal_id=p.id and v.version_number=p.current_version and v.published_at is not null
 		where p.is_default = true
 		  and p.deleted_at is null
@@ -86,17 +90,19 @@ func scanProposal(row proposalScanner) (domain.Proposal, error) {
 		&item.ValidUntil,
 		&item.CreatedBy,
 		&item.CreatedByName,
+		&item.UpdatedBy,
+		&item.UpdatedByName,
 		&item.UpdatedAt,
 	)
 	return item, err
 }
 
-func (s *Store) SetDefault(ctx context.Context, proposalID string) error {
+func (s *Store) SetDefault(ctx context.Context, proposalID, userID string) error {
 	result, err := s.pool.Exec(ctx, `
 		update proposals
-		set is_default=true,updated_at=now()
+		set is_default=true,updated_by=$2,updated_at=now()
 		where id=$1 and is_default=false and deleted_at is null
-	`, proposalID)
+	`, proposalID, userID)
 	if err != nil {
 		return err
 	}
@@ -112,12 +118,12 @@ func (s *Store) SetDefault(ctx context.Context, proposalID string) error {
 	return nil
 }
 
-func (s *Store) ClearDefault(ctx context.Context, proposalID string) error {
+func (s *Store) ClearDefault(ctx context.Context, proposalID, userID string) error {
 	result, err := s.pool.Exec(ctx, `
 		update proposals
-		set is_default=false,updated_at=now()
+		set is_default=false,updated_by=$2,updated_at=now()
 		where id=$1 and is_default=true and deleted_at is null
-	`, proposalID)
+	`, proposalID, userID)
 	if err != nil {
 		return err
 	}
