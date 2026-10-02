@@ -459,10 +459,18 @@ func (a *App) proposalInputFromForm(r *http.Request, salesperson domain.User) (p
 			Label:               product.Name,
 			Description:         product.Description,
 			Unit:                product.Unit,
-			Price:        price,
-			IsOptional:   status == "optional",
-			SortOrder:    index,
+			Price:          price,
+			IsOptional:     status == "optional",
+			RequiresPolicy: product.RequiresPolicy,
+			SortOrder:      index,
 		})
+	}
+	input.RequiresPolicy = false
+	for _, item := range input.Items {
+		if !item.IsOptional && item.RequiresPolicy {
+			input.RequiresPolicy = true
+			break
+		}
 	}
 	selectedProductCodes := make([]string, 0, len(input.Items))
 	for _, item := range input.Items {
