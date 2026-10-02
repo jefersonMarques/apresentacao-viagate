@@ -123,6 +123,14 @@ func (a *App) saveOnboarding(w http.ResponseWriter, r *http.Request) {
 	current.CompanyResponsibleEmail = strings.TrimSpace(strings.ToLower(r.FormValue("responsible_email")))
 	current.CompanyResponsibleRole = strings.TrimSpace(r.FormValue("responsible_role"))
 	current.AuthorityDeclared = r.FormValue("responsible_authority") == "1"
+	if !current.RequiresPolicy {
+		current.OperationType = ""
+		current.Insurer = ""
+		current.PolicyStartDate = ""
+		current.PolicyEndDate = ""
+		current.BrokerCompany = ""
+		current.BrokerProducer = ""
+	}
 
 	if validationError := validateOnboarding(current); validationError != "" {
 		a.renderContractingError(w, r, current, validationError)
