@@ -25,9 +25,13 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
 				@PublicFlashMessages(message, errorMessage)
 
 				<section class="activation-progress">
-					<div class={ "activation-progress-item " + activationDoneClass(access.Profile.HasPolicy) }><span></span><strong>Apólice</strong></div>
+					if access.Profile.RequiresPolicy {
+						<div class={ "activation-progress-item " + activationDoneClass(access.Profile.HasPolicy) }><span></span><strong>Apólice</strong></div>
+					}
 					<div class={ "activation-progress-item " + activationDoneClass(access.Profile.FinanceResponsibleName != "") }><span></span><strong>Financeiro</strong></div>
-					<div class={ "activation-progress-item " + activationDoneClass(len(access.Profile.Goods) > 0) }><span></span><strong>Mercadorias</strong></div>
+					if access.Profile.RequiresPolicy {
+						<div class={ "activation-progress-item " + activationDoneClass(len(access.Profile.Goods) > 0) }><span></span><strong>Mercadorias</strong></div>
+					}
 					<div class={ "activation-progress-item " + activationDoneClass(len(access.Profile.SystemUsers) > 0) }><span></span><strong>Usuários</strong></div>
 				</section>
 
@@ -37,7 +41,9 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
 					<div class="activation-summary-grid">
 						<div><small>Empresa</small><strong>{ access.Profile.LegalName }</strong><span>{ brfields.FormatCNPJ(access.Profile.CNPJ) }</span></div>
 						<div><small>Endereço</small><strong>{ ActivationAddress(access.Profile) }</strong></div>
-						<div><small>Operação</small><strong>{ humanOperationType(access.Profile.OperationType) }</strong><span>{ access.Profile.Insurer }</span></div>
+						if access.Profile.RequiresPolicy {
+							<div><small>Operação</small><strong>{ humanOperationType(access.Profile.OperationType) }</strong><span>{ access.Profile.Insurer }</span></div>
+						}
 						<div><small>Responsável pela empresa</small><strong>{ access.Profile.CompanyResponsibleName }</strong><span>{ access.Profile.CompanyResponsibleEmail } · { brfields.FormatPhone(access.Profile.CompanyResponsiblePhone) }</span></div>
 					</div>
 					<p class="activation-lock-note">Esses dados vieram da contratação e permanecem vinculados ao contrato gerado. Alterações operacionais nesta etapa não modificam o documento contratual.</p>
@@ -50,29 +56,35 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
 					</section>
 				}
 
-				<section class="accept-box" id="apolice" data-policy-present={ BoolString(access.Profile.HasPolicy) }>
-					<span class="step-title">1 · APÓLICE</span>
-					<h2>Envie a apólice da operação</h2>
-					<p>O arquivo não faz parte do contrato. Ele será usado pela equipe de implantação e pode ser enviado enquanto o contrato aguarda assinatura.</p>
-					if ActivationCanEdit(access, "policy") {
-						<form method="post" action={ templ.SafeURL("/activation/" + token + "/policy") } enctype="multipart/form-data">
-							<div class="field">
-								<label>Apólice</label>
-								<input name="document" type="file" accept="application/pdf,image/jpeg,image/png" required/>
-							</div>
-							<p class="activation-step-requirement">PDF, JPG ou PNG · máximo 15 MB.</p>
-							<div class="actions activation-step-actions">
-								<span>{ ActivationPolicyStatus(access.Profile.HasPolicy) }</span>
-								<button class="btn dark" type="submit" data-processing="Enviando apólice...">{ ActivationPolicyButton(access.Profile.HasPolicy) }</button>
-							</div>
-						</form>
-					} else {
-						<div class="activation-answer"><strong>{ ActivationPolicyStatus(access.Profile.HasPolicy) }</strong></div>
-					}
-				</section>
+				if access.Profile.RequiresPolicy {
+					<section class="accept-box" id="apolice" data-policy-present={ BoolString(access.Profile.HasPolicy) }>
+						<span class="step-title">1 · APÓLICE</span>
+						<h2>Envie a apólice da operação</h2>
+						<p>O arquivo não faz parte do contrato. Ele será usado pela equipe de implantação e pode ser enviado enquanto o contrato aguarda assinatura.</p>
+						if ActivationCanEdit(access, "policy") {
+							<form method="post" action={ templ.SafeURL("/activation/" + token + "/policy") } enctype="multipart/form-data">
+								<div class="field">
+									<label>Apólice</label>
+									<input name="document" type="file" accept="application/pdf,image/jpeg,image/png" required/>
+								</div>
+								<p class="activation-step-requirement">PDF, JPG ou PNG · máximo 15 MB.</p>
+								<div class="actions activation-step-actions">
+									<span>{ ActivationPolicyStatus(access.Profile.HasPolicy) }</span>
+									<button class="btn dark" type="submit" data-processing="Enviando apólice...">{ ActivationPolicyButton(access.Profile.HasPolicy) }</button>
+								</div>
+							</form>
+						} else {
+							<div class="activation-answer"><strong>{ ActivationPolicyStatus(access.Profile.HasPolicy) }</strong></div>
+						}
+					</section>
+				}
 
 				<section class="accept-box" id="financeiro">
-					<span class="step-title">2 · FINANCEIRO</span>
+					if access.Profile.RequiresPolicy {
+						<span class="step-title">2 · FINANCEIRO</span>
+					} else {
+						<span class="step-title">1 · FINANCEIRO</span>
+					}
 					<h2>Quem será o contato financeiro?</h2>
 					<p>Essa pessoa receberá os contatos relacionados a faturamento e assuntos financeiros da operação.</p>
 					if ActivationCanEdit(access, "finance") {
@@ -87,6 +99,7 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
 					}
 				</section>
 
+				if access.Profile.RequiresPolicy {
 				<section class="accept-box" id="mercadorias">
 					<span class="step-title">3 · OPERAÇÃO</span>
 					<h2>Quais mercadorias vocês transportam?</h2>
@@ -112,9 +125,14 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
 						</div>
 					}
 				</section>
+				}
 
 				<section class="accept-box" id="usuarios">
-					<span class="step-title">4 · ACESSOS</span>
+					if access.Profile.RequiresPolicy {
+						<span class="step-title">4 · ACESSOS</span>
+					} else {
+						<span class="step-title">2 · ACESSOS</span>
+					}
 					<h2>Quem utilizará o sistema?</h2>
 					<p>Informe apenas quem precisa receber acesso inicialmente. Outros usuários poderão ser cadastrados depois.</p>
 					if ActivationCanEdit(access, "users") {
@@ -152,7 +170,9 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
 								<select name="delegate_section">
 									<option value="all">Toda a preparação</option>
 									<option value="finance">Somente financeiro</option>
-									<option value="goods">Somente mercadorias</option>
+									if access.Profile.RequiresPolicy {
+										<option value="goods">Somente mercadorias</option>
+									}
 									<option value="users">Somente usuários</option>
 								</select>
 							</div>
@@ -229,9 +249,11 @@ templ ActivationAdminDetailPage(user domain.User, profile activation.Profile) {
 					<dl class="data-list">
 						<dt>CNPJ</dt><dd>{ brfields.FormatCNPJ(profile.CNPJ) }</dd>
 						<dt>Endereço</dt><dd>{ ActivationAddress(profile) }</dd>
-						<dt>Operação</dt><dd>{ humanOperationType(profile.OperationType) }</dd>
-						<dt>Seguradora</dt><dd>{ profile.Insurer }</dd>
-						<dt>Apólice</dt><dd>{ ActivationPolicyStatus(profile.HasPolicy) }</dd>
+						if profile.RequiresPolicy {
+							<dt>Operação</dt><dd>{ humanOperationType(profile.OperationType) }</dd>
+							<dt>Seguradora</dt><dd>{ profile.Insurer }</dd>
+							<dt>Apólice</dt><dd>{ ActivationPolicyStatus(profile.HasPolicy) }</dd>
+						}
 						<dt>Contrato</dt><dd>{ ActivationContractStatus(profile) }</dd>
 						<dt>Responsável</dt><dd>{ profile.CompanyResponsibleName } · { profile.CompanyResponsibleEmail }</dd>
 					</dl>
@@ -247,6 +269,7 @@ templ ActivationAdminDetailPage(user domain.User, profile activation.Profile) {
 					</dl>
 				</div>
 			</section>
+			if profile.RequiresPolicy {
 			<section class="panel activation-admin-panel">
 				<header class="panel-head"><h2>Mercadorias</h2></header>
 				<div class="panel-body">
@@ -261,6 +284,7 @@ templ ActivationAdminDetailPage(user domain.User, profile activation.Profile) {
 					}
 				</div>
 			</section>
+			}
 			<section class="panel activation-admin-panel">
 				<header class="panel-head"><h2>Usuários iniciais</h2></header>
 				<div class="panel-body">
