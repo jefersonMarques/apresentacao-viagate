@@ -216,6 +216,107 @@
     });
   }
 
+  function initProposalEmailCopyDialog() {
+    const dialog = document.querySelector('[data-proposal-email-copy-dialog]');
+    if (typeof HTMLDialogElement === 'undefined' || !(dialog instanceof HTMLDialogElement) || typeof dialog.showModal !== 'function') return;
+
+    const openers = Array.from(document.querySelectorAll('[data-proposal-email-copy-open]'));
+    const closeButtons = Array.from(dialog.querySelectorAll('[data-proposal-email-copy-close]'));
+    const submit = dialog.querySelector('[data-proposal-email-copy-submit]');
+    const title = dialog.querySelector('[data-proposal-email-copy-name]');
+    const client = dialog.querySelector('[data-proposal-email-copy-client]');
+    const status = dialog.querySelector('[data-proposal-email-copy-status]');
+    const templateOptions = Array.from(dialog.querySelectorAll('input[name="proposal_email_template"]'));
+    const defaultTemplate = templateOptions.find((option) => option.checked) || templateOptions[0];
+
+    if (!(submit instanceof HTMLButtonElement) || templateOptions.length === 0) return;
+
+    const setStatus = (message, state = '') => {
+      if (!status) return;
+      status.textContent = message;
+      status.dataset.state = state;
+    };
+
+    const close = () => dialog.close();
+
+    openers.forEach((opener) => {
+      opener.addEventListener('click', () => {
+        const proposalID = opener.getAttribute('data-proposal-id') || '';
+        if (!proposalID) return;
+
+        dialog.dataset.proposalId = proposalID;
+        if (title) title.textContent = opener.getAttribute('data-proposal-title') || 'Proposta';
+        if (client) client.textContent = opener.getAttribute('data-proposal-client') || '';
+        if (defaultTemplate instanceof HTMLInputElement) defaultTemplate.checked = true;
+        setStatus('');
+        submit.disabled = false;
+        submit.textContent = 'Copiar HTML para e-mail';
+        dialog.showModal();
+        window.requestAnimationFrame(() => {
+          const selected = dialog.querySelector('input[name="proposal_email_template"]:checked');
+          selected?.focus();
+        });
+      });
+    });
+
+    closeButtons.forEach((button) => button.addEventListener('click', close));
+    dialog.addEventListener('click', (event) => {
+      if (event.target === dialog) close();
+    });
+    dialog.addEventListener('close', () => {
+      delete dialog.dataset.proposalId;
+      setStatus('');
+      submit.disabled = false;
+      submit.textContent = 'Copiar HTML para e-mail';
+    });
+
+    submit.addEventListener('click', async () => {
+      const proposalID = dialog.dataset.proposalId || '';
+      const selected = dialog.querySelector('input[name="proposal_email_template"]:checked');
+      const templateID = selected instanceof HTMLInputElement ? selected.value : '';
+      if (!proposalID || !templateID) {
+        setStatus('Selecione um modelo de e-mail.', 'error');
+        return;
+      }
+
+      submit.disabled = true;
+      submit.textContent = 'Preparando HTML...';
+      setStatus('');
+
+      try {
+        const endpoint = new URL(`/admin/proposals/${encodeURIComponent(proposalID)}/email-draft`, window.location.origin);
+        endpoint.searchParams.set('template', templateID);
+        const response = await fetch(endpoint.toString(), {
+          method: 'GET',
+          credentials: 'same-origin',
+          headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'ViaGate-Proposal-Email-Draft',
+          },
+        });
+        if (!response.ok) {
+          const detail = (await response.text()).trim();
+          throw new Error(detail || 'Não foi possível preparar o e-mail.');
+        }
+
+        const draft = await response.json();
+        const copiedFormat = await window.ViaGate?.copyRichHTML?.(draft.html_body || '', draft.text_body || '');
+        if (!copiedFormat) throw new Error('Área de transferência indisponível.');
+
+        if (copiedFormat === 'html') {
+          setStatus('E-mail em HTML copiado. Cole no corpo de uma nova mensagem no Outlook.', 'success');
+        } else {
+          setStatus('O navegador copiou a versão em texto. Cole no corpo do e-mail.', 'success');
+        }
+      } catch (error) {
+        setStatus(error?.message || 'Não foi possível copiar o e-mail.', 'error');
+      } finally {
+        submit.disabled = false;
+        submit.textContent = 'Copiar novamente';
+      }
+    });
+  }
+
   function initProposalDeleteDialog() {
     const dialog = document.querySelector('[data-proposal-delete-dialog]');
     if (typeof HTMLDialogElement === 'undefined' || !(dialog instanceof HTMLDialogElement) || typeof dialog.showModal !== 'function') return;
@@ -280,6 +381,7 @@
     document.querySelectorAll('[data-admin-list]').forEach(initList);
     initActionMenus();
     initProposalSourceDialog();
+    initProposalEmailCopyDialog();
     initProposalDeleteDialog();
   });
 })();
