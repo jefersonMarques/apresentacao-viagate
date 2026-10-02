@@ -57,6 +57,8 @@ type Proposal struct {
 	ValidUntil     *time.Time
 	CreatedBy      string
 	CreatedByName  string
+	UpdatedBy      string
+	UpdatedByName  string
 	UpdatedAt      time.Time
 }
 
