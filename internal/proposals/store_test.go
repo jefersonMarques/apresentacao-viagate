@@ -23,3 +23,16 @@ func TestIsDateExpiredRejectsPreviousCalendarDate(t *testing.T) {
 		t.Fatal("proposal validity before the current calendar date must be expired")
 	}
 }
+
+
+func TestRequiresPolicyUsesOnlyIncludedProducts(t *testing.T) {
+	if RequiresPolicy([]EditorItem{{RequiresPolicy: true, IsOptional: true}}) {
+		t.Fatal("optional product must not require policy")
+	}
+	if !RequiresPolicy([]EditorItem{{RequiresPolicy: true, IsOptional: false}}) {
+		t.Fatal("included product requiring policy must enable requirement")
+	}
+	if RequiresPolicy([]EditorItem{{RequiresPolicy: false, IsOptional: false}}) {
+		t.Fatal("included product without requirement must not require policy")
+	}
+}
