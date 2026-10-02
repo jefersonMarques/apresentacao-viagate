@@ -41,11 +41,13 @@ func TestSoftDeleteCascadePreservesSignedEvidence(t *testing.T) {
 			is_default boolean not null default false,
 			deleted_at timestamptz,
 			deleted_by uuid,
+			updated_by uuid,
 			updated_at timestamptz not null default now()
 		);
 		create table %s.proposal_acceptances (
 			id uuid primary key,
 			proposal_id uuid not null,
+			accepted_by_name text not null,
 			deleted_at timestamptz,
 			deleted_by uuid
 		);
@@ -151,6 +153,26 @@ func TestSoftDeleteCascadePreservesSignedEvidence(t *testing.T) {
 	}
 	defer pool.Close()
 
+	if _, err := pool.Exec(ctx, `
+		create or replace function prevent_proposal_acceptance_mutation()
+		returns trigger language plpgsql as $
+		begin
+			if tg_op = 'DELETE' then
+				raise exception 'proposal acceptances are immutable';
+			end if;
+			if (to_jsonb(new) - 'deleted_at' - 'deleted_by') is distinct from (to_jsonb(old) - 'deleted_at' - 'deleted_by') then
+				raise exception 'proposal acceptance evidence is immutable';
+			end if;
+			return new;
+		end;
+		$;
+		create trigger proposal_acceptances_immutable
+		before update or delete on proposal_acceptances
+		for each row execute function prevent_proposal_acceptance_mutation();
+	`); err != nil {
+		t.Fatalf("create proposal acceptance evidence trigger: %v", err)
+	}
+
 	const (
 		proposalID   = "11111111-1111-1111-1111-111111111111"
 		acceptanceID = "22222222-2222-2222-2222-222222222222"
@@ -168,7 +190,7 @@ func TestSoftDeleteCascadePreservesSignedEvidence(t *testing.T) {
 		args  []any
 	}{
 		{`insert into proposals(id,status,is_default) values($1,'accepted',true)`, []any{proposalID}},
-		{`insert into proposal_acceptances(id,proposal_id) values($1,$2)`, []any{acceptanceID, proposalID}},
+		{`insert into proposal_acceptances(id,proposal_id,accepted_by_name) values($1,$2,'Cliente Original')`, []any{acceptanceID, proposalID}},
 		{`insert into onboardings(id,proposal_acceptance_id) values($1,$2)`, []any{onboardingID, acceptanceID}},
 		{`insert into uploaded_documents(id,onboarding_id) values($1,$2)`, []any{documentID, onboardingID}},
 		{`insert into contracts(id,onboarding_id,status,fully_signed_at,document_sha256) values($1,$2,'signed',now(),$3)`, []any{contractID, onboardingID, documentHash}},
@@ -255,6 +277,17 @@ func TestSoftDeleteCascadePreservesSignedEvidence(t *testing.T) {
 	}
 	if notificationStatus != "cancelled" {
 		t.Fatalf("pending notification should be cancelled, got %s", notificationStatus)
+	}
+
+	if _, err := pool.Exec(ctx, `update proposal_acceptances set accepted_by_name='Nome adulterado' where id=$1`, acceptanceID); err == nil {
+		t.Fatal("proposal acceptance evidence mutation should remain blocked after soft delete")
+	}
+	var acceptedByName string
+	if err := pool.QueryRow(ctx, `select accepted_by_name from proposal_acceptances where id=$1`, acceptanceID).Scan(&acceptedByName); err != nil {
+		t.Fatalf("load retained proposal acceptance evidence: %v", err)
+	}
+	if acceptedByName != "Cliente Original" {
+		t.Fatalf("proposal acceptance evidence was altered: %q", acceptedByName)
 	}
 
 	var hiddenNotification bool
