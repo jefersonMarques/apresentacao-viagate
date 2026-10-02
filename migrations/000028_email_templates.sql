@@ -46,7 +46,7 @@ select
   </tr>
   <tr>
     <td style="padding:30px 28px">
-      <p style="margin:0 0 16px;font-size:15px;line-height:1.6">Olá, {contact.name}.</p>
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.6">{contact.greeting}</p>
       <p style="margin:0 0 12px;font-size:14px;line-height:1.65">Preparei a proposta comercial da ViaGate para <strong>{client.display_name}</strong>.</p>
       <p style="margin:0 0 24px;color:#536875;font-size:13px;line-height:1.65">No link abaixo estão a solução, os produtos, valores e condições comerciais desta negociação.</p>
       <table role="presentation" cellspacing="0" cellpadding="0">
@@ -69,7 +69,7 @@ select
 </table>
 $email$,
   $text$
-Olá, {contact.name}.
+{contact.greeting}
 
 Preparei a proposta comercial da ViaGate para {client.display_name}.
 
