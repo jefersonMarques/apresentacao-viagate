@@ -1,8 +1,8 @@
 package httpapp
 
 import (
-	"html"
 	"fmt"
+	"html"
 	"net/http"
 	"strings"
 
@@ -120,6 +120,7 @@ func sampleEmailTemplateVariables() map[string]string {
 		"contact.name":             "Mariana Souza",
 		"contact.role":             "Gerente de Logística",
 		"contact.email":            "mariana@cliente.com.br",
+		"contact.greeting":         "Olá, Mariana Souza.",
 		"contact.phone":            "(41) 99999-0000",
 		"proposal.title":           "Proposta Comercial ViaGate",
 		"proposal.url":             "https://viagate.com.br/p/exemplo",
