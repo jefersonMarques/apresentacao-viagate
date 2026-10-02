@@ -9,6 +9,7 @@ import (
 	"github.com/jefersonMarques/apresentacao-viagate/internal/access"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/contracts"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/emailtemplates"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/presentations"
 	"github.com/jefersonMarques/apresentacao-viagate/web/templates"
 )
@@ -200,11 +201,21 @@ func (a *App) adminProposals(w http.ResponseWriter, r *http.Request) {
 		a.downloadProposalPDF(w, r, items, proposalID)
 		return
 	}
+	emailTemplateItems := []emailtemplates.Template{}
+	if access.Can(user, access.ProposalCreate) {
+		emailTemplateItems, err = a.emailTemplateStore.ListActive(r.Context(), emailtemplates.PurposeProposalShare)
+		if err != nil {
+			a.logger.Error("load proposal email templates for list failed", "user_id", user.ID, "error", err)
+			http.Error(w, "não foi possível carregar os modelos de e-mail", http.StatusInternalServerError)
+			return
+		}
+	}
+
 	message := ""
 	if r.URL.Query().Get("deleted") == "1" {
 		message = "Proposta excluída. A jornada relacionada foi removida das áreas operacionais e os acessos públicos foram revogados; evidências históricas permanecem preservadas."
 	}
-	render(r.Context(), w, http.StatusOK, templates.ProposalListPage(user, items, defaultProposals, message))
+	render(r.Context(), w, http.StatusOK, templates.ProposalListPage(user, items, defaultProposals, emailTemplateItems, message))
 }
 
 func (a *App) setDefaultProposal(w http.ResponseWriter, r *http.Request) {
