@@ -40,7 +40,7 @@ func (a *App) downloadProposalPDF(w http.ResponseWriter, r *http.Request, items 
 		return
 	}
 
-	key := "commercial-pdf/raster-v3/proposals/" + proposal.VersionID + ".pdf"
+	key := "commercial-pdf/raster-v4/proposals/" + proposal.VersionID + ".pdf"
 	filename := commercialPDFFilename("proposta", proposal.ClientTradeName, proposal.ClientName, fmt.Sprintf("v%d", proposal.VersionNumber))
 	a.serveCommercialPDF(w, r, key, filename, func(ctx context.Context) (string, error) {
 		var buffer bytes.Buffer
@@ -71,7 +71,7 @@ func (a *App) downloadPresentationPDF(w http.ResponseWriter, r *http.Request, it
 		return
 	}
 
-	key := "commercial-pdf/raster-v3/presentations/" + presentation.VersionID + ".pdf"
+	key := "commercial-pdf/raster-v4/presentations/" + presentation.VersionID + ".pdf"
 	filename := commercialPDFFilename("apresentacao", presentationClientFilename(presentation), fmt.Sprintf("v%d", presentation.VersionNumber))
 	a.serveCommercialPDF(w, r, key, filename, func(ctx context.Context) (string, error) {
 		return a.preparePresentationPDFDocument(presentation)
@@ -118,8 +118,8 @@ func (a *App) serveCommercialPDF(w http.ResponseWriter, r *http.Request, key, fi
 func (a *App) prepareProposalPDFDocument(document string) string {
 	baseURL := strings.TrimRight(a.cfg.BaseURL, "/") + "/"
 	document = strings.Replace(document, "<head>", `<head><base href="`+html.EscapeString(baseURL)+`"/>`, 1)
-	document = strings.Replace(document, "</head>", `<link rel="stylesheet" href="/assets/commercial-pdf.css"/></head>`, 1)
-	pdfRuntime := `<script>window.__VIAGATE_PDF_MODE__=true;</script><script src="/assets/commercial-pdf.js"></script>`
+	document = strings.Replace(document, "</head>", `<link rel="stylesheet" href="/commercial-assets/commercial-pdf.css"/></head>`, 1)
+	pdfRuntime := `<script>window.__VIAGATE_PDF_MODE__=true;</script><script src="/commercial-assets/commercial-pdf.js"></script>`
 	document = strings.Replace(document, "</body>", pdfRuntime+"</body>", 1)
 	return document
 }
@@ -134,7 +134,7 @@ func (a *App) preparePresentationPDFDocument(p presentations.PublicPresentation)
 	baseTag := `<base href="` + html.EscapeString(baseURL) + `/v1/" />`
 	document = strings.Replace(document, `<base href="/apresentacao/" />`, baseTag, 1)
 	document = strings.Replace(document, `<base href="/apresentacao/">`, baseTag, 1)
-	document = strings.Replace(document, "</head>", `<link rel="stylesheet" href="`+html.EscapeString(baseURL)+`/assets/commercial-pdf.css"/></head>`, 1)
+	document = strings.Replace(document, "</head>", `<link rel="stylesheet" href="`+html.EscapeString(baseURL)+`/commercial-assets/commercial-pdf.css"/></head>`, 1)
 
 	contact := map[string]any{
 		"name": p.SalespersonName,
@@ -160,7 +160,7 @@ func (a *App) preparePresentationPDFDocument(p presentations.PublicPresentation)
 	modulesJSON, _ := json.Marshal(p.SelectedModules)
 
 	configuration := `<script>window.__VIAGATE_PDF_MODE__=true;window.presentationContact=Object.freeze(` + string(contactJSON) + `);window.presentationSettings=Object.freeze(` + string(settingsJSON) + `);</script>` +
-		`<script src="` + html.EscapeString(baseURL) + `/assets/commercial-pdf.js"></script>`
+		`<script src="` + html.EscapeString(baseURL) + `/commercial-assets/commercial-pdf.js"></script>`
 	document = strings.Replace(document, "<body>", "<body>"+configuration, 1)
 
 	bootstrap := `<script>(function(){

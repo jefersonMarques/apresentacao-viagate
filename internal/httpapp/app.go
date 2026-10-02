@@ -19,6 +19,7 @@ import (
 	"github.com/jefersonMarques/apresentacao-viagate/internal/config"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/contracts"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/emailtemplates"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/onboarding"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/pipeline"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/companyregistry"
@@ -46,6 +47,7 @@ type App struct {
 	pipelineStore     *pipeline.Store
 	onboardingStore   *onboarding.Store
 	contractStore     *contracts.Store
+	emailTemplateStore *emailtemplates.Store
 	activationStore   *activation.Store
 	auditStore        *auditlog.Store
 	contractRenderer  *contracts.Renderer
@@ -80,7 +82,7 @@ func New(deps Dependencies) *App {
 	return &App{
 		cfg: deps.Config, pool: deps.Pool, logger: deps.Logger, authStore: deps.AuthStore, catalogStore: catalog.NewStore(deps.Pool),
 		proposalStore: deps.ProposalStore, presentationStore: deps.PresentationStore, pipelineStore: deps.PipelineStore,
-		onboardingStore: deps.OnboardingStore, contractStore: deps.ContractStore, activationStore: deps.ActivationStore,
+		onboardingStore: deps.OnboardingStore, contractStore: deps.ContractStore, emailTemplateStore: emailtemplates.NewStore(deps.Pool), activationStore: deps.ActivationStore,
 		auditStore: deps.AuditStore, contractRenderer: deps.ContractRenderer, contractGenerator: deps.ContractGenerator,
 		contractFinalizer: deps.ContractFinalizer, storage: deps.Storage, mailer: deps.Mailer, registry: deps.Registry,
 	}
@@ -155,9 +157,13 @@ func (a *App) Routes() http.Handler {
 		admin.With(a.permission("proposal.create")).Get("/admin/proposals/new", a.newProposalPage)
 		admin.With(a.permission("proposal.create")).Get("/admin/proposals/{id}/edit", a.editProposalPage)
 		admin.With(a.permission("proposal.create")).Post("/admin/proposals/save", a.saveProposal)
-		admin.With(a.permission("proposal.create")).Post("/admin/proposals/{id}/share-email", a.shareProposalByEmail)
+		admin.With(a.permission("proposal.create")).Get("/admin/proposals/{id}/email-draft", a.proposalEmailDraft)
 		admin.With(a.permission("settings.manage")).Post("/admin/proposals/{id}/default", a.setDefaultProposal)
 		admin.Post("/admin/proposals/{id}/delete", a.softDeleteProposal)
+
+		admin.With(a.permission("settings.manage")).Get("/admin/email-templates", a.emailTemplatesPage)
+		admin.With(a.permission("settings.manage")).Post("/admin/email-templates", a.saveEmailTemplate)
+		admin.With(a.permission("settings.manage")).Post("/admin/email-templates/preview", a.previewEmailTemplate)
 
 		admin.With(a.permission("settings.manage")).Get("/admin/products", a.productCatalogPage)
 		admin.With(a.permission("settings.manage")).Post("/admin/products/categories", a.saveProductCategory)

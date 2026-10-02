@@ -13,6 +13,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/access"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/emailtemplates"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/proposals"
 	"github.com/jefersonMarques/apresentacao-viagate/web/templates"
 )
@@ -126,6 +127,15 @@ func (a *App) editProposalPage(w http.ResponseWriter, r *http.Request) {
 		input.Content["__ui_share_dialog"] = true
 		if r.URL.Query().Get("published") == "1" {
 			input.Content["__ui_share_state"] = "published"
+			if currentPublicToken != "" {
+				input.Content["__ui_share_public_url"] = strings.TrimRight(a.cfg.BaseURL, "/") + "/p/" + currentPublicToken
+				emailTemplates, templateErr := a.emailTemplateStore.ListActive(r.Context(), emailtemplates.PurposeProposalShare)
+				if templateErr != nil {
+					a.logger.Error("load proposal email templates failed", "proposal_id", proposalID, "error", templateErr)
+				} else {
+					input.Content["__ui_email_templates"] = emailTemplates
+				}
+			}
 		} else {
 			input.Content["__ui_share_state"] = "draft"
 		}

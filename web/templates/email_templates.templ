@@ -1,0 +1,98 @@
+package templates
+
+import (
+	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/emailtemplates"
+)
+
+templ EmailTemplatesPage(user domain.User, items []emailtemplates.Template, variables []string, selected emailtemplates.Template, message string) {
+	@AdminEditorLayout("ViaGate — Modelos de e-mail", user) {
+		<div class="v1-page">
+			@AdminEditorHeader("E-MAIL", "Modelos personalizados", "Crie modelos HTML com variáveis controladas. O compartilhamento da proposta abre o cliente de e-mail ou copia o HTML pronto para colar no Outlook.") {
+				<a class="v1-button primary" href="/admin/email-templates">Novo modelo</a>
+			}
+			@FlashMessages(message, "")
+			<div class="v1-contract-layout">
+				<aside class="v1-contract-list">
+					<div class="v1-contract-list-head">
+						<h2>Modelos disponíveis</h2>
+						<div class="v1-help admin-form-help-tight">O modelo padrão aparece primeiro no compartilhamento da proposta.</div>
+					</div>
+					for _, item := range items {
+						<a class="v1-contract-item" href={ templ.SafeURL("/admin/email-templates?template=" + item.ID) }>
+							<strong>{ item.Name }</strong>
+							if item.IsDefault {
+								<span>Padrão</span>
+							}
+							if item.IsActive {
+								<span>Ativo</span>
+							} else {
+								<span>Inativo</span>
+							}
+							if item.Description != "" {
+								<span>{ item.Description }</span>
+							}
+							if selected.ID == item.ID {
+								<span class="admin-form-current">EDITANDO ESTE MODELO</span>
+							}
+						</a>
+					}
+					if len(items) == 0 {
+						<div class="v1-contract-item"><strong>Nenhum modelo cadastrado</strong><span>Crie o primeiro modelo no editor.</span></div>
+					}
+				</aside>
+
+				<section class="v1-contract-editor">
+					<div class="v1-contract-editor-head">
+						if selected.ID == "" {
+							<h2>Novo modelo</h2>
+							<div class="v1-help admin-form-help-tight">Crie um modelo para compartilhar propostas.</div>
+						} else {
+							<h2>Editar { selected.Name }</h2>
+							<div class="v1-help admin-form-help-tight">As alterações passam a valer nas próximas cópias ou aberturas de e-mail.</div>
+						}
+					</div>
+					<div class="v1-contract-editor-body">
+						<form method="post" action="/admin/email-templates">
+							<input type="hidden" name="template_id" value={ selected.ID }/>
+							<div class="v1-form-grid">
+								<div class="v1-field"><label>Nome do modelo</label><input name="name" value={ selected.Name } placeholder="Proposta comercial padrão" required/></div>
+								<div class="v1-field"><label>Descrição</label><input name="description" value={ selected.Description } placeholder="Quando este modelo deve ser usado"/></div>
+								<div class="v1-field full"><label>Assunto</label><input name="subject_template" value={ selected.SubjectTemplate } data-email-template-editor placeholder="Proposta ViaGate — {client.display_name}" required/></div>
+								<div class="v1-field full"><label>Conteúdo HTML</label><textarea class="v1-contract-markdown" name="html_template" data-email-template-editor data-email-template-html required placeholder="<table>...</table>">{ selected.HTMLTemplate }</textarea></div>
+								<div class="v1-field full"><label>Versão em texto</label><textarea name="text_template" data-email-template-editor placeholder="Texto usado ao abrir o cliente de e-mail e como fallback da área de transferência.">{ selected.TextTemplate }</textarea></div>
+							</div>
+
+							<div class="admin-form-section-gap">
+								<div class="v1-label admin-form-label-gap">Inserir variável</div>
+								<div class="v1-variable-cloud">
+									for _, variable := range variables {
+										<button class="v1-variable-chip" type="button" data-email-template-variable={ "{" + variable + "}" }>{ "{" + variable + "}" }</button>
+									}
+								</div>
+								<div class="v1-help admin-form-help">Clique em uma variável para inseri-la no campo que estiver em edição. Dados variáveis são escapados antes de entrar no HTML.</div>
+							</div>
+
+							<div class="v1-form-grid admin-form-section-gap">
+								<label class="v1-option-card">
+									<span class="v1-switch"><input type="checkbox" name="is_active" value="1" checked?={ selected.ID == "" || selected.IsActive }/><span class="v1-switch-track"></span></span>
+									<span><strong>Modelo ativo</strong><small>Somente modelos ativos aparecem ao compartilhar uma proposta.</small></span>
+								</label>
+								<label class="v1-option-card">
+									<span class="v1-switch"><input type="checkbox" name="make_default" value="1" checked?={ selected.IsDefault }/><span class="v1-switch-track"></span></span>
+									<span><strong>Usar como padrão</strong><small>Será a primeira opção escolhida no modal de compartilhamento.</small></span>
+								</label>
+							</div>
+
+							<div class="v1-actions admin-form-actions">
+								<button class="v1-button" type="submit" formaction="/admin/email-templates/preview" formtarget="_blank">Visualizar HTML</button>
+								<button class="v1-button primary" type="submit" data-processing="Salvando modelo...">Salvar modelo</button>
+							</div>
+						</form>
+					</div>
+				</section>
+			</div>
+		</div>
+		<script src="/commercial-assets/email-template.js" defer></script>
+	}
+}

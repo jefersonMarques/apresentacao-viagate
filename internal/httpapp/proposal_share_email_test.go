@@ -1,17 +1,24 @@
 package httpapp
 
 import (
-	"strings"
 	"testing"
+	"time"
 
+	"github.com/jefersonMarques/apresentacao-viagate/internal/config"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/proposals"
 )
 
-func TestBuildProposalShareEmailIncludesProposalAndSellerSignature(t *testing.T) {
+func TestProposalEmailVariablesUseCanonicalBaseURL(t *testing.T) {
+	validUntil := time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC)
+	app := &App{cfg: config.Config{BaseURL: "https://viagate.com.br/"}}
 	input := proposals.EditorInput{
-		ClientTradeName: "Cliente XPTO",
-		ContactName:     "Mariana",
+		ClientLegalName:  "Cliente XPTO Ltda.",
+		ClientTradeName:  "Cliente XPTO",
+		ContactName:      "Mariana",
+		ContactEmail:     "mariana@example.com",
+		Title:            "Proposta Comercial",
+		ValidUntil:       &validUntil,
 	}
 	seller := domain.User{
 		Name:     "Jeferson Marques",
@@ -21,47 +28,30 @@ func TestBuildProposalShareEmailIncludesProposalAndSellerSignature(t *testing.T)
 		PhotoURL: "/media/photo-id",
 	}
 
-	subject, htmlBody, textBody := buildProposalShareEmail(
-		"https://viagate.com.br/",
-		input,
-		seller,
-		"public-token",
-	)
+	variables := app.proposalEmailVariables(input, seller, "public-token")
 
-	if subject != "Proposta ViaGate — Cliente XPTO" {
-		t.Fatalf("unexpected subject: %q", subject)
+	if variables["proposal.url"] != "https://viagate.com.br/p/public-token" {
+		t.Fatalf("unexpected proposal URL: %q", variables["proposal.url"])
 	}
-	for _, expected := range []string{
-		"https://viagate.com.br/p/public-token",
-		"Jeferson Marques",
-		"Executivo Comercial",
-		"jeferson@example.com",
-		"https://viagate.com.br/media/photo-id",
-	} {
-		if !strings.Contains(htmlBody, expected) {
-			t.Fatalf("html body should contain %q", expected)
-		}
+	if variables["salesperson.photo_url"] != "https://viagate.com.br/media/photo-id" {
+		t.Fatalf("unexpected seller photo URL: %q", variables["salesperson.photo_url"])
 	}
-	if !strings.Contains(textBody, "Mariana") || !strings.Contains(textBody, "Jeferson Marques") {
-		t.Fatal("text body must contain recipient greeting and seller signature")
+	if variables["contact.greeting"] != "Olá, Mariana." {
+		t.Fatalf("unexpected greeting: %q", variables["contact.greeting"])
+	}
+	if variables["proposal.valid_until"] != "31/12/2026" {
+		t.Fatalf("unexpected validity: %q", variables["proposal.valid_until"])
 	}
 }
 
-func TestBuildProposalShareEmailEscapesCustomerData(t *testing.T) {
-	input := proposals.EditorInput{
-		ClientTradeName: "<script>alert(1)</script>",
-		ContactName:     "<b>Contato</b>",
-	}
-	_, htmlBody, _ := buildProposalShareEmail(
-		"https://viagate.com.br",
-		input,
-		domain.User{Name: "<img src=x onerror=alert(1)>"},
+func TestProposalEmailVariablesFallbackGreeting(t *testing.T) {
+	app := &App{cfg: config.Config{BaseURL: "https://viagate.com.br"}}
+	variables := app.proposalEmailVariables(
+		proposals.EditorInput{ClientLegalName: "Cliente"},
+		domain.User{},
 		"token",
 	)
-
-	for _, unsafe := range []string{"<script>alert(1)</script>", "<b>Contato</b>", "<img src=x onerror=alert(1)>"} {
-		if strings.Contains(htmlBody, unsafe) {
-			t.Fatalf("html body contains unescaped value %q", unsafe)
-		}
+	if variables["contact.greeting"] != "Olá." {
+		t.Fatalf("unexpected greeting: %q", variables["contact.greeting"])
 	}
 }
