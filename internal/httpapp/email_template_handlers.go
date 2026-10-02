@@ -1,7 +1,7 @@
 package httpapp
 
 import (
-	"encoding/json"
+	"html"
 	"fmt"
 	"net/http"
 	"strings"
@@ -107,7 +107,7 @@ func (a *App) previewEmailTemplate(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Content-Security-Policy", "default-src 'none'; img-src https: http: data:; style-src 'unsafe-inline'; font-src https: data:; base-uri 'none'; form-action 'none'")
-	_, _ = fmt.Fprintf(w, "<!doctype html><html lang=\"pt-BR\"><head><meta charset=\"utf-8\"><title>%s</title></head><body style=\"margin:24px;background:#eef3f6\">%s</body></html>", draft.Subject, draft.HTMLBody)
+	_, _ = fmt.Fprintf(w, "<!doctype html><html lang=\"pt-BR\"><head><meta charset=\"utf-8\"><title>%s</title></head><body style=\"margin:24px;background:#eef3f6\">%s</body></html>", html.EscapeString(draft.Subject), draft.HTMLBody)
 }
 
 func sampleEmailTemplateVariables() map[string]string {
@@ -134,9 +134,3 @@ func sampleEmailTemplateVariables() map[string]string {
 	}
 }
 
-func writeJSON(w http.ResponseWriter, status int, payload any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Cache-Control", "no-store")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(payload)
-}
