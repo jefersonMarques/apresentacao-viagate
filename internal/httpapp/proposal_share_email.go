@@ -70,14 +70,19 @@ func (a *App) proposalEmailDraft(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	variables := a.proposalEmailVariables(input, seller, publicToken)
 	draft, err := emailtemplates.Render(
 		emailTemplate,
-		a.proposalEmailVariables(input, seller, publicToken),
+		variables,
 	)
 	if err != nil {
 		a.logger.Error("render proposal email draft failed", "proposal_id", proposalID, "template_id", emailTemplate.ID, "error", err)
 		http.Error(w, "não foi possível preparar o e-mail", http.StatusInternalServerError)
 		return
+	}
+
+	if draft.TextBody == "" {
+		draft.TextBody = "Acesse a proposta: " + variables["proposal.url"]
 	}
 
 	w.Header().Set("Content-Type", "application/json")
