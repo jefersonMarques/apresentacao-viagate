@@ -239,6 +239,8 @@ templ ProposalEditorPage(user domain.User, input proposals.EditorInput, draft pr
 						</header>
 
 						if ProposalShareState(input) == "published" && draft.PublishedPublicToken != "" {
+							{{ emailTemplates := ProposalEmailTemplates(input) }}
+							{{ shareURL := ProposalSharePublicURL(input, draft.PublishedPublicToken) }}
 							<div class="v1-share-body">
 								<div class="v1-share-recipient">
 									<span>Contato da negociação</span>
@@ -247,36 +249,64 @@ templ ProposalEditorPage(user domain.User, input proposals.EditorInput, draft pr
 										<small>{ input.ContactEmail }</small>
 									} else {
 										<strong>E-mail não informado</strong>
-										<small>Preencha o e-mail do contato para usar o envio automático.</small>
+										<small>O cliente de e-mail será aberto sem destinatário; informe-o no Outlook antes de enviar.</small>
 									}
 								</div>
+
+								if len(emailTemplates) > 0 {
+									<div class="v1-field">
+										<label>Modelo de e-mail</label>
+										<select data-proposal-email-template>
+											for _, emailTemplate := range emailTemplates {
+												<option value={ emailTemplate.ID } selected?={ emailTemplate.IsDefault }>
+													{ emailTemplate.Name }
+													if emailTemplate.IsDefault {
+														<span> · padrão</span>
+													}
+												</option>
+											}
+										</select>
+									</div>
+								} else {
+									<div class="v1-share-draft-note">
+										<strong>Nenhum modelo de e-mail ativo.</strong>
+										<span>Cadastre um modelo em Administração → Modelos de e-mail. O link público continua disponível abaixo.</span>
+									</div>
+								}
 
 								<div class="v1-share-actions">
 									<button
 										class="v1-button primary"
 										type="button"
-										data-proposal-share-email
-										data-endpoint={ templ.SafeURL("/admin/proposals/" + input.ProposalID + "/share-email") }
-										disabled?={ !ProposalHasContactEmail(input) }
-									>Enviar por e-mail</button>
+										data-proposal-share-email-open
+										data-endpoint={ templ.SafeURL("/admin/proposals/" + input.ProposalID + "/email-draft") }
+										disabled?={ len(emailTemplates) == 0 }
+									>Abrir no e-mail</button>
+									<button
+										class="v1-button"
+										type="button"
+										data-proposal-share-email-copy
+										data-endpoint={ templ.SafeURL("/admin/proposals/" + input.ProposalID + "/email-draft") }
+										disabled?={ len(emailTemplates) == 0 }
+									>Copiar e-mail em HTML</button>
 									<button
 										class="v1-button"
 										type="button"
 										data-proposal-share-copy
-										data-share-path={ proposalPublicURL(draft.PublishedPublicToken) }
+										data-share-url={ shareURL }
 									>Copiar link</button>
 									<button
 										class="v1-button dark"
 										type="button"
 										data-proposal-share-native
-										data-share-path={ proposalPublicURL(draft.PublishedPublicToken) }
+										data-share-url={ shareURL }
 										data-share-title={ proposalTitle(input.Title) }
 									>Compartilhar</button>
 								</div>
 								<div class="v1-share-status" data-proposal-share-status aria-live="polite"></div>
 								<div class="v1-share-preview">
 									<span>Link público</span>
-									<code>{ proposalPublicURL(draft.PublishedPublicToken) }</code>
+									<code>{ shareURL }</code>
 								</div>
 							</div>
 						} else {
