@@ -68,6 +68,15 @@ type SavedDraft struct {
 	PublishedPublicToken string
 }
 
+func RequiresPolicy(items []EditorItem) bool {
+	for _, item := range items {
+		if !item.IsOptional && item.RequiresPolicy {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *Store) SaveDraft(ctx context.Context, userID string, allowAll bool, input EditorInput) (SavedDraft, error) {
 	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.Serializable})
 	if err != nil {
