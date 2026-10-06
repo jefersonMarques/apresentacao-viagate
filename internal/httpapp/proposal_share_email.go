@@ -122,22 +122,55 @@ func (a *App) proposalEmailDraft(w http.ResponseWriter, r *http.Request) {
 
 func proposalEmailInputFromPublishedContent(input proposals.EditorInput, content map[string]any) proposals.EditorInput {
 	input.Content = content
-	input.Title = proposalContentString(content, "proposal", "title")
-	input.ClientLegalName = proposalContentString(content, "client", "legal_name")
-	input.ClientTradeName = proposalContentString(content, "client", "trade_name")
-	input.ClientEmail = proposalContentString(content, "client", "email")
-	input.ContactName = proposalContentString(content, "contact", "name")
-	input.ContactRole = proposalContentString(content, "contact", "role")
-	input.ContactEmail = proposalContentString(content, "contact", "email")
-	input.ContactPhone = proposalContentString(content, "contact", "phone")
-
-	input.ValidUntil = nil
-	if rawValidUntil := proposalContentString(content, "proposal", "valid_until"); rawValidUntil != "" {
-		if parsed, err := time.Parse("2006-01-02", rawValidUntil); err == nil {
-			input.ValidUntil = &parsed
+	if value, ok := proposalEmailSnapshotValue(content, "proposal", "title"); ok {
+		input.Title = value
+	}
+	if value, ok := proposalEmailSnapshotValue(content, "client", "legal_name"); ok {
+		input.ClientLegalName = value
+	}
+	if value, ok := proposalEmailSnapshotValue(content, "client", "trade_name"); ok {
+		input.ClientTradeName = value
+	}
+	if value, ok := proposalEmailSnapshotValue(content, "client", "email"); ok {
+		input.ClientEmail = value
+	}
+	if value, ok := proposalEmailSnapshotValue(content, "contact", "name"); ok {
+		input.ContactName = value
+	}
+	if value, ok := proposalEmailSnapshotValue(content, "contact", "role"); ok {
+		input.ContactRole = value
+	}
+	if value, ok := proposalEmailSnapshotValue(content, "contact", "email"); ok {
+		input.ContactEmail = value
+	}
+	if value, ok := proposalEmailSnapshotValue(content, "contact", "phone"); ok {
+		input.ContactPhone = value
+	}
+	if rawValidUntil, ok := proposalEmailSnapshotValue(content, "proposal", "valid_until"); ok {
+		input.ValidUntil = nil
+		if rawValidUntil != "" {
+			if parsed, err := time.Parse("2006-01-02", rawValidUntil); err == nil {
+				input.ValidUntil = &parsed
+			}
 		}
 	}
 	return input
+}
+
+func proposalEmailSnapshotValue(content map[string]any, section, key string) (string, bool) {
+	group, ok := content[section].(map[string]any)
+	if !ok {
+		return "", false
+	}
+	raw, exists := group[key]
+	if !exists {
+		return "", false
+	}
+	value, ok := raw.(string)
+	if !ok {
+		return "", false
+	}
+	return strings.TrimSpace(value), true
 }
 
 type proposalEmailProduct struct {
