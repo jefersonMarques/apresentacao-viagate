@@ -27,6 +27,10 @@ var allowedVariables = []string{
 	"proposal.title",
 	"proposal.url",
 	"proposal.valid_until",
+	"proposal.products_html",
+	"proposal.products_text",
+	"proposal.products_count",
+	"proposal.requires_policy",
 	"salesperson.name",
 	"salesperson.job_title",
 	"salesperson.email",
@@ -38,6 +42,9 @@ var allowedVariables = []string{
 
 var variablePattern = regexp.MustCompile("\\{([a-zA-Z0-9_.-]+)\\}")
 var unsafeHTMLPattern = regexp.MustCompile("(?is)<\\s*(script|iframe|object|embed|form|base|meta|link)\\b|on[a-z]+\\s*=|javascript\\s*:")
+var trustedHTMLVariables = map[string]bool{
+	"proposal.products_html": true,
+}
 
 func AllowedVariables() []string {
 	result := make([]string, len(allowedVariables))
@@ -71,12 +78,25 @@ func Validate(subjectTemplate, htmlTemplate, textTemplate string) error {
 	for _, variable := range allowedVariables {
 		allowed[variable] = true
 	}
-	for _, content := range []string{subjectTemplate, htmlTemplate, textTemplate} {
-		for _, match := range variablePattern.FindAllStringSubmatch(content, -1) {
-			if len(match) < 2 || allowed[match[1]] {
+	for _, field := range []struct {
+		name    string
+		content string
+	}{
+		{name: "assunto", content: subjectTemplate},
+		{name: "HTML", content: htmlTemplate},
+		{name: "texto", content: textTemplate},
+	} {
+		for _, match := range variablePattern.FindAllStringSubmatch(field.content, -1) {
+			if len(match) < 2 {
 				continue
 			}
-			return fmt.Errorf("variável não permitida: {%s}", match[1])
+			variable := match[1]
+			if !allowed[variable] {
+				return fmt.Errorf("variável não permitida: {%s}", variable)
+			}
+			if trustedHTMLVariables[variable] && field.name != "HTML" {
+				return fmt.Errorf("a variável {%s} só pode ser usada no conteúdo HTML", variable)
+			}
 		}
 	}
 	return nil
@@ -95,6 +115,10 @@ func Render(template Template, variables map[string]string) (Draft, error) {
 		value := variables[variable]
 		subject = strings.ReplaceAll(subject, token, value)
 		textBody = strings.ReplaceAll(textBody, token, value)
+		if trustedHTMLVariables[variable] {
+			htmlBody = strings.ReplaceAll(htmlBody, token, value)
+			continue
+		}
 		htmlBody = strings.ReplaceAll(htmlBody, token, html.EscapeString(value))
 	}
 
