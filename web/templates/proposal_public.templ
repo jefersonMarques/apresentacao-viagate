@@ -84,11 +84,7 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 							<div>
 								<p class="proposal-kicker">VISÃO EXECUTIVA</p>
 								<h2>Uma composição pensada para <span>{ ProposalClientDisplayName(proposal) }</span></h2>
-								if ProposalContentString(proposal,"operation_context") != "" {
-									<p class="proposal-lead">{ ProposalContentString(proposal,"operation_context") }</p>
-								} else {
-									<p class="proposal-lead">{ ProposalExecutiveSummary(proposal) }</p>
-								}
+								<p class="proposal-lead">{ ProposalExecutiveSummary(proposal) }</p>
 							</div>
 							<div class="proposal-company-proof-grid">
 								<article><span>{ len(solutions) }</span><strong>Frentes de solução</strong><p>Módulos organizados de acordo com os produtos selecionados nesta versão.</p></article>
@@ -258,7 +254,7 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 									<div class="proposal-commercial-summary-card primary"><small>ITENS INCLUÍDOS</small><strong>{ ProposalIncludedCount(proposal) }</strong></div>
 									<div class="proposal-commercial-summary-card"><small>ITENS OPCIONAIS</small><strong>{ ProposalOptionalCount(proposal) }</strong></div>
 									<div class="proposal-commercial-summary-card"><small>FRENTES DE SOLUÇÃO</small><strong>{ len(ProposalSolutions(proposal)) }</strong></div>
-									<div class="proposal-commercial-summary-card"><small>IMPLANTAÇÃO</small><strong>{ ProposalPolicyRequirementLabel(proposal) }</strong></div>
+									<div class="proposal-commercial-summary-card"><small>REQUISITOS OPERACIONAIS</small><strong>{ ProposalPolicyRequirementLabel(proposal) }</strong></div>
 								</div>
 								if len(proposal.Items) > 0 {
 									<div class="proposal-price-groups">
