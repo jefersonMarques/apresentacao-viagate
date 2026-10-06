@@ -100,9 +100,9 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 							<div class="proposal-company-selected">
 								<div class="proposal-company-selected-title"><small>ESCOPO SELECIONADO</small><strong>Soluções que compõem esta proposta</strong></div>
 								<div class="proposal-company-selected-grid">
-									for _, solution := range solutions {
+									for index, solution := range solutions {
 										<article>
-											<span>{ solution.Status }</span>
+											<span>{ index + 1 }</span>
 											<div>
 												<div class="proposal-company-module-heading">
 													<strong>{ solution.Title }</strong>
