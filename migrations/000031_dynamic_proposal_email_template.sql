@@ -9,7 +9,7 @@ set
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;max-width:680px;margin:0 auto;background:#ffffff;border:1px solid #d9e2e8;font-family:Arial,Helvetica,sans-serif;color:#102637">
   <tr>
     <td style="background:#071827;padding:22px 28px;border-bottom:4px solid #ff6b18">
-      <img src="{brand.logo_url}" alt="ViaGate" style="display:block;max-width:150px;max-height:42px;border:0">
+      <img src="{brand.logo_url}" alt="ViaGate" style="display:block;max-width:150px;max-height:42px;border:0;background:#ffffff;padding:6px 8px">
       <div style="margin-top:12px;color:#ffffff;font-size:22px;font-weight:700">Proposta comercial</div>
     </td>
   </tr>
