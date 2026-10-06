@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/access"
@@ -35,9 +36,10 @@ func (a *App) proposalEmailDraft(w http.ResponseWriter, r *http.Request) {
 
 	var status, publicToken, ownerID, currentVersionID string
 	var requiresPolicy bool
+	var publishedContentJSON []byte
 	if err := a.pool.QueryRow(r.Context(), `
 		select p.status::text,coalesce(v.public_token::text,''),p.created_by::text,
-		       coalesce(v.id::text,''),coalesce(v.requires_policy,false)
+		       coalesce(v.id::text,''),coalesce(v.requires_policy,false),coalesce(v.content,'{}'::jsonb)
 		from proposals p
 		left join proposal_versions v
 		  on v.proposal_id=p.id
@@ -45,7 +47,7 @@ func (a *App) proposalEmailDraft(w http.ResponseWriter, r *http.Request) {
 		 and v.published_at is not null
 		where p.id=$1
 		  and p.deleted_at is null
-	`, proposalID).Scan(&status, &publicToken, &ownerID, &currentVersionID, &requiresPolicy); err != nil {
+	`, proposalID).Scan(&status, &publicToken, &ownerID, &currentVersionID, &requiresPolicy, &publishedContentJSON); err != nil {
 		http.Error(w, "não foi possível carregar a proposta", http.StatusInternalServerError)
 		return
 	}
@@ -53,6 +55,14 @@ func (a *App) proposalEmailDraft(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "publique a proposta antes de preparar o e-mail", http.StatusConflict)
 		return
 	}
+
+	var publishedContent map[string]any
+	if err := json.Unmarshal(publishedContentJSON, &publishedContent); err != nil {
+		a.logger.Error("decode published proposal content for email draft failed", "proposal_id", proposalID, "version_id", currentVersionID, "error", err)
+		http.Error(w, "não foi possível carregar os dados publicados da proposta", http.StatusInternalServerError)
+		return
+	}
+	input = proposalEmailInputFromPublishedContent(input, publishedContent)
 	seller, err := a.authStore.Profile(r.Context(), ownerID)
 	if err != nil {
 		a.logger.Error("load proposal seller profile for email draft failed", "proposal_id", proposalID, "seller_id", ownerID, "error", err)
@@ -108,6 +118,26 @@ func (a *App) proposalEmailDraft(w http.ResponseWriter, r *http.Request) {
 		HTMLBody: draft.HTMLBody,
 		TextBody: draft.TextBody,
 	})
+}
+
+func proposalEmailInputFromPublishedContent(input proposals.EditorInput, content map[string]any) proposals.EditorInput {
+	input.Content = content
+	input.Title = proposalContentString(content, "proposal", "title")
+	input.ClientLegalName = proposalContentString(content, "client", "legal_name")
+	input.ClientTradeName = proposalContentString(content, "client", "trade_name")
+	input.ClientEmail = proposalContentString(content, "client", "email")
+	input.ContactName = proposalContentString(content, "contact", "name")
+	input.ContactRole = proposalContentString(content, "contact", "role")
+	input.ContactEmail = proposalContentString(content, "contact", "email")
+	input.ContactPhone = proposalContentString(content, "contact", "phone")
+
+	input.ValidUntil = nil
+	if rawValidUntil := proposalContentString(content, "proposal", "valid_until"); rawValidUntil != "" {
+		if parsed, err := time.Parse("2006-01-02", rawValidUntil); err == nil {
+			input.ValidUntil = &parsed
+		}
+	}
+	return input
 }
 
 type proposalEmailProduct struct {
