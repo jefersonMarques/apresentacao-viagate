@@ -53,13 +53,10 @@ func ProposalSolutions(proposal proposals.PublicProposal) []ProposalSolution {
 			}
 			continue
 		}
-		title := strings.TrimSpace(item.GroupName)
+		title := ProposalItemGroupLabel(item)
 		summary := strings.TrimSpace(item.GroupDescription)
 		for _, group := range catalog.Groups {
-			if group.ID == item.CategoryCode || group.Title == key {
-				if title == "" || title == key {
-					title = group.ShortTitle
-				}
+			if group.ID == item.CategoryCode || group.ShortTitle == title || group.Title == key {
 				if summary == "" {
 					summary = group.Summary
 				}
@@ -90,7 +87,7 @@ func ProposalPriceGroups(proposal proposals.PublicProposal) []ProposalPriceGroup
 		if !ok {
 			index = len(groups)
 			indexes[item.GroupName] = index
-			groups = append(groups, ProposalPriceGroup{Name: item.GroupName, AllOptional: true})
+			groups = append(groups, ProposalPriceGroup{Name: ProposalItemGroupLabel(item), AllOptional: true})
 		}
 		groups[index].Items = append(groups[index].Items, item)
 		if !item.IsOptional {
@@ -98,6 +95,48 @@ func ProposalPriceGroups(proposal proposals.PublicProposal) []ProposalPriceGroup
 		}
 	}
 	return groups
+}
+
+func ProposalItemGroupLabel(item proposals.Item) string {
+	if group, _, ok := catalog.ItemByID(item.ProductCode); ok {
+		return group.ShortTitle
+	}
+	for _, group := range catalog.Groups {
+		if group.ID == item.CategoryCode {
+			return group.ShortTitle
+		}
+	}
+
+	groupName := strings.TrimSpace(item.GroupName)
+	normalized := strings.ToLower(groupName + " " + item.ProductCode)
+	switch {
+	case strings.Contains(normalized, "score") || strings.Contains(normalized, "analise cadastral") || strings.Contains(normalized, "análise cadastral"):
+		return "Cargo Score"
+	case strings.Contains(normalized, "truck") || strings.Contains(normalized, "logistica") || strings.Contains(normalized, "logística"):
+		return "Cargo Truck"
+	case strings.Contains(normalized, "auth") || strings.Contains(normalized, "autentic"):
+		return "Consultas e autenticação"
+	case strings.Contains(normalized, "preven"):
+		return "Prevenção"
+	case strings.Contains(normalized, "monitor"):
+		return "Monitoramento de veículos"
+	default:
+		return groupName
+	}
+}
+
+func ProposalItemScopeLabel(item proposals.Item) string {
+	if item.IsOptional {
+		return "Opcional"
+	}
+	return "Principal"
+}
+
+func ProposalDifferentialGridClass(items []ProposalDifferential) string {
+	if len(items) == 4 {
+		return "is-four"
+	}
+	return ""
 }
 
 func ProposalModelCards(value string) []catalog.PricingModel {
