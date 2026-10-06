@@ -77,6 +77,44 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 					<div class="proposal-slide-footer"><span>Proposta comercial</span><span data-slide-number></span></div>
 				</section>
 
+				{{ solutions := ProposalSolutions(proposal) }}
+				<section class="proposal-slide light proposal-company-integrated" data-viewer-slide>
+					<div class="proposal-slide-inner proposal-company-integrated-inner">
+						<div class="proposal-company-integrated-intro">
+							<div>
+								<p class="proposal-kicker">VISÃO EXECUTIVA</p>
+								<h2>Uma composição pensada para <span>{ ProposalClientDisplayName(proposal) }</span></h2>
+								<p class="proposal-lead">{ ProposalExecutiveSummary(proposal) }</p>
+							</div>
+							<div class="proposal-company-proof-grid">
+								<article><span>{ len(solutions) }</span><strong>Frentes de solução</strong><p>Módulos organizados de acordo com os produtos selecionados nesta versão.</p></article>
+								<article><span>{ ProposalIncludedCount(proposal) }</span><strong>Itens incluídos</strong><p>Produtos e serviços que compõem diretamente o escopo comercial apresentado.</p></article>
+								<article><span>{ ProposalOptionalCount(proposal) }</span><strong>Itens opcionais</strong><p>Alternativas adicionais identificadas separadamente para facilitar a decisão.</p></article>
+							</div>
+						</div>
+						if len(solutions) > 0 {
+							<div class="proposal-company-selected">
+								<div class="proposal-company-selected-title"><small>ESCOPO SELECIONADO</small><strong>Soluções que compõem esta proposta</strong></div>
+								<div class="proposal-company-selected-grid">
+									for index, solution := range solutions {
+										<article>
+											<span>{ index + 1 }</span>
+											<div>
+												<div class="proposal-company-module-heading">
+													<strong>{ solution.Title }</strong>
+													<em class={ "proposal-module-status " + ProposalSolutionStatusClass(solution.Status) }>{ solution.Status }</em>
+												</div>
+												<p>{ solution.Summary }</p>
+											</div>
+										</article>
+									}
+								</div>
+							</div>
+						}
+					</div>
+					<div class="proposal-slide-footer"><span>Visão executiva</span><span data-slide-number></span></div>
+				</section>
+
 				{{ priorities := ProposalContentStrings(proposal,"customer_priorities") }}
 				if ProposalContentString(proposal,"operation_context") != "" || len(priorities) > 0 {
 					<section class="proposal-slide light" data-viewer-slide>
@@ -124,6 +162,65 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 					</section>
 				}
 
+				{{ productPages := ProposalProductPages(proposal) }}
+				for _, productPage := range productPages {
+					<section class="proposal-slide light proposal-product-detail-slide" data-viewer-slide>
+						<div class="proposal-slide-inner">
+							<div>
+								<p class="proposal-kicker">ESCOPO DETALHADO</p>
+								if len(productPages) > 1 {
+									<h2>Produtos e serviços <span>selecionados · { productPage.Number }</span></h2>
+								} else {
+									<h2>Produtos e serviços <span>selecionados</span></h2>
+								}
+								<p class="proposal-product-detail-lead">Cada item abaixo pertence ao snapshot desta versão publicada e permanecerá vinculado à proposta mesmo que o catálogo seja alterado posteriormente.</p>
+								<div class="proposal-product-detail-grid">
+									for _, item := range productPage.Items {
+										<article class="proposal-product-detail-card">
+											<header>
+												<small>{ item.GroupName }</small>
+												<span class={ "proposal-module-status " + ProposalItemStatusClass(item) }>{ ProposalItemStatus(item) }</span>
+											</header>
+											<strong>{ item.Label }</strong>
+											<p>{ ProposalItemDescription(item) }</p>
+											<footer>
+												if item.Unit != "" {
+													<span>Unidade: { item.Unit }</span>
+												}
+												<span>{ Money(item.Price) }</span>
+											</footer>
+										</article>
+									}
+								</div>
+							</div>
+						</div>
+						<div class="proposal-slide-footer"><span>Escopo detalhado</span><span data-slide-number></span></div>
+					</section>
+				}
+
+				{{ differentials := ProposalDifferentials(proposal) }}
+				if len(differentials) > 0 {
+					<section class="proposal-slide dark" data-viewer-slide>
+						<div class="proposal-slide-inner">
+							<div>
+								<p class="proposal-kicker">DIFERENCIAIS DA SOLUÇÃO</p>
+								<h2>Mais do que produtos: uma operação <span>mais estruturada</span></h2>
+								<p class="proposal-commercial-note">A composição selecionada combina tecnologia, rastreabilidade e flexibilidade para apoiar a rotina operacional e a evolução da contratação.</p>
+								<div class="proposal-differential-grid">
+									for index, differential := range differentials {
+										<article class="proposal-differential-card">
+											<small>{ index + 1 }</small>
+											<strong>{ differential.Title }</strong>
+											<p>{ differential.Summary }</p>
+										</article>
+									}
+								</div>
+							</div>
+						</div>
+						<div class="proposal-slide-footer"><span>Diferenciais</span><span data-slide-number></span></div>
+					</section>
+				}
+
 				{{ modelCards := ProposalModelCards(proposal.PricingModel) }}
 				if len(modelCards) > 0 {
 					<section class="proposal-slide light" data-viewer-slide>
@@ -153,6 +250,12 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 								<p class="proposal-kicker">INVESTIMENTO</p>
 								<h2>Valores da <span>proposta comercial</span></h2>
 								<p class="proposal-commercial-note">Os valores são aplicados de acordo com o uso e respeitam as condições definidas nesta versão.</p>
+								<div class="proposal-commercial-summary-grid">
+									<div class="proposal-commercial-summary-card primary"><small>ITENS INCLUÍDOS</small><strong>{ ProposalIncludedCount(proposal) }</strong></div>
+									<div class="proposal-commercial-summary-card"><small>ITENS OPCIONAIS</small><strong>{ ProposalOptionalCount(proposal) }</strong></div>
+									<div class="proposal-commercial-summary-card"><small>FRENTES DE SOLUÇÃO</small><strong>{ len(ProposalSolutions(proposal)) }</strong></div>
+									<div class="proposal-commercial-summary-card"><small>REQUISITOS OPERACIONAIS</small><strong>{ ProposalPolicyRequirementLabel(proposal) }</strong></div>
+								</div>
 								if len(proposal.Items) > 0 {
 									<div class="proposal-price-groups">
 										for _, group := range ProposalPriceGroups(proposal) {
@@ -216,6 +319,35 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 						<div class="proposal-slide-footer"><span>Condições comerciais</span><span data-slide-number></span></div>
 					</section>
 				}
+
+				{{ journeySteps := ProposalJourneySteps(proposal) }}
+				<section class="proposal-slide dark proposal-journey-slide" data-viewer-slide>
+					<div class="proposal-slide-inner">
+						<div>
+							<p class="proposal-kicker">PRÓXIMOS PASSOS</p>
+							<h2>Do aceite à <span>ativação</span></h2>
+							<p class="proposal-commercial-note">A jornada foi estruturada para que proposta, contrato, assinatura e preparação operacional avancem com clareza e rastreabilidade.</p>
+							<div class="proposal-journey-grid">
+								for _, step := range journeySteps {
+									<article class="proposal-journey-card">
+										<small>{ step.Number }</small>
+										<strong>{ step.Title }</strong>
+										<p>{ step.Summary }</p>
+									</article>
+								}
+							</div>
+							<div class="proposal-journey-note">
+								<strong>{ ProposalPolicyRequirementLabel(proposal) }</strong>
+								if proposal.RequiresPolicy {
+									<span>Esta versão exige apólice e cadastro de mercadorias na preparação da implantação.</span>
+								} else {
+									<span>Esta versão não exige apólice nem cadastro de mercadorias para avançar na implantação.</span>
+								}
+							</div>
+						</div>
+					</div>
+					<div class="proposal-slide-footer"><span>Próximos passos</span><span data-slide-number></span></div>
+				</section>
 
 				<section class="proposal-slide orange" data-viewer-slide>
 					<div class="proposal-slide-inner proposal-contact-final">

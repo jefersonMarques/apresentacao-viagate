@@ -1,6 +1,7 @@
 package templates
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/jefersonMarques/apresentacao-viagate/internal/catalog"
@@ -11,6 +12,22 @@ type ProposalSolution struct {
 	Title   string
 	Summary string
 	Status  string
+}
+
+type ProposalProductPage struct {
+	Number int
+	Items  []proposals.Item
+}
+
+type ProposalDifferential struct {
+	Title   string
+	Summary string
+}
+
+type ProposalJourneyStep struct {
+	Number  string
+	Title   string
+	Summary string
 }
 
 type ProposalPriceGroup struct {
@@ -31,14 +48,24 @@ func ProposalSolutions(proposal proposals.PublicProposal) []ProposalSolution {
 			}
 			continue
 		}
-		title := key
-		summary := "Solução selecionada para esta negociação."
+		title := strings.TrimSpace(item.GroupName)
+		summary := strings.TrimSpace(item.GroupDescription)
 		for _, group := range catalog.Groups {
-			if group.Title == key {
-				title = group.ShortTitle
-				summary = group.Summary
+			if group.ID == item.CategoryCode || group.Title == key {
+				if title == "" || title == key {
+					title = group.ShortTitle
+				}
+				if summary == "" {
+					summary = group.Summary
+				}
 				break
 			}
+		}
+		if title == "" {
+			title = "Solução ViaGate"
+		}
+		if summary == "" {
+			summary = "Solução selecionada e configurada para esta negociação."
 		}
 		seen[key] = &ProposalSolution{Title: title, Summary: summary, Status: status}
 		order = append(order, key)
@@ -176,4 +203,161 @@ func ProposalClientDisplayName(value any) string {
 	default:
 		return ""
 	}
+}
+
+
+func ProposalIncludedCount(proposal proposals.PublicProposal) int {
+	count := 0
+	for _, item := range proposal.Items {
+		if !item.IsOptional {
+			count++
+		}
+	}
+	return count
+}
+
+func ProposalOptionalCount(proposal proposals.PublicProposal) int {
+	count := 0
+	for _, item := range proposal.Items {
+		if item.IsOptional {
+			count++
+		}
+	}
+	return count
+}
+
+func ProposalExecutiveSummary(proposal proposals.PublicProposal) string {
+	solutions := ProposalSolutions(proposal)
+	included := ProposalIncludedCount(proposal)
+	optional := ProposalOptionalCount(proposal)
+	client := ProposalClientDisplayName(proposal)
+
+	if len(solutions) == 0 {
+		return fmt.Sprintf("Esta proposta foi preparada para %s com condições comerciais e uma jornada de contratação estruturada pela ViaGate.", client)
+	}
+
+	if optional > 0 {
+		return fmt.Sprintf(
+			"Esta proposta foi estruturada para %s com %d frente(s) de solução, %d produto(s) ou serviço(s) incluído(s) e %d opção(ões) adicional(is), preservando flexibilidade para a evolução da operação.",
+			client,
+			len(solutions),
+			included,
+			optional,
+		)
+	}
+	return fmt.Sprintf(
+		"Esta proposta foi estruturada para %s com %d frente(s) de solução e %d produto(s) ou serviço(s) incluído(s), reunindo em uma única jornada o escopo comercial, a contratação e a preparação da implantação.",
+		client,
+		len(solutions),
+		included,
+	)
+}
+
+func ProposalProductPages(proposal proposals.PublicProposal) []ProposalProductPage {
+	const pageSize = 6
+	if len(proposal.Items) == 0 {
+		return nil
+	}
+	pages := make([]ProposalProductPage, 0, (len(proposal.Items)+pageSize-1)/pageSize)
+	for start := 0; start < len(proposal.Items); start += pageSize {
+		end := start + pageSize
+		if end > len(proposal.Items) {
+			end = len(proposal.Items)
+		}
+		items := make([]proposals.Item, end-start)
+		copy(items, proposal.Items[start:end])
+		pages = append(pages, ProposalProductPage{
+			Number: len(pages) + 1,
+			Items:  items,
+		})
+	}
+	return pages
+}
+
+func ProposalDifferentials(proposal proposals.PublicProposal) []ProposalDifferential {
+	selected := map[string]bool{}
+	for _, item := range proposal.Items {
+		selected[item.CategoryCode] = true
+	}
+
+	result := []ProposalDifferential{}
+	add := func(title, summary string) {
+		result = append(result, ProposalDifferential{Title: title, Summary: summary})
+	}
+
+	if selected["score"] {
+		add("Risco cadastral em uma única jornada", "Cadastro e consulta de motoristas, veículos e colaboradores com validações estruturadas para apoiar a tomada de decisão.")
+		add("Biometria com prova de vida", "Fluxo digital de identificação integrado ao processo cadastral, reduzindo etapas manuais e dependência de cópias de documentos.")
+	}
+	if selected["authentication"] {
+		add("Consultas complementares", "Camada adicional de autenticação e consultas para aprofundar a análise conforme a necessidade da operação.")
+	}
+	if selected["logistics"] {
+		add("Acompanhamento operacional", "Recursos para coletas, entregas, eventos de parada e acompanhamento de viagens pelo smartphone do motorista.")
+	}
+	if selected["prevention"] {
+		add("Gestão preventiva", "Ferramentas complementares para multas, débitos, restrições e histórico veicular, quando contratadas.")
+	}
+	if selected["monitoring"] {
+		add("Integração com monitoramento", "Opções para integrar o acompanhamento de veículos e viagens às rotinas operacionais já utilizadas pela empresa.")
+	}
+
+	add("Composição modular", "Produtos principais e opcionais podem ser combinados conforme a necessidade comercial e operacional de cada cliente.")
+	add("Implantação acompanhada", "A contratação segue uma jornada orientada, com aceite, contrato, assinatura e preparação da implantação em etapas claras.")
+
+	if len(result) > 6 {
+		result = result[:6]
+	}
+	return result
+}
+
+func ProposalJourneySteps(proposal proposals.PublicProposal) []ProposalJourneyStep {
+	implementationSummary := "Cadastro dos responsáveis, usuários e informações necessárias para configuração da operação."
+	if proposal.RequiresPolicy {
+		implementationSummary = "Cadastro dos responsáveis e usuários, envio da apólice e informação das mercadorias transportadas para preparação da operação."
+	}
+
+	return []ProposalJourneyStep{
+		{Number: "01", Title: "Aceite comercial", Summary: "O cliente confirma formalmente esta versão da proposta e inicia a jornada de contratação."},
+		{Number: "02", Title: "Dados contratuais", Summary: "São confirmados os dados cadastrais e os responsáveis necessários para geração do contrato."},
+		{Number: "03", Title: "Assinatura digital", Summary: "O contrato segue para assinatura dos responsáveis definidos, preservando rastreabilidade e evidências."},
+		{Number: "04", Title: "Preparação da implantação", Summary: implementationSummary},
+		{Number: "05", Title: "Ativação", Summary: "Com as etapas obrigatórias concluídas, a equipe ViaGate realiza a configuração interna e libera a operação."},
+	}
+}
+
+func ProposalPolicyRequirementLabel(proposal proposals.PublicProposal) string {
+	if proposal.RequiresPolicy {
+		return "Apólice e mercadorias exigidas"
+	}
+	return "Sem exigência de apólice"
+}
+
+func ProposalItemDescription(item proposals.Item) string {
+	if value := strings.TrimSpace(item.Description); value != "" {
+		return value
+	}
+	if value := strings.TrimSpace(item.GroupDescription); value != "" {
+		return value
+	}
+	return "Produto ou serviço selecionado para compor o escopo desta proposta."
+}
+
+
+func ProposalSolutionStatusClass(status string) string {
+	switch strings.TrimSpace(strings.ToLower(status)) {
+	case "opcional":
+		return "optional"
+	case "incluído + opcional":
+		return "mixed"
+	default:
+		return ""
+	}
+}
+
+func ProposalItemStatusClass(item proposals.Item) string {
+	if item.IsOptional {
+		return "optional"
+	}
+	return ""
 }

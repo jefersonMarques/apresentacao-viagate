@@ -22,7 +22,7 @@ func (s *Store) PublishedByToken(ctx context.Context, token string) (PublicPropo
 	err := s.pool.QueryRow(ctx, `
 		select p.id::text, v.id::text, v.version_number, v.public_token::text, p.title,p.status::text,
 		       c.id::text, coalesce(c.legal_name,''), coalesce(c.cnpj,''), v.pricing_model,
-		       v.content, v.conditions, v.minimum_invoice, v.setup_fee, v.content_hash, p.valid_until
+		       v.content, v.conditions, v.minimum_invoice, v.setup_fee, v.requires_policy, v.content_hash, p.valid_until
 		from proposal_versions v
 		join proposals p on p.id=v.proposal_id
 		join clients c on c.id=p.client_id
@@ -44,6 +44,7 @@ func (s *Store) PublishedByToken(ctx context.Context, token string) (PublicPropo
 		&conditionsJSON,
 		&result.MinimumInvoice,
 		&result.SetupFee,
+		&result.RequiresPolicy,
 		&result.ContentHash,
 		&currentValidUntil,
 	)
@@ -70,7 +71,14 @@ func (s *Store) PublishedByToken(ctx context.Context, token string) (PublicPropo
 	}
 
 	rows, err := s.pool.Query(ctx, `
-		select group_name,label,coalesce(unit,''),price,is_optional,sort_order
+		select
+		       coalesce(metadata->>'category_code',''),
+		       group_name,
+		       coalesce(metadata->>'category_description',''),
+		       coalesce(metadata->>'product_code',metadata->>'catalog_id',''),
+		       label,
+		       coalesce(metadata->>'product_description',''),
+		       coalesce(unit,''),price,is_optional,sort_order
 		from proposal_items
 		where proposal_version_id=$1
 		order by sort_order,id
@@ -81,7 +89,18 @@ func (s *Store) PublishedByToken(ctx context.Context, token string) (PublicPropo
 	defer rows.Close()
 	for rows.Next() {
 		var item Item
-		if err := rows.Scan(&item.GroupName, &item.Label, &item.Unit, &item.Price, &item.IsOptional, &item.SortOrder); err != nil {
+		if err := rows.Scan(
+			&item.CategoryCode,
+			&item.GroupName,
+			&item.GroupDescription,
+			&item.ProductCode,
+			&item.Label,
+			&item.Description,
+			&item.Unit,
+			&item.Price,
+			&item.IsOptional,
+			&item.SortOrder,
+		); err != nil {
 			return PublicProposal{}, err
 		}
 		item.GroupName = strings.TrimSpace(item.GroupName)
