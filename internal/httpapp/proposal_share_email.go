@@ -292,7 +292,7 @@ func (a *App) proposalEmailVariables(input proposals.EditorInput, seller domain.
 
 	baseURL := strings.TrimRight(a.cfg.BaseURL, "/")
 	return map[string]string{
-		"brand.logo_url":       baseURL + "/v1/assets/logo-viagate-white.svg",
+		"brand.logo_url":       baseURL + "/v1/assets/logo-viagate-email.png",
 		"client.display_name":   clientDisplayName,
 		"client.legal_name":     strings.TrimSpace(input.ClientLegalName),
 		"client.trade_name":     strings.TrimSpace(input.ClientTradeName),
