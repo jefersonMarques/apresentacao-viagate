@@ -8,7 +8,7 @@
   const previous = document.querySelector('[data-viewer-previous]');
   const next = document.querySelector('[data-viewer-next]');
   const counter = document.querySelector('[data-viewer-counter]');
-  const inlineAction = document.querySelector('[data-proposal-accept-inline]');
+  const inlineActions = Array.from(document.querySelectorAll('[data-proposal-accept-inline]'));
   const slides = () => Array.from(root.querySelectorAll('[data-viewer-slide]'));
   const startLabel = start?.getAttribute('data-viewer-start-label') || 'INICIAR';
   const continueLabel = start?.getAttribute('data-viewer-continue-label') || 'CONTINUAR';
@@ -62,7 +62,7 @@
         tone: nextJourney.tone || 'primary',
       };
       updateActionButton(action);
-      updateActionButton(inlineAction);
+      inlineActions.forEach(updateActionButton);
     }
 
     async function loadState(force = false) {
@@ -112,7 +112,7 @@
     }
 
     action.addEventListener('click', advance);
-    inlineAction?.addEventListener('click', advance);
+    inlineActions.forEach((button) => button.addEventListener('click', advance));
 
     modal.querySelectorAll('[data-proposal-contract-close]').forEach((button) => button.addEventListener('click', closeModal));
     document.addEventListener('keydown', (event) => {
@@ -197,10 +197,12 @@
   }
 
   function inlineActionVisible() {
-    if (!(inlineAction instanceof HTMLElement)) return false;
-    const rect = inlineAction.getBoundingClientRect();
     const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-    return rect.bottom > 0 && rect.top < viewportHeight;
+    return inlineActions.some((inlineAction) => {
+      if (!(inlineAction instanceof HTMLElement)) return false;
+      const rect = inlineAction.getBoundingClientRect();
+      return rect.bottom > 0 && rect.top < viewportHeight;
+    });
   }
 
   function updateAcceptAction(items, index) {

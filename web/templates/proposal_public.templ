@@ -32,7 +32,7 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 						<div>
 							<img class="proposal-cover-logo" src="/v1/assets/logo-viagate-white.svg" alt="ViaGate"/>
 							<p class="proposal-kicker">PROPOSTA COMERCIAL · VERSÃO { proposal.VersionNumber }</p>
-							<h1>Preparada para<br/><span>{ ProposalClientDisplayName(proposal) }</span></h1>
+							<h1 class={ ProposalClientNameClass(proposal) }>Preparada para<br/><span>{ ProposalClientDisplayName(proposal) }</span></h1>
 							if ProposalSectionString(proposal,"contact","name") != "" {
 								<p class="proposal-lead">
 									Aos cuidados de { ProposalSectionString(proposal,"contact","name") }
@@ -102,7 +102,9 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 											<div>
 												<div class="proposal-company-module-heading">
 													<strong>{ solution.Title }</strong>
-													<em class={ "proposal-module-status " + ProposalSolutionStatusClass(solution.Status) }>{ solution.Status }</em>
+													if solution.Status != "Contemplado" {
+														<em class={ "proposal-module-status " + ProposalSolutionStatusClass(solution.Status) }>{ solution.Status }</em>
+													}
 												</div>
 												<p>{ solution.Summary }</p>
 											</div>
@@ -168,25 +170,21 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 						<div class="proposal-slide-inner">
 							<div>
 								<p class="proposal-kicker">ESCOPO DETALHADO</p>
-								if len(productPages) > 1 {
-									<h2>Produtos e serviços <span>contemplados · { productPage.Number }</span></h2>
-								} else {
-									<h2>Produtos e serviços <span>contemplados</span></h2>
-								}
+								<h2>Produtos e serviços <span>contemplados</span></h2>
 								<p class="proposal-product-detail-lead">Abaixo estão os produtos e serviços que compõem esta proposta, com suas condições comerciais e opções adicionais quando aplicáveis.</p>
 								<div class="proposal-product-detail-grid">
 									for _, item := range productPage.Items {
 										<article class="proposal-product-detail-card">
 											<header>
-												<small>{ item.GroupName }</small>
-												<span class={ "proposal-module-status " + ProposalItemStatusClass(item) }>{ ProposalItemStatus(item) }</span>
+												<small>{ ProposalItemGroupLabel(item) }</small>
+												if item.IsOptional {
+													<span class="proposal-module-status optional">Opção adicional</span>
+												}
 											</header>
 											<strong>{ item.Label }</strong>
 											<p>{ ProposalItemDescription(item) }</p>
 											<footer>
-												if item.Unit != "" {
-													<span>Unidade: { item.Unit }</span>
-												}
+												<span>{ ProposalBillingUnitLabel(item.Unit) }</span>
 												<span>{ Money(item.Price) }</span>
 											</footer>
 										</article>
@@ -206,7 +204,7 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 								<p class="proposal-kicker">DIFERENCIAIS DA SOLUÇÃO</p>
 								<h2>Mais do que produtos: uma operação <span>mais estruturada</span></h2>
 								<p class="proposal-commercial-note">A solução apresentada combina tecnologia, rastreabilidade e flexibilidade para apoiar a rotina operacional e a evolução da contratação.</p>
-								<div class="proposal-differential-grid">
+								<div class={ "proposal-differential-grid " + ProposalDifferentialGridClass(differentials) }>
 									for index, differential := range differentials {
 										<article class="proposal-differential-card">
 											<small>{ index + 1 }</small>
@@ -252,9 +250,10 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 								<p class="proposal-commercial-note">Os valores são aplicados de acordo com o uso e respeitam as condições comerciais desta proposta.</p>
 								<div class="proposal-commercial-summary-grid">
 									<div class="proposal-commercial-summary-card primary"><small>PRODUTOS CONTEMPLADOS</small><strong>{ ProposalIncludedCount(proposal) }</strong></div>
-									<div class="proposal-commercial-summary-card"><small>OPÇÕES ADICIONAIS</small><strong>{ ProposalOptionalCount(proposal) }</strong></div>
+									if ProposalHasOptionalItems(proposal) {
+										<div class="proposal-commercial-summary-card"><small>OPÇÕES ADICIONAIS</small><strong>{ ProposalOptionalCount(proposal) }</strong></div>
+									}
 									<div class="proposal-commercial-summary-card"><small>SOLUÇÕES</small><strong>{ len(ProposalSolutions(proposal)) }</strong></div>
-									<div class="proposal-commercial-summary-card"><small>REQUISITOS OPERACIONAIS</small><strong>{ ProposalPolicyRequirementLabel(proposal) }</strong></div>
 								</div>
 								if len(proposal.Items) > 0 {
 									<div class="proposal-price-groups">
@@ -263,14 +262,30 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 												<header class="proposal-price-group-header">
 													<strong>{ group.Name }</strong>
 													if group.AllOptional {
-														<span class="proposal-optional-label">Opcional</span>
+														<span class="proposal-optional-label">Opção adicional</span>
 													}
 												</header>
 												<table class="proposal-price-table">
-													<thead><tr><th>Produto ou serviço</th><th>Unidade</th><th>Condição</th><th>Valor</th></tr></thead>
+													<thead>
+														<tr>
+															<th>Produto ou serviço</th>
+															<th>Forma de cobrança</th>
+															if ProposalHasOptionalItems(proposal) {
+																<th>Escopo</th>
+															}
+															<th>Valor</th>
+														</tr>
+													</thead>
 													<tbody>
 														for _, item := range group.Items {
-															<tr><td data-label="Produto ou serviço">{ item.Label }</td><td data-label="Unidade">{ item.Unit }</td><td data-label="Condição">{ ProposalItemStatus(item) }</td><td data-label="Valor">{ Money(item.Price) }</td></tr>
+															<tr>
+																<td data-label="Produto ou serviço">{ item.Label }</td>
+																<td data-label="Forma de cobrança">{ ProposalBillingUnitLabel(item.Unit) }</td>
+																if ProposalHasOptionalItems(proposal) {
+																	<td data-label="Escopo">{ ProposalItemScopeLabel(item) }</td>
+																}
+																<td data-label="Valor">{ Money(item.Price) }</td>
+															</tr>
 														}
 													</tbody>
 												</table>
@@ -298,21 +313,29 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 					</section>
 				}
 
-				if len(proposal.Conditions) > 0 || proposal.ValidUntil != nil {
+				{{ conditionGroups := ProposalConditionGroups(proposal.Conditions) }}
+				if len(conditionGroups) > 0 || proposal.ValidUntil != nil {
 					<section class="proposal-slide light" data-viewer-slide>
 						<div class="proposal-slide-inner">
 							<div>
-								<p class="proposal-kicker">OBSERVAÇÕES E CONDIÇÕES</p>
-								<h2>Condições <span>comerciais</span></h2>
-								if len(proposal.Conditions) > 0 {
-									<div class="proposal-content-grid">
-										for index, condition := range proposal.Conditions {
-											<article class="proposal-content-card"><small>{ index + 1 }</small><h3>{ condition }</h3></article>
+								<p class="proposal-kicker">CONDIÇÕES COMERCIAIS</p>
+								<h2>Informações importantes para <span>esta contratação</span></h2>
+								if len(conditionGroups) > 0 {
+									<div class="proposal-condition-groups">
+										for groupIndex, group := range conditionGroups {
+											<article class="proposal-condition-group">
+												<header><small>{ groupIndex + 1 }</small><strong>{ group.Title }</strong></header>
+												<ul>
+													for _, condition := range group.Items {
+														<li>{ condition }</li>
+													}
+												</ul>
+											</article>
 										}
 									</div>
 								}
 								if proposal.ValidUntil != nil {
-									<div class="proposal-validity"><strong>Válida até { Date(proposal.ValidUntil) }</strong></div>
+									<div class="proposal-validity"><strong>Proposta válida até { Date(proposal.ValidUntil) }</strong></div>
 								}
 							</div>
 						</div>
@@ -337,11 +360,11 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 								}
 							</div>
 							<div class="proposal-journey-note">
-								<strong>{ ProposalPolicyRequirementLabel(proposal) }</strong>
+								<strong>Documentos para implantação</strong>
 								if proposal.RequiresPolicy {
-									<span>Para a implantação, será necessário enviar a apólice e informar as principais mercadorias transportadas.</span>
+									<span>Nesta contratação, será necessário enviar a apólice e informar as principais mercadorias transportadas.</span>
 								} else {
-									<span>Esta proposta não exige apólice nem cadastro de mercadorias para avançar na implantação.</span>
+									<span>Nesta contratação, não será necessário enviar apólice nem cadastrar mercadorias.</span>
 								}
 							</div>
 						</div>
@@ -350,25 +373,26 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 				</section>
 
 				<section class="proposal-slide orange" data-viewer-slide>
-					<div class="proposal-slide-inner proposal-contact-final">
-						<div>
-							<p class="proposal-kicker" style="color:#fff">CONTATO COMERCIAL</p>
-							if ProposalSalesperson(proposal,"name") != "" {
-								<h2>{ ProposalSalesperson(proposal,"name") }</h2>
-							} else {
-								<h2>ViaGate</h2>
-							}
-							if ProposalSalespersonRole(proposal) != "" {
-								<p class="proposal-lead" style="color:rgba(255,255,255,.84)">{ ProposalSalespersonRole(proposal) }</p>
-							}
+					<div class="proposal-slide-inner proposal-contact-final proposal-closing">
+						<div class="proposal-closing-copy">
+							<p class="proposal-kicker" style="color:#fff">OBRIGADO PELA OPORTUNIDADE</p>
+							<h2>Prontos para <span>avançar juntos</span></h2>
+							<p class="proposal-lead" style="color:rgba(255,255,255,.84)">A ViaGate está pronta para apoiar a { ProposalClientDisplayName(proposal) } na próxima etapa. Ficamos à disposição para esclarecer qualquer ponto desta proposta.</p>
+							<div class="proposal-closing-actions">
+								<button class="proposal-accept-inline proposal-closing-accept" type="button" data-proposal-accept-inline>ACEITAR PROPOSTA</button>
+								<small>O aceite inicia a jornada de contratação e preparação da implantação.</small>
+							</div>
 						</div>
 						<aside class="proposal-contact-data">
 							if ProposalSalesperson(proposal,"photo_url") != "" {
 								<img src={ templ.SafeURL(ProposalSalesperson(proposal,"photo_url")) } alt={ ProposalSalesperson(proposal,"name") }/>
 							}
-							<small>CONTATO RESPONSÁVEL</small>
+							<small>SEU CONTATO NA VIAGATE</small>
 							if ProposalSalesperson(proposal,"name") != "" {
 								<strong>{ ProposalSalesperson(proposal,"name") }</strong>
+							}
+							if ProposalSalespersonRole(proposal) != "" {
+								<span>{ ProposalSalespersonRole(proposal) }</span>
 							}
 							if ProposalSalesperson(proposal,"phone") != "" {
 								<span>{ Phone(ProposalSalesperson(proposal,"phone")) }</span>
@@ -388,7 +412,7 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 							}
 						</aside>
 					</div>
-					<div class="proposal-slide-footer"><span>Contato comercial</span><span data-slide-number></span></div>
+					<div class="proposal-slide-footer"><span>Encerramento</span><span data-slide-number></span></div>
 				</section>
 			</main>
 

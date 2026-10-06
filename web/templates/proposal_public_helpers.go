@@ -30,6 +30,11 @@ type ProposalJourneyStep struct {
 	Summary string
 }
 
+type ProposalConditionGroup struct {
+	Title string
+	Items []string
+}
+
 type ProposalPriceGroup struct {
 	Name        string
 	Items       []proposals.Item
@@ -40,7 +45,7 @@ func ProposalSolutions(proposal proposals.PublicProposal) []ProposalSolution {
 	seen := map[string]*ProposalSolution{}
 	order := []string{}
 	for _, item := range proposal.Items {
-		key := item.GroupName
+		key := ProposalItemGroupLabel(item)
 		status := ProposalItemStatus(item)
 		if current, ok := seen[key]; ok {
 			if current.Status != status {
@@ -48,13 +53,10 @@ func ProposalSolutions(proposal proposals.PublicProposal) []ProposalSolution {
 			}
 			continue
 		}
-		title := strings.TrimSpace(item.GroupName)
+		title := key
 		summary := strings.TrimSpace(item.GroupDescription)
 		for _, group := range catalog.Groups {
-			if group.ID == item.CategoryCode || group.Title == key {
-				if title == "" || title == key {
-					title = group.ShortTitle
-				}
+			if group.ID == item.CategoryCode || group.ShortTitle == title || group.Title == item.GroupName {
 				if summary == "" {
 					summary = group.Summary
 				}
@@ -81,11 +83,12 @@ func ProposalPriceGroups(proposal proposals.PublicProposal) []ProposalPriceGroup
 	indexes := map[string]int{}
 	groups := []ProposalPriceGroup{}
 	for _, item := range proposal.Items {
-		index, ok := indexes[item.GroupName]
+		groupName := ProposalItemGroupLabel(item)
+		index, ok := indexes[groupName]
 		if !ok {
 			index = len(groups)
-			indexes[item.GroupName] = index
-			groups = append(groups, ProposalPriceGroup{Name: item.GroupName, AllOptional: true})
+			indexes[groupName] = index
+			groups = append(groups, ProposalPriceGroup{Name: groupName, AllOptional: true})
 		}
 		groups[index].Items = append(groups[index].Items, item)
 		if !item.IsOptional {
@@ -93,6 +96,48 @@ func ProposalPriceGroups(proposal proposals.PublicProposal) []ProposalPriceGroup
 		}
 	}
 	return groups
+}
+
+func ProposalItemGroupLabel(item proposals.Item) string {
+	if group, _, ok := catalog.ItemByID(item.ProductCode); ok {
+		return group.ShortTitle
+	}
+	for _, group := range catalog.Groups {
+		if group.ID == item.CategoryCode {
+			return group.ShortTitle
+		}
+	}
+
+	groupName := strings.TrimSpace(item.GroupName)
+	normalized := strings.ToLower(groupName + " " + item.ProductCode)
+	switch {
+	case strings.Contains(normalized, "score") || strings.Contains(normalized, "analise cadastral") || strings.Contains(normalized, "análise cadastral"):
+		return "Cargo Score"
+	case strings.Contains(normalized, "truck") || strings.Contains(normalized, "logistica") || strings.Contains(normalized, "logística"):
+		return "Cargo Truck"
+	case strings.Contains(normalized, "auth") || strings.Contains(normalized, "autentic"):
+		return "Consultas e autenticação"
+	case strings.Contains(normalized, "preven"):
+		return "Prevenção"
+	case strings.Contains(normalized, "monitor"):
+		return "Monitoramento de veículos"
+	default:
+		return groupName
+	}
+}
+
+func ProposalItemScopeLabel(item proposals.Item) string {
+	if item.IsOptional {
+		return "Opcional"
+	}
+	return "Principal"
+}
+
+func ProposalDifferentialGridClass(items []ProposalDifferential) string {
+	if len(items) == 4 {
+		return "is-four"
+	}
+	return ""
 }
 
 func ProposalModelCards(value string) []catalog.PricingModel {
@@ -257,22 +302,31 @@ func ProposalExecutiveSummary(proposal proposals.PublicProposal) string {
 }
 
 func ProposalProductPages(proposal proposals.PublicProposal) []ProposalProductPage {
-	const pageSize = 6
-	if len(proposal.Items) == 0 {
+	const maxItemsPerPage = 6
+	total := len(proposal.Items)
+	if total == 0 {
 		return nil
 	}
-	pages := make([]ProposalProductPage, 0, (len(proposal.Items)+pageSize-1)/pageSize)
-	for start := 0; start < len(proposal.Items); start += pageSize {
-		end := start + pageSize
-		if end > len(proposal.Items) {
-			end = len(proposal.Items)
+
+	pageCount := (total + maxItemsPerPage - 1) / maxItemsPerPage
+	baseSize := total / pageCount
+	remainder := total % pageCount
+
+	pages := make([]ProposalProductPage, 0, pageCount)
+	start := 0
+	for pageIndex := 0; pageIndex < pageCount; pageIndex++ {
+		size := baseSize
+		if pageIndex < remainder {
+			size++
 		}
-		items := make([]proposals.Item, end-start)
+		end := start + size
+		items := make([]proposals.Item, size)
 		copy(items, proposal.Items[start:end])
 		pages = append(pages, ProposalProductPage{
-			Number: len(pages) + 1,
+			Number: pageIndex + 1,
 			Items:  items,
 		})
+		start = end
 	}
 	return pages
 }
@@ -280,7 +334,25 @@ func ProposalProductPages(proposal proposals.PublicProposal) []ProposalProductPa
 func ProposalDifferentials(proposal proposals.PublicProposal) []ProposalDifferential {
 	selected := map[string]bool{}
 	for _, item := range proposal.Items {
-		selected[item.CategoryCode] = true
+		category := strings.ToLower(strings.TrimSpace(item.CategoryCode))
+		product := strings.ToLower(strings.TrimSpace(item.ProductCode))
+		group := strings.ToLower(strings.TrimSpace(item.GroupName))
+
+		if category != "" {
+			selected[category] = true
+		}
+		switch {
+		case strings.Contains(product, "score") || strings.Contains(group, "analise cadastral") || strings.Contains(group, "análise cadastral"):
+			selected["score"] = true
+		case strings.Contains(product, "auth") || strings.Contains(group, "autentic"):
+			selected["authentication"] = true
+		case strings.Contains(product, "truck") || strings.Contains(group, "logistica") || strings.Contains(group, "logística"):
+			selected["logistics"] = true
+		case strings.Contains(product, "prevention") || strings.Contains(group, "preven"):
+			selected["prevention"] = true
+		case strings.Contains(product, "monitoring") || strings.Contains(group, "monitoramento"):
+			selected["monitoring"] = true
+		}
 	}
 
 	result := []ProposalDifferential{}
@@ -289,29 +361,135 @@ func ProposalDifferentials(proposal proposals.PublicProposal) []ProposalDifferen
 	}
 
 	if selected["score"] {
-		add("Risco cadastral em uma única jornada", "Cadastro e consulta de motoristas, veículos e colaboradores com validações estruturadas para apoiar a tomada de decisão.")
-		add("Biometria com prova de vida", "Fluxo digital de identificação integrado ao processo cadastral, reduzindo etapas manuais e dependência de cópias de documentos.")
+		add("Análise de risco mais estruturada", "Consultas cadastrais de motoristas e veículos organizadas para apoiar decisões com mais agilidade e consistência.")
+		add("Biometria integrada ao processo", "Validação biométrica incorporada à jornada cadastral, reduzindo etapas manuais e apoiando a identificação do profissional.")
 	}
 	if selected["authentication"] {
-		add("Consultas complementares", "Camada adicional de autenticação e consultas para aprofundar a análise conforme a necessidade da operação.")
+		add("Consultas complementares", "Recursos adicionais de autenticação e pesquisa para aprofundar a análise conforme a necessidade da operação.")
 	}
 	if selected["logistics"] {
 		add("Acompanhamento operacional", "Recursos para coletas, entregas, eventos de parada e acompanhamento de viagens pelo smartphone do motorista.")
 	}
 	if selected["prevention"] {
-		add("Gestão preventiva", "Ferramentas complementares para multas, débitos, restrições e histórico veicular, quando contratadas.")
+		add("Gestão preventiva", "Ferramentas complementares para acompanhar multas, débitos, restrições e histórico veicular quando contratadas.")
 	}
 	if selected["monitoring"] {
-		add("Integração com monitoramento", "Opções para integrar o acompanhamento de veículos e viagens às rotinas operacionais já utilizadas pela empresa.")
+		add("Integração com monitoramento", "Opções para conectar o acompanhamento de veículos e viagens às rotinas operacionais da empresa.")
 	}
 
-	add("Composição modular", "Produtos principais e opcionais podem ser combinados conforme a necessidade comercial e operacional de cada cliente.")
+	if ProposalOptionalCount(proposal) > 0 {
+		add("Flexibilidade para evoluir a solução", "As opções adicionais podem ampliar o escopo conforme novas necessidades comerciais e operacionais surgirem.")
+	} else if len(ProposalSolutions(proposal)) > 1 {
+		add("Visão integrada da operação", "As soluções desta proposta se complementam em uma jornada única, reduzindo dispersão entre etapas e fornecedores.")
+	}
 	add("Implantação acompanhada", "A contratação segue uma jornada orientada, com aceite, contrato, assinatura e preparação da implantação em etapas claras.")
 
 	if len(result) > 6 {
 		result = result[:6]
 	}
 	return result
+}
+
+func ProposalHasOptionalItems(proposal proposals.PublicProposal) bool {
+	return ProposalOptionalCount(proposal) > 0
+}
+
+func ProposalBillingUnitLabel(unit string) string {
+	value := strings.TrimSpace(strings.ToLower(unit))
+	if value == "" {
+		return "Conforme utilização"
+	}
+	switch value {
+	case "cadastro":
+		return "Por cadastro"
+	case "consulta":
+		return "Por consulta"
+	case "reanálise", "reanalise":
+		return "Por reanálise"
+	case "viagem":
+		return "Por viagem"
+	case "veículo", "veiculo":
+		return "Por veículo"
+	case "estado":
+		return "Por estado"
+	case "conjunto":
+		return "Por conjunto"
+	default:
+		return "Por " + value
+	}
+}
+
+func ProposalConditionGroups(conditions []string) []ProposalConditionGroup {
+	if len(conditions) == 0 {
+		return nil
+	}
+
+	type groupRule struct {
+		title    string
+		keywords []string
+	}
+	rules := []groupRule{
+		{
+			title:    "Prazos e operação",
+			keywords: []string{"prazo", "retorno", "biometr", "operaç", "operac", "implant", "atendimento"},
+		},
+		{
+			title:    "Serviços e integrações",
+			keywords: []string{"integra", "aplicativo", "link web", "vitimologia", "logíst", "logist", "gestão de risco", "gerenciamento de risco"},
+		},
+		{
+			title:    "Customizações e despesas",
+			keywords: []string{"customiza", "fora do escopo", "hora técnica", "hora tecnica", "despesa", "deslocamento", "alimentação", "alimentacao", "hospedagem", "orçad", "orcad"},
+		},
+	}
+
+	groups := make([]ProposalConditionGroup, 0, len(rules)+1)
+	indexes := map[string]int{}
+	add := func(title, item string) {
+		index, ok := indexes[title]
+		if !ok {
+			index = len(groups)
+			indexes[title] = index
+			groups = append(groups, ProposalConditionGroup{Title: title})
+		}
+		groups[index].Items = append(groups[index].Items, item)
+	}
+
+	for _, condition := range conditions {
+		text := strings.TrimSpace(condition)
+		if text == "" {
+			continue
+		}
+		normalized := strings.ToLower(text)
+		title := "Condições gerais"
+		for _, rule := range rules {
+			matched := false
+			for _, keyword := range rule.keywords {
+				if strings.Contains(normalized, keyword) {
+					title = rule.title
+					matched = true
+					break
+				}
+			}
+			if matched {
+				break
+			}
+		}
+		add(title, text)
+	}
+	return groups
+}
+
+func ProposalClientNameClass(proposal proposals.PublicProposal) string {
+	length := len([]rune(ProposalClientDisplayName(proposal)))
+	switch {
+	case length > 46:
+		return "proposal-client-name proposal-client-name-xlong"
+	case length > 30:
+		return "proposal-client-name proposal-client-name-long"
+	default:
+		return "proposal-client-name"
+	}
 }
 
 func ProposalJourneySteps(proposal proposals.PublicProposal) []ProposalJourneyStep {

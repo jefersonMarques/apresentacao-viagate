@@ -48,8 +48,8 @@ func TestProposalProductPagesChunkDetailWithoutDroppingItems(t *testing.T) {
 	if len(pages) != 2 {
 		t.Fatalf("expected two detail pages, got %d", len(pages))
 	}
-	if len(pages[0].Items) != 6 || len(pages[1].Items) != 1 {
-		t.Fatalf("unexpected page sizes: %d and %d", len(pages[0].Items), len(pages[1].Items))
+	if len(pages[0].Items) != 4 || len(pages[1].Items) != 3 {
+		t.Fatalf("expected balanced 4/3 pages, got %d and %d", len(pages[0].Items), len(pages[1].Items))
 	}
 }
 
@@ -124,5 +124,74 @@ func TestProposalPolicyRequirementLabelIsCustomerFacing(t *testing.T) {
 	}
 	if got := ProposalPolicyRequirementLabel(proposals.PublicProposal{RequiresPolicy: false}); got != "Não requer apólice" {
 		t.Fatalf("unexpected no-policy label: %q", got)
+	}
+}
+
+
+func TestProposalProductPagesBalanceElevenItems(t *testing.T) {
+	proposal := proposals.PublicProposal{}
+	for i := 0; i < 11; i++ {
+		proposal.Items = append(proposal.Items, proposals.Item{Label: string(rune('A' + i))})
+	}
+	pages := ProposalProductPages(proposal)
+	if len(pages) != 2 || len(pages[0].Items) != 6 || len(pages[1].Items) != 5 {
+		t.Fatalf("expected balanced 6/5 pages, got %#v", []int{len(pages[0].Items), len(pages[1].Items)})
+	}
+}
+
+func TestProposalItemGroupLabelMapsLegacyCommercialNames(t *testing.T) {
+	item := proposals.Item{
+		GroupName:   "ANALISE CADASTRAL | CONJUNTO",
+		ProductCode: "score-bundle-register",
+	}
+	if got := ProposalItemGroupLabel(item); got != "Cargo Score" {
+		t.Fatalf("unexpected commercial group name: %q", got)
+	}
+}
+
+func TestProposalDifferentialsAvoidModularCopyWithoutOptions(t *testing.T) {
+	proposal := proposals.PublicProposal{
+		Items: []proposals.Item{
+			{CategoryCode: "logistics", GroupName: "Cargo Truck"},
+			{CategoryCode: "prevention", GroupName: "Prevenção"},
+		},
+	}
+	for _, differential := range ProposalDifferentials(proposal) {
+		if differential.Title == "Flexibilidade para evoluir a solução" {
+			t.Fatal("proposal without optional items must not advertise optional flexibility")
+		}
+	}
+}
+
+func TestProposalConditionGroupsOrganizeCommercialConditions(t *testing.T) {
+	groups := ProposalConditionGroups([]string{
+		"O retorno ocorre em até 10 minutos.",
+		"Integrações dependem de homologação.",
+		"Customizações fora do escopo serão orçadas.",
+		"Condição específica adicional.",
+	})
+	if len(groups) != 4 {
+		t.Fatalf("expected four condition groups, got %d", len(groups))
+	}
+	got := map[string]int{}
+	for _, group := range groups {
+		got[group.Title] = len(group.Items)
+	}
+	if got["Prazos e operação"] != 1 || got["Serviços e integrações"] != 1 || got["Customizações e despesas"] != 1 || got["Condições gerais"] != 1 {
+		t.Fatalf("unexpected condition grouping: %#v", got)
+	}
+}
+
+func TestProposalBillingUnitLabelUsesCustomerLanguage(t *testing.T) {
+	tests := map[string]string{
+		"consulta":  "Por consulta",
+		"viagem":    "Por viagem",
+		"veículo":   "Por veículo",
+		"reanálise": "Por reanálise",
+	}
+	for input, want := range tests {
+		if got := ProposalBillingUnitLabel(input); got != want {
+			t.Fatalf("unit %q: got %q want %q", input, got, want)
+		}
 	}
 }

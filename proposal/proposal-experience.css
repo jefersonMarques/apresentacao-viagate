@@ -1024,3 +1024,178 @@ html:fullscreen body.public-proposal:not(.proposal-locked) #proposalPresentation
     width: 108px;
   }
 }
+
+
+/* Commercial refinement */
+
+.proposal-client-name-long span {
+  font-size: .82em;
+  line-height: .98;
+}
+
+.proposal-client-name-xlong span {
+  font-size: .68em;
+  line-height: .96;
+}
+
+.proposal-differential-grid.is-four {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.proposal-commercial-summary-grid {
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.proposal-condition-groups {
+  margin-top: 30px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.proposal-condition-group {
+  min-height: 250px;
+  padding: 22px;
+  border: 1px solid #dfe6ea;
+  background: #fff;
+  box-shadow: 0 12px 34px rgba(7, 24, 39, .04);
+}
+
+.proposal-condition-group header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #edf1f3;
+}
+
+.proposal-condition-group header small {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  display: grid;
+  place-items: center;
+  background: #071827;
+  color: #ff6b18;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.proposal-condition-group header strong {
+  color: #071827;
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.proposal-condition-group ul {
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.proposal-condition-group li {
+  position: relative;
+  padding: 10px 0 10px 18px;
+  border-bottom: 1px solid #edf1f3;
+  color: #415867;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.proposal-condition-group li:last-child {
+  border-bottom: 0;
+}
+
+.proposal-condition-group li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 17px;
+  width: 6px;
+  height: 2px;
+  background: #ff6b18;
+}
+
+.proposal-closing {
+  gap: 80px;
+}
+
+.proposal-closing-copy {
+  max-width: 760px;
+}
+
+.proposal-closing-copy h2 span {
+  display: block;
+  color: #fff;
+}
+
+.proposal-closing-copy .proposal-lead {
+  max-width: 680px;
+}
+
+.proposal-closing-actions {
+  margin-top: 30px;
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+}
+
+.proposal-closing-actions small {
+  max-width: 460px;
+  color: rgba(255, 255, 255, .72);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.proposal-closing-accept {
+  min-width: 300px;
+  border-color: #071827;
+  background: #071827;
+  box-shadow: 0 18px 46px rgba(7, 24, 39, .25);
+}
+
+.proposal-closing-accept:hover {
+  border-color: #102c40;
+  background: #102c40;
+}
+
+@media (max-width: 900px) {
+  .proposal-differential-grid.is-four {
+    grid-template-columns: 1fr;
+  }
+
+  .proposal-closing {
+    gap: 30px;
+  }
+}
+
+@media (max-width: 760px) {
+  .proposal-client-name-long span,
+  .proposal-client-name-xlong span {
+    font-size: .82em;
+    line-height: 1;
+  }
+
+  .proposal-condition-groups {
+    grid-template-columns: 1fr;
+    margin-top: 22px;
+  }
+
+  .proposal-condition-group {
+    min-height: 0;
+    padding: 18px;
+  }
+
+  .proposal-condition-group li {
+    font-size: 12px;
+  }
+
+  .proposal-closing-actions {
+    justify-items: stretch;
+  }
+
+  .proposal-closing-accept {
+    width: 100%;
+    min-width: 0;
+  }
+}
