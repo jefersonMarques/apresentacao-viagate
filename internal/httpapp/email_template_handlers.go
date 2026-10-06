@@ -112,7 +112,7 @@ func (a *App) previewEmailTemplate(w http.ResponseWriter, r *http.Request) {
 
 func sampleEmailTemplateVariables() map[string]string {
 	return map[string]string{
-		"brand.logo_url":          "https://viagate.com.br/v1/assets/logo-viagate-white.svg",
+		"brand.logo_url":          "https://viagate.com.br/v1/assets/logo-viagate-email.png",
 		"client.display_name":      "Cliente Exemplo",
 		"client.legal_name":        "Cliente Exemplo Ltda.",
 		"client.trade_name":        "Cliente Exemplo",
