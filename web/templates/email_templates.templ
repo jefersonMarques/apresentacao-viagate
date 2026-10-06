@@ -70,7 +70,7 @@ templ EmailTemplatesPage(user domain.User, items []emailtemplates.Template, vari
 										<button class="v1-variable-chip" type="button" data-email-template-variable={ "{" + variable + "}" }>{ "{" + variable + "}" }</button>
 									}
 								</div>
-								<div class="v1-help admin-form-help">Clique em uma variável para inseri-la no campo que estiver em edição. Dados simples são escapados antes de entrar no HTML. {proposal.products_html} é um bloco seguro gerado pelo sistema a partir dos produtos da versão publicada.</div>
+								<div class="v1-help admin-form-help">Clique em uma variável para inseri-la no campo que estiver em edição. Dados simples são escapados antes de entrar no HTML. <code>{ "{proposal.products_html}" }</code> é um bloco seguro gerado pelo sistema a partir dos produtos da versão publicada.</div>
 							</div>
 
 							<div class="v1-form-grid admin-form-section-gap">
