@@ -342,3 +342,22 @@ func ProposalItemDescription(item proposals.Item) string {
 	}
 	return "Produto ou serviço selecionado para compor o escopo desta proposta."
 }
+
+
+func ProposalSolutionStatusClass(status string) string {
+	switch strings.TrimSpace(strings.ToLower(status)) {
+	case "opcional":
+		return "optional"
+	case "incluído + opcional":
+		return "mixed"
+	default:
+		return ""
+	}
+}
+
+func ProposalItemStatusClass(item proposals.Item) string {
+	if item.IsOptional {
+		return "optional"
+	}
+	return ""
+}
