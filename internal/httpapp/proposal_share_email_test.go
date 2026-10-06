@@ -1,6 +1,7 @@
 package httpapp
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -53,5 +54,55 @@ func TestProposalEmailVariablesFallbackGreeting(t *testing.T) {
 	)
 	if variables["contact.greeting"] != "Olá." {
 		t.Fatalf("unexpected greeting: %q", variables["contact.greeting"])
+	}
+}
+
+
+func TestProposalEmailProductVariablesRenderPublishedSnapshotSafely(t *testing.T) {
+	variables := proposalEmailProductVariables([]proposalEmailProduct{
+		{
+			Label:       "Cargo <Score>",
+			Description: "Análise & risco",
+			GroupName:   "Plataforma Cargo",
+		},
+		{
+			Label:       "Cargo Logística",
+			Description: "Acompanhamento por aplicativo",
+			GroupName:   "Plataforma Cargo",
+			IsOptional:  true,
+		},
+	}, true)
+
+	htmlBody := variables["proposal.products_html"]
+	if strings.Contains(htmlBody, "Cargo <Score>") {
+		t.Fatal("product label must be escaped in trusted HTML block")
+	}
+	if !strings.Contains(htmlBody, "Cargo &lt;Score&gt;") || !strings.Contains(htmlBody, "Análise &amp; risco") {
+		t.Fatal("escaped product snapshot values missing from HTML block")
+	}
+	if !strings.Contains(htmlBody, "Opcional") {
+		t.Fatal("optional proposal item should be identified in HTML block")
+	}
+	if variables["proposal.products_count"] != "2" {
+		t.Fatalf("unexpected product count: %q", variables["proposal.products_count"])
+	}
+	if variables["proposal.requires_policy"] != "Sim" {
+		t.Fatalf("unexpected policy requirement: %q", variables["proposal.requires_policy"])
+	}
+	if !strings.Contains(variables["proposal.products_text"], "Cargo Logística (Opcional)") {
+		t.Fatal("plain text product list should identify optional proposal items")
+	}
+}
+
+func TestProposalEmailProductVariablesWithoutPolicy(t *testing.T) {
+	variables := proposalEmailProductVariables([]proposalEmailProduct{
+		{Label: "Cadastro de motorista"},
+	}, false)
+
+	if variables["proposal.requires_policy"] != "Não" {
+		t.Fatalf("unexpected policy requirement: %q", variables["proposal.requires_policy"])
+	}
+	if variables["proposal.products_count"] != "1" {
+		t.Fatalf("unexpected product count: %q", variables["proposal.products_count"])
 	}
 }
