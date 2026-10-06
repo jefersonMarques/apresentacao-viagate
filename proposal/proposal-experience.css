@@ -636,6 +636,13 @@ html:fullscreen body.public-proposal:not(.proposal-locked) #proposalPresentation
 /* Mobile proposal reading experience */
 
 @media (max-width: 760px) {
+  html:not(:fullscreen) body.public-proposal:not(.proposal-locked) #proposalPresentation {
+    opacity: 1;
+    filter: none;
+    pointer-events: auto;
+    user-select: auto;
+  }
+
   html,
   body.public-proposal {
     min-height: 100%;
