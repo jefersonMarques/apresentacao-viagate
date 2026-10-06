@@ -87,7 +87,7 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 								<p class="proposal-lead">{ ProposalExecutiveSummary(proposal) }</p>
 							</div>
 							<div class="proposal-company-proof-grid">
-								<article><span>{ len(solutions) }</span><strong>Frentes de solução</strong><p>Soluções que compõem esta proposta comercial.</p></article>
+								<article><span>{ len(solutions) }</span><strong>Soluções contempladas</strong><p>Soluções que compõem esta proposta comercial.</p></article>
 								<article><span>{ ProposalIncludedCount(proposal) }</span><strong>Produtos contemplados</strong><p>Produtos e serviços que fazem parte do escopo principal desta proposta.</p></article>
 								<article><span>{ ProposalOptionalCount(proposal) }</span><strong>Opções adicionais</strong><p>Alternativas disponíveis para ampliar a solução conforme a necessidade da operação.</p></article>
 							</div>
@@ -205,7 +205,7 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 							<div>
 								<p class="proposal-kicker">DIFERENCIAIS DA SOLUÇÃO</p>
 								<h2>Mais do que produtos: uma operação <span>mais estruturada</span></h2>
-								<p class="proposal-commercial-note">A composição selecionada combina tecnologia, rastreabilidade e flexibilidade para apoiar a rotina operacional e a evolução da contratação.</p>
+								<p class="proposal-commercial-note">A solução apresentada combina tecnologia, rastreabilidade e flexibilidade para apoiar a rotina operacional e a evolução da contratação.</p>
 								<div class="proposal-differential-grid">
 									for index, differential := range differentials {
 										<article class="proposal-differential-card">
@@ -249,7 +249,7 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 							<div>
 								<p class="proposal-kicker">INVESTIMENTO</p>
 								<h2>Valores da <span>proposta comercial</span></h2>
-								<p class="proposal-commercial-note">Os valores são aplicados de acordo com o uso e respeitam as condições definidas nesta versão.</p>
+								<p class="proposal-commercial-note">Os valores são aplicados de acordo com o uso e respeitam as condições comerciais desta proposta.</p>
 								<div class="proposal-commercial-summary-grid">
 									<div class="proposal-commercial-summary-card primary"><small>PRODUTOS CONTEMPLADOS</small><strong>{ ProposalIncludedCount(proposal) }</strong></div>
 									<div class="proposal-commercial-summary-card"><small>OPÇÕES ADICIONAIS</small><strong>{ ProposalOptionalCount(proposal) }</strong></div>
@@ -400,7 +400,7 @@ templ PublicProposalViewerPage(proposal proposals.PublicProposal, errorMessage s
 						<div>
 							<small>ACEITE DA PROPOSTA</small>
 							<h2>Confirmar aceite</h2>
-							<p>O aceite registra exatamente esta versão. Os dados necessários para gerar o contrato serão solicitados no próximo passo.</p>
+							<p>O aceite registra exatamente as condições apresentadas nesta proposta. Os dados necessários para preparar o contrato serão solicitados no próximo passo.</p>
 						</div>
 						<button class="proposal-contract-close" type="button" aria-label="Fechar" data-proposal-contract-close>×</button>
 					</header>
