@@ -34,7 +34,7 @@ func TestProposalEmailVariablesUseCanonicalBaseURL(t *testing.T) {
 	if variables["proposal.url"] != "https://viagate.com.br/p/public-token" {
 		t.Fatalf("unexpected proposal URL: %q", variables["proposal.url"])
 	}
-	if variables["brand.logo_url"] != "https://viagate.com.br/v1/assets/logo-viagate-white.svg" {
+	if variables["brand.logo_url"] != "https://viagate.com.br/v1/assets/logo-viagate-email.png" {
 		t.Fatalf("unexpected brand logo URL: %q", variables["brand.logo_url"])
 	}
 	if variables["salesperson.photo_url"] != "https://viagate.com.br/media/photo-id" {
