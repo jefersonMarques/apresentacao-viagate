@@ -45,7 +45,7 @@ func ProposalSolutions(proposal proposals.PublicProposal) []ProposalSolution {
 	seen := map[string]*ProposalSolution{}
 	order := []string{}
 	for _, item := range proposal.Items {
-		key := item.GroupName
+		key := ProposalItemGroupLabel(item)
 		status := ProposalItemStatus(item)
 		if current, ok := seen[key]; ok {
 			if current.Status != status {
@@ -53,10 +53,10 @@ func ProposalSolutions(proposal proposals.PublicProposal) []ProposalSolution {
 			}
 			continue
 		}
-		title := ProposalItemGroupLabel(item)
+		title := key
 		summary := strings.TrimSpace(item.GroupDescription)
 		for _, group := range catalog.Groups {
-			if group.ID == item.CategoryCode || group.ShortTitle == title || group.Title == key {
+			if group.ID == item.CategoryCode || group.ShortTitle == title || group.Title == item.GroupName {
 				if summary == "" {
 					summary = group.Summary
 				}
@@ -83,11 +83,12 @@ func ProposalPriceGroups(proposal proposals.PublicProposal) []ProposalPriceGroup
 	indexes := map[string]int{}
 	groups := []ProposalPriceGroup{}
 	for _, item := range proposal.Items {
-		index, ok := indexes[item.GroupName]
+		groupName := ProposalItemGroupLabel(item)
+		index, ok := indexes[groupName]
 		if !ok {
 			index = len(groups)
-			indexes[item.GroupName] = index
-			groups = append(groups, ProposalPriceGroup{Name: ProposalItemGroupLabel(item), AllOptional: true})
+			indexes[groupName] = index
+			groups = append(groups, ProposalPriceGroup{Name: groupName, AllOptional: true})
 		}
 		groups[index].Items = append(groups[index].Items, item)
 		if !item.IsOptional {
