@@ -106,3 +106,46 @@ func TestProposalEmailProductVariablesWithoutPolicy(t *testing.T) {
 		t.Fatalf("unexpected product count: %q", variables["proposal.products_count"])
 	}
 }
+
+
+func TestProposalEmailInputUsesPublishedSnapshot(t *testing.T) {
+	input := proposals.EditorInput{
+		Title:           "Rascunho novo",
+		ClientLegalName: "Cliente alterado",
+		ClientTradeName: "Cliente alterado",
+		ContactName:     "Contato alterado",
+		ContactEmail:    "novo@example.com",
+	}
+	published := map[string]any{
+		"proposal": map[string]any{
+			"title":       "Proposta publicada",
+			"valid_until": "2026-12-31",
+		},
+		"client": map[string]any{
+			"legal_name": "Cliente Publicado Ltda.",
+			"trade_name": "Cliente Publicado",
+			"email":      "cliente@example.com",
+		},
+		"contact": map[string]any{
+			"name":  "Mariana",
+			"role":  "Gerente",
+			"email": "mariana@example.com",
+			"phone": "41999990000",
+		},
+	}
+
+	result := proposalEmailInputFromPublishedContent(input, published)
+
+	if result.Title != "Proposta publicada" {
+		t.Fatalf("email should use published title, got %q", result.Title)
+	}
+	if result.ClientTradeName != "Cliente Publicado" {
+		t.Fatalf("email should use published client snapshot, got %q", result.ClientTradeName)
+	}
+	if result.ContactEmail != "mariana@example.com" {
+		t.Fatalf("email should use published contact snapshot, got %q", result.ContactEmail)
+	}
+	if result.ValidUntil == nil || result.ValidUntil.Format("2006-01-02") != "2026-12-31" {
+		t.Fatalf("email should use published validity, got %v", result.ValidUntil)
+	}
+}
