@@ -45,3 +45,36 @@ func TestValidateRejectsUnsafeHTMLAndUnknownVariables(t *testing.T) {
 		}
 	}
 }
+
+
+func TestRenderAllowsOnlyTrustedProposalProductHTML(t *testing.T) {
+	template := Template{
+		SubjectTemplate: "Proposta — {client.display_name}",
+		HTMLTemplate:    "<div>{proposal.products_html}</div><p>{contact.name}</p>",
+		TextTemplate:    "{proposal.products_text}",
+	}
+	draft, err := Render(template, map[string]string{
+		"client.display_name":    "Cliente",
+		"contact.name":           "<b>Mariana</b>",
+		"proposal.products_html": "<table><tr><td><strong>Cargo Score</strong></td></tr></table>",
+		"proposal.products_text": "- Cargo Score",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(draft.HTMLBody, "<table><tr><td><strong>Cargo Score</strong></td></tr></table>") {
+		t.Fatal("trusted proposal product HTML should be inserted as system-generated markup")
+	}
+	if strings.Contains(draft.HTMLBody, "<b>Mariana</b>") {
+		t.Fatal("ordinary variables must remain HTML escaped")
+	}
+}
+
+func TestValidateRejectsProductHTMLOutsideHTMLBody(t *testing.T) {
+	if err := Validate("Produtos {proposal.products_html}", "<p>OK</p>", "Texto"); err == nil {
+		t.Fatal("trusted HTML variable must not be allowed in subject")
+	}
+	if err := Validate("Assunto", "<p>OK</p>", "{proposal.products_html}"); err == nil {
+		t.Fatal("trusted HTML variable must not be allowed in text body")
+	}
+}
