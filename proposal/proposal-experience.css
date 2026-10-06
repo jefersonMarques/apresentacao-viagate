@@ -631,3 +631,396 @@ html:fullscreen body.public-proposal:not(.proposal-locked) #proposalPresentation
     flex-direction: column;
   }
 }
+
+
+/* Mobile proposal reading experience */
+
+@media (max-width: 760px) {
+  html:not(:fullscreen) body.public-proposal:not(.proposal-locked) #proposalPresentation {
+    opacity: 1;
+    filter: none;
+    pointer-events: auto;
+    user-select: auto;
+  }
+
+  html,
+  body.public-proposal {
+    min-height: 100%;
+    height: auto;
+  }
+
+  body.public-proposal {
+    overflow-x: hidden;
+    scroll-snap-type: none;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body.public-proposal:not(.proposal-locked) {
+    overflow-y: auto;
+  }
+
+  .proposal-slide {
+    min-height: auto;
+    overflow: visible;
+    scroll-snap-align: none;
+  }
+
+  .proposal-slide::after {
+    display: none;
+  }
+
+  .proposal-slide-inner,
+  .proposal-slide-footer {
+    width: calc(100% - 32px);
+    max-width: none;
+  }
+
+  .proposal-slide-inner {
+    min-height: auto;
+    padding: 52px 0 30px;
+    display: block;
+  }
+
+  .proposal-slide-footer {
+    position: static;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    transform: none;
+    margin: 0 auto;
+    padding: 14px 0 24px;
+    gap: 16px;
+    font-size: 8px;
+  }
+
+  .proposal-slide h1 {
+    max-width: none;
+    font-size: clamp(36px, 11vw, 50px);
+    line-height: 1.02;
+    letter-spacing: -.045em;
+  }
+
+  .proposal-slide h2 {
+    max-width: none;
+    font-size: clamp(30px, 8.8vw, 42px);
+    line-height: 1.05;
+    letter-spacing: -.04em;
+  }
+
+  .proposal-kicker {
+    margin-bottom: 14px;
+    gap: 8px;
+    font-size: 9px;
+    letter-spacing: .14em;
+  }
+
+  .proposal-kicker::before {
+    width: 24px;
+  }
+
+  .proposal-lead,
+  .proposal-product-detail-lead,
+  .proposal-commercial-note,
+  .proposal-commercial-summary-copy,
+  .proposal-next-step-copy {
+    max-width: none;
+    margin-top: 16px;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .proposal-cover-grid,
+  .proposal-contact-final {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  .proposal-cover-logo {
+    width: 132px;
+    margin-bottom: 34px;
+  }
+
+  .proposal-client-logo {
+    max-width: 170px;
+    max-height: 82px;
+    margin-top: 24px;
+  }
+
+  .proposal-person-card,
+  .proposal-contact-data {
+    padding: 20px;
+  }
+
+  .proposal-person-card img,
+  .proposal-contact-data img {
+    width: 78px;
+    height: 78px;
+  }
+
+  .proposal-person-card strong,
+  .proposal-contact-data strong {
+    font-size: 20px;
+  }
+
+  .proposal-company-integrated-inner {
+    gap: 26px;
+  }
+
+  .proposal-company-integrated-intro {
+    gap: 24px;
+  }
+
+  .proposal-company-proof-grid,
+  .proposal-company-selected-grid,
+  .proposal-content-grid,
+  .proposal-model-grid,
+  .proposal-product-detail-grid,
+  .proposal-differential-grid,
+  .proposal-commercial-summary-grid,
+  .proposal-commercial-products,
+  .proposal-journey-grid,
+  .proposal-highlight-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .proposal-company-proof-grid article,
+  .proposal-company-selected-grid article,
+  .proposal-content-card,
+  .proposal-model-card,
+  .proposal-product-detail-card,
+  .proposal-differential-card,
+  .proposal-commercial-summary-card,
+  .proposal-journey-card {
+    min-height: 0;
+  }
+
+  .proposal-company-proof-grid article,
+  .proposal-content-card,
+  .proposal-model-card,
+  .proposal-product-detail-card,
+  .proposal-differential-card,
+  .proposal-commercial-summary-card,
+  .proposal-journey-card {
+    padding: 18px;
+  }
+
+  .proposal-company-proof-grid strong {
+    margin-top: 18px;
+  }
+
+  .proposal-company-selected {
+    padding-top: 20px;
+  }
+
+  .proposal-company-selected-grid article {
+    padding: 16px;
+    grid-template-columns: 38px minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .proposal-company-proof-grid article > span,
+  .proposal-company-selected-grid article > span {
+    width: 38px;
+    height: 38px;
+  }
+
+  .proposal-company-module-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .proposal-module-status {
+    min-height: 22px;
+    white-space: normal;
+    line-height: 1.25;
+  }
+
+  .proposal-content-grid,
+  .proposal-model-grid,
+  .proposal-product-detail-grid,
+  .proposal-differential-grid,
+  .proposal-journey-grid {
+    margin-top: 24px;
+  }
+
+  .proposal-content-card h3 {
+    margin-top: 20px;
+    font-size: 18px;
+  }
+
+  .proposal-model-card strong {
+    margin-top: 12px;
+    font-size: 22px;
+  }
+
+  .proposal-model-card span {
+    margin-top: 12px;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .proposal-product-detail-card > strong {
+    margin-top: 12px;
+    font-size: 16px;
+  }
+
+  .proposal-product-detail-card > p {
+    margin: 7px 0 14px;
+    font-size: 12px;
+  }
+
+  .proposal-differential-card strong {
+    margin-top: 14px;
+  }
+
+  .proposal-journey-card strong {
+    margin-top: 16px;
+  }
+
+  .proposal-journey-grid::before {
+    display: none;
+  }
+
+  .proposal-journey-note {
+    margin-top: 12px;
+    padding: 14px;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .proposal-price-groups {
+    margin-top: 24px;
+    gap: 12px;
+  }
+
+  .proposal-price-group-header {
+    padding: 14px 15px;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .proposal-price-table,
+  .proposal-price-table tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .proposal-price-table thead {
+    display: none;
+  }
+
+  .proposal-slide.dark .proposal-price-table tr,
+  .proposal-price-table tr {
+    display: grid;
+    gap: 8px;
+    padding: 14px 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, .1);
+    background: rgba(255, 255, 255, .025) !important;
+  }
+
+  .proposal-price-table tbody tr:last-child {
+    border-bottom: 0;
+  }
+
+  .proposal-slide.dark .proposal-price-table td,
+  .proposal-price-table td {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    text-align: right !important;
+    font-size: 12px;
+  }
+
+  .proposal-price-table td::before {
+    content: attr(data-label);
+    color: rgba(255, 255, 255, .48);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-align: left;
+    text-transform: uppercase;
+  }
+
+  .proposal-price-table td:first-child {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    padding-bottom: 6px !important;
+    color: #fff !important;
+    font-size: 14px;
+    font-weight: 700;
+    text-align: left !important;
+  }
+
+  .proposal-price-table td:first-child::before {
+    color: #ff8a49;
+  }
+
+  .proposal-highlight-grid {
+    margin-top: 16px;
+  }
+
+  .proposal-highlight {
+    padding: 18px;
+  }
+
+  .proposal-highlight strong {
+    font-size: 24px;
+  }
+
+  .proposal-validity {
+    width: 100%;
+    margin-top: 24px;
+  }
+
+  .proposal-contact-final {
+    align-items: stretch;
+  }
+
+  .proposal-view-navigation {
+    left: 50%;
+    bottom: 10px;
+    width: min(calc(100% - 28px), 300px);
+    justify-content: center;
+  }
+
+  .proposal-view-navigation button {
+    flex: 0 0 42px;
+    width: 42px;
+    height: 40px;
+  }
+
+  .proposal-view-navigation span {
+    flex: 1;
+    min-width: 0;
+    height: 40px;
+  }
+
+  .proposal-view-action {
+    width: 100%;
+    padding: 0 16px;
+  }
+
+  .proposal-view-action-row {
+    width: 100%;
+  }
+
+  .proposal-view-button,
+  .proposal-view-button.secondary {
+    width: 100%;
+    min-width: 0;
+    min-height: 54px;
+    padding: 0 18px;
+  }
+
+  .proposal-view-logo {
+    width: 108px;
+  }
+}

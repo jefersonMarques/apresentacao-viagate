@@ -253,13 +253,21 @@
     updateControls();
   }
 
+  function prefersContinuousMobileView() {
+    return window.matchMedia('(max-width: 760px), (pointer: coarse)').matches;
+  }
+
   async function enter() {
+    started = true;
+    if (prefersContinuousMobileView() || typeof document.documentElement.requestFullscreen !== 'function') {
+      reveal();
+      return;
+    }
     try {
       if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
-      started = true;
       reveal();
     } catch (_) {
-      showGate(started);
+      reveal();
     }
   }
 
@@ -320,7 +328,7 @@
       if (started) reveal();
       return;
     }
-    if (started) showGate(true);
+    if (started && !prefersContinuousMobileView()) showGate(true);
   });
 
   showGate(false);

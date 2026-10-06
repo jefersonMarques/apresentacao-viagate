@@ -44,7 +44,7 @@ func ProposalSolutions(proposal proposals.PublicProposal) []ProposalSolution {
 		status := ProposalItemStatus(item)
 		if current, ok := seen[key]; ok {
 			if current.Status != status {
-				current.Status = "Incluído + opcional"
+				current.Status = "Inclui opção adicional"
 			}
 			continue
 		}
@@ -65,7 +65,7 @@ func ProposalSolutions(proposal proposals.PublicProposal) []ProposalSolution {
 			title = "Solução ViaGate"
 		}
 		if summary == "" {
-			summary = "Solução selecionada e configurada para esta negociação."
+			summary = "Solução contemplada nesta proposta, organizada para apoiar a operação apresentada."
 		}
 		seen[key] = &ProposalSolution{Title: title, Summary: summary, Status: status}
 		order = append(order, key)
@@ -117,7 +117,7 @@ func ProposalItemStatus(value any, found ...bool) string {
 		if item.IsOptional {
 			return "Opcional"
 		}
-		return "Proposto"
+		return "Contemplado"
 	case proposals.EditorItem:
 		exists := len(found) > 0 && found[0]
 		if !exists {
@@ -236,20 +236,23 @@ func ProposalExecutiveSummary(proposal proposals.PublicProposal) string {
 		return fmt.Sprintf("Esta proposta foi preparada para %s com condições comerciais e uma jornada de contratação estruturada pela ViaGate.", client)
 	}
 
+	solutionLabel := proposalCountLabel(len(solutions), "solução", "soluções")
+	includedLabel := proposalCountLabel(included, "produto ou serviço contemplado", "produtos e serviços contemplados")
 	if optional > 0 {
+		optionalLabel := proposalCountLabel(optional, "opção adicional", "opções adicionais")
 		return fmt.Sprintf(
-			"Esta proposta foi estruturada para %s com %d frente(s) de solução, %d produto(s) ou serviço(s) incluído(s) e %d opção(ões) adicional(is), preservando flexibilidade para a evolução da operação.",
+			"Esta proposta foi preparada para %s com %s, reunindo %s no escopo principal e %s para ampliar a solução conforme a necessidade da operação.",
 			client,
-			len(solutions),
-			included,
-			optional,
+			solutionLabel,
+			includedLabel,
+			optionalLabel,
 		)
 	}
 	return fmt.Sprintf(
-		"Esta proposta foi estruturada para %s com %d frente(s) de solução e %d produto(s) ou serviço(s) incluído(s), reunindo em uma única jornada o escopo comercial, a contratação e a preparação da implantação.",
+		"Esta proposta foi preparada para %s com %s e %s, reunindo em uma única jornada o escopo comercial, a contratação e a preparação da implantação.",
 		client,
-		len(solutions),
-		included,
+		solutionLabel,
+		includedLabel,
 	)
 }
 
@@ -318,19 +321,19 @@ func ProposalJourneySteps(proposal proposals.PublicProposal) []ProposalJourneySt
 	}
 
 	return []ProposalJourneyStep{
-		{Number: "01", Title: "Aceite comercial", Summary: "O cliente confirma formalmente esta versão da proposta e inicia a jornada de contratação."},
-		{Number: "02", Title: "Dados contratuais", Summary: "São confirmados os dados cadastrais e os responsáveis necessários para geração do contrato."},
-		{Number: "03", Title: "Assinatura digital", Summary: "O contrato segue para assinatura dos responsáveis definidos, preservando rastreabilidade e evidências."},
+		{Number: "01", Title: "Aceite comercial", Summary: "A empresa confirma a proposta e inicia a jornada de contratação."},
+		{Number: "02", Title: "Dados contratuais", Summary: "São confirmados os dados cadastrais e os responsáveis necessários para preparar o contrato."},
+		{Number: "03", Title: "Assinatura digital", Summary: "O contrato segue para assinatura dos responsáveis, com registro e rastreabilidade de todo o processo."},
 		{Number: "04", Title: "Preparação da implantação", Summary: implementationSummary},
-		{Number: "05", Title: "Ativação", Summary: "Com as etapas obrigatórias concluídas, a equipe ViaGate realiza a configuração interna e libera a operação."},
+		{Number: "05", Title: "Ativação", Summary: "Com as etapas obrigatórias concluídas, a ViaGate finaliza a configuração e libera a operação."},
 	}
 }
 
 func ProposalPolicyRequirementLabel(proposal proposals.PublicProposal) string {
 	if proposal.RequiresPolicy {
-		return "Apólice e mercadorias exigidas"
+		return "Requer apólice e mercadorias"
 	}
-	return "Sem exigência de apólice"
+	return "Não requer apólice"
 }
 
 func ProposalItemDescription(item proposals.Item) string {
@@ -340,7 +343,7 @@ func ProposalItemDescription(item proposals.Item) string {
 	if value := strings.TrimSpace(item.GroupDescription); value != "" {
 		return value
 	}
-	return "Produto ou serviço selecionado para compor o escopo desta proposta."
+	return "Este produto ou serviço integra a solução comercial apresentada nesta proposta."
 }
 
 
@@ -348,7 +351,7 @@ func ProposalSolutionStatusClass(status string) string {
 	switch strings.TrimSpace(strings.ToLower(status)) {
 	case "opcional":
 		return "optional"
-	case "incluído + opcional":
+	case "inclui opção adicional":
 		return "mixed"
 	default:
 		return ""
@@ -360,4 +363,12 @@ func ProposalItemStatusClass(item proposals.Item) string {
 		return "optional"
 	}
 	return ""
+}
+
+
+func proposalCountLabel(count int, singular, plural string) string {
+	if count == 1 {
+		return fmt.Sprintf("%d %s", count, singular)
+	}
+	return fmt.Sprintf("%d %s", count, plural)
 }

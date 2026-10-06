@@ -33,7 +33,7 @@ func TestProposalSolutionsPreferPublishedSnapshotDescriptions(t *testing.T) {
 	if solutions[0].Summary != "Descrição congelada na proposta publicada." {
 		t.Fatalf("unexpected snapshot summary: %q", solutions[0].Summary)
 	}
-	if solutions[0].Status != "Incluído + opcional" {
+	if solutions[0].Status != "Inclui opção adicional" {
 		t.Fatalf("unexpected mixed status: %q", solutions[0].Status)
 	}
 }
@@ -63,7 +63,7 @@ func TestProposalExecutiveSummaryReflectsIncludedAndOptionalItems(t *testing.T) 
 	}
 
 	summary := ProposalExecutiveSummary(proposal)
-	if !strings.Contains(summary, "Cliente Teste") || !strings.Contains(summary, "1 produto(s) ou serviço(s) incluído(s)") || !strings.Contains(summary, "1 opção(ões) adicional(is)") {
+	if !strings.Contains(summary, "Cliente Teste") || !strings.Contains(summary, "1 produto ou serviço contemplado") || !strings.Contains(summary, "1 opção adicional") {
 		t.Fatalf("unexpected executive summary: %q", summary)
 	}
 }
@@ -97,5 +97,32 @@ func TestProposalDifferentialsFollowSelectedModules(t *testing.T) {
 	}
 	if !found {
 		t.Fatal("logistics proposal should include operational tracking differential")
+	}
+}
+
+
+func TestProposalPublicCopyUsesCustomerFacingTerms(t *testing.T) {
+	included := proposals.Item{Label: "Cargo Score"}
+	optional := proposals.Item{Label: "Histórico Veicular", IsOptional: true}
+
+	if status := ProposalItemStatus(included); status != "Contemplado" {
+		t.Fatalf("unexpected included customer-facing status: %q", status)
+	}
+	if status := ProposalItemStatus(optional); status != "Opcional" {
+		t.Fatalf("unexpected optional customer-facing status: %q", status)
+	}
+
+	description := ProposalItemDescription(included)
+	if strings.Contains(strings.ToLower(description), "selecionado") || strings.Contains(strings.ToLower(description), "snapshot") {
+		t.Fatalf("fallback description exposes internal terminology: %q", description)
+	}
+}
+
+func TestProposalPolicyRequirementLabelIsCustomerFacing(t *testing.T) {
+	if got := ProposalPolicyRequirementLabel(proposals.PublicProposal{RequiresPolicy: true}); got != "Requer apólice e mercadorias" {
+		t.Fatalf("unexpected policy label: %q", got)
+	}
+	if got := ProposalPolicyRequirementLabel(proposals.PublicProposal{RequiresPolicy: false}); got != "Não requer apólice" {
+		t.Fatalf("unexpected no-policy label: %q", got)
 	}
 }
