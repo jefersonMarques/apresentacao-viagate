@@ -186,7 +186,7 @@ templ ProposalEditorPage(user domain.User, input proposals.EditorInput, draft pr
 							<div class="v1-condition-grid">
 								for _, condition := range ProposalConditions(input) {
 									<label class="v1-condition" data-proposal-condition>
-										<input type="checkbox" name="condition" value={ condition.Text } data-condition-groups={ joinModels(condition.Groups) } checked?={ conditionChecked(input.Conditions, condition.Text) }/>
+										<input type="checkbox" name="condition" value={ condition.Text } data-condition-groups={ joinModels(condition.Groups) } checked?={ conditionChecked(input, condition.Text) }/>
 										<span>
 											{ condition.Text }
 											if !condition.IsActive {
