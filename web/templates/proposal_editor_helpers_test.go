@@ -47,3 +47,32 @@ func TestProposalConditionGroupSelected(t *testing.T) {
 		t.Fatal("unrelated group should not be selected")
 	}
 }
+
+
+func TestProposalConditionGroupNamesUsesCategoryLabelsAndGlobalFallback(t *testing.T) {
+	categories := []catalog.ManagedCategory{
+		{Code: "score", Name: "Cargo Score"},
+		{Code: "logistics", Name: "Cargo Truck"},
+	}
+
+	global := catalog.Condition{}
+	globalNames := ProposalConditionGroupNames(global, categories)
+	if len(globalNames) != 1 || globalNames[0] != "Todas as propostas" {
+		t.Fatalf("unexpected global condition label: %#v", globalNames)
+	}
+
+	condition := catalog.Condition{Groups: []string{"score", "legacy"}}
+	names := ProposalConditionGroupNames(condition, categories)
+	if len(names) != 2 || names[0] != "Cargo Score" || names[1] != "legacy" {
+		t.Fatalf("unexpected condition group labels: %#v", names)
+	}
+}
+
+func TestProposalConditionActiveValue(t *testing.T) {
+	if got := ProposalConditionActiveValue(catalog.Condition{IsActive: true}); got != "true" {
+		t.Fatalf("unexpected active value: %q", got)
+	}
+	if got := ProposalConditionActiveValue(catalog.Condition{}); got != "false" {
+		t.Fatalf("unexpected inactive value: %q", got)
+	}
+}
