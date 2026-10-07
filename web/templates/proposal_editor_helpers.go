@@ -152,3 +152,23 @@ func ProposalConditionAdminClass(condition catalog.Condition) string {
 	}
 	return "is-inactive"
 }
+
+
+func ProposalConditionGroupNames(condition catalog.Condition, categories []catalog.ManagedCategory) []string {
+	if len(condition.Groups) == 0 {
+		return []string{"Todas as propostas"}
+	}
+
+	names := make([]string, 0, len(condition.Groups))
+	for _, code := range condition.Groups {
+		name := code
+		for _, category := range categories {
+			if category.Code == code {
+				name = category.Name
+				break
+			}
+		}
+		names = append(names, name)
+	}
+	return names
+}
