@@ -1,9 +1,11 @@
 package catalog
 
 type Condition struct {
-	ID     string
-	Text   string
-	Groups []string
+	ID        string
+	Text      string
+	Groups    []string
+	IsActive  bool
+	SortOrder int
 }
 
 var StandardConditions = []Condition{
