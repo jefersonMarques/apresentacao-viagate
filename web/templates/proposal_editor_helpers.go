@@ -172,3 +172,11 @@ func ProposalConditionGroupNames(condition catalog.Condition, categories []catal
 	}
 	return names
 }
+
+
+func ProposalConditionActiveValue(condition catalog.Condition) string {
+	if condition.IsActive {
+		return "true"
+	}
+	return "false"
+}
