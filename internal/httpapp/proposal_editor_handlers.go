@@ -182,6 +182,7 @@ func (a *App) saveProposal(w http.ResponseWriter, r *http.Request) {
 	input, err := a.proposalInputFromForm(r, salesperson)
 	if err != nil {
 		input = a.restoreProposalSubmittedState(r, input)
+		_ = a.enforceProposalProtectedFields(r, user, allowAll, &input)
 		input = a.decorateProposalEditor(r.Context(), input)
 		render(r.Context(), w, http.StatusBadRequest, templates.ProposalEditorPage(user, input, proposals.SavedDraft{}, "", err.Error()))
 		return
