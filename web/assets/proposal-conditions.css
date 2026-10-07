@@ -3,52 +3,223 @@
   gap: 18px;
 }
 
-.proposal-conditions-intro {
-  display: grid;
-  gap: 5px;
-  padding: 18px 20px;
+.proposal-conditions-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 16px 18px;
   border: 1px solid #dfe6ea;
   background: #f8fafb;
 }
 
-.proposal-conditions-intro strong {
-  font-size: 15px;
+.proposal-conditions-summary > div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.proposal-conditions-summary strong {
   color: #102637;
+  font-size: 24px;
+  line-height: 1;
 }
 
-.proposal-conditions-intro span {
-  font-size: 12px;
-  line-height: 1.55;
+.proposal-conditions-summary span,
+.proposal-conditions-summary p {
   color: #687b87;
+  font-size: 11px;
 }
 
-.proposal-conditions-list {
-  display: grid;
-  gap: 12px;
+.proposal-conditions-summary p {
+  max-width: 720px;
+  margin: 0;
+  line-height: 1.55;
+  text-align: right;
 }
 
-.proposal-condition-admin-card {
-  display: grid;
-  gap: 18px;
-  padding: 20px;
+.proposal-conditions-table-wrap {
+  overflow: hidden;
   border: 1px solid #dfe6ea;
   background: #fff;
 }
 
-.proposal-condition-admin-card.is-inactive {
-  opacity: .72;
-  background: #f8fafb;
+.proposal-conditions-table {
+  width: 100%;
+  border-collapse: collapse;
 }
 
-.proposal-condition-admin-card footer {
+.proposal-conditions-table th,
+.proposal-conditions-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #e6ecef;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.proposal-conditions-table th {
+  background: #f8fafb;
+  color: #738691;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.proposal-conditions-table td {
+  color: #405663;
+  font-size: 11px;
+}
+
+.proposal-conditions-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.proposal-conditions-table tbody tr:hover {
+  background: #fbfcfd;
+}
+
+.proposal-conditions-table tr.is-inactive {
+  background: #fafbfc;
+}
+
+.proposal-conditions-table tr.is-inactive td:first-child strong {
+  color: #7c8d97;
+}
+
+.proposal-conditions-table td:first-child {
+  width: 48%;
+}
+
+.proposal-conditions-table td:first-child strong {
+  display: block;
+  color: #102637;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.proposal-condition-tags {
   display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.proposal-condition-tags span {
+  display: inline-flex;
   align-items: center;
+  min-height: 24px;
+  padding: 3px 7px;
+  border: 1px solid #dce5ea;
+  background: #f8fafb;
+  color: #526976;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.proposal-condition-order {
+  display: inline-grid;
+  min-width: 30px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid #dce5ea;
+  color: #405663;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.proposal-condition-actions {
+  width: 92px;
+  text-align: right !important;
+}
+
+.proposal-condition-empty {
+  padding: 34px !important;
+  color: #7c8d97 !important;
+  text-align: center !important;
+}
+
+.proposal-condition-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.proposal-condition-modal.is-open {
+  display: flex;
+}
+
+.proposal-condition-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(7, 24, 39, .66);
+  backdrop-filter: blur(3px);
+}
+
+.proposal-condition-modal-panel {
+  position: relative;
+  z-index: 1;
+  width: min(760px, 100%);
+  max-height: min(820px, calc(100vh - 48px));
+  overflow: auto;
+  border: 1px solid #d7e0e5;
+  background: #fff;
+  box-shadow: 0 28px 90px rgba(7, 24, 39, .28);
+}
+
+.proposal-condition-modal-panel > header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px 22px;
+  border-bottom: 1px solid #e3e9ed;
+  background: #071827;
+}
+
+.proposal-condition-modal-panel > header small {
+  color: #ff6b18;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.proposal-condition-modal-panel > header h2 {
+  margin: 4px 0 0;
+  color: #fff;
+  font-size: 20px;
+}
+
+.proposal-condition-modal-close {
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(255, 255, 255, .2);
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.proposal-condition-modal-panel form {
+  display: grid;
+  gap: 20px;
+  padding: 22px;
+}
+
+.proposal-condition-modal-panel form > footer {
+  display: flex;
   justify-content: flex-end;
   gap: 10px;
-}
-
-.proposal-condition-new {
-  border-left: 4px solid #ff6b18;
+  padding-top: 16px;
+  border-top: 1px solid #e6ecef;
 }
 
 .proposal-condition-form-grid {
@@ -64,9 +235,9 @@
 
 .proposal-condition-form-grid > label > span,
 .proposal-condition-groups > span {
+  color: #263d4c;
   font-size: 12px;
   font-weight: 700;
-  color: #263d4c;
 }
 
 .proposal-condition-form-grid textarea,
@@ -75,8 +246,14 @@
   border: 1px solid #cfd9df;
   background: #fff;
   padding: 11px 12px;
-  font: inherit;
   color: #102637;
+  font: inherit;
+}
+
+.proposal-condition-form-grid textarea:focus,
+.proposal-condition-form-grid input[type="number"]:focus {
+  border-color: #ff6b18;
+  outline: 2px solid rgba(255, 107, 24, .12);
 }
 
 .proposal-condition-form-grid .full {
@@ -107,26 +284,107 @@
   padding: 8px 10px;
   border: 1px solid #dfe6ea;
   background: #f8fafb;
-  font-size: 11px;
   color: #405663;
+  font-size: 11px;
 }
 
 .proposal-condition-groups small {
-  font-size: 10px;
   color: #7c8d97;
+  font-size: 10px;
+}
+
+body.proposal-condition-modal-open {
+  overflow: hidden;
 }
 
 @media (max-width: 760px) {
+  .proposal-conditions-summary {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .proposal-conditions-summary p {
+    text-align: left;
+  }
+
+  .proposal-conditions-table-wrap {
+    border: 0;
+    background: transparent;
+    overflow: visible;
+  }
+
+  .proposal-conditions-table,
+  .proposal-conditions-table tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .proposal-conditions-table thead {
+    display: none;
+  }
+
+  .proposal-conditions-table tr {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding: 16px;
+    border: 1px solid #dfe6ea;
+    background: #fff;
+  }
+
+  .proposal-conditions-table td,
+  .proposal-conditions-table td:first-child,
+  .proposal-condition-actions {
+    width: auto;
+    padding: 0;
+    border: 0;
+    text-align: left !important;
+  }
+
+  .proposal-conditions-table td {
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr);
+    align-items: start;
+    gap: 10px;
+  }
+
+  .proposal-conditions-table td::before {
+    content: attr(data-label);
+    color: #82919a;
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+
+  .proposal-condition-actions .btn {
+    width: 100%;
+  }
+
+  .proposal-condition-modal {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .proposal-condition-modal-panel {
+    width: 100%;
+    max-height: 92dvh;
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+  }
+
   .proposal-condition-form-grid {
     grid-template-columns: 1fr;
   }
 
-  .proposal-condition-admin-card footer {
+  .proposal-condition-modal-panel form > footer {
     align-items: stretch;
-    flex-direction: column;
+    flex-direction: column-reverse;
   }
 
-  .proposal-condition-admin-card footer .btn {
+  .proposal-condition-modal-panel form > footer .btn {
     width: 100%;
   }
 }
