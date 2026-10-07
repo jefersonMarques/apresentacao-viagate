@@ -72,7 +72,22 @@ func (s *Store) SessionUser(ctx context.Context, tokenHash []byte) (domain.User,
 		       (select count(*)::int from in_app_notifications n where n.recipient_user_id=u.id and n.read_at is null and n.deleted_at is null),
 		       case
 		         when exists(select 1 from effective_user_permissions(u.id) where permission_code='activation.manage')
-		         then (select count(*)::int from activation_profiles a where a.status='completed')
+		         then (
+		           select count(*)::int
+		           from activation_profiles a
+		           join contracts c on c.id=a.contract_id
+		           join onboardings o on o.id=c.onboarding_id
+		           join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
+		           join proposals p on p.id=pa.proposal_id
+		           where a.status='completed'
+		             and c.status='signed'
+		             and c.fully_signed_at is not null
+		             and a.deleted_at is null
+		             and c.deleted_at is null
+		             and o.deleted_at is null
+		             and pa.deleted_at is null
+		             and p.deleted_at is null
+		         )
 		         else 0
 		       end
 		from sessions s
