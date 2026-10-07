@@ -109,22 +109,28 @@ func TestSessionUserCountsOnlyActivationsReadyForInternalSetup(t *testing.T) {
 		returns table(permission_code text)
 		language sql
 		stable
-		as $$
+		as $
 			select 'activation.manage'::text
 			where target_user_id = '11111111-1111-1111-1111-111111111111'::uuid
-		$$;
-
+		$
+	`); err != nil {
+		t.Fatalf("create effective permissions function: %v", err)
+	}
+	if _, err := pool.Exec(ctx, `
 		insert into users(id,email,name,status)
 		values
 			('11111111-1111-1111-1111-111111111111','manager@example.com','Manager','active'),
-			('22222222-2222-2222-2222-222222222222','viewer@example.com','Viewer','active');
-
+			('22222222-2222-2222-2222-222222222222','viewer@example.com','Viewer','active')
+	`); err != nil {
+		t.Fatalf("seed users: %v", err)
+	}
+	if _, err := pool.Exec(ctx, `
 		insert into sessions(user_id,token_hash,expires_at)
 		values
 			('11111111-1111-1111-1111-111111111111',$1,now()+interval '1 hour'),
-			('22222222-2222-2222-2222-222222222222',$2,now()+interval '1 hour');
+			('22222222-2222-2222-2222-222222222222',$2,now()+interval '1 hour')
 	`, []byte("manager-token"), []byte("viewer-token")); err != nil {
-		t.Fatalf("seed users and sessions: %v", err)
+		t.Fatalf("seed sessions: %v", err)
 	}
 
 	type activationSeed struct {
@@ -164,19 +170,19 @@ func TestSessionUserCountsOnlyActivationsReadyForInternalSetup(t *testing.T) {
 			fullySignedAt = time.Now()
 		}
 
-		if _, err := pool.Exec(ctx, `
-			insert into proposals(id,deleted_at) values($1,$2);
-			insert into proposal_acceptances(id,proposal_id) values($3,$1);
-			insert into onboardings(id,proposal_acceptance_id) values($4,$3);
-			insert into contracts(id,onboarding_id,status,fully_signed_at) values($5,$4,$6,$7);
-			insert into activation_profiles(id,contract_id,status,deleted_at) values($8,$5,$9,$10);
-		`,
-			proposalID, proposalDeleted,
-			acceptanceID,
-			onboardingID,
-			contractID, seed.contract, fullySignedAt,
-			activationID, seed.status, activationDeleted,
-		); err != nil {
+		if _, err := pool.Exec(ctx, `insert into proposals(id,deleted_at) values($1,$2)`, proposalID, proposalDeleted); err != nil {
+			t.Fatalf("seed proposal %s: %v", seed.base, err)
+		}
+		if _, err := pool.Exec(ctx, `insert into proposal_acceptances(id,proposal_id) values($1,$2)`, acceptanceID, proposalID); err != nil {
+			t.Fatalf("seed acceptance %s: %v", seed.base, err)
+		}
+		if _, err := pool.Exec(ctx, `insert into onboardings(id,proposal_acceptance_id) values($1,$2)`, onboardingID, acceptanceID); err != nil {
+			t.Fatalf("seed onboarding %s: %v", seed.base, err)
+		}
+		if _, err := pool.Exec(ctx, `insert into contracts(id,onboarding_id,status,fully_signed_at) values($1,$2,$3,$4)`, contractID, onboardingID, seed.contract, fullySignedAt); err != nil {
+			t.Fatalf("seed contract %s: %v", seed.base, err)
+		}
+		if _, err := pool.Exec(ctx, `insert into activation_profiles(id,contract_id,status,deleted_at) values($1,$2,$3,$4)`, activationID, contractID, seed.status, activationDeleted); err != nil {
 			t.Fatalf("seed activation %s: %v", seed.base, err)
 		}
 	}
