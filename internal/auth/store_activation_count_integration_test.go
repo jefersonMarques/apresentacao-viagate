@@ -109,10 +109,10 @@ func TestSessionUserCountsOnlyActivationsReadyForInternalSetup(t *testing.T) {
 		returns table(permission_code text)
 		language sql
 		stable
-		as $
+		as $permissions$
 			select 'activation.manage'::text
 			where target_user_id = '11111111-1111-1111-1111-111111111111'::uuid
-		$
+		$permissions$
 	`); err != nil {
 		t.Fatalf("create effective permissions function: %v", err)
 	}
