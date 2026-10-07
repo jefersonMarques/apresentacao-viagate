@@ -17,7 +17,7 @@ templ ProposalEditorPage(user domain.User, input proposals.EditorInput, draft pr
 				}
 			}
 			@FlashMessages(message, errorMessage)
-			<form method="post" action="/admin/proposals/save" data-proposal-editor>
+			<form method="post" action="/admin/proposals/save" data-proposal-editor data-proposal-restore?={ errorMessage != "" }>
 				<input type="hidden" name="proposal_id" value={ input.ProposalID }/>
 				<div class="v1-editor-layout">
 					<div class="v1-editor-main">
@@ -26,7 +26,7 @@ templ ProposalEditorPage(user domain.User, input proposals.EditorInput, draft pr
 								<div class="v1-field full">
 									<label>CNPJ</label>
 									<div class="v1-cnpj-row">
-										<input name="client_cnpj" data-mask="cnpj" autocomplete="off" value={ input.ClientCNPJ }/>
+										<input name="client_cnpj" data-mask="cnpj" autocomplete="off" value={ input.ClientCNPJ } data-cnpj-autolookup?={ input.ProposalID == "" }/>
 										<button class="v1-button dark" type="button" data-cnpj-lookup data-cnpj-field="client_cnpj" data-cnpj-prefix="client_">Buscar dados</button>
 										<div class="v1-cnpj-status" data-cnpj-status></div>
 									</div>
@@ -185,13 +185,21 @@ templ ProposalEditorPage(user domain.User, input proposals.EditorInput, draft pr
 								<div class="v1-field"><label>Implantação</label><input name="setup_fee" type="search" inputmode="numeric" autocomplete="off" data-money value={ editorFloat(input.SetupFee) } placeholder="R$ 0,00"/></div>
 							</div>
 							<div class="v1-condition-grid">
-								for _, condition := range catalog.StandardConditions {
-									<label class="v1-condition"><input type="checkbox" name="condition" value={ condition.Text } data-condition-groups={ joinModels(condition.Groups) } checked?={ conditionChecked(input.Conditions, condition.Text) }/><span>{ condition.Text }</span></label>
+								for _, condition := range ProposalConditions(input) {
+									<label class="v1-condition" data-proposal-condition>
+										<input type="checkbox" name="condition" value={ condition.Text } data-condition-groups={ joinModels(condition.Groups) } checked?={ conditionChecked(input.Conditions, condition.Text) }/>
+										<span>
+											{ condition.Text }
+											if !condition.IsActive {
+												<small>Condição inativa — mantida nesta proposta</small>
+											}
+										</span>
+									</label>
 								}
 							</div>
 							<details class="v1-details">
 								<summary>Condições específicas / ajustes avançados</summary>
-								<div class="v1-details-body"><div class="v1-field"><label>Condições adicionais</label><textarea name="custom_conditions" placeholder="Uma condição por linha">{ CustomConditions(input.Conditions) }</textarea></div></div>
+								<div class="v1-details-body"><div class="v1-field"><label>Condições adicionais</label><textarea name="custom_conditions" placeholder="Uma condição por linha">{ ProposalCustomConditions(input) }</textarea></div></div>
 							</details>
 						}
 					</div>
