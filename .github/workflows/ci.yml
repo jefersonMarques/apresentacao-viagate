@@ -97,6 +97,11 @@ jobs:
           RUN_DB_INTEGRATION: '1'
         run: go test ./internal/proposals -run TestProposalDraftOwnershipAndAudit -count=1
 
+      - name: Test public proposal link resolution
+        env:
+          RUN_DB_INTEGRATION: '1'
+        run: go test ./internal/proposals -run TestPublicByTokenRedirectsSupersededPublishedVersion -count=1
+
       - name: Test migration 000029 with published proposal versions
         env:
           RUN_DB_INTEGRATION: '1'
