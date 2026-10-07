@@ -48,13 +48,13 @@ func editorFloat(value float64) string {
 
 func joinModels(values []string) string { return strings.Join(values, ",") }
 
-func conditionChecked(current []string, value string) bool {
-	for _, item := range current {
+func conditionChecked(input proposals.EditorInput, value string) bool {
+	for _, item := range input.Conditions {
 		if item == value {
 			return true
 		}
 	}
-	return len(current) == 0
+	return input.ProposalID == "" && len(input.Conditions) == 0
 }
 
 func ProposalContractTemplateOptions(input proposals.EditorInput) []domain.ContractTemplate {
