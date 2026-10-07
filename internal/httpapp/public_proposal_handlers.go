@@ -22,6 +22,11 @@ func (a *App) publicProposalPage(w http.ResponseWriter, r *http.Request) {
 	token := chi.URLParam(r, "token")
 	proposal, err := a.proposalStore.PublicByToken(r.Context(), token)
 	if err != nil {
+		var superseded *proposals.SupersededProposalError
+		if errors.As(err, &superseded) && strings.TrimSpace(superseded.CurrentToken) != "" {
+			http.Redirect(w, r, "/p/"+superseded.CurrentToken, http.StatusSeeOther)
+			return
+		}
 		if errors.Is(err, pgx.ErrNoRows) {
 			http.Error(w, "Proposta não encontrada.", http.StatusNotFound)
 			return
@@ -30,7 +35,7 @@ func (a *App) publicProposalPage(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Esta proposta não está mais disponível.", http.StatusGone)
 			return
 		}
-		a.logger.Error("load public proposal failed", "error", err)
+		a.logger.Error("load public proposal failed", "token", token, "error", err)
 		http.Error(w, "Não foi possível carregar a proposta.", http.StatusInternalServerError)
 		return
 	}
