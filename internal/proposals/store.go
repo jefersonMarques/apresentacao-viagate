@@ -16,6 +16,14 @@ import (
 
 var ErrProposalExpired = errors.New("proposal expired")
 
+type SupersededProposalError struct {
+	CurrentToken string
+}
+
+func (e *SupersededProposalError) Error() string {
+	return "proposal version was superseded"
+}
+
 type Store struct {
 	pool *pgxpool.Pool
 }
@@ -90,17 +98,23 @@ func (s *Store) PublicByToken(ctx context.Context, token string) (PublicProposal
 	var currentTitle, currentClientName, currentClientCNPJ string
 	var currentValidUntil *time.Time
 
+	var currentVersion int
+	var currentPublicToken string
 	err := s.pool.QueryRow(ctx, `
 		select p.id::text, v.id::text, v.version_number, v.public_token::text, p.title,p.status::text,
 		       c.id::text, coalesce(c.legal_name,''), coalesce(c.cnpj,''), v.pricing_model,
-		       v.content, v.conditions, v.minimum_invoice, v.setup_fee, v.requires_policy, v.content_hash, p.valid_until
+		       v.content, v.conditions, v.minimum_invoice, v.setup_fee, v.requires_policy, v.content_hash, p.valid_until,
+		       p.current_version,coalesce(current_v.public_token::text,'')
 		from proposal_versions v
 		join proposals p on p.id=v.proposal_id
 		join clients c on c.id=p.client_id
-		where v.public_token=$1 and v.published_at is not null
-		  and v.version_number=p.current_version
+		left join proposal_versions current_v
+		  on current_v.proposal_id=p.id
+		 and current_v.version_number=p.current_version
+		 and current_v.published_at is not null
+		where v.public_token=$1
+		  and v.published_at is not null
 		  and p.deleted_at is null
-		  and p.status in ('published','accepted')
 	`, token).Scan(
 		&result.ProposalID,
 		&result.VersionID,
@@ -119,9 +133,23 @@ func (s *Store) PublicByToken(ctx context.Context, token string) (PublicProposal
 		&result.RequiresPolicy,
 		&result.ContentHash,
 		&currentValidUntil,
+		&currentVersion,
+		&currentPublicToken,
 	)
 	if err != nil {
 		return PublicProposal{}, err
+	}
+	if result.VersionNumber != currentVersion {
+		if currentPublicToken != "" {
+			return PublicProposal{}, &SupersededProposalError{CurrentToken: currentPublicToken}
+		}
+		return PublicProposal{}, fmt.Errorf("published proposal version %d is not current version %d", result.VersionNumber, currentVersion)
+	}
+	if result.Status == "expired" {
+		return PublicProposal{}, ErrProposalExpired
+	}
+	if result.Status != "published" && result.Status != "accepted" {
+		return PublicProposal{}, pgx.ErrNoRows
 	}
 
 	if err := json.Unmarshal(contentJSON, &result.Content); err != nil {
