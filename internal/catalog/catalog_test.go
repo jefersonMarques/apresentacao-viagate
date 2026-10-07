@@ -32,3 +32,11 @@ func TestCargoScorePricingModelsKeepItemAndBundleOptionsSeparated(t *testing.T) 
 		t.Fatal("item_and_bundle must allow both score option families")
 	}
 }
+
+
+func TestNormalizedConditionGroupsRemovesEmptyAndDuplicateValues(t *testing.T) {
+	got := normalizedConditionGroups([]string{"score", "", "score", " logistics ", "logistics"})
+	if len(got) != 2 || got[0] != "score" || got[1] != "logistics" {
+		t.Fatalf("unexpected normalized groups: %#v", got)
+	}
+}
