@@ -8,40 +8,102 @@ import (
 templ ProposalConditionsPage(user domain.User, conditions []catalog.Condition, categories []catalog.ManagedCategory, message, errorMessage string) {
 	@AdminLayout("ViaGate — Condições especiais", user) {
 		<link rel="stylesheet" href="/commercial-assets/proposal-conditions.css"/>
-		@AdminPageHeader("CONFIGURAÇÃO COMERCIAL", "Condições especiais", "Edite as condições padrão que ficam disponíveis na criação das propostas. Alterações não modificam versões já publicadas.") {
-			<a class="btn" href="/admin/proposals">Ver propostas</a>
+		<script defer src="/commercial-assets/proposal-conditions.js"></script>
+
+		@AdminPageHeader("CONFIGURAÇÃO COMERCIAL", "Condições especiais", "Gerencie as condições padrão disponíveis na criação das propostas. Alterações não modificam versões já publicadas.") {
+			<button class="btn primary" type="button" data-condition-new>Nova condição</button>
 		}
 		@FlashMessages(message, errorMessage)
 
 		<section class="proposal-conditions-admin">
-			<div class="proposal-conditions-intro">
-				<strong>Nova condição</strong>
-				<span>Sem categoria marcada, a condição fica disponível para qualquer proposta. Com categorias marcadas, ela aparece apenas quando a proposta utiliza uma delas.</span>
+			<div class="proposal-conditions-summary">
+				<div>
+					<strong>{ len(conditions) }</strong>
+					<span>condições cadastradas</span>
+				</div>
+				<p>Condições sem categoria são globais. Quando vinculadas a categorias, ficam disponíveis apenas nas propostas que utilizam essas soluções.</p>
 			</div>
-			<form method="post" action="/admin/proposal-conditions" class="proposal-condition-admin-card proposal-condition-new">
-				@ProposalConditionFields(catalog.Condition{IsActive: true}, categories)
-				<footer>
-					<button class="btn primary" type="submit">Adicionar condição</button>
-				</footer>
-			</form>
 
-			<div class="proposal-conditions-list">
-				for _, condition := range conditions {
-					<form method="post" action="/admin/proposal-conditions" class={ "proposal-condition-admin-card " + ProposalConditionAdminClass(condition) }>
-						<input type="hidden" name="id" value={ condition.ID }/>
-						@ProposalConditionFields(condition, categories)
-						<footer>
-							if condition.IsActive {
-								<span class="badge active">Ativa</span>
-							} else {
-								<span class="badge">Inativa</span>
+			<div class="proposal-conditions-table-wrap">
+				<table class="proposal-conditions-table">
+					<thead>
+						<tr>
+							<th>Condição</th>
+							<th>Aplicação</th>
+							<th>Ordem</th>
+							<th>Status</th>
+							<th class="proposal-condition-actions">Ações</th>
+						</tr>
+					</thead>
+					<tbody>
+						if len(conditions) == 0 {
+							<tr>
+								<td colspan="5" class="proposal-condition-empty">Nenhuma condição cadastrada.</td>
+							</tr>
+						} else {
+							for _, condition := range conditions {
+								<tr class={ ProposalConditionAdminClass(condition) }>
+									<td data-label="Condição">
+										<strong>{ condition.Text }</strong>
+									</td>
+									<td data-label="Aplicação">
+										<div class="proposal-condition-tags">
+											for _, name := range ProposalConditionGroupNames(condition, categories) {
+												<span>{ name }</span>
+											}
+										</div>
+									</td>
+									<td data-label="Ordem">
+										<span class="proposal-condition-order">{ condition.SortOrder }</span>
+									</td>
+									<td data-label="Status">
+										if condition.IsActive {
+											<span class="badge active">Ativa</span>
+										} else {
+											<span class="badge">Inativa</span>
+										}
+									</td>
+									<td data-label="Ações" class="proposal-condition-actions">
+										<button
+											class="btn"
+											type="button"
+											data-condition-edit
+											data-condition-id={ condition.ID }
+											data-condition-text={ condition.Text }
+											data-condition-sort={ CatalogSortOrder(condition.SortOrder) }
+											data-condition-active={ ProposalConditionActiveValue(condition) }
+											data-condition-groups={ joinModels(condition.Groups) }
+										>Editar</button>
+									</td>
+								</tr>
 							}
-							<button class="btn dark" type="submit">Salvar alteração</button>
-						</footer>
-					</form>
-				}
+						}
+					</tbody>
+				</table>
 			</div>
 		</section>
+
+		<div class="proposal-condition-modal" data-condition-modal aria-hidden="true">
+			<div class="proposal-condition-modal-backdrop" data-condition-modal-close></div>
+			<section class="proposal-condition-modal-panel" role="dialog" aria-modal="true" aria-labelledby="proposal-condition-modal-title">
+				<header>
+					<div>
+						<small>CONDIÇÕES ESPECIAIS</small>
+						<h2 id="proposal-condition-modal-title" data-condition-modal-title>Nova condição</h2>
+					</div>
+					<button type="button" class="proposal-condition-modal-close" data-condition-modal-close aria-label="Fechar">×</button>
+				</header>
+
+				<form method="post" action="/admin/proposal-conditions" data-condition-form>
+					<input type="hidden" name="id" value=""/>
+					@ProposalConditionFields(catalog.Condition{IsActive: true}, categories)
+					<footer>
+						<button class="btn" type="button" data-condition-modal-close>Cancelar</button>
+						<button class="btn primary" type="submit" data-condition-submit>Adicionar condição</button>
+					</footer>
+				</form>
+			</section>
+		</div>
 	}
 }
 
@@ -49,7 +111,7 @@ templ ProposalConditionFields(condition catalog.Condition, categories []catalog.
 	<div class="proposal-condition-form-grid">
 		<label class="full">
 			<span>Texto da condição</span>
-			<textarea name="condition_text" rows="3" required placeholder="Ex.: Biometria facial inclusa no cadastro...">{ condition.Text }</textarea>
+			<textarea name="condition_text" rows="4" required placeholder="Ex.: Biometria facial inclusa no cadastro...">{ condition.Text }</textarea>
 		</label>
 		<label>
 			<span>Ordem</span>
@@ -71,7 +133,7 @@ templ ProposalConditionFields(condition catalog.Condition, categories []catalog.
 					}
 				}
 			</div>
-			<small>Deixe todas desmarcadas para uma condição global.</small>
+			<small>Deixe todas desmarcadas para disponibilizar a condição em todas as propostas.</small>
 		</div>
 	</div>
 }
