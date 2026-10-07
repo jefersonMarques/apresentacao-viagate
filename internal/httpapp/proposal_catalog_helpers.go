@@ -18,6 +18,10 @@ func (a *App) decorateProposalConditions(ctx context.Context, input proposals.Ed
 	if err != nil {
 		a.logger.Error("load proposal special conditions failed", "proposal_id", input.ProposalID, "error", err)
 		items = append([]catalog.Condition(nil), catalog.StandardConditions...)
+		for index := range items {
+			items[index].IsActive = true
+			items[index].SortOrder = (index + 1) * 10
+		}
 	}
 	if input.Content == nil {
 		input.Content = map[string]any{}
