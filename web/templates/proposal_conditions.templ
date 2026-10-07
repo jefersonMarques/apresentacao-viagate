@@ -71,7 +71,7 @@ templ ProposalConditionsPage(user domain.User, conditions []catalog.Condition, c
 											data-condition-id={ condition.ID }
 											data-condition-text={ condition.Text }
 											data-condition-sort={ CatalogSortOrder(condition.SortOrder) }
-											data-condition-active={ condition.IsActive }
+											data-condition-active={ ProposalConditionActiveValue(condition) }
 											data-condition-groups={ joinModels(condition.Groups) }
 										>Editar</button>
 									</td>
