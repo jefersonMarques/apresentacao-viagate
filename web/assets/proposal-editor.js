@@ -1,4 +1,74 @@
 (() => {
+  const proposalFormStateKey = 'viagate:proposal-editor:submitted';
+
+  function proposalFormControls(form) {
+    return Array.from(form.querySelectorAll('input[name], select[name], textarea[name]'))
+      .filter((field) => !(field instanceof HTMLInputElement && field.type === 'file'));
+  }
+
+  function persistProposalFormState(form) {
+    try {
+      const occurrences = new Map();
+      const fields = proposalFormControls(form).map((field) => {
+        const name = field.name || '';
+        const index = occurrences.get(name) || 0;
+        occurrences.set(name, index + 1);
+        return {
+          name,
+          index,
+          value: field.value,
+          checked: field instanceof HTMLInputElement && (field.type === 'checkbox' || field.type === 'radio')
+            ? field.checked
+            : null,
+        };
+      });
+      const products = {};
+      form.querySelectorAll('[data-proposal-product]').forEach((row) => {
+        const code = row.getAttribute('data-product-code') || '';
+        if (!code) return;
+        products[code] = {
+          enabled: Boolean(row.querySelector('[data-product-enabled]')?.checked),
+          optional: Boolean(row.querySelector('[data-product-optional]')?.checked),
+        };
+      });
+      sessionStorage.setItem(proposalFormStateKey, JSON.stringify({ fields, products }));
+    } catch (_) {}
+  }
+
+  function restoreProposalFormState(form) {
+    if (!form.hasAttribute('data-proposal-restore')) {
+      try { sessionStorage.removeItem(proposalFormStateKey); } catch (_) {}
+      return;
+    }
+
+    try {
+      const raw = sessionStorage.getItem(proposalFormStateKey);
+      if (!raw) return;
+      const state = JSON.parse(raw);
+      const controls = proposalFormControls(form);
+      const byName = new Map();
+      controls.forEach((field) => {
+        if (!byName.has(field.name)) byName.set(field.name, []);
+        byName.get(field.name).push(field);
+      });
+      (state.fields || []).forEach((saved) => {
+        const field = byName.get(saved.name)?.[saved.index];
+        if (!field) return;
+        field.value = saved.value ?? '';
+        if (saved.checked !== null && field instanceof HTMLInputElement) {
+          field.checked = Boolean(saved.checked);
+        }
+      });
+      form.querySelectorAll('[data-proposal-product]').forEach((row) => {
+        const saved = state.products?.[row.getAttribute('data-product-code') || ''];
+        if (!saved) return;
+        const enabled = row.querySelector('[data-product-enabled]');
+        const optional = row.querySelector('[data-product-optional]');
+        if (enabled instanceof HTMLInputElement) enabled.checked = Boolean(saved.enabled);
+        if (optional instanceof HTMLInputElement) optional.checked = Boolean(saved.optional);
+      });
+    } catch (_) {}
+  }
   function currentPermissions() {
     const node = document.querySelector('[data-user-permissions]');
     return new Set(String(node?.dataset.userPermissions || '').split(',').map((value) => value.trim()).filter(Boolean));
@@ -40,6 +110,8 @@
     const form = document.querySelector('[data-proposal-editor]');
     if (!(form instanceof HTMLFormElement)) return;
 
+    restoreProposalFormState(form);
+
     const permissions = currentPermissions();
     const canEditPrices = permissions.has('proposal.price.edit');
     const canEditConditions = permissions.has('proposal.conditions.edit');
@@ -50,6 +122,7 @@
         .filter(([code]) => code),
     );
     const categoryToggles = Array.from(form.querySelectorAll('[data-proposal-category]'));
+    const conditionRows = Array.from(form.querySelectorAll('[data-proposal-condition]'));
     const summaryCount = form.querySelector('[data-proposal-summary-count]');
     const summaryOptional = form.querySelector('[data-proposal-summary-optional]');
     const summaryTotal = form.querySelector('[data-proposal-summary-total]');
@@ -147,6 +220,19 @@
       form.querySelectorAll('[data-proposal-category-choice]').forEach((choice) => {
         const toggle = choice.querySelector('[data-proposal-category]');
         choice.classList.toggle('is-selected', Boolean(toggle?.checked));
+      });
+
+      conditionRows.forEach((row) => {
+        const checkbox = row.querySelector('[name="condition"]');
+        const groups = String(checkbox?.dataset.conditionGroups || '')
+          .split(',')
+          .map((value) => value.trim())
+          .filter(Boolean);
+        const visible = groups.length === 0 || groups.some((group) => selected.has(group));
+        row.hidden = !visible;
+        if (checkbox instanceof HTMLInputElement) {
+          checkbox.disabled = !canEditConditions || !visible;
+        }
       });
 
       form.querySelectorAll('[data-catalog-group]').forEach((group) => {
@@ -284,6 +370,7 @@
         }
         status.value = enabled.checked ? (optional?.checked ? 'optional' : 'included') : 'off';
       });
+      persistProposalFormState(form);
     }, { capture: true });
 
     syncCategoryVisibility();
