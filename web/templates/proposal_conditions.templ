@@ -1,0 +1,77 @@
+package templates
+
+import (
+	"github.com/jefersonMarques/apresentacao-viagate/internal/catalog"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
+)
+
+templ ProposalConditionsPage(user domain.User, conditions []catalog.Condition, categories []catalog.ManagedCategory, message, errorMessage string) {
+	@AdminLayout("ViaGate — Condições especiais", user) {
+		<link rel="stylesheet" href="/commercial-assets/proposal-conditions.css"/>
+		@AdminPageHeader("CONFIGURAÇÃO COMERCIAL", "Condições especiais", "Edite as condições padrão que ficam disponíveis na criação das propostas. Alterações não modificam versões já publicadas.") {
+			<a class="btn" href="/admin/proposals">Ver propostas</a>
+		}
+		@FlashMessages(message, errorMessage)
+
+		<section class="proposal-conditions-admin">
+			<div class="proposal-conditions-intro">
+				<strong>Nova condição</strong>
+				<span>Sem categoria marcada, a condição fica disponível para qualquer proposta. Com categorias marcadas, ela aparece apenas quando a proposta utiliza uma delas.</span>
+			</div>
+			<form method="post" action="/admin/proposal-conditions" class="proposal-condition-admin-card proposal-condition-new">
+				@ProposalConditionFields(catalog.Condition{IsActive: true}, categories)
+				<footer>
+					<button class="btn primary" type="submit">Adicionar condição</button>
+				</footer>
+			</form>
+
+			<div class="proposal-conditions-list">
+				for _, condition := range conditions {
+					<form method="post" action="/admin/proposal-conditions" class={ "proposal-condition-admin-card " + ProposalConditionAdminClass(condition) }>
+						<input type="hidden" name="id" value={ condition.ID }/>
+						@ProposalConditionFields(condition, categories)
+						<footer>
+							if condition.IsActive {
+								<span class="badge active">Ativa</span>
+							} else {
+								<span class="badge">Inativa</span>
+							}
+							<button class="btn dark" type="submit">Salvar alteração</button>
+						</footer>
+					</form>
+				}
+			</div>
+		</section>
+	}
+}
+
+templ ProposalConditionFields(condition catalog.Condition, categories []catalog.ManagedCategory) {
+	<div class="proposal-condition-form-grid">
+		<label class="full">
+			<span>Texto da condição</span>
+			<textarea name="condition_text" rows="3" required placeholder="Ex.: Biometria facial inclusa no cadastro...">{ condition.Text }</textarea>
+		</label>
+		<label>
+			<span>Ordem</span>
+			<input name="sort_order" type="number" value={ CatalogSortOrder(condition.SortOrder) }/>
+		</label>
+		<label class="proposal-condition-check">
+			<input type="checkbox" name="is_active" value="1" checked?={ condition.IsActive }/>
+			<span>Condição ativa</span>
+		</label>
+		<div class="full proposal-condition-groups">
+			<span>Disponível quando a proposta tiver</span>
+			<div>
+				for _, category := range categories {
+					if !category.IsDeleted && !category.IsArchived {
+						<label>
+							<input type="checkbox" name="group_code" value={ category.Code } checked?={ ProposalConditionGroupSelected(condition, category.Code) }/>
+							<span>{ category.Name }</span>
+						</label>
+					}
+				}
+			</div>
+			<small>Deixe todas desmarcadas para uma condição global.</small>
+		</div>
+	</div>
+}

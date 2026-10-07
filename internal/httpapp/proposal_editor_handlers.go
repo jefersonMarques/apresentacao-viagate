@@ -181,6 +181,8 @@ func (a *App) saveProposal(w http.ResponseWriter, r *http.Request) {
 	}
 	input, err := a.proposalInputFromForm(r, salesperson)
 	if err != nil {
+		input = a.restoreProposalSubmittedState(r, input)
+		_ = a.enforceProposalProtectedFields(r, user, allowAll, &input)
 		input = a.decorateProposalEditor(r.Context(), input)
 		render(r.Context(), w, http.StatusBadRequest, templates.ProposalEditorPage(user, input, proposals.SavedDraft{}, "", err.Error()))
 		return
@@ -503,6 +505,58 @@ func (a *App) proposalInputFromForm(r *http.Request, salesperson domain.User) (p
 		},
 	}
 	return rehashProposalInput(input), nil
+}
+
+func (a *App) restoreProposalSubmittedState(r *http.Request, input proposals.EditorInput) proposals.EditorInput {
+	input.SelectedCategoryCodes = normalizedCategoryCodes(r.Form["category_code"])
+	input.Conditions = normalizedConditions(r.Form["condition"], r.FormValue("custom_conditions"))
+	input.Items = nil
+
+	selectedCategories := map[string]bool{}
+	for _, categoryCode := range input.SelectedCategoryCodes {
+		selectedCategories[categoryCode] = true
+	}
+
+	ids := r.Form["catalog_id"]
+	statuses := r.Form["item_status"]
+	prices := r.Form["item_price"]
+	for index, id := range ids {
+		status := "off"
+		if index < len(statuses) {
+			status = strings.TrimSpace(statuses[index])
+		}
+		if status != "included" && status != "optional" {
+			continue
+		}
+
+		category, product, err := a.catalogStore.ProductForProposal(r.Context(), id, input.ProposalID)
+		if err != nil || !selectedCategories[category.Code] {
+			continue
+		}
+
+		price := 0.0
+		if index < len(prices) {
+			if parsed, parseErr := parseMoney(prices[index]); parseErr == nil {
+				price = parsed
+			}
+		}
+		input.Items = append(input.Items, proposals.EditorItem{
+			CatalogID:           product.Code,
+			CategoryID:          category.ID,
+			CategoryCode:        category.Code,
+			CategoryDescription: category.Description,
+			GroupName:           category.Name,
+			Label:               product.Name,
+			Description:         product.Description,
+			Unit:                product.Unit,
+			Price:               price,
+			IsOptional:          status == "optional",
+			RequiresPolicy:      product.RequiresPolicy,
+			SortOrder:           index,
+		})
+	}
+	input.RequiresPolicy = proposals.RequiresPolicy(input.Items)
+	return input
 }
 
 func rehashProposalInput(input proposals.EditorInput) proposals.EditorInput {

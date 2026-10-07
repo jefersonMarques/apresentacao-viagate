@@ -805,3 +805,74 @@ func uniqueNonBlank(values []string) []string {
 	}
 	return result
 }
+
+
+func (s *Store) ListProposalConditions(ctx context.Context, current []string, includeInactive bool) ([]Condition, error) {
+	rows, err := s.pool.Query(ctx, `
+		select id::text,condition_text,group_codes,is_active,sort_order
+		from proposal_special_conditions
+		where $1
+		   or is_active=true
+		   or condition_text = any($2::text[])
+		order by sort_order,created_at,id
+	`, includeInactive, current)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	items := []Condition{}
+	for rows.Next() {
+		var item Condition
+		if err := rows.Scan(&item.ID, &item.Text, &item.Groups, &item.IsActive, &item.SortOrder); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
+func (s *Store) SaveProposalCondition(ctx context.Context, id, text string, groups []string, isActive bool, sortOrder int) (string, error) {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return "", fmt.Errorf("condition text is required")
+	}
+
+	groups = normalizedConditionGroups(groups)
+	if strings.TrimSpace(id) == "" {
+		var createdID string
+		err := s.pool.QueryRow(ctx, `
+			insert into proposal_special_conditions(condition_text,group_codes,is_active,sort_order)
+			values($1,$2,$3,$4)
+			returning id::text
+		`, text, groups, isActive, sortOrder).Scan(&createdID)
+		return createdID, err
+	}
+
+	result, err := s.pool.Exec(ctx, `
+		update proposal_special_conditions
+		set condition_text=$2,group_codes=$3,is_active=$4,sort_order=$5,updated_at=now()
+		where id=$1
+	`, id, text, groups, isActive, sortOrder)
+	if err != nil {
+		return "", err
+	}
+	if result.RowsAffected() == 0 {
+		return "", ErrCatalogNotFound
+	}
+	return id, nil
+}
+
+func normalizedConditionGroups(values []string) []string {
+	seen := map[string]bool{}
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" || seen[value] {
+			continue
+		}
+		seen[value] = true
+		result = append(result, value)
+	}
+	return result
+}
