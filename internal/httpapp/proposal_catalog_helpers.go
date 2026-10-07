@@ -3,12 +3,27 @@ package httpapp
 import (
 	"context"
 
+	"github.com/jefersonMarques/apresentacao-viagate/internal/catalog"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/proposals"
 )
 
 func (a *App) decorateProposalEditor(ctx context.Context, input proposals.EditorInput) proposals.EditorInput {
 	input = a.decorateProposalContractOptions(ctx, input)
-	return a.decorateProposalCatalog(ctx, input)
+	input = a.decorateProposalCatalog(ctx, input)
+	return a.decorateProposalConditions(ctx, input)
+}
+
+func (a *App) decorateProposalConditions(ctx context.Context, input proposals.EditorInput) proposals.EditorInput {
+	items, err := a.catalogStore.ListProposalConditions(ctx, input.Conditions, false)
+	if err != nil {
+		a.logger.Error("load proposal special conditions failed", "proposal_id", input.ProposalID, "error", err)
+		items = append([]catalog.Condition(nil), catalog.StandardConditions...)
+	}
+	if input.Content == nil {
+		input.Content = map[string]any{}
+	}
+	input.Content["__ui_proposal_conditions"] = items
+	return input
 }
 
 func (a *App) decorateProposalCatalog(ctx context.Context, input proposals.EditorInput) proposals.EditorInput {
