@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jefersonMarques/apresentacao-viagate/internal/catalog"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/emailtemplates"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/proposals"
@@ -110,4 +111,27 @@ func ProposalShareState(input proposals.EditorInput) string {
 
 func ProposalHasContactEmail(input proposals.EditorInput) bool {
 	return strings.TrimSpace(input.ContactEmail) != ""
+}
+
+
+func ProposalConditions(input proposals.EditorInput) []catalog.Condition {
+	if input.Content == nil {
+		return nil
+	}
+	items, _ := input.Content["__ui_proposal_conditions"].([]catalog.Condition)
+	return items
+}
+
+func ProposalCustomConditions(input proposals.EditorInput) string {
+	standard := map[string]bool{}
+	for _, condition := range ProposalConditions(input) {
+		standard[condition.Text] = true
+	}
+	custom := make([]string, 0, len(input.Conditions))
+	for _, value := range input.Conditions {
+		if !standard[value] {
+			custom = append(custom, value)
+		}
+	}
+	return strings.Join(custom, "\n")
 }
