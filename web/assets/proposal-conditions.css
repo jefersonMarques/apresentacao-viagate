@@ -1,1 +1,132 @@
-.proposal-conditions-admin{display:grid;gap:18px}.proposal-conditions-intro{display:grid;gap:5px;padding:18px 20px;border:1px solid #dfe6ea;background:#f8fafb}.proposal-conditions-intro strong{font-size:15px;color:#102637}.proposal-conditions-intro span{font-size:12px;line-height:1.55;color:#687b87}.proposal-conditions-list{display:grid;gap:12px}.proposal-condition-admin-card{display:grid;gap:18px;padding:20px;border:1px solid #dfe6ea;background:#fff}.proposal-condition-admin-card.is-inactive{opacity:.72;background:#f8fafb}.proposal-condition-admin-card footer{display:flex;align-items:center;justify-content:flex-end;gap:10px}.proposal-condition-new{border-left:4px solid #ff6b18}.proposal-condition-form-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}.proposal-condition-form-grid>label{display:grid;gap:7px}.proposal-condition-form-grid>label>span,.proposal-condition-groups>span{font-size:12px;font-weight:700;color:#263d4c}.proposal-condition-form-grid textarea,.proposal-condition-form-grid input[type="number"]{width:100%;border:1px solid #cfd9df;background:#fff;padding:11px 12px;font:inherit;color:#102637}.proposal-condition-form-grid .full{grid-column:1/-1}.proposal-condition-check{align-content:center;grid-template-columns:auto 1fr!important;align-items:center}.proposal-condition-groups{display:grid;gap:10px}.proposal-condition-groups>div{display:flex;flex-wrap:wrap;gap:8px}.proposal-condition-groups label{display:inline-flex;align-items:center;gap:7px;padding:8px 10px;border:1px solid #dfe6ea;background:#f8fafb;font-size:11px;color:#405663}.proposal-condition-groups small{font-size:10px;color:#7c8d97}@media(max-width:760px){.proposal-condition-form-grid{grid-template-columns:1fr}.proposal-condition-admin-card footer{align-items:stretch;flex-direction:column}.proposal-condition-admin-card footer .btn{width:100%}}
+.proposal-conditions-admin {
+  display: grid;
+  gap: 18px;
+}
+
+.proposal-conditions-intro {
+  display: grid;
+  gap: 5px;
+  padding: 18px 20px;
+  border: 1px solid #dfe6ea;
+  background: #f8fafb;
+}
+
+.proposal-conditions-intro strong {
+  font-size: 15px;
+  color: #102637;
+}
+
+.proposal-conditions-intro span {
+  font-size: 12px;
+  line-height: 1.55;
+  color: #687b87;
+}
+
+.proposal-conditions-list {
+  display: grid;
+  gap: 12px;
+}
+
+.proposal-condition-admin-card {
+  display: grid;
+  gap: 18px;
+  padding: 20px;
+  border: 1px solid #dfe6ea;
+  background: #fff;
+}
+
+.proposal-condition-admin-card.is-inactive {
+  opacity: .72;
+  background: #f8fafb;
+}
+
+.proposal-condition-admin-card footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.proposal-condition-new {
+  border-left: 4px solid #ff6b18;
+}
+
+.proposal-condition-form-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+}
+
+.proposal-condition-form-grid > label {
+  display: grid;
+  gap: 7px;
+}
+
+.proposal-condition-form-grid > label > span,
+.proposal-condition-groups > span {
+  font-size: 12px;
+  font-weight: 700;
+  color: #263d4c;
+}
+
+.proposal-condition-form-grid textarea,
+.proposal-condition-form-grid input[type="number"] {
+  width: 100%;
+  border: 1px solid #cfd9df;
+  background: #fff;
+  padding: 11px 12px;
+  font: inherit;
+  color: #102637;
+}
+
+.proposal-condition-form-grid .full {
+  grid-column: 1 / -1;
+}
+
+.proposal-condition-check {
+  align-content: center;
+  grid-template-columns: auto 1fr !important;
+  align-items: center;
+}
+
+.proposal-condition-groups {
+  display: grid;
+  gap: 10px;
+}
+
+.proposal-condition-groups > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.proposal-condition-groups label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border: 1px solid #dfe6ea;
+  background: #f8fafb;
+  font-size: 11px;
+  color: #405663;
+}
+
+.proposal-condition-groups small {
+  font-size: 10px;
+  color: #7c8d97;
+}
+
+@media (max-width: 760px) {
+  .proposal-condition-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .proposal-condition-admin-card footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .proposal-condition-admin-card footer .btn {
+    width: 100%;
+  }
+}
