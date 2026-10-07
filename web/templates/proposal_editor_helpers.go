@@ -135,3 +135,20 @@ func ProposalCustomConditions(input proposals.EditorInput) string {
 	}
 	return strings.Join(custom, "\n")
 }
+
+
+func ProposalConditionGroupSelected(condition catalog.Condition, code string) bool {
+	for _, current := range condition.Groups {
+		if current == code {
+			return true
+		}
+	}
+	return false
+}
+
+func ProposalConditionAdminClass(condition catalog.Condition) string {
+	if condition.IsActive {
+		return ""
+	}
+	return "is-inactive"
+}
