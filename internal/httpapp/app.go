@@ -165,6 +165,9 @@ func (a *App) Routes() http.Handler {
 		admin.With(a.permission("settings.manage")).Post("/admin/email-templates", a.saveEmailTemplate)
 		admin.With(a.permission("settings.manage")).Post("/admin/email-templates/preview", a.previewEmailTemplate)
 
+		admin.With(a.permission("settings.manage")).Get("/admin/proposal-conditions", a.proposalConditionsPage)
+		admin.With(a.permission("settings.manage")).Post("/admin/proposal-conditions", a.saveProposalCondition)
+
 		admin.With(a.permission("settings.manage")).Get("/admin/products", a.productCatalogPage)
 		admin.With(a.permission("settings.manage")).Post("/admin/products/categories", a.saveProductCategory)
 		admin.With(a.permission("settings.manage")).Post("/admin/products/items", a.saveProductItem)
