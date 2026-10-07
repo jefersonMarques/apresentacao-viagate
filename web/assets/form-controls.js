@@ -207,23 +207,26 @@
 
   function initCNPJLookups() {
     document.querySelectorAll('[data-cnpj-lookup]').forEach((button) => {
-      button.addEventListener('click', async () => {
-        const form = button.closest('form');
-        if (!form) return;
+      const form = button.closest('form');
+      if (!form) return;
+      const cnpjField = form.elements.namedItem(button.dataset.cnpjField || 'client_cnpj');
+      if (!(cnpjField instanceof HTMLInputElement)) return;
+      const status = button.parentElement?.querySelector('[data-cnpj-status]') || form.querySelector('[data-cnpj-status]');
 
-        const cnpjField = form.elements.namedItem(button.dataset.cnpjField || 'client_cnpj');
-        if (!(cnpjField instanceof HTMLInputElement)) return;
+      const lookup = async ({ focusInvalid = false, force = false } = {}) => {
         const raw = cnpjCharacters(cnpjField.value);
-        const status = button.parentElement?.querySelector('[data-cnpj-status]') || form.querySelector('[data-cnpj-status]');
         if (raw.length !== 14) {
-          if (status) {
+          if (raw.length > 0 && status) {
             status.textContent = 'Informe um CNPJ válido.';
             status.classList.add('error');
           }
-          cnpjField.focus();
+          if (focusInvalid) cnpjField.focus();
           return;
         }
+        if (!force && button.dataset.cnpjLastLookup === raw) return;
+        if (button.dataset.cnpjLookupRunning === 'true') return;
 
+        button.dataset.cnpjLookupRunning = 'true';
         button.disabled = true;
         if (status) {
           status.textContent = 'Buscando dados na Receita...';
@@ -246,6 +249,7 @@
           fillInput(form, `${prefix}city`, data.city);
           fillInput(form, `${prefix}state`, data.state);
           fillInput(form, `${prefix}postal_code`, data.postal_code);
+          button.dataset.cnpjLastLookup = raw;
           if (status) status.textContent = 'Dados encontrados. Revise antes de salvar.';
         } catch (error) {
           if (status) {
@@ -253,9 +257,15 @@
             status.classList.add('error');
           }
         } finally {
+          delete button.dataset.cnpjLookupRunning;
           button.disabled = false;
         }
-      });
+      };
+
+      button.addEventListener('click', () => lookup({ focusInvalid: true, force: true }));
+      if (cnpjField.hasAttribute('data-cnpj-autolookup')) {
+        cnpjField.addEventListener('blur', () => lookup());
+      }
     });
   }
 
