@@ -129,19 +129,22 @@ func (a *App) updatePostSaleOperation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var activationID string
-	err = a.pool.QueryRow(r.Context(), `
-        select id::text from activation_profiles
+    lookupError := a.pool.QueryRow(r.Context(), `
+        select id::text
+        from activation_profiles
         where contract_id=$1 and deleted_at is null
     `, detail.ContractID).Scan(&activationID)
-    if err != nil && err != pgx.ErrNoRows {
-        a.logger.Error("resolve activation before commercial operation update failed", "error", err)
+    if lookupError != nil && lookupError != pgx.ErrNoRows {
+        a.logger.Error("resolve activation before commercial operation update failed", "error", lookupError)
     }
 
     wasReady := false
-    if err == nil {
-        wasReady, err = a.activationStore.ReadyForInternalSetup(r.Context(), activationID)
-        if err != nil {
-            a.logger.Error("check readiness before commercial operation update failed", "error", err)
+    if lookupError == nil {
+        readiness, readinessError := a.activationStore.ReadyForInternalSetup(r.Context(), activationID)
+        if readinessError != nil {
+            a.logger.Error("check readiness before commercial operation update failed", "error", readinessError)
+        } else {
+            wasReady = readiness
         }
     }
 	if err := a.postSaleStore.SaveOperation(r.Context(), detail.ContractID, operation, postsale.Actor{
