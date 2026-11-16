@@ -4,18 +4,35 @@
   color: var(--ink);
 }
 
+.activation-public .activation-page {
+  width: min(980px, calc(100% - 32px));
+  padding: 32px 0 64px;
+}
+
 .activation-public .activation-hero {
-  position: relative;
+  padding: 0 0 8px;
   color: var(--ink);
 }
 
 .activation-public .activation-hero h1 {
+  max-width: 760px;
+  margin: 12px 0;
   color: var(--ink);
+  font-size: clamp(26px, 4.5vw, 38px);
+  line-height: 1.15;
+  letter-spacing: -.035em;
 }
 
 .activation-public .activation-hero p,
 .activation-public .activation-status-line {
+  max-width: 620px;
   color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.activation-public .activation-status-line {
+  margin-top: 12px;
 }
 
 .activation-public .activation-progress-item {
@@ -26,3 +43,324 @@
   color: #fff;
 }
 
+.activation-public .activation-step-summary {
+  align-items: center;
+  margin-top: 22px;
+}
+
+.activation-public .activation-wizard-panel {
+  margin-top: 0;
+  padding: clamp(22px, 4vw, 36px);
+}
+
+.activation-public .activation-wizard-panel > h2 {
+  margin: 12px 0 8px;
+  font-size: clamp(22px, 3.5vw, 28px);
+  line-height: 1.2;
+}
+
+.activation-public .activation-wizard-panel > p {
+  margin: 0 0 20px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.activation-public .activation-wizard-panel > form {
+  margin-top: 22px;
+}
+
+.activation-public .activation-wizard-panel form.grid,
+.activation-public .activation-wizard-panel .grid {
+  gap: 18px 16px;
+}
+
+.activation-public .activation-wizard-panel .field {
+  min-width: 0;
+  gap: 8px;
+}
+
+.activation-public .activation-wizard-panel .field > label,
+.activation-public .activation-repeat-field {
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.4;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.activation-public .activation-wizard-panel .field input,
+.activation-public .activation-wizard-panel .field select {
+  min-width: 0;
+  min-height: 48px;
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.activation-public .activation-policy-received {
+  margin-bottom: 18px;
+}
+
+.activation-public .activation-policy-field {
+  margin-top: 0;
+}
+
+.activation-public .activation-policy-upload {
+  position: relative;
+  padding: 0;
+  border: 2px dashed #aebfc8;
+  background: #f9fbfc;
+  transition: border-color .2s ease, background-color .2s ease;
+}
+
+.activation-public .activation-policy-upload:hover,
+.activation-public .activation-policy-upload:focus-within {
+  border-color: var(--orange);
+  background: #fffaf6;
+}
+
+.activation-public .activation-policy-upload.is-invalid {
+  border-color: var(--danger);
+  background: #fff4f2;
+}
+
+.activation-public .activation-policy-upload .activation-policy-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  opacity: 0;
+  clip-path: inset(50%);
+}
+
+.activation-public .activation-policy-picker {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 32px 18px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.activation-public .activation-policy-picker strong {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  color: var(--deep);
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.activation-public .activation-policy-hint,
+.activation-public .activation-policy-picker small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+.activation-public .activation-policy-select {
+  min-height: 44px;
+  padding-inline: 24px;
+  background: var(--white);
+  color: var(--deep);
+}
+
+.activation-public .activation-policy-feedback {
+  min-height: 18px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.activation-public .activation-policy-feedback.is-error {
+  color: var(--danger);
+}
+
+.activation-public .activation-policy-feedback.is-valid {
+  color: var(--success);
+}
+
+.activation-public .activation-repeat-row,
+.activation-public .activation-user-row {
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.activation-public .activation-repeat-row input,
+.activation-public .activation-user-row input {
+  min-width: 0;
+  min-height: 48px;
+  font-size: 16px;
+}
+
+.activation-public .activation-repeat-field {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  color: var(--ink);
+  cursor: text;
+}
+
+.activation-public .activation-user-row .activation-remove {
+  align-self: end;
+}
+
+.activation-public .activation-form-actions {
+  gap: 12px;
+  margin-top: 26px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.activation-public .activation-form-actions .btn {
+  min-height: 46px;
+}
+
+.activation-public .activation-form-actions .btn:disabled {
+  border-color: #d7e0e5;
+  background: #eef2f4;
+  color: #83949e;
+  cursor: not-allowed;
+}
+
+.activation-public .activation-review {
+  gap: 16px;
+}
+
+.activation-public .activation-review-card {
+  padding: 18px;
+}
+
+.activation-public .activation-review-card .data-grid {
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.activation-public .activation-review-card .data-field {
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  background: #f9fbfc;
+}
+
+.activation-public .activation-review-card .data-field small {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.activation-public .activation-review-card .data-field-value {
+  display: grid;
+  gap: 4px;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+
+.activation-public .activation-review-card .data-field-value span {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+@media (max-width: 800px) {
+  .activation-public .activation-page {
+    width: min(100% - 24px, 980px);
+    padding-top: 20px;
+  }
+
+  .activation-public .activation-progress {
+    margin-bottom: 16px;
+  }
+
+  .activation-public .activation-wizard-panel {
+    padding: 24px 18px;
+  }
+
+  .activation-public .activation-user-row {
+    padding: 14px;
+    border: 1px solid var(--line);
+    background: #fafbfc;
+  }
+
+  .activation-public .activation-user-row .activation-remove {
+    justify-self: end;
+  }
+
+  .activation-public .activation-review-head {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .activation-public .activation-page {
+    width: calc(100% - 20px);
+    padding-top: 16px;
+  }
+
+  .activation-public .activation-step-summary {
+    flex-wrap: wrap;
+    gap: 4px 10px;
+  }
+
+  .activation-public .activation-progress-item {
+    min-height: 48px;
+  }
+
+  .activation-public .activation-wizard-panel {
+    padding: 22px 16px;
+  }
+
+  .activation-public .activation-policy-picker {
+    padding: 24px 12px;
+  }
+
+  .activation-public .activation-form-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .activation-public .activation-form-actions > * {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .activation-public .activation-form-actions .btn {
+    width: 100%;
+    min-height: 48px;
+  }
+
+  .activation-public .activation-form-actions > [data-add-activation-good],
+  .activation-public .activation-form-actions > [data-add-activation-user] {
+    order: 1;
+  }
+
+  .activation-public .activation-form-actions > form,
+  .activation-public .activation-form-actions > [type="submit"],
+  .activation-public .activation-form-actions > [data-activation-next] {
+    order: 2;
+  }
+
+  .activation-public .activation-form-actions > [data-activation-previous] {
+    order: 3;
+  }
+
+  .activation-public .activation-review-card {
+    padding: 14px;
+  }
+
+  .activation-public .activation-review-head {
+    gap: 10px;
+  }
+
+  .activation-public .activation-review-head h3 {
+    font-size: 15px;
+  }
+}
