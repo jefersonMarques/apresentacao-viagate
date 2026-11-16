@@ -17,9 +17,9 @@ templ PostSaleContactPage(token string, contact postsale.Contact, message, error
 						<label><input type="radio" name="contact_mode" value="team" checked?={ contact.Mode == "team" }/> Minha equipe</label>
 					</div>
 					<div class="grid" data-implementation-team-fields>
-						<div class="field"><label>Nome</label><input name="contact_name" value={ contact.Name } autocomplete="name"/></div>
-						<div class="field"><label>Telefone</label><input name="contact_phone" value={ contact.Phone } autocomplete="tel" data-mask="phone"/></div>
-						<div class="field full"><label>E-mail (opcional)</label><input name="contact_email" value={ contact.Email } type="email" autocomplete="email"/></div>
+						<div class="field"><label>Nome</label><input name="contact_name" value={ TeamContactValue(contact.Mode, contact.Name) } autocomplete="name"/></div>
+						<div class="field"><label>Telefone</label><input name="contact_phone" value={ TeamContactValue(contact.Mode, contact.Phone) } autocomplete="tel" data-mask="phone"/></div>
+						<div class="field full"><label>E-mail (opcional)</label><input name="contact_email" value={ TeamContactValue(contact.Mode, contact.Email) } type="email" autocomplete="email"/></div>
 					</div>
 					<div class="actions"><button class="btn primary" type="submit" data-processing="Salvando contato...">Confirmar contato</button></div>
 				</form>

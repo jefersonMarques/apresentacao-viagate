@@ -157,6 +157,7 @@ type Item struct {
 	ContactName      string
 	SignedAt         time.Time
 	HasContact       bool
+	ActivationStatus string
 }
 
 type ContactVersion struct {
@@ -181,18 +182,21 @@ type Detail struct {
 func (s *Store) List(ctx context.Context, userID string, all bool) ([]Item, error) {
 	rows, err := s.pool.Query(ctx, `
 		select c.id::text, o.legal_name, u.name, p.title, c.fully_signed_at,
-		       coalesce(ps.contact_name,''), ps.contract_id is not null
+		       coalesce(ps.contact_name,''), ps.contract_id is not null,
+		       coalesce(a.status,'')
 		from contracts c
 		join onboardings o on o.id=c.onboarding_id
 		join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
 		join proposals p on p.id=pa.proposal_id
 		join users u on u.id=p.created_by
 		left join post_sale_contacts ps on ps.contract_id=c.id
+		left join activation_profiles a on a.contract_id=c.id and a.deleted_at is null
 		where c.status='signed'
 		  and c.deleted_at is null and o.deleted_at is null
 		  and pa.deleted_at is null and p.deleted_at is null
 		  and ($2 or p.created_by::text=$1)
-		order by c.fully_signed_at desc
+		order by case when a.status in ('activated','under_internal_setup','completed') then 1 else 0 end,
+		         c.fully_signed_at desc
 	`, userID, all)
 	if err != nil {
 		return nil, err
@@ -205,6 +209,7 @@ func (s *Store) List(ctx context.Context, userID string, all bool) ([]Item, erro
 		if err := rows.Scan(
 			&item.ContractID, &item.ClientName, &item.SalespersonName,
 			&item.ProposalTitle, &item.SignedAt, &item.ContactName, &item.HasContact,
+			&item.ActivationStatus,
 		); err != nil {
 			return nil, err
 		}
@@ -275,4 +280,20 @@ func (s *Store) Detail(ctx context.Context, contractID, userID string, all bool)
 		return Detail{}, err
 	}
 	return detail,nil
+}
+
+func StatusLabel(item Item) string {
+	switch item.ActivationStatus {
+	case "activated":
+		return "Operação liberada"
+	case "under_internal_setup":
+		return "Em implantação"
+	case "completed":
+		return "Pronto para ativação"
+	default:
+		if item.HasContact {
+			return "Em preparação"
+		}
+		return "Aguardando contato"
+	}
 }

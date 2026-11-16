@@ -39,7 +39,7 @@ func (a *App) saveActivationOperation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := a.postSaleStore.SaveOperation(r.Context(), access.Profile.ContractID, operation, postsale.Actor{
-		Type: "customer", TokenID: access.TokenID, Name: access.Name, IP: requestIP(r), Agent: r.UserAgent(),
+		Type: "customer", TokenID: access.TokenID, Name: "Acesso por link compartilhado", IP: requestIP(r), Agent: r.UserAgent(),
 	}); err != nil {
 		a.logger.Error("save public post-sale operation failed", "contract_id", access.Profile.ContractID, "error", err)
 		http.Error(w, "Não foi possível salvar os dados da operação.", http.StatusConflict)

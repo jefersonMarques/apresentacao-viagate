@@ -34,6 +34,7 @@ func (a *App) postSaleContactPage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Não foi possível carregar o contato de implantação.", http.StatusInternalServerError)
 		return
 	}
+	w.Header().Set("Cache-Control", "no-store")
 	message := ""
 	if r.URL.Query().Get("saved") == "1" {
 		message = "Contato de implantação confirmado."

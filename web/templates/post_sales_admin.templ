@@ -12,7 +12,7 @@ templ PostSalesPage(user domain.User, items []postsale.Item) {
 			@AdminListToolbar(len(items), "cliente(s)") {
 				@AdminListSearch("Buscar empresa, comercial ou contato...")
 			}
-			@AdminDataTable([]string{"Cliente", "Comercial", "Contrato", "Contato", "Ações"}, len(items), "Nenhum contrato assinado encontrado.") {
+			@AdminDataTable([]string{"Cliente", "Comercial", "Contrato", "Contato", "Situação", "Ações"}, len(items), "Nenhum contrato assinado encontrado.") {
 				for _, item := range items {
 					<tr data-admin-list-row data-search={ item.ClientName + " " + item.SalespersonName + " " + item.ContactName }>
 						<td data-label="Cliente" data-primary="true"><strong>{ item.ClientName }</strong></td>
@@ -25,6 +25,7 @@ templ PostSalesPage(user domain.User, items []postsale.Item) {
 								Aguardando indicação
 							}
 						</td>
+						<td data-label="Situação">{ postsale.StatusLabel(item) }</td>
 						<td data-label="Ações" data-actions="true"><a class="btn" href={ templ.SafeURL("/admin/post-sales/" + item.ContractID) }>Abrir</a></td>
 					</tr>
 				}
@@ -166,6 +167,7 @@ templ PostSaleShareLinkPage(user domain.User, detail postsale.Detail, link, mess
 				<div class="actions">
 					<button class="btn primary" type="button" data-post-sale-copy>Copiar link</button>
 					<button class="btn dark" type="button" data-post-sale-share>Compartilhar</button>
+					<a class="btn" href={ templ.SafeURL(link) } target="_blank" rel="noopener noreferrer">Preencher agora</a>
 				</div>
 				<p data-post-sale-share-status role="status"></p>
 			</div>
