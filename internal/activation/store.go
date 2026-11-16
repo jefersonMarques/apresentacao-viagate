@@ -377,32 +377,6 @@ func (s *Store) Submit(ctx context.Context, tokenID string) error {
 	}
 
 	if requiresPolicy {
-		var operationComplete bool
-		if err := tx.QueryRow(ctx, `
- 			select coalesce((
-				case when ps.contract_id is not null
-				then ps.operation_type in ('normal','avulsa')
-				     and nullif(btrim(ps.insurer),'') is not null
-				     and ps.policy_start_date is not null
-				     and ps.policy_end_date is not null
-				else o.operation_type in ('normal','avulsa')
-				     and nullif(btrim(o.insurer),'') is not null
-				     and o.policy_start_date is not null
-				     and o.policy_end_date is not null
- 				end
-			),false)
-			from activation_profiles a
-			join contracts c on c.id=a.contract_id
-			join onboardings o on o.id=c.onboarding_id
-			left join post_sale_operations ps on ps.contract_id=c.id
-			where a.id=$1
-		`, activationID).Scan(&operationComplete); err != nil {
-			return err
-		}
-		if !operationComplete {
-			return fmt.Errorf("complete insurance operation details")
-		}
-
 		var hasPolicy bool
 		if err := tx.QueryRow(ctx, `
 			select exists(
@@ -466,44 +440,77 @@ func (s *Store) ListAdmin(ctx context.Context) ([]AdminItem, error) {
 	return items, rows.Err()
 }
 
+const commercialOperationReadyPredicate = `(
+    not pv.requires_policy or coalesce(
+        case when ps.contract_id is not null then
+            ps.operation_type in ('normal','avulsa')
+            and nullif(btrim(ps.insurer),'') is not null
+            and ps.policy_start_date is not null
+            and ps.policy_end_date is not null
+            and ps.policy_end_date >= ps.policy_start_date
+        else
+            o.operation_type in ('normal','avulsa')
+            and nullif(btrim(o.insurer),'') is not null
+            and o.policy_start_date is not null
+            and o.policy_end_date is not null
+            and o.policy_end_date >= o.policy_start_date
+        end,
+        false
+    )
+)`
+
 func (s *Store) ReadyForInternalSetup(ctx context.Context, activationID string) (bool, error) {
-	var ready bool
-	err := s.pool.QueryRow(ctx, `
-		select a.status='completed'
-		   and c.status='signed'
-		   and c.fully_signed_at is not null
-		from activation_profiles a
-		join contracts c on c.id=a.contract_id
-		where a.id=$1
-		  and a.deleted_at is null
-		  and c.deleted_at is null
-	`, activationID).Scan(&ready)
-	return ready, err
+    var ready bool
+    query := fmt.Sprintf(`
+        select a.status='completed'
+            and c.status='signed'
+            and c.fully_signed_at is not null
+            and %s
+        from activation_profiles a
+        join contracts c on c.id=a.contract_id
+        join onboardings o on o.id=c.onboarding_id
+        join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
+        join proposal_versions pv on pv.id=pa.proposal_version_id
+        left join post_sale_operations ps on ps.contract_id=c.id
+        where a.id=$1
+          and a.deleted_at is null
+          and c.deleted_at is null
+          and o.deleted_at is null
+    `, commercialOperationReadyPredicate)
+    err := s.pool.QueryRow(ctx, query, activationID).Scan(&ready)
+    return ready, err
 }
 
 func (s *Store) SetInternalStatus(ctx context.Context, activationID, status string) error {
-	if status != "under_internal_setup" && status != "activated" {
-		return fmt.Errorf("invalid activation status")
-	}
-	command, err := s.pool.Exec(ctx, `
-		update activation_profiles a
-		set status=$2,
-		    activated_at=case when $2='activated' then coalesce(a.activated_at,now()) else a.activated_at end,
-		    updated_at=now()
-		from contracts c
-		where a.id=$1
-		  and c.id=a.contract_id
-		  and a.deleted_at is null
-		  and c.deleted_at is null
-		  and c.status='signed'
-		  and c.fully_signed_at is not null
-		  and a.status in ('completed','under_internal_setup')
-	`, activationID, status)
-	if err != nil {
-		return err
-	}
-	if command.RowsAffected() != 1 {
-		return fmt.Errorf("activation is not ready for this transition")
-	}
-	return nil
+    if status != "under_internal_setup" && status != "activated" {
+        return fmt.Errorf("invalid activation status")
+    }
+    query := fmt.Sprintf(`
+        update activation_profiles a
+        set status=$2,
+            activated_at=case when $2='activated' then coalesce(a.activated_at,now()) else a.activated_at end,
+            updated_at=now()
+        from contracts c
+        join onboardings o on o.id=c.onboarding_id
+        join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
+        join proposal_versions pv on pv.id=pa.proposal_version_id
+        left join post_sale_operations ps on ps.contract_id=c.id
+        where a.id=$1
+          and c.id=a.contract_id
+          and a.deleted_at is null
+          and c.deleted_at is null
+          and o.deleted_at is null
+          and c.status='signed'
+          and c.fully_signed_at is not null
+          and a.status in ('completed','under_internal_setup')
+          and %s
+    `, commercialOperationReadyPredicate)
+    command, err := s.pool.Exec(ctx, query, activationID, status)
+    if err != nil {
+        return err
+    }
+    if command.RowsAffected() != 1 {
+        return fmt.Errorf("activation is not ready for this transition")
+    }
+    return nil
 }

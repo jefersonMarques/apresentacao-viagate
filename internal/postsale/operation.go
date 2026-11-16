@@ -101,15 +101,9 @@ func (s *Store) SaveOperation(ctx context.Context, contractID string, operation 
 	if err := ValidateOperation(operation); err != nil {
 		return err
 	}
-	if actor.Type == "user" && actor.UserID == "" {
-		return fmt.Errorf("missing staff user")
-	}
-	if actor.Type == "customer" && actor.TokenID == "" {
-		return fmt.Errorf("missing customer access token")
-	}
-	if actor.Type != "user" && actor.Type != "customer" {
-		return fmt.Errorf("invalid post-sale operation actor")
-	}
+	if actor.Type != "user" || actor.UserID == "" {
+        return fmt.Errorf("post-sale operation requires an authenticated commercial user")
+    }
 
 	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.Serializable})
 	if err != nil {
@@ -126,23 +120,6 @@ func (s *Store) SaveOperation(ctx context.Context, contractID string, operation 
 	}
 	if status != "signed" {
 		return fmt.Errorf("post-sale operation requires a signed contract")
-	}
-	if actor.Type == "customer" {
-		var allowed bool
-		if err := tx.QueryRow(ctx, `
-			select exists(
-				select 1 from activation_access_tokens t
-				join activation_profiles a on a.id=t.activation_id
-				where t.id=$1 and a.contract_id=$2 and t.section='all'
-				  and t.revoked_at is null and t.expires_at>now()
-				  and a.deleted_at is null and a.status in ('pending','in_progress')
-			)
-		`, actor.TokenID, contractID).Scan(&allowed); err != nil {
-			return err
-		}
-		if !allowed {
-			return fmt.Errorf("operation data access denied")
-		}
 	}
 
 	var current Operation

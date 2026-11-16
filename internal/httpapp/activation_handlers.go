@@ -34,8 +34,6 @@ func (a *App) activationPage(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Query().Get("saved") {
 	case "policy":
 		message = "Apólice enviada com sucesso."
-	case "operation":
-		message = "Dados operacionais salvos."
 	case "finance":
 		message = "Dados financeiros salvos."
 	case "goods":
@@ -46,9 +44,9 @@ func (a *App) activationPage(w http.ResponseWriter, r *http.Request) {
 		message = "Convite enviado para a pessoa indicada."
 	case "completed":
 		if access.Profile.ContractStatus == "signed" && access.Profile.FullySignedAt != nil {
-			message = "Dados recebidos. A ViaGate já pode prosseguir com a implantação."
+			message = "Seus dados foram recebidos. O comercial concluirá as informações operacionais pendentes."
 		} else {
-			message = "Dados recebidos. A implantação ficará aguardando apenas a assinatura do contrato."
+			message = "Seus dados foram recebidos. A ViaGate acompanhará as pendências da contratação."
 		}
 	}
 	render(r.Context(), w, http.StatusOK, templates.ActivationPage(access, token, message, ""))
@@ -254,7 +252,7 @@ func (a *App) submitActivation(w http.ResponseWriter, r *http.Request) {
 		access, _ = a.activationStore.AccessByToken(r.Context(), hashToken(token))
 		message := "Ainda faltam informações. Preencha o contato financeiro e ao menos um usuário do sistema."
 		if access.Profile.RequiresPolicy {
-			message = "Ainda faltam informações. Complete operação e seguro, envie a apólice, informe financeiro, mercadorias e usuários."
+			message = "Ainda faltam informações. Envie a apólice e complete o financeiro, as mercadorias e os usuários."
 		}
 		render(r.Context(), w, http.StatusBadRequest, templates.ActivationPage(access, token, "", message))
 		return

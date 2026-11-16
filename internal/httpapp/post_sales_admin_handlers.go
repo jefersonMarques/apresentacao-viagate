@@ -128,6 +128,22 @@ func (a *App) updatePostSaleOperation(w http.ResponseWriter, r *http.Request) {
 		render(r.Context(), w, http.StatusBadRequest, templates.PostSaleDetailPage(user, detail, "", "Verifique o tipo de operação e a vigência da apólice."))
 		return
 	}
+	var activationID string
+	err = a.pool.QueryRow(r.Context(), `
+        select id::text from activation_profiles
+        where contract_id=$1 and deleted_at is null
+    `, detail.ContractID).Scan(&activationID)
+    if err != nil && err != pgx.ErrNoRows {
+        a.logger.Error("resolve activation before commercial operation update failed", "error", err)
+    }
+
+    wasReady := false
+    if err == nil {
+        wasReady, err = a.activationStore.ReadyForInternalSetup(r.Context(), activationID)
+        if err != nil {
+            a.logger.Error("check readiness before commercial operation update failed", "error", err)
+        }
+    }
 	if err := a.postSaleStore.SaveOperation(r.Context(), detail.ContractID, operation, postsale.Actor{
 		Type: "user", UserID: user.ID, Name: user.Name, IP: requestIP(r), Agent: r.UserAgent(),
 	}); err != nil {
@@ -135,5 +151,8 @@ func (a *App) updatePostSaleOperation(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Não foi possível salvar os dados operacionais.", http.StatusInternalServerError)
 		return
 	}
+	if activationID != "" && !wasReady {
+        a.notifyActivationReadyIfEligible(r, activationID)
+    }
 	http.Redirect(w, r, "/admin/post-sales/"+detail.ContractID+"?saved=operation", http.StatusSeeOther)
 }
