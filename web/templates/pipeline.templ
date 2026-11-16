@@ -41,7 +41,19 @@ templ PipelinePage(user domain.User, items []domain.PipelineItem, all bool) {
 						</td>
 						<td data-label="Proposta">{ item.ProposalTitle }</td>
 						<td data-label="Última atividade">{ item.UpdatedAt.Format("02/01/2006 15:04") }</td>
-						<td data-label="Ações" data-actions="true"><div class="admin-list-actions"><a class="btn" href={ templ.SafeURL("/admin/pipeline/" + item.ProposalID) }>Detalhes</a></div></td>
+						<td data-label="Ações" data-actions="true">
+							<div class="admin-list-actions">
+								<a
+									class="btn"
+									href={ templ.SafeURL("/admin/pipeline/" + item.ProposalID) }
+									hx-get={ "/admin/pipeline/" + item.ProposalID }
+									hx-target="#adminContent"
+									hx-select="#adminContent"
+									hx-swap="outerHTML show:window:top"
+									hx-push-url="true"
+								>Detalhes</a>
+							</div>
+						</td>
 					</tr>
 				}
 			}
