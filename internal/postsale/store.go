@@ -27,6 +27,8 @@ type Actor struct {
 	Type     string
 	SignerID string
 	UserID   string
+	TokenID  string
+	Name     string
 	IP       net.IP
 	Agent    string
 }
@@ -170,6 +172,8 @@ type Detail struct {
 	ResponsibleEmail   string
 	ResponsiblePhone   string
 	Contact            Contact
+	Operation          Operation
+	OperationHistory   []OperationVersion
 	History            []ContactVersion
 }
 
@@ -232,6 +236,14 @@ func (s *Store) Detail(ctx context.Context, contractID, userID string, all bool)
 		return Detail{}, err
 	}
 	detail.Contact, err = s.ByContract(ctx, contractID)
+	if err != nil {
+		return Detail{}, err
+	}
+	detail.Operation, err = s.OperationByContract(ctx, contractID)
+	if err != nil {
+		return Detail{}, err
+	}
+	detail.OperationHistory, err = s.OperationHistory(ctx, contractID)
 	if err != nil {
 		return Detail{}, err
 	}
