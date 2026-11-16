@@ -1,4 +1,4 @@
--- Emite uma nova versão sem campos securitários, preservando contratos históricos.
+-- Remove campos securitários por nova versão apenas quando presentes; preserva modelos já adequados.
 DO $migration$
 DECLARE
     target_template_id uuid;
@@ -30,6 +30,16 @@ BEGIN
     operation_start := strpos(original_markdown, '### 1.3. Operação');
     insurance_start := strpos(original_markdown, '### 1.4. Informações securitárias');
     pricing_start := strpos(original_markdown, '## 2. PREÇO E FORMA DE PAGAMENTO');
+
+    -- Modelos já adequados são preservados, sem criar versões artificiais.
+    IF operation_start = 0 AND insurance_start = 0 THEN
+        IF pricing_start = 0
+           OR strpos(lower(original_markdown), '{operation.') > 0
+           OR strpos(lower(original_markdown), '{insurance.') > 0 THEN
+            RAISE EXCEPTION 'default contract template has unresolved operational insurance fields';
+        END IF;
+        RETURN;
+    END IF;
 
     IF operation_start = 0 OR insurance_start <= operation_start OR pricing_start <= insurance_start THEN
         RAISE EXCEPTION 'default contract template has unexpected operation or insurance sections';

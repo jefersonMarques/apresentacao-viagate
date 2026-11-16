@@ -160,3 +160,93 @@ func TestDefaultContractTemplateExcludesInsuranceAfterMigration(t *testing.T) {
         }
     }
 }
+
+func TestContractTemplateAlreadyWithoutInsuranceIsPreserved(t *testing.T) {
+    if os.Getenv("RUN_DB_INTEGRATION") != "1" {
+        t.Skip("database integration test")
+    }
+
+    ctx := context.Background()
+    pool, err := pgxpool.New(ctx, os.Getenv("DATABASE_URL"))
+    if err != nil {
+        t.Fatalf("connect to database: %v", err)
+    }
+    defer pool.Close()
+
+    tx, err := pool.Begin(ctx)
+    if err != nil {
+        t.Fatalf("begin contract template test: %v", err)
+    }
+    defer tx.Rollback(ctx)
+
+    statements := []string{
+        "create temp table contract_templates (id uuid primary key, created_by uuid not null, current_version integer not null, is_active boolean not null, is_default boolean not null, updated_at timestamptz)",
+        "create temp table contract_template_versions (contract_template_id uuid not null, version_number integer not null, markdown text not null, template_hash bytea, created_by uuid not null)",
+    }
+    for _, statement := range statements {
+        if _, err := tx.Exec(ctx, statement); err != nil {
+            t.Fatalf("create isolated contract tables: %v", err)
+        }
+    }
+
+    existing := strings.Join([]string{
+        "# CONTRATO PARTICULAR DE PRESTAÇÃO DE SERVIÇOS",
+        "",
+        "## 1. OBJETO",
+        "",
+        "### 1.2. Produtos e serviços da proposta aceita",
+        "",
+        "## 2. PREÇO E FORMA DE PAGAMENTO",
+        "",
+        "{proposal.pricing_table}",
+        "",
+        "## 3. OBRIGAÇÕES DAS PARTES",
+        "",
+        "As regras gerais da apólice deverão ser observadas quando aplicáveis.",
+        "",
+        "## 10. ACEITE E ASSINATURAS",
+    }, "\r\n")
+
+    _, err = tx.Exec(ctx,
+        "insert into contract_templates (id,created_by,current_version,is_active,is_default) values ($1,$2,5,true,true)",
+        "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb")
+    if err != nil {
+        t.Fatalf("seed default contract template: %v", err)
+    }
+
+    _, err = tx.Exec(ctx,
+        "insert into contract_template_versions (contract_template_id,version_number,markdown,template_hash,created_by) values ($1,5,$2,digest($2,'sha256'),$3)",
+        "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", existing, "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb")
+    if err != nil {
+        t.Fatalf("seed current contract version: %v", err)
+    }
+
+    migration, err := os.ReadFile("../../../migrations/000037_contract_without_operational_insurance.sql")
+    if err != nil {
+        t.Fatalf("read contract template migration: %v", err)
+    }
+    if _, err := tx.Exec(ctx, string(migration)); err != nil {
+        t.Fatalf("migrate already-correct contract template: %v", err)
+    }
+
+    var currentVersion int
+    var versionCount int
+    var stored string
+    err = tx.QueryRow(ctx,
+        "select current_version from contract_templates where is_active=true and is_default=true",
+    ).Scan(&currentVersion)
+    if err != nil {
+        t.Fatalf("load current contract template version: %v", err)
+    }
+    err = tx.QueryRow(ctx,
+        "select count(*), max(markdown) from contract_template_versions",
+    ).Scan(&versionCount, &stored)
+    if err != nil {
+        t.Fatalf("inspect contract template versions: %v", err)
+    }
+
+    if currentVersion != 5 || versionCount != 1 || stored != existing {
+        t.Fatalf("existing contract was modified: version=%d count=%d content_unchanged=%t",
+            currentVersion, versionCount, stored == existing)
+    }
+}
