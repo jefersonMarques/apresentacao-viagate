@@ -76,12 +76,7 @@ func (a *App) writeProposalContractData(w http.ResponseWriter, r *http.Request, 
 			"city": proposalSnapshotString(proposal.Content, "client", "city"),
 			"state": proposalSnapshotString(proposal.Content, "client", "state"),
 		},
-		"responsible": map[string]string{
-			"name": proposalSnapshotString(proposal.Content, "contact", "name"),
-			"role": proposalSnapshotString(proposal.Content, "contact", "role"),
-			"email": proposalSnapshotString(proposal.Content, "contact", "email"),
-			"phone": proposalSnapshotString(proposal.Content, "contact", "phone"),
-		},
+		"responsible": proposalSignerPrefill(proposal.Content),
 	}
 	_ = json.NewEncoder(w).Encode(payload)
 }
@@ -108,4 +103,14 @@ func proposalSnapshotString(content map[string]any, section, key string) string 
 	group, _ := content[section].(map[string]any)
 	value, _ := group[key].(string)
 	return strings.TrimSpace(value)
+}
+
+func proposalSignerPrefill(content map[string]any) map[string]string {
+	return map[string]string{
+		"name":  proposalSnapshotString(content, "signer", "name"),
+		"cpf":   proposalSnapshotString(content, "signer", "cpf"),
+		"role":  proposalSnapshotString(content, "signer", "role"),
+		"email": proposalSnapshotString(content, "signer", "email"),
+		"phone": proposalSnapshotString(content, "signer", "phone"),
+	}
 }

@@ -34,6 +34,20 @@ templ ProposalEditorPage(user domain.User, input proposals.EditorInput, draft pr
 								<div class="v1-field"><label>Nome fantasia</label><input name="client_trade_name" value={ input.ClientTradeName }/></div>
 								<div class="v1-field"><label>E-mail da empresa</label><input name="client_email" type="email" value={ input.ClientEmail }/></div>
 								<div class="v1-field"><label>Telefone da empresa</label><input name="client_phone" data-mask="phone" autocomplete="tel" value={ input.ClientPhone }/></div>
+								<details class="v1-details v1-field full">
+									<summary>Endereço da empresa (opcional para o comercial)</summary>
+									<div class="v1-details-body">
+										<div class="v1-form-grid">
+											<div class="v1-field"><label>CEP</label><input name="client_postal_code" data-mask="postal-code" value={ input.ClientPostalCode }/></div>
+											<div class="v1-field"><label>Logradouro</label><input name="client_street" value={ input.ClientStreet }/></div>
+											<div class="v1-field"><label>Número</label><input name="client_street_number" value={ input.ClientStreetNumber }/></div>
+											<div class="v1-field"><label>Complemento</label><input name="client_complement" value={ input.ClientComplement }/></div>
+											<div class="v1-field"><label>Bairro</label><input name="client_district" value={ input.ClientDistrict }/></div>
+											<div class="v1-field"><label>Cidade</label><input name="client_city" value={ input.ClientCity }/></div>
+											<div class="v1-field"><label>UF</label><input name="client_state" maxlength="2" value={ input.ClientState }/></div>
+										</div>
+									</div>
+								</details>
 								<div class="v1-field full">
 									<label>Logo do cliente</label>
 									@AdminImageUpload("client_logo_url", input.ClientLogoURL, "client_logo", "Logo do cliente", "Prévia do logo")
@@ -50,6 +64,19 @@ templ ProposalEditorPage(user domain.User, input proposals.EditorInput, draft pr
 									</div>
 								</div>
 							</details>
+						<details class="v1-details" open>
+							<summary>Responsável pelo aceite e assinatura (opcional para o comercial)</summary>
+							<div class="v1-details-body">
+								<div class="v1-form-grid">
+									<div class="v1-field"><label>Nome completo</label><input name="signer_name" value={ input.SignerName }/></div>
+									<div class="v1-field"><label>CPF</label><input name="signer_cpf" data-mask="cpf" value={ input.SignerCPF }/></div>
+									<div class="v1-field"><label>Cargo / função</label><input name="signer_role" value={ input.SignerRole }/></div>
+									<div class="v1-field"><label>E-mail</label><input name="signer_email" type="email" value={ input.SignerEmail }/></div>
+									<div class="v1-field"><label>Telefone</label><input name="signer_phone" data-mask="phone" value={ input.SignerPhone }/></div>
+								</div>
+							<p class="v1-help">Estes dados serão sugeridos ao cliente, que deverá conferi-los e declarar seus poderes no aceite.</p>
+							</div>
+						</details>
 						}
 
 						@AdminFormSection("2. Configuração da proposta", "Defina os dados gerais e a personalização desta negociação.") {

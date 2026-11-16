@@ -79,6 +79,7 @@
         if (acceptanceText && data.acceptance_text) acceptanceText.textContent = data.acceptance_text;
         const responsible = data.responsible || {};
         setField('name', responsible.name);
+        setField('cpf', responsible.cpf);
         setField('role', responsible.role);
         setField('email', responsible.email);
         setField('phone', responsible.phone);

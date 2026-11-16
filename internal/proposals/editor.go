@@ -43,6 +43,11 @@ type EditorInput struct {
 	ContactRole         string
 	ContactEmail        string
 	ContactPhone        string
+	SignerName          string
+	SignerCPF           string
+	SignerRole          string
+	SignerEmail         string
+	SignerPhone         string
 	Title               string
 	ValidUntil          *time.Time
 	OperationContext    string
@@ -392,6 +397,11 @@ func (s *Store) EditorByID(ctx context.Context, userID, proposalID string, allow
 		input.ContactRole = contentString(input.Content, "contact", "role")
 		input.ContactEmail = contentString(input.Content, "contact", "email")
 		input.ContactPhone = contentString(input.Content, "contact", "phone")
+		input.SignerName = contentString(input.Content, "signer", "name")
+		input.SignerCPF = contentString(input.Content, "signer", "cpf")
+		input.SignerRole = contentString(input.Content, "signer", "role")
+		input.SignerEmail = contentString(input.Content, "signer", "email")
+		input.SignerPhone = contentString(input.Content, "signer", "phone")
 		input.OperationContext = contentRootString(input.Content, "operation_context")
 		input.CustomerPriorities = contentRootStrings(input.Content, "customer_priorities")
 		input.SolutionTitle = contentRootString(input.Content, "solution_title")
