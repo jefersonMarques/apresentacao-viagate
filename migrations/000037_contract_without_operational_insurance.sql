@@ -21,7 +21,10 @@ BEGIN
     FOR UPDATE OF t;
 
     IF NOT FOUND THEN
-        RAISE EXCEPTION 'active default contract template not found';
+        IF EXISTS (SELECT 1 FROM contract_templates) THEN
+            RAISE EXCEPTION 'active default contract template not found';
+        END IF;
+        RETURN;
     END IF;
 
     operation_start := strpos(original_markdown, '### 1.3. Operação');
