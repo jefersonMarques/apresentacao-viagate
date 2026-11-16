@@ -307,10 +307,10 @@ templ ActivationsAdminPage(user domain.User, items []activation.AdminItem) {
 			}
 			@AdminDataTable([]string{"Cliente", "Comercial", "Status", "Dados", "Contrato", "Ações"}, len(items), "Nenhuma ativação encontrada.") {
 				for _, item := range items {
-					<tr data-admin-list-row data-search={ item.ClientName + " " + item.CommercialName + " " + ActivationStatusLabel(item.Status) } data-filter-status={ item.Status }>
+					<tr data-admin-list-row data-search={ item.ClientName + " " + item.CommercialName + " " + ActivationAdminStatusLabel(item) } data-filter-status={ item.Status }>
 						<td data-label="Cliente" data-primary="true"><strong>{ item.ClientName }</strong></td>
 						<td data-label="Comercial">{ item.CommercialName }</td>
-						<td data-label="Status"><span class={ "badge status-badge " + AdminStatusBadgeClass(item.Status) }>{ ActivationStatusLabel(item.Status) }</span></td>
+						<td data-label="Status"><span class={ "badge status-badge " + AdminStatusBadgeClass(item.Status) }>{ ActivationAdminStatusLabel(item) }</span></td>
 						<td data-label="Dados">
 							if item.RequiresPolicy {
 								{ fmt.Sprintf("%d mercadorias · %d usuários", item.GoodsCount, item.SystemUserCount) }
@@ -390,7 +390,20 @@ templ ActivationAdminDetailPage(user domain.User, profile activation.Profile) {
 				</div>
 			</section>
 		</div>
-		if (profile.Status == "completed" || profile.Status == "under_internal_setup") && ActivationContractSigned(profile) {
+        if profile.Status == "completed" && ActivationContractSigned(profile) &&
+            profile.RequiresPolicy && !ActivationOperationComplete(profile) {
+            <section class="panel activation-admin-implementation admin-page-section-gap">
+                <header class="panel-head"><h2>Aguardando operação comercial</h2></header>
+                <div class="panel-body">
+                    <p>Os dados do cliente foram recebidos. O comercial precisa concluir Operação e seguro no Pós-venda.</p>
+                    if UserCan(user, "proposal.create") {
+                        <a class="btn dark" href={ templ.SafeURL("/admin/post-sales/" + profile.ContractID) }>Abrir Pós-venda</a>
+                    }
+                </div>
+            </section>
+        }
+        if (profile.Status == "completed" || profile.Status == "under_internal_setup") &&
+            ActivationContractSigned(profile) && (!profile.RequiresPolicy || ActivationOperationComplete(profile)) {
 			<section class="panel activation-admin-implementation admin-page-section-gap">
 				<header class="panel-head">
 					<div>

@@ -2,6 +2,7 @@ package templates
 
 import (
 	"strings"
+    "time"
 
 	"github.com/jefersonMarques/apresentacao-viagate/internal/activation"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/brfields"
@@ -120,10 +121,16 @@ func humanOperationType(value string) string {
 }
 
 func ActivationOperationComplete(profile activation.Profile) bool {
-	operationType := strings.ToLower(strings.TrimSpace(profile.OperationType))
-	return (operationType == "normal" || operationType == "avulsa") &&
-		strings.TrimSpace(profile.Insurer) != "" &&
-		profile.PolicyStartDate != "" && profile.PolicyEndDate != ""
+    operationType := strings.ToLower(strings.TrimSpace(profile.OperationType))
+    if operationType != "normal" && operationType != "avulsa" {
+        return false
+    }
+    if strings.TrimSpace(profile.Insurer) == "" {
+        return false
+    }
+    startDate, startError := time.Parse("2006-01-02", profile.PolicyStartDate)
+    endDate, endError := time.Parse("2006-01-02", profile.PolicyEndDate)
+    return startError == nil && endError == nil && !endDate.Before(startDate)
 }
 
 type ActivationStep struct {
@@ -182,4 +189,11 @@ func ActivationSteps(access activation.Access) []ActivationStep {
     }
 
     return steps
+}
+
+func ActivationAdminStatusLabel(item activation.AdminItem) string {
+    if item.Status == "completed" && !item.OperationReady {
+        return "Aguardando operação comercial"
+    }
+    return ActivationStatusLabel(item.Status)
 }

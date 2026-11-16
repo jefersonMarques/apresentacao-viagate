@@ -79,6 +79,7 @@ type AdminItem struct {
 	GoodsCount      int
 	SystemUserCount int
 	RequiresPolicy  bool
+	OperationReady  bool
 }
 
 func NewStore(pool *pgxpool.Pool) *Store {
@@ -406,11 +407,11 @@ func (s *Store) Submit(ctx context.Context, tokenID string) error {
 }
 
 func (s *Store) ListAdmin(ctx context.Context) ([]AdminItem, error) {
-	rows, err := s.pool.Query(ctx, `
+	rows, err := s.pool.Query(ctx, fmt.Sprintf(`
 		select a.id::text,a.contract_id::text,o.legal_name,u.name,a.status,c.fully_signed_at,a.submitted_at,a.activated_at,a.updated_at,
 		       (select count(*) from activation_goods g where g.activation_id=a.id),
 		       (select count(*) from activation_system_users su where su.activation_id=a.id),
-		       pv.requires_policy
+		       pv.requires_policy, %s
 		from activation_profiles a
 		join contracts c on c.id=a.contract_id
 		join onboardings o on o.id=c.onboarding_id
@@ -418,13 +419,14 @@ func (s *Store) ListAdmin(ctx context.Context) ([]AdminItem, error) {
 		join proposal_versions pv on pv.id=pa.proposal_version_id
 		join proposals p on p.id=pa.proposal_id
 		join users u on u.id=p.created_by
+        left join post_sale_operations ps on ps.contract_id=c.id
 		where a.deleted_at is null
 		  and c.deleted_at is null
 		  and o.deleted_at is null
 		  and pa.deleted_at is null
 		  and p.deleted_at is null
 		order by case a.status when 'completed' then 0 when 'in_progress' then 1 when 'pending' then 2 when 'under_internal_setup' then 3 else 4 end,a.updated_at desc
-	`)
+	`, commercialOperationReadyPredicate))
 	if err != nil {
 		return nil, err
 	}
@@ -432,7 +434,7 @@ func (s *Store) ListAdmin(ctx context.Context) ([]AdminItem, error) {
 	items := []AdminItem{}
 	for rows.Next() {
 		var item AdminItem
-		if err := rows.Scan(&item.ProfileID, &item.ContractID, &item.ClientName, &item.CommercialName, &item.Status, &item.FullySignedAt, &item.SubmittedAt, &item.ActivatedAt, &item.UpdatedAt, &item.GoodsCount, &item.SystemUserCount, &item.RequiresPolicy); err != nil {
+		if err := rows.Scan(&item.ProfileID, &item.ContractID, &item.ClientName, &item.CommercialName, &item.Status, &item.FullySignedAt, &item.SubmittedAt, &item.ActivatedAt, &item.UpdatedAt, &item.GoodsCount, &item.SystemUserCount, &item.RequiresPolicy, &item.OperationReady); err != nil {
 			return nil, err
 		}
 		items = append(items, item)
