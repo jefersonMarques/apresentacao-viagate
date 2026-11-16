@@ -168,15 +168,6 @@ func (s *Store) Submit(ctx context.Context, onboardingID string) error {
 		  and o.status in ('pending','in_progress','correction_requested')
 		  and length(o.cnpj)=14
 		  and btrim(o.legal_name)<>''
-		  and (
-		    pv.requires_policy=false
-		    or (
-		      o.operation_type in ('normal','avulsa')
-		      and o.insurer is not null and btrim(o.insurer)<>''
-		      and o.policy_start_date is not null and o.policy_end_date is not null
-		      and o.policy_end_date >= o.policy_start_date
-		    )
-		  )
 		  and btrim(o.company_responsible_name)<>''
 		  and length(o.company_responsible_cpf)=11
 		  and btrim(o.company_responsible_phone)<>''

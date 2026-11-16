@@ -102,6 +102,14 @@ func (g *Generator) GenerateForOnboarding(ctx context.Context, onboardingID stri
 		}
 	}
 
+	if requiresPolicy && !contractInsuranceDetailsComplete(
+		operationType, insurer, policyStartDate, policyEndDate,
+	) && templateRequiresInsuranceDetails(templateMarkdown) {
+		return Generated{}, fmt.Errorf(
+			"contract template must be revised before generating an insurance-dependent contract without insurance data",
+		)
+	}
+
 	templateMarkdown = ensureProposalFinancialTerms(templateMarkdown)
 
 	pricingData, err := loadProposalPricing(ctx, g.pool, proposalVersionID)
@@ -315,4 +323,14 @@ func nonEmpty(values ...string) []string {
 		}
 	}
 	return result
+}
+
+func templateRequiresInsuranceDetails(markdown string) bool {
+	return strings.Contains(markdown, "{operation.type}") ||
+		strings.Contains(markdown, "{insurance.")
+}
+
+func contractInsuranceDetailsComplete(operationType, insurer, start, end string) bool {
+	return (operationType == "normal" || operationType == "avulsa") &&
+		strings.TrimSpace(insurer) != "" && start != "" && end != ""
 }
