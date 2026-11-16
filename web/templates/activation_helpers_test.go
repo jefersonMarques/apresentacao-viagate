@@ -135,3 +135,122 @@ func TestActivationPageHidesPolicyAndGoodsWhenNotRequired(t *testing.T) {
 		t.Fatal("policy and goods sections must be hidden when not required")
 	}
 }
+
+func TestActivationStepsMatchInsuranceRequirements(t *testing.T) {
+    insured := activation.Access{
+        Section: "all",
+        Profile: activation.Profile{RequiresPolicy: true},
+    }
+    insuredSteps := ActivationSteps(insured)
+    expected := []string{"operation", "policy", "finance", "goods", "users", "review"}
+    if len(insuredSteps) != len(expected) {
+        t.Fatalf("insured steps = %d, want %d", len(insuredSteps), len(expected))
+    }
+    for index, key := range expected {
+        if insuredSteps[index].Key != key {
+            t.Errorf("step %d = %q, want %q", index, insuredSteps[index].Key, key)
+        }
+    }
+
+    regular := activation.Access{Section: "all"}
+    regularSteps := ActivationSteps(regular)
+    expectedRegular := []string{"finance", "users", "review"}
+    if len(regularSteps) != len(expectedRegular) {
+        t.Fatalf("regular steps = %d, want %d", len(regularSteps), len(expectedRegular))
+    }
+    for index, key := range expectedRegular {
+        if regularSteps[index].Key != key {
+            t.Errorf("regular step %d = %q, want %q", index, regularSteps[index].Key, key)
+        }
+    }
+}
+
+func TestActivationPageLimitsDelegateToAuthorizedSection(t *testing.T) {
+    access := activation.Access{
+        Section: "finance",
+        AccessType: "delegate",
+        Profile: activation.Profile{
+            LegalName: "Test Company",
+            CompanyResponsibleEmail: "signer@example.com",
+            Status: "in_progress",
+            RequiresPolicy: true,
+            Insurer: "Example Insurer",
+            Goods: []string{"Restricted Good"},
+        },
+    }
+
+    var output bytes.Buffer
+    if err := ActivationPage(access, "token-test", "", "").Render(context.Background(), &output); err != nil {
+        t.Fatalf("render scoped activation: %v", err)
+    }
+    html := output.String()
+    for _, forbidden := range []string{
+        `data-activation-step="operation"`,
+        `data-activation-step="policy"`,
+        `data-activation-step="goods"`,
+        `data-activation-step="users"`,
+        `data-activation-step="review"`,
+        "Restricted Good",
+        "Example Insurer",
+        "signer@example.com",
+        "/activation/token-test/proposal",
+        "/activation/token-test/submit",
+    } {
+        if strings.Contains(html, forbidden) {
+            t.Errorf("scoped activation exposed forbidden content %q", forbidden)
+        }
+    }
+    if !strings.Contains(html, `data-activation-step="finance"`) {
+        t.Fatal("finance delegate must access the finance step")
+    }
+}
+
+func TestActivationReviewContainsEditActionsAndConfirmation(t *testing.T) {
+    access := activation.Access{
+        Section: "all",
+        Profile: activation.Profile{
+            Status: "in_progress",
+            RequiresPolicy: true,
+        },
+    }
+    var output bytes.Buffer
+    if err := ActivationPage(access, "token-test", "", "").Render(context.Background(), &output); err != nil {
+        t.Fatalf("render review: %v", err)
+    }
+    html := output.String()
+    for _, required := range []string{
+        `data-activation-step="review"`,
+        `data-activation-edit="operation"`,
+        `data-activation-edit="policy"`,
+        `data-activation-edit="finance"`,
+        `data-activation-edit="goods"`,
+        `data-activation-edit="users"`,
+        "Confirmar dados da implantação",
+    } {
+        if !strings.Contains(html, required) {
+            t.Errorf("review missing action %q", required)
+        }
+    }
+    if strings.Contains(html, `/activation/token-test/proposal`) {
+        t.Fatal("review must not link to the proposal")
+    }
+}
+
+func TestActivationPageShowsSuccessAfterConfirmation(t *testing.T) {
+    access := activation.Access{
+        Section: "all",
+        Profile: activation.Profile{Status: "completed"},
+    }
+    var output bytes.Buffer
+    if err := ActivationPage(access, "token-test", "", "").Render(context.Background(), &output); err != nil {
+        t.Fatalf("render completed activation: %v", err)
+    }
+    html := output.String()
+    if !strings.Contains(html, "Dados enviados com sucesso!") {
+        t.Fatal("completed activation must show success message")
+    }
+    if strings.Contains(html, `data-activation-step="review"`) ||
+        strings.Contains(html, `/activation/token-test/submit`) {
+        t.Fatal("completed activation must not show a new submit action")
+    }
+}

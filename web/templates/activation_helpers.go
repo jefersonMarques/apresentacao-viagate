@@ -8,7 +8,7 @@ import (
 )
 
 func ActivationCanEdit(access activation.Access, section string) bool {
-	if access.Profile.Status == "completed" || access.Profile.Status == "under_internal_setup" || access.Profile.Status == "activated" {
+	if ActivationFinished(access.Profile) {
 		return false
 	}
 	if (section == "policy" || section == "goods" || section == "operation") && !access.Profile.RequiresPolicy {
@@ -121,4 +121,68 @@ func ActivationOperationComplete(profile activation.Profile) bool {
 	return (operationType == "normal" || operationType == "avulsa") &&
 		strings.TrimSpace(profile.Insurer) != "" &&
 		profile.PolicyStartDate != "" && profile.PolicyEndDate != ""
+}
+
+type ActivationStep struct {
+    Key      string
+    Label    string
+    Complete bool
+}
+
+func ActivationFinished(profile activation.Profile) bool {
+    return profile.Status == "completed" ||
+        profile.Status == "under_internal_setup" ||
+        profile.Status == "activated"
+}
+
+func ActivationCanView(access activation.Access, section string) bool {
+    if (section == "operation" || section == "policy" || section == "goods") &&
+        !access.Profile.RequiresPolicy {
+        return false
+    }
+
+    if access.Section == "all" {
+        return true
+    }
+
+    return access.Section == section
+}
+
+func ActivationFinanceComplete(profile activation.Profile) bool {
+    return strings.TrimSpace(profile.FinanceResponsibleName) != "" &&
+        strings.TrimSpace(profile.FinanceResponsiblePhone) != "" &&
+        strings.TrimSpace(profile.FinanceResponsibleEmail) != ""
+}
+
+func ActivationOptionalValue(value string) string {
+    if strings.TrimSpace(value) == "" {
+        return "Não informado"
+    }
+    return value
+}
+
+func ActivationSteps(access activation.Access) []ActivationStep {
+    profile := access.Profile
+    candidates := []ActivationStep{
+        {Key: "operation", Label: "Operação", Complete: ActivationOperationComplete(profile)},
+        {Key: "policy", Label: "Apólice", Complete: profile.HasPolicy},
+        {Key: "finance", Label: "Financeiro", Complete: ActivationFinanceComplete(profile)},
+        {Key: "goods", Label: "Mercadorias", Complete: len(profile.Goods) > 0},
+        {Key: "users", Label: "Usuários", Complete: len(profile.SystemUsers) > 0},
+    }
+
+    steps := make([]ActivationStep, 0, len(candidates)+1)
+    for _, step := range candidates {
+        if ActivationCanView(access, step.Key) {
+            steps = append(steps, step)
+        }
+    }
+
+    if access.Section == "all" {
+        steps = append(steps, ActivationStep{
+            Key: "review", Label: "Revisão", Complete: ActivationComplete(profile),
+        })
+    }
+
+    return steps
 }

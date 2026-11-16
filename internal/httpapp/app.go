@@ -141,7 +141,6 @@ func (a *App) Routes() http.Handler {
 	router.Get("/sign/{token}/contract", a.downloadSignedContract)
 
 	router.Get("/activation/{token}", a.activationPage)
-	router.Get("/activation/{token}/proposal", a.proposalFromActivation)
 	router.Post("/activation/{token}/policy", a.uploadActivationPolicy)
 	router.Post("/activation/{token}/operation", a.saveActivationOperation)
 	router.Post("/activation/{token}/delegate", a.delegateActivation)

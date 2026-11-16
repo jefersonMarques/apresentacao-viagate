@@ -25,3 +25,8 @@
 .activation-public .activation-progress-item.is-current {
   color: #fff;
 }
+
+.activation-public .activation-progress-item.is-complete {
+  border-color: #cfe3d5;
+}
+

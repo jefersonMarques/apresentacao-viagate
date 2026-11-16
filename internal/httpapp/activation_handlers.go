@@ -219,7 +219,7 @@ func (a *App) delegateActivation(w http.ResponseWriter, r *http.Request) {
 	}
 	link := strings.TrimRight(a.cfg.BaseURL, "/") + "/activation/" + plain
 	htmlBody := fmt.Sprintf(
-		"<p>Olá, %s.</p><p>A contratação da <strong>%s</strong> com a ViaGate está em andamento e você foi indicado para complementar os dados necessários para implantação.</p><p>Esse preenchimento pode ser concluído enquanto o responsável legal finaliza a assinatura do contrato.</p><p><a href=\"%s\">Preencher dados para implantação</a></p><p>O link é individual e expira em 30 dias.</p>",
+		"<p>Olá, %s.</p><p>Você foi indicado para preencher os dados necessários à implantação de <strong>%s</strong> na ViaGate.</p><p><a href=\"%s\">Preencher dados para implantação</a></p><p>O link é individual e expira em 30 dias.</p>",
 		html.EscapeString(name), html.EscapeString(access.Profile.LegalName), html.EscapeString(link),
 	)
 	if err := notifications.EnqueueWithOptions(r.Context(), a.pool, notifications.MessageOptions{
@@ -244,6 +244,10 @@ func (a *App) submitActivation(w http.ResponseWriter, r *http.Request) {
 	access, err := a.activationStore.AccessByToken(r.Context(), hashToken(token))
 	if err != nil {
 		http.Error(w, "Link de ativação inválido ou expirado.", http.StatusGone)
+		return
+	}
+	if access.Section != "all" {
+		http.Error(w, "Este acesso não permite confirmar toda a implantação.", http.StatusForbidden)
 		return
 	}
 	if err := a.activationStore.Submit(r.Context(), access.TokenID); err != nil {

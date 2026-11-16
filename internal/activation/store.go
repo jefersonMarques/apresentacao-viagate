@@ -331,11 +331,11 @@ func (s *Store) Submit(ctx context.Context, tokenID string) error {
 	}
 	defer tx.Rollback(ctx)
 
-	var activationID, status string
+	var activationID, status, allowedSection string
 	var financeName, financeEmail, financePhone string
 	var requiresPolicy bool
 	err = tx.QueryRow(ctx, `
-		select a.id::text,a.status,coalesce(a.finance_responsible_name,''),coalesce(a.finance_responsible_email::text,''),coalesce(a.finance_responsible_phone,''),pv.requires_policy
+		select a.id::text,a.status,t.section,coalesce(a.finance_responsible_name,''),coalesce(a.finance_responsible_email::text,''),coalesce(a.finance_responsible_phone,''),pv.requires_policy
 		from activation_access_tokens t
 		join activation_profiles a on a.id=t.activation_id
 		join contracts c on c.id=a.contract_id
@@ -349,9 +349,12 @@ func (s *Store) Submit(ctx context.Context, tokenID string) error {
 		  and c.deleted_at is null
 		  and o.deleted_at is null
 		for update of t,a
-	`, tokenID).Scan(&activationID, &status, &financeName, &financeEmail, &financePhone, &requiresPolicy)
+	`, tokenID).Scan(&activationID, &status, &allowedSection, &financeName, &financeEmail, &financePhone, &requiresPolicy)
 	if err != nil {
 		return err
+	}
+	if allowedSection != "all" {
+		return fmt.Errorf("activation confirmation requires full access")
 	}
 	if status == "completed" || status == "under_internal_setup" || status == "activated" {
 		return nil
