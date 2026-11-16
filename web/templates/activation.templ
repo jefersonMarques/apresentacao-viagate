@@ -35,8 +35,8 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
                     </section>
                 } else {
                     <div class="activation-step-summary" aria-live="polite">
-                        <strong data-activation-step-count></strong>
-                        <span data-activation-step-label></span>
+                        <strong data-activation-step-count>Etapa</strong>
+                        <span data-activation-step-label>Preparação</span>
                     </div>
                     <nav class="activation-progress" aria-label="Etapas da preparação">
                         for index, step := range ActivationSteps(access) {
