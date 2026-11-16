@@ -59,6 +59,8 @@ jobs:
 
       - name: Validate activation wizard JavaScript
         run: node --check web/assets/activation.js
+      - name: Validate implementation contact JavaScript
+        run: node --check web/assets/implementation-contact.js
 
       - name: Vet
         run: go vet ./...
