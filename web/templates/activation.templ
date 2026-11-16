@@ -156,7 +156,9 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
                                 </form>
                             } else {
                                 <div class="activation-tags">
-                                    for _, good := range access.Profile.Goods { <span>{ good }</span> }
+                                    for _, good := range access.Profile.Goods {
+                                        <span>{ good }</span>
+                                    }
                                 </div>
                                 @ActivationReadonlyNavigation()
                             }
@@ -248,7 +250,9 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
                                     <div class="activation-review-head"><h3>Mercadorias</h3><button class="btn ghost" type="button" data-activation-edit="goods">Editar</button></div>
                                     if len(access.Profile.Goods) > 0 {
                                         <div class="activation-tags">
-                                            for _, good := range access.Profile.Goods { <span>{ good }</span> }
+                                            for _, good := range access.Profile.Goods {
+                                            <span>{ good }</span>
+                                        }
                                         </div>
                                     } else {
                                         <p class="activation-review-pending">Nenhuma mercadoria informada.</p>
