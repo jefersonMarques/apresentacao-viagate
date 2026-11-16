@@ -46,6 +46,8 @@ templ AdminLayout(title string, user domain.User) {
 		<link rel="stylesheet" href="/commercial-assets/admin-form.css"/>
 		<link rel="stylesheet" href="/commercial-assets/admin-notifications.css"/>
 		<link rel="stylesheet" href="/commercial-assets/activation.css"/>
+		<script src="/commercial-assets/vendor/htmx.min.js" defer></script>
+		<script src="/commercial-assets/htmx-config.js" defer></script>
 		<div data-user-permissions={ Join(user.Permissions) } hidden></div>
 		<div class="admin-app" data-admin-shell>
 			<aside class="admin-sidebar" data-admin-sidebar>
@@ -132,7 +134,7 @@ templ AdminLayout(title string, user domain.User) {
 						<a class="topbar-profile" href="/admin/profile"><span class="profile-avatar small">{ UserInitials(user.Name) }</span><span>{ user.Name }</span></a>
 					</div>
 				</header>
-				<main class="admin-content">{ children... }</main>
+				<main id="adminContent" class="admin-content">{ children... }</main>
 			</div>
 		</div>
 		<script src="/commercial-assets/admin-shell.js" defer></script>
