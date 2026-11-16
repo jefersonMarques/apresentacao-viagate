@@ -22,6 +22,7 @@ import (
 	"github.com/jefersonMarques/apresentacao-viagate/internal/emailtemplates"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/onboarding"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/pipeline"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/postsale"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/companyregistry"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/email"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/storage"
@@ -49,6 +50,7 @@ type App struct {
 	contractStore     *contracts.Store
 	emailTemplateStore *emailtemplates.Store
 	activationStore   *activation.Store
+	postSaleStore     *postsale.Store
 	auditStore        *auditlog.Store
 	contractRenderer  *contracts.Renderer
 	contractGenerator *contracts.Generator
@@ -83,7 +85,7 @@ func New(deps Dependencies) *App {
 		cfg: deps.Config, pool: deps.Pool, logger: deps.Logger, authStore: deps.AuthStore, catalogStore: catalog.NewStore(deps.Pool),
 		proposalStore: deps.ProposalStore, presentationStore: deps.PresentationStore, pipelineStore: deps.PipelineStore,
 		onboardingStore: deps.OnboardingStore, contractStore: deps.ContractStore, emailTemplateStore: emailtemplates.NewStore(deps.Pool), activationStore: deps.ActivationStore,
-		auditStore: deps.AuditStore, contractRenderer: deps.ContractRenderer, contractGenerator: deps.ContractGenerator,
+		auditStore: deps.AuditStore, postSaleStore: postsale.NewStore(deps.Pool), contractRenderer: deps.ContractRenderer, contractGenerator: deps.ContractGenerator,
 		contractFinalizer: deps.ContractFinalizer, storage: deps.Storage, mailer: deps.Mailer, registry: deps.Registry,
 	}
 }
@@ -129,6 +131,8 @@ func (a *App) Routes() http.Handler {
 	})
 
 	router.Get("/sign/{token}", a.signaturePage)
+	router.Get("/sign/{token}/contact", a.postSaleContactPage)
+	router.Post("/sign/{token}/contact", a.savePostSaleContact)
 	router.Get("/sign/{token}/proposal", a.proposalFromSignature)
 	router.Get("/sign/{token}/document", a.viewContractDocument)
 	router.Post("/sign/{token}/otp", a.sendSignatureOTP)

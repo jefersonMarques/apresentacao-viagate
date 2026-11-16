@@ -1,0 +1,33 @@
+package templates
+
+import "github.com/jefersonMarques/apresentacao-viagate/internal/postsale"
+
+templ PostSaleContactPage(token string, contact postsale.Contact, message, errorMessage string) {
+	@PublicFlowLayout("ViaGate — Contato para implantação") {
+		<link rel="stylesheet" href="/commercial-assets/signature.css"/>
+		<main class="shell public-flow-stack">
+			<section class="accept-box signature-complete-box">
+				<div class="notice" role="status"><strong>Contrato assinado com sucesso!</strong></div>
+				<h1>Quem cuida da implantação?</h1>
+				<p>Para iniciarmos a implantação, nossa equipe entrará em contato.</p>
+				@PublicFlashMessages(message, errorMessage)
+				<form method="post" action={ templ.SafeURL("/sign/" + token + "/contact") } data-implementation-contact-form>
+					<div class="field">
+						<label><input type="radio" name="contact_mode" value="self" checked?={ contact.Mode != "team" }/> Eu mesmo</label>
+						<label><input type="radio" name="contact_mode" value="team" checked?={ contact.Mode == "team" }/> Minha equipe</label>
+					</div>
+					<div class="grid" data-implementation-team-fields>
+						<div class="field"><label>Nome</label><input name="contact_name" value={ contact.Name } autocomplete="name"/></div>
+						<div class="field"><label>Telefone</label><input name="contact_phone" value={ contact.Phone } autocomplete="tel" data-mask="phone"/></div>
+						<div class="field full"><label>E-mail (opcional)</label><input name="contact_email" value={ contact.Email } type="email" autocomplete="email"/></div>
+					</div>
+					<div class="actions"><button class="btn primary" type="submit" data-processing="Salvando contato...">Confirmar contato</button></div>
+				</form>
+				<div class="actions">
+					<a class="btn ghost" href={ templ.SafeURL("/sign/" + token + "/contract") }>Baixar contrato assinado</a>
+				</div>
+			</section>
+		</main>
+		<script src="/commercial-assets/implementation-contact.js" defer></script>
+	}
+}

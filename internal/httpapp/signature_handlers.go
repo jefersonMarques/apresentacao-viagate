@@ -227,7 +227,7 @@ func (a *App) confirmSignature(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	http.Redirect(w, r, "/sign/"+token+"?signed=1", http.StatusSeeOther)
+	http.Redirect(w, r, "/sign/"+token+"/contact", http.StatusSeeOther)
 }
 
 func writeJSONError(w http.ResponseWriter, status int, message string) {

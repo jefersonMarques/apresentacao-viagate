@@ -66,9 +66,7 @@ templ SignatureContractPage(access contracts.SignerAccess, token string, message
 						<h2>Assinatura registrada com sucesso.</h2>
 						<p>A assinatura foi concluída. Se a preparação da implantação já estiver completa, a ViaGate pode seguir internamente; caso contrário, você pode continuar os dados agora.</p>
 						<div class="actions">
-							<form method="post" action={ templ.SafeURL("/sign/" + token + "/activation") }>
-								<button class="btn primary" type="submit" data-processing="Abrindo preparação...">Continuar preparação da implantação</button>
-							</form>
+							<a class="btn primary" href={ templ.SafeURL("/sign/" + token + "/contact") }>Informar contato da implantação</a>
 							<a class="btn ghost" href={ templ.SafeURL("/sign/" + token + "/contract") }>Baixar contrato assinado</a>
 						</div>
 						<p class="public-flow-muted">Você não precisa concluir a ativação agora. O link recebido por e-mail permite retomar o processo depois.</p>
