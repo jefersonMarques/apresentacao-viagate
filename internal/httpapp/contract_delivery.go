@@ -66,23 +66,10 @@ func (a *App) ensureContractDelivery(ctx context.Context, onboardingID string) (
 	}
 	signatureLink := strings.TrimRight(a.cfg.BaseURL, "/") + proposalPath
 
-	activationPath, err := a.issueActivationOwnerPath(
-		ctx,
-		access.ContractID,
-		access.SignerID,
-		access.SignerName,
-		access.SignerEmail,
-	)
-	if err != nil {
-		return access, created, fmt.Errorf("prepare activation access: %w", err)
-	}
-	activationLink := strings.TrimRight(a.cfg.BaseURL, "/") + activationPath
-
 	htmlBody := fmt.Sprintf(
-		"<p>Olá, %s.</p><p>Seu contrato ViaGate está pronto para conferência e assinatura.</p><p><a href=\"%s\">Revisar e assinar contrato</a></p><p>Enquanto a assinatura estiver pendente, você já pode preparar a implantação ou encaminhar essa etapa para alguém da sua equipe.</p><p><a href=\"%s\">Preparar dados da implantação</a></p><p>A implantação interna só será liberada quando o contrato estiver assinado e os dados operacionais estiverem concluídos.</p>",
+		"<p>Olá, %s.</p><p>Seu contrato ViaGate está pronto para conferência e assinatura.</p><p><a href=\"%s\">Revisar e assinar contrato</a></p><p>Após a assinatura, solicitaremos apenas o contato responsável pela implantação.</p>",
 		html.EscapeString(access.SignerName),
 		html.EscapeString(signatureLink),
-		html.EscapeString(activationLink),
 	)
 	if err := notifications.EnqueueUnique(
 		ctx,
@@ -92,7 +79,7 @@ func (a *App) ensureContractDelivery(ctx context.Context, onboardingID string) (
 		access.SignerEmail,
 		"Seu contrato ViaGate está pronto para assinatura",
 		htmlBody,
-		"Seu contrato ViaGate está pronto. Assinatura: "+signatureLink+"\nPreparação da implantação: "+activationLink,
+		"Seu contrato ViaGate está pronto. Assinatura: "+signatureLink,
 	); err != nil {
 		return access, created, err
 	}

@@ -21,20 +21,9 @@ func (a *App) signaturePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.URL.Query().Get("continue") == "activation" {
-		path, activationErr := a.issueActivationOwnerPath(
-			r.Context(),
-			access.Contract.ID,
-			access.Signer.ID,
-			access.Signer.Name,
-			access.Signer.Email,
-		)
-		if activationErr != nil {
-			a.logger.Error("resume signed journey into activation failed", "contract_id", access.Contract.ID, "error", activationErr)
-			http.Error(w, "Não foi possível continuar para a ativação.", http.StatusInternalServerError)
-			return
-		}
-		http.Redirect(w, r, path, http.StatusSeeOther)
+	if r.URL.Query().Get("continue") == "activation" &&
+		access.Contract.Status == "signed" && access.Signer.Status == "signed" {
+		http.Redirect(w, r, "/sign/"+token+"/contact", http.StatusSeeOther)
 		return
 	}
 
