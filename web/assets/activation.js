@@ -1,37 +1,183 @@
 (() => {
-  const page = document.querySelector('[data-activation-access-section]');
-  if (!(page instanceof HTMLElement)) return;
+  const page = document.querySelector('[data-activation-wizard]');
+  if (!(page instanceof HTMLElement)) {
+    return;
+  }
 
-  const accessSection = page.getAttribute('data-activation-access-section') || 'all';
-  const policy = document.querySelector('#apolice');
-  const finance = document.querySelector('#financeiro');
-  const goods = document.querySelector('#mercadorias');
-  const users = document.querySelector('#usuarios');
-  const goodsRoot = document.querySelector('[data-activation-goods]');
-  const usersRoot = document.querySelector('[data-activation-users]');
-  const submitBox = document.querySelector('.activation-submit-box');
-  const completeBox = document.querySelector('.activation-complete-box');
-  const progress = Array.from(document.querySelectorAll('.activation-progress-item'));
+  const stepButtons = Array.from(page.querySelectorAll('[data-activation-step-link]'));
+  const panels = new Map(
+    Array.from(page.querySelectorAll('[data-activation-step]')).map((panel) => [
+      panel.dataset.activationStep,
+      panel,
+    ]),
+  );
+  if (stepButtons.length === 0 || panels.size === 0) {
+    return;
+  }
 
-  const goodsPersisted = goodsRoot?.getAttribute('data-persisted-complete') === 'true';
-  const usersPersisted = usersRoot?.getAttribute('data-persisted-complete') === 'true';
-  const policyPersisted = policy?.getAttribute('data-policy-present') === 'true';
-  let goodsDirty = false;
-  let usersDirty = false;
+  const steps = stepButtons.map((button) => button.dataset.activationStepLink);
+  const accessSection = page.dataset.activationAccessSection;
+  const params = new URL(window.location.href).searchParams;
+  const stepCount = page.querySelector('[data-activation-step-count]');
+  const stepLabel = page.querySelector('[data-activation-step-label]');
+  const goodsRoot = page.querySelector('[data-activation-goods]');
+  const usersRoot = page.querySelector('[data-activation-users]');
   let activeStep = '';
 
+  function currentPanel() {
+    return panels.get(activeStep);
+  }
+
+  function currentForm() {
+    return currentPanel()?.querySelector('[data-activation-step-form]');
+  }
+
+  function hasUnsavedChanges() {
+    return currentForm()?.dataset.activationDirty === 'true';
+  }
+
+  function confirmNavigation() {
+    if (!hasUnsavedChanges()) {
+      return true;
+    }
+
+    return window.confirm('Existem alterações não salvas nesta etapa. Deseja sair sem salvar?');
+  }
+
+  function findFirstIncomplete() {
+    const nextIncomplete = stepButtons.find((button) => (
+      button.dataset.activationStepLink !== 'review' &&
+      button.dataset.activationComplete !== 'true'
+    ));
+
+    if (nextIncomplete) {
+      return nextIncomplete.dataset.activationStepLink;
+    }
+
+    return panels.has('review') ? 'review' : steps[0];
+  }
+
+  function nextStep(step) {
+    const index = steps.indexOf(step);
+    if (index < 0 || index === steps.length - 1) {
+      return step;
+    }
+
+    return steps[index + 1];
+  }
+
+  function previousStep(step) {
+    const index = steps.indexOf(step);
+    if (index <= 0) {
+      return step;
+    }
+
+    return steps[index - 1];
+  }
+
+  function resolveInitialStep() {
+    const requested = params.get('step');
+    if (panels.has(requested)) {
+      return requested;
+    }
+
+    if (accessSection !== 'all') {
+      return steps[0];
+    }
+
+    const saved = params.get('saved');
+    if (panels.has(saved)) {
+      return nextStep(saved);
+    }
+
+    if (saved === 'delegated') {
+      return 'review';
+    }
+
+    return findFirstIncomplete();
+  }
+
+  function renderCurrentStep(step) {
+    const index = steps.indexOf(step);
+
+    panels.forEach((panel, key) => {
+      const selected = key === step;
+      panel.classList.toggle('is-active', selected);
+      panel.hidden = !selected;
+    });
+
+    stepButtons.forEach((button) => {
+      const selected = button.dataset.activationStepLink === step;
+      button.classList.toggle('is-current', selected);
+
+      if (selected) {
+        button.setAttribute('aria-current', 'step');
+      } else {
+        button.removeAttribute('aria-current');
+      }
+    });
+
+    if (stepCount) {
+      stepCount.textContent = `Etapa ${index + 1} de ${steps.length}`;
+    }
+    if (stepLabel) {
+      stepLabel.textContent = stepButtons[index]?.querySelector('strong')?.textContent || '';
+    }
+
+    const panel = panels.get(step);
+    panel?.querySelectorAll('[data-activation-previous]').forEach((button) => {
+      button.hidden = index === 0;
+      button.style.display = index === 0 ? 'none' : '';
+    });
+
+    panel?.querySelectorAll('[data-activation-next]').forEach((button) => {
+      button.hidden = index === steps.length - 1;
+      button.style.display = index === steps.length - 1 ? 'none' : '';
+    });
+  }
+
+  function goToStep(step, updateURL = true) {
+    if (!panels.has(step) || step === activeStep) {
+      return;
+    }
+    if (activeStep && !confirmNavigation()) {
+      return;
+    }
+
+    activeStep = step;
+    renderCurrentStep(step);
+
+    if (updateURL) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('step', step);
+      url.searchParams.delete('saved');
+      window.history.replaceState({}, '', url);
+      page.querySelector('.activation-step-summary')?.scrollIntoView({
+        block: 'start',
+        behavior: 'smooth',
+      });
+    }
+  }
+
   function goodsFormReady() {
-    if (!goodsRoot) return false;
+    if (!goodsRoot) {
+      return false;
+    }
+
     const inputs = Array.from(goodsRoot.querySelectorAll('input[name="goods"]'));
     return inputs.length > 0 && inputs.every((input) => input.value.trim() !== '');
   }
 
   function usersFormReady() {
-    if (!usersRoot) return false;
+    if (!usersRoot) {
+      return false;
+    }
+
     const rows = Array.from(usersRoot.querySelectorAll('.activation-user-row'));
     return rows.length > 0 && rows.every((row) => {
       const name = row.querySelector('input[name="system_user_name"]');
       const email = row.querySelector('input[name="system_user_email"]');
+
       return name instanceof HTMLInputElement &&
         email instanceof HTMLInputElement &&
         name.value.trim() !== '' &&
@@ -40,201 +186,135 @@
     });
   }
 
-  function syncSectionSaveButton(root, ready) {
+  function syncSaveButton(root, valid) {
+    const button = root?.closest('form')?.querySelector('[data-activation-section-save]');
+    if (button instanceof HTMLButtonElement) {
+      button.disabled = !valid;
+    }
+  }
+
+  function syncSaveButtons() {
+    syncSaveButton(goodsRoot, goodsFormReady());
+    syncSaveButton(usersRoot, usersFormReady());
+  }
+
+  function markDirty(root) {
     const form = root?.closest('form');
-    const button = form?.querySelector('[data-activation-section-save]');
-    if (!(button instanceof HTMLButtonElement)) return;
-    button.disabled = !ready;
-    button.setAttribute('aria-disabled', ready ? 'false' : 'true');
-  }
-
-  function syncSectionSaveButtons() {
-    syncSectionSaveButton(goodsRoot, goodsFormReady());
-    syncSectionSaveButton(usersRoot, usersFormReady());
-  }
-
-  const bindRemove = (root, markDirty) => {
-    if (!root) return;
-    root.addEventListener('click', (event) => {
-      const button = event.target.closest('.activation-remove');
-      if (!button) return;
-      const row = button.closest('.activation-repeat-row, .activation-user-row');
-      if (!row) return;
-
-      const rows = root.querySelectorAll('.activation-repeat-row, .activation-user-row');
-      if (rows.length === 1) {
-        row.querySelectorAll('input').forEach((input) => { input.value = ''; });
-      } else {
-        row.remove();
-      }
-
-      markDirty();
-      syncSectionSaveButtons();
-      renderProgress();
-    });
-  };
-
-  bindRemove(goodsRoot, () => { goodsDirty = true; });
-  bindRemove(usersRoot, () => { usersDirty = true; });
-
-  const addGood = document.querySelector('[data-add-activation-good]');
-  if (addGood && goodsRoot) {
-    addGood.addEventListener('click', () => {
-      const row = document.createElement('div');
-      row.className = 'activation-repeat-row';
-      row.innerHTML = '<input name="goods" placeholder="Ex.: Alimentos refrigerados" required><button type="button" class="btn ghost activation-remove" aria-label="Remover">×</button>';
-      goodsRoot.appendChild(row);
-      goodsDirty = true;
-      syncSectionSaveButtons();
-      renderProgress();
-      row.querySelector('input')?.focus();
-    });
-  }
-
-  const addUser = document.querySelector('[data-add-activation-user]');
-  if (addUser && usersRoot) {
-    addUser.addEventListener('click', () => {
-      const row = document.createElement('div');
-      row.className = 'activation-user-row';
-      row.innerHTML = '<input name="system_user_name" placeholder="Nome" required><input name="system_user_phone" placeholder="Telefone"><input type="email" name="system_user_email" placeholder="E-mail" required><button type="button" class="btn ghost activation-remove" aria-label="Remover">×</button>';
-      usersRoot.appendChild(row);
-      usersDirty = true;
-      syncSectionSaveButtons();
-      renderProgress();
-      row.querySelector('input')?.focus();
-    });
-  }
-
-  goodsRoot?.addEventListener('input', () => {
-    goodsDirty = true;
-    syncSectionSaveButtons();
-    renderProgress();
-  });
-  usersRoot?.addEventListener('input', () => {
-    usersDirty = true;
-    syncSectionSaveButtons();
-    renderProgress();
-  });
-
-  if (!policy || !finance || !goods || !users || !progress.length) return;
-
-  const panels = { policy, finance, goods, users, review: submitBox || completeBox };
-  const params = new URL(window.location.href).searchParams;
-  const orderedSteps = ['policy', 'finance', 'goods', 'users'];
-
-  function hasValue(selector) {
-    const input = document.querySelector(selector);
-    return input instanceof HTMLInputElement && input.value.trim() !== '';
-  }
-
-  function policyComplete() {
-    return policyPersisted;
-  }
-
-  function financeComplete() {
-    return hasValue('#financeiro input[name="finance_name"]') || Boolean(document.querySelector('#financeiro .activation-answer strong'));
-  }
-
-  function goodsComplete() {
-    if (document.querySelector('#mercadorias .activation-tags span')) return true;
-    return goodsPersisted && !goodsDirty;
-  }
-
-  function usersComplete() {
-    if (document.querySelector('#usuarios .activation-user-list strong')) return true;
-    return usersPersisted && !usersDirty;
-  }
-
-  function completion() {
-    return {
-      policy: policyComplete(),
-      finance: financeComplete(),
-      goods: goodsComplete(),
-      users: usersComplete()
-    };
-  }
-
-  function firstIncomplete() {
-    const state = completion();
-    return orderedSteps.find((step) => !state[step]) || 'review';
-  }
-
-  function initialStep() {
-    if (accessSection !== 'all') {
-      return accessSection === 'finance' || accessSection === 'goods' || accessSection === 'users'
-        ? accessSection
-        : 'policy';
+    if (form instanceof HTMLFormElement) {
+      form.dataset.activationDirty = 'true';
     }
-    if (completeBox) return 'review';
-
-    const saved = params.get('saved');
-    if (saved === 'policy') return 'finance';
-    if (saved === 'finance') return 'goods';
-    if (saved === 'goods') return 'users';
-    if (saved === 'users') return firstIncomplete();
-
-    return firstIncomplete();
   }
 
-  function resolveStep(step) {
-    if (accessSection !== 'all') {
-      return accessSection === 'finance' || accessSection === 'goods' || accessSection === 'users'
-        ? accessSection
-        : 'policy';
+  function removeRow(event, root) {
+    const removeButton = event.target.closest('.activation-remove');
+    if (!removeButton) {
+      return;
     }
 
-    const state = completion();
-    if (step === 'finance' && !state.policy) return 'policy';
-    if (step === 'goods' && (!state.policy || !state.finance)) return !state.policy ? 'policy' : 'finance';
-    if (step === 'users' && (!state.policy || !state.finance || !state.goods)) {
-      return !state.policy ? 'policy' : !state.finance ? 'finance' : 'goods';
+    const row = removeButton.closest('.activation-repeat-row, .activation-user-row');
+    if (!row) {
+      return;
     }
-    if (step === 'review' && (!state.policy || !state.finance || !state.goods || !state.users) && !completeBox) {
-      return firstIncomplete();
-    }
-    return step;
-  }
 
-  function renderProgress() {
-    const state = completion();
-    progress.forEach((item, index) => {
-      const name = orderedSteps[index];
-      item.classList.toggle('is-current', name === activeStep);
-      item.classList.toggle('is-complete', Boolean(state[name]));
-      item.setAttribute('role', accessSection === 'all' ? 'button' : 'presentation');
-      item.tabIndex = accessSection === 'all' ? 0 : -1;
-      item.setAttribute('aria-current', name === activeStep ? 'step' : 'false');
-    });
-  }
-
-  function setStep(step) {
-    step = resolveStep(step);
-    activeStep = step;
-
-    Object.entries(panels).forEach(([name, panel]) => {
-      if (panel instanceof HTMLElement) panel.hidden = name !== step;
-    });
-
-    renderProgress();
-
-    const url = new URL(window.location.href);
-    url.searchParams.set('step', step);
-    window.history.replaceState({}, '', url);
-  }
-
-  if (accessSection === 'all') {
-    progress.forEach((item, index) => {
-      const step = orderedSteps[index];
-      const activate = () => setStep(step);
-      item.addEventListener('click', activate);
-      item.addEventListener('keydown', (event) => {
-        if (event.key !== 'Enter' && event.key !== ' ') return;
-        event.preventDefault();
-        activate();
+    const rows = root.querySelectorAll('.activation-repeat-row, .activation-user-row');
+    if (rows.length === 1) {
+      row.querySelectorAll('input').forEach((input) => {
+        input.value = '';
       });
-    });
+    } else {
+      row.remove();
+    }
+
+    markDirty(root);
+    syncSaveButtons();
   }
 
-  syncSectionSaveButtons();
-  setStep(params.get('step') || initialStep());
+  function appendRow(root, markup, inputSelector) {
+    if (!root) {
+      return;
+    }
+
+    const row = document.createElement('div');
+    row.innerHTML = markup.trim();
+    const content = row.firstElementChild;
+    if (!(content instanceof HTMLElement)) {
+      return;
+    }
+
+    root.appendChild(content);
+    markDirty(root);
+    syncSaveButtons();
+    content.querySelector(inputSelector)?.focus();
+  }
+
+  goodsRoot?.addEventListener('click', (event) => {
+    removeRow(event, goodsRoot);
+  });
+
+  usersRoot?.addEventListener('click', (event) => {
+    removeRow(event, usersRoot);
+  });
+
+  page.querySelector('[data-add-activation-good]')?.addEventListener('click', () => {
+    appendRow(goodsRoot, `
+      <div class="activation-repeat-row">
+        <input name="goods" placeholder="Ex.: Alimentos refrigerados" required>
+        <button class="btn ghost activation-remove" type="button" aria-label="Remover">×</button>
+      </div>
+    `, 'input[name="goods"]');
+  });
+
+  page.querySelector('[data-add-activation-user]')?.addEventListener('click', () => {
+    appendRow(usersRoot, `
+      <div class="activation-user-row">
+        <input name="system_user_name" placeholder="Nome" required>
+        <input name="system_user_phone" placeholder="Telefone (opcional)">
+        <input name="system_user_email" placeholder="E-mail" type="email" required>
+        <button class="btn ghost activation-remove" type="button" aria-label="Remover">×</button>
+      </div>
+    `, 'input[name="system_user_name"]');
+  });
+
+  page.querySelectorAll('[data-activation-step-form]').forEach((form) => {
+    form.addEventListener('input', () => {
+      markDirty(form);
+      syncSaveButtons();
+    });
+
+    form.addEventListener('change', () => {
+      markDirty(form);
+      syncSaveButtons();
+    });
+  });
+
+  page.addEventListener('click', (event) => {
+    const navigation = event.target.closest(
+      '[data-activation-step-link], [data-activation-edit], ' +
+      '[data-activation-next], [data-activation-previous]',
+    );
+
+    if (!(navigation instanceof HTMLElement)) {
+      return;
+    }
+
+    const requested = navigation.dataset.activationStepLink ||
+      navigation.dataset.activationEdit;
+
+    if (requested) {
+      goToStep(requested);
+      return;
+    }
+
+    if (navigation.hasAttribute('data-activation-next')) {
+      goToStep(nextStep(activeStep));
+    }
+
+    if (navigation.hasAttribute('data-activation-previous')) {
+      goToStep(previousStep(activeStep));
+    }
+  });
+
+  page.dataset.activationWizardReady = 'true';
+  syncSaveButtons();
+  goToStep(resolveInitialStep(), false);
 })();
