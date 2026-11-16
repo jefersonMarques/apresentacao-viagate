@@ -9,7 +9,8 @@ func TestStatusLabel(t *testing.T) {
 	}{
 		{Item{},"Aguardando contato"},
 		{Item{HasContact:true},"Em preparação"},
-		{Item{ActivationStatus:"completed"},"Pronto para ativação"},
+		{Item{ActivationStatus:"completed",OperationReady:false},"Aguardando operação comercial"},
+        {Item{ActivationStatus:"completed",OperationReady:true},"Pronto para ativação"},
 		{Item{ActivationStatus:"under_internal_setup"},"Em implantação"},
 		{Item{ActivationStatus:"activated"},"Operação liberada"},
 	}

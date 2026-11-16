@@ -158,6 +158,7 @@ type Item struct {
 	SignedAt         time.Time
 	HasContact       bool
 	ActivationStatus string
+	OperationReady   bool
 }
 
 type ContactVersion struct {
@@ -183,13 +184,30 @@ func (s *Store) List(ctx context.Context, userID string, all bool) ([]Item, erro
 	rows, err := s.pool.Query(ctx, `
 		select c.id::text, o.legal_name, u.name, p.title, c.fully_signed_at,
 		       coalesce(ps.contact_name,''), ps.contract_id is not null,
-		       coalesce(a.status,'')
+		       coalesce(a.status,''),
+           (not pv.requires_policy or coalesce(
+               case when op.contract_id is not null then
+                   op.operation_type in ('normal','avulsa')
+                   and nullif(btrim(op.insurer),'') is not null
+                   and op.policy_start_date is not null
+                   and op.policy_end_date is not null
+                   and op.policy_end_date >= op.policy_start_date
+               else
+                   o.operation_type in ('normal','avulsa')
+                   and nullif(btrim(o.insurer),'') is not null
+                   and o.policy_start_date is not null
+                   and o.policy_end_date is not null
+                   and o.policy_end_date >= o.policy_start_date
+               end, false
+           ))
 		from contracts c
 		join onboardings o on o.id=c.onboarding_id
 		join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
+        join proposal_versions pv on pv.id=pa.proposal_version_id
 		join proposals p on p.id=pa.proposal_id
 		join users u on u.id=p.created_by
 		left join post_sale_contacts ps on ps.contract_id=c.id
+        left join post_sale_operations op on op.contract_id=c.id
 		left join activation_profiles a on a.contract_id=c.id and a.deleted_at is null
 		where c.status='signed'
 		  and c.deleted_at is null and o.deleted_at is null
@@ -209,7 +227,7 @@ func (s *Store) List(ctx context.Context, userID string, all bool) ([]Item, erro
 		if err := rows.Scan(
 			&item.ContractID, &item.ClientName, &item.SalespersonName,
 			&item.ProposalTitle, &item.SignedAt, &item.ContactName, &item.HasContact,
-			&item.ActivationStatus,
+			&item.ActivationStatus, &item.OperationReady,
 		); err != nil {
 			return nil, err
 		}
@@ -289,6 +307,9 @@ func StatusLabel(item Item) string {
 	case "under_internal_setup":
 		return "Em implantação"
 	case "completed":
+        if !item.OperationReady {
+            return "Aguardando operação comercial"
+        }
 		return "Pronto para ativação"
 	default:
 		if item.HasContact {
