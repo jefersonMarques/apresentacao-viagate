@@ -1,0 +1,92 @@
+package templates
+
+import (
+	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/postsale"
+)
+
+templ PostSalesPage(user domain.User, items []postsale.Item) {
+	@AdminLayout("ViaGate — Pós-venda", user) {
+		@AdminPageHeader("PÓS-VENDA", "Clientes contratados", "Acompanhe os contatos da implantação após a assinatura do contrato.") {}
+		<div class="admin-list-root" data-admin-list>
+			@AdminListToolbar(len(items), "cliente(s)") {
+				@AdminListSearch("Buscar empresa, comercial ou contato...")
+			}
+			@AdminDataTable([]string{"Cliente", "Comercial", "Contrato", "Contato", "Ações"}, len(items), "Nenhum contrato assinado encontrado.") {
+				for _, item := range items {
+					<tr data-admin-list-row data-search={ item.ClientName + " " + item.SalespersonName + " " + item.ContactName }>
+						<td data-label="Cliente" data-primary="true"><strong>{ item.ClientName }</strong></td>
+						<td data-label="Comercial">{ item.SalespersonName }</td>
+						<td data-label="Contrato">Assinado em { item.SignedAt.Format("02/01/2006") }</td>
+						<td data-label="Contato">
+							if item.HasContact {
+								{ item.ContactName }
+							} else {
+								Aguardando indicação
+							}
+						</td>
+						<td data-label="Ações" data-actions="true"><a class="btn" href={ templ.SafeURL("/admin/post-sales/" + item.ContractID) }>Abrir</a></td>
+					</tr>
+				}
+			}
+		</div>
+	}
+}
+
+templ PostSaleDetailPage(user domain.User, detail postsale.Detail, message, errorMessage string) {
+	@AdminLayout("ViaGate — Pós-venda", user) {
+		@AdminPageHeader("PÓS-VENDA", detail.ClientName, "Contrato assinado · " + detail.ProposalTitle) {
+			<a class="btn" href="/admin/post-sales">Voltar à lista</a>
+		}
+		@PublicFlashMessages(message, errorMessage)
+		<section class="panel">
+			<div class="panel-head"><h2>Empresa e assinatura</h2></div>
+			<div class="panel-body">
+				@PublicDataGrid() {
+					@PublicDataField("Razão social") { <strong>{ detail.ClientName }</strong> }
+					@PublicDataField("CNPJ") { { CNPJ(detail.CNPJ) } }
+					@PublicDataField("Responsável legal") { { detail.ResponsibleName } }
+					@PublicDataField("E-mail do responsável") { { detail.ResponsibleEmail } }
+					@PublicDataField("Telefone do responsável") { { detail.ResponsiblePhone } }
+					@PublicDataField("Comercial") { { detail.SalespersonName } }
+				}
+				<p class="public-flow-muted">Os dados contratuais permanecem vinculados ao documento assinado e não são alterados nesta tela.</p>
+			</div>
+		</section>
+		<section class="panel">
+			<div class="panel-head"><h2>Contato para implantação</h2></div>
+			<div class="panel-body">
+				if detail.Contact.Saved {
+					<p>Contato atual: <strong>{ detail.Contact.Name }</strong> · { detail.Contact.Phone } · { detail.Contact.Email }</p>
+				} else {
+					<p>Contato ainda não informado pelo contratante.</p>
+				}
+				if UserCan(user, "proposal.create") {
+					<form method="post" action={ templ.SafeURL("/admin/post-sales/" + detail.ContractID + "/contact") } class="grid">
+						<div class="field"><label>Nome</label><input name="contact_name" value={ detail.Contact.Name } required/></div>
+						<div class="field"><label>Telefone</label><input name="contact_phone" data-mask="phone" value={ detail.Contact.Phone } required/></div>
+						<div class="field full"><label>E-mail (opcional)</label><input name="contact_email" type="email" value={ detail.Contact.Email }/></div>
+						<div class="field full"><button class="btn primary" type="submit">Salvar contato</button></div>
+					</form>
+				}
+			</div>
+		</section>
+		<section class="panel">
+			<div class="panel-head"><h2>Histórico do contato</h2></div>
+			<div class="panel-body">
+				if len(detail.History) == 0 {
+					<p>Nenhuma alteração registrada.</p>
+				} else {
+					<table class="table">
+						<thead><tr><th>Data</th><th>Alterado por</th><th>Nome</th><th>Telefone</th><th>E-mail</th></tr></thead>
+						<tbody>
+							for _, record := range detail.History {
+								<tr><td>{ record.ChangedAt.Format("02/01/2006 15:04") }</td><td>{ record.ActorName }</td><td>{ record.Name }</td><td>{ record.Phone }</td><td>{ record.Email }</td></tr>
+							}
+						</tbody>
+					</table>
+				}
+			</div>
+		</section>
+	}
+}

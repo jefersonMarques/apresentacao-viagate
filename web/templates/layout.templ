@@ -68,6 +68,7 @@ templ AdminLayout(title string, user domain.User) {
 					}
 					if UserCan(user, "proposal.read_own") || UserCan(user, "proposal.read_all") {
 						<a href="/admin/proposals" data-admin-nav><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6z"/><path d="M9 10h6M9 14h6M9 18h4"/></svg><span>Propostas</span></a>
+						<a href="/admin/post-sales" data-admin-nav><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4z"/><path d="M7 9h10M7 13h6"/></svg><span>Pós-venda</span></a>
 					}
 					if UserCan(user, "presentation.read_own") || UserCan(user, "presentation.read_all") {
 						<a href="/admin/presentations" data-admin-nav><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H4z"/><path d="M9 20h6M12 16v4"/><path d="m8 12 3-3 2 2 3-3"/></svg><span>Apresentações</span></a>

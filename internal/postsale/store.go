@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -144,4 +145,120 @@ func nullableID(value string) any {
 		return nil
 	}
 	return value
+}
+
+type Item struct {
+	ContractID       string
+	ClientName       string
+	SalespersonName  string
+	ProposalTitle    string
+	ContactName      string
+	SignedAt         time.Time
+	HasContact       bool
+}
+
+type ContactVersion struct {
+	Contact
+	ActorName string
+	ChangedAt time.Time
+}
+
+type Detail struct {
+	Item
+	CNPJ               string
+	ResponsibleName    string
+	ResponsibleEmail   string
+	ResponsiblePhone   string
+	Contact            Contact
+	History            []ContactVersion
+}
+
+func (s *Store) List(ctx context.Context, userID string, all bool) ([]Item, error) {
+	rows, err := s.pool.Query(ctx, `
+		select c.id::text, o.legal_name, u.name, p.title, c.fully_signed_at,
+		       coalesce(ps.contact_name,''), ps.contract_id is not null
+		from contracts c
+		join onboardings o on o.id=c.onboarding_id
+		join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
+		join proposals p on p.id=pa.proposal_id
+		join users u on u.id=p.created_by
+		left join post_sale_contacts ps on ps.contract_id=c.id
+		where c.status='signed'
+		  and c.deleted_at is null and o.deleted_at is null
+		  and pa.deleted_at is null and p.deleted_at is null
+		  and ($2 or p.created_by::text=$1)
+		order by c.fully_signed_at desc
+	`, userID, all)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	items := make([]Item, 0)
+	for rows.Next() {
+		var item Item
+		if err := rows.Scan(
+			&item.ContractID, &item.ClientName, &item.SalespersonName,
+			&item.ProposalTitle, &item.SignedAt, &item.ContactName, &item.HasContact,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
+func (s *Store) Detail(ctx context.Context, contractID, userID string, all bool) (Detail, error) {
+	var detail Detail
+	err := s.pool.QueryRow(ctx, `
+		select c.id::text, o.legal_name, u.name, p.title, c.fully_signed_at,
+		       o.cnpj, o.company_responsible_name, o.company_responsible_email::text,
+		       o.company_responsible_phone
+		from contracts c
+		join onboardings o on o.id=c.onboarding_id
+		join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
+		join proposals p on p.id=pa.proposal_id
+		join users u on u.id=p.created_by
+		where c.id=$1 and c.status='signed'
+		  and c.deleted_at is null and o.deleted_at is null
+		  and pa.deleted_at is null and p.deleted_at is null
+		  and ($3 or p.created_by::text=$2)
+	`, contractID, userID, all).Scan(
+		&detail.ContractID, &detail.ClientName, &detail.SalespersonName,
+		&detail.ProposalTitle, &detail.SignedAt,
+		&detail.CNPJ, &detail.ResponsibleName, &detail.ResponsibleEmail, &detail.ResponsiblePhone,
+	)
+	if err != nil {
+		return Detail{}, err
+	}
+	detail.Contact, err = s.ByContract(ctx, contractID)
+	if err != nil {
+		return Detail{}, err
+	}
+	rows, err := s.pool.Query(ctx, `
+		select h.contact_mode,h.contact_name,h.contact_phone,coalesce(h.contact_email::text,''),
+		       coalesce(u.name,cs.name,'Sistema'),h.created_at
+		from post_sale_contact_history h
+		left join users u on u.id=h.actor_user_id
+		left join contract_signers cs on cs.id=h.actor_signer_id
+		where h.contract_id=$1
+		order by h.created_at desc,h.id desc
+		limit 100
+	`, contractID)
+	if err != nil {
+		return Detail{}, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var version ContactVersion
+		if err := rows.Scan(&version.Mode,&version.Name,&version.Phone,&version.Email,&version.ActorName,&version.ChangedAt); err != nil {
+			return Detail{}, err
+		}
+		version.Saved = true
+		detail.History = append(detail.History,version)
+	}
+	if err := rows.Err(); err != nil {
+		return Detail{}, err
+	}
+	return detail,nil
 }

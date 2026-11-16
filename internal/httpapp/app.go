@@ -156,6 +156,9 @@ func (a *App) Routes() http.Handler {
 		admin.Get("/admin/api/cnpj/{cnpj}", a.adminLookupCNPJ)
 		admin.Get("/admin/pipeline", a.pipelinePage)
 		admin.Get("/admin/pipeline/{proposalID}", a.pipelineDetailPage)
+		admin.Get("/admin/post-sales", a.postSalesPage)
+		admin.Get("/admin/post-sales/{contractID}", a.postSaleDetailPage)
+		admin.With(a.permission("proposal.create")).Post("/admin/post-sales/{contractID}/contact", a.updatePostSaleContact)
 
 		admin.Get("/admin/proposals", a.adminProposals)
 		admin.With(a.permission("proposal.create")).Get("/admin/proposals/new", a.newProposalPage)
