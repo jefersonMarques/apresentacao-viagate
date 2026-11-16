@@ -1,23 +1,44 @@
-# Contracting and post-sale redesign
+# Customer contracting and commercial post-sale redesign
 
-Status: implementation staged; no production rollout until the contract template is legally reviewed.
+Status: **draft PR, not approved for production deployment**.
 
-## Customer contracting
+## Scope already implemented
 
-1. The proposal acceptance form captures signer name, CPF, role (optional), e-mail, phone and a fresh authority declaration. Explicit signer fields provided by Sales appear prefilled; the negotiation contact is a separate person and must not be used as the signer by default.
-2. The company step reuses the address and company identification already captured in the proposal editor and asks the customer to review missing values.
-3. The review step confirms the contract data and generates the signing PDF.
-4. E-mail OTP and explicit consent are required to sign the immutable PDF.
-5. After signing, the customer chooses themselves or a team contact for implementation. This is a separate, resumable action that must never revoke the already completed signature.
+- Optional company address and dedicated signer fields in Sales proposal editor, independently from the negotiation contact.
+- Signer identification prefilled in the public proposal acceptance form; the authority declaration remains unchecked.
+- Customer contracting wizard reduced to company verification and review; the proposal acceptance and signing PDF are separate steps.
+- Post-signature contact confirmation: signer self or team contact (required name and phone, optional e-mail), with transactional history.
+- Sales post-sale listing and customer detail, scoped to proposal ownership or cross-client permissions.
+- Sales can update the implementation contact and six operational/insurance fields, with immutable modification history. Existing signed document snapshots are not rewritten.
+- The existing activation form provides policy-document upload, finance, transported goods, system users and the new operation form.
+- Sales can create a limited-scope, expiring, revocable post-sale link, share or copy it, or enqueue an invitation email.
+- Activation completeness validates policy document, insurer, dates, operation type, goods, finance and users where relevant. Internal setup remains gated by a fully signed contract.
+- Existing route that issues an activation link from a signer token now requires an already signed contract.
 
-## Post-sale process
+## Contract template blocker
 
-Sales owns the operational intake: operation type, insurer, policy validity, broker, producer, policy document, transported goods, financial contact and initial system users. Sales can edit or invite an individual limited-scope contact; all mutations require audit events and permissions checks. Operations receives the activation only after all applicable data is complete and the contract is signed.
+The existing published template includes operation and insurance variables such as `{operation.type}` and `{insurance.insurer}`. The new onboarding flow intentionally does not collect these fields prior to signature.
 
-## Contract template dependency
+The generator refuses to create a new PDF when an insurance-dependent proposal uses a contract template requiring uncollected insurance values. It does **not** replace clauses or change accepted proposal version references. The definitive revised commercial contract needs review and approval before these new journeys can be used for insurance-dependent proposals.
 
-The currently deployed contract template contains sections 1.3 (operation) and 1.4 (insurance); the generator and onboarding backend require these values when the product needs insurance. These clauses and the insurance gate must only be removed when the commercial team supplies and approves the canonical replacement contract. The original signed documents, hashes and historical template versions remain immutable.
+## Compatibility and audit
+
+- Signed PDFs, cryptographic hashes and existing contract template versions must remain untouched.
+- Published proposals pin their original template version. Existing accepted, unsigned proposals with insurance-dependent legacy templates require a dedicated migration/continuation decision (legacy completion flow or explicit new accepted proposal); never silently replace the bound template.
+- Legacy operation values continue to be read from onboarding when the new post-sale operation row is absent.
+- Post-sale contact and operation histories append actor metadata and timestamps. Link-based actions are recorded as access-by-link, not independently verified identity.
+- Temporary sharing links expire after 30 days; issuing a new Sales link revokes previously Sales-issued links for the same contract, not all historical owner links.
+- No global HTMX boost is enabled. PR #43 is a separate progressive HTMX pilot; any integration must preserve existing scripts and fallback behavior.
+
+## Remaining before merge or release
+
+1. Obtain and approve a revised contract template and decide on version handling for already-published proposals.
+2. Add browser E2E coverage for acceptance, login/session expiration, PDF signing, post-sale forms and activation permission/authorization, including historic proposal compatibility.
+3. Evaluate a dedicated authenticated staff editor for all operational sections rather than using the public form via a staff-generated link.
+4. Validate the full new workflow against a realistic database and approved contract template.
+5. Review operational permissions and whether the notification and menu counters should include only owned post-sale tasks.
+6. Coordinate deployment so schema changes, templates and server code roll out atomically. Never change existing signed evidence.
 
 ## Release safety
 
-Do not deploy this feature until the post-sale data capture, backend readiness rules, migration and revised contract template are deployed together. A draft PR may include isolated milestones while deployment is blocked.
+This PR remains a draft. CI success proves compilation, unit tests, migrations and existing integration checks; it does **not** certify that the end-to-end contracting workflow is ready for production.

@@ -271,6 +271,10 @@ func (a *App) issueActivationAccess(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "A preparação da implantação ainda não está disponível.", http.StatusConflict)
 		return
 	}
+	if access.Contract.Status != "signed" || access.Signer.Status != "signed" {
+		http.Error(w, "A preparação da implantação estará disponível após a assinatura.", http.StatusConflict)
+		return
+	}
 	profile, err := a.activationStore.EnsureForContract(r.Context(), access.Contract.ID)
 	if err != nil {
 		a.logger.Error("ensure activation after signature failed", "error", err, "contract_id", access.Contract.ID)
