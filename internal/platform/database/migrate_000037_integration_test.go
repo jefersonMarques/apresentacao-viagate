@@ -98,7 +98,7 @@ func TestDefaultContractTemplateExcludesInsuranceAfterMigration(t *testing.T) {
         t.Fatalf("seed isolated contract template: %v", err)
     }
 
-    migration, err := os.ReadFile("../../migrations/000037_contract_without_operational_insurance.sql")
+    migration, err := os.ReadFile("../../../migrations/000037_contract_without_operational_insurance.sql")
     if err != nil {
         t.Fatalf("read contract template migration: %v", err)
     }
