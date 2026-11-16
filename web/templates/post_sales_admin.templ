@@ -118,6 +118,21 @@ templ PostSaleDetailPage(user domain.User, detail postsale.Detail, message, erro
 			</section>
 		}
 		<section class="panel">
+			<div class="panel-head"><h2>Solicitar informações para implantação</h2></div>
+			<div class="panel-body">
+				<p>O link abre o formulário de apólice, financeiro, mercadorias, usuários e, quando aplicável, operação e seguro.</p>
+				if UserCan(user, "proposal.create") {
+					<form method="post" action={ templ.SafeURL("/admin/post-sales/" + detail.ContractID + "/share") } class="actions">
+						<button class="btn primary" type="submit" name="delivery" value="copy">Gerar link</button>
+						if detail.Contact.Email != "" {
+							<button class="btn dark" type="submit" name="delivery" value="email">Enviar por e-mail</button>
+						}
+					</form>
+				}
+				<p class="public-flow-muted">A emissão de um novo link revoga o anterior gerado pelo comercial. Cada link expira em 30 dias.</p>
+			</div>
+		</section>
+		<section class="panel">
 			<div class="panel-head"><h2>Histórico do contato</h2></div>
 			<div class="panel-body">
 				if len(detail.History) == 0 {
@@ -134,5 +149,27 @@ templ PostSaleDetailPage(user domain.User, detail postsale.Detail, message, erro
 				}
 			</div>
 		</section>
+	}
+}
+
+templ PostSaleShareLinkPage(user domain.User, detail postsale.Detail, link, message, errorMessage string) {
+	@AdminLayout("ViaGate — Compartilhar dados de implantação", user) {
+		@AdminPageHeader("PÓS-VENDA", "Compartilhar formulário", detail.ClientName) {
+			<a class="btn" href={ templ.SafeURL("/admin/post-sales/" + detail.ContractID) }>Voltar ao cliente</a>
+		}
+		@PublicFlashMessages(message, errorMessage)
+		<section class="panel">
+			<div class="panel-head"><h2>Link de implantação</h2></div>
+			<div class="panel-body">
+				<p>Este link individual permite completar os dados operacionais da contratação. Validade: 30 dias.</p>
+				<div class="field"><label>Link seguro</label><input data-post-sale-share-url value={ link } readonly/></div>
+				<div class="actions">
+					<button class="btn primary" type="button" data-post-sale-copy>Copiar link</button>
+					<button class="btn dark" type="button" data-post-sale-share>Compartilhar</button>
+				</div>
+				<p data-post-sale-share-status role="status"></p>
+			</div>
+		</section>
+		<script src="/commercial-assets/post-sale-share.js" defer></script>
 	}
 }

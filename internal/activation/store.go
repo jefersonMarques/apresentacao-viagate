@@ -376,7 +376,7 @@ func (s *Store) Submit(ctx context.Context, tokenID string) error {
 	if requiresPolicy {
 		var operationComplete bool
 		if err := tx.QueryRow(ctx, `
-			select (
+ 			select coalesce((
 				case when ps.contract_id is not null
 				then ps.operation_type in ('normal','avulsa')
 				     and nullif(btrim(ps.insurer),'') is not null
@@ -386,8 +386,8 @@ func (s *Store) Submit(ctx context.Context, tokenID string) error {
 				     and nullif(btrim(o.insurer),'') is not null
 				     and o.policy_start_date is not null
 				     and o.policy_end_date is not null
-				end
-			)
+ 				end
+			),false)
 			from activation_profiles a
 			join contracts c on c.id=a.contract_id
 			join onboardings o on o.id=c.onboarding_id
