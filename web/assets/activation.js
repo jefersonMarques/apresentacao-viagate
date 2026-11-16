@@ -22,6 +22,12 @@
   const stepLabel = page.querySelector('[data-activation-step-label]');
   const goodsRoot = page.querySelector('[data-activation-goods]');
   const usersRoot = page.querySelector('[data-activation-users]');
+  const policyInput = page.querySelector('[data-activation-policy-input]');
+  const policyUpload = page.querySelector('[data-activation-policy-upload]');
+  const policyFileName = page.querySelector('[data-activation-policy-filename]');
+  const policyFeedback = page.querySelector('[data-activation-policy-feedback]');
+  const policySubmit = page.querySelector('[data-activation-policy-submit]');
+  const maxPolicyBytes = 15 * 1024 * 1024;
   let activeStep = '';
 
   function currentPanel() {
@@ -159,6 +165,66 @@
     }
   }
 
+  function updatePolicyUpload() {
+    if (!(policyInput instanceof HTMLInputElement) ||
+        !(policySubmit instanceof HTMLButtonElement)) {
+      return;
+    }
+
+    const selectedFile = policyInput.files?.[0];
+
+    if (!selectedFile) {
+      policyInput.setCustomValidity('');
+      policySubmit.disabled = true;
+      policyUpload?.classList.remove('is-invalid');
+      policyFeedback?.classList.remove('is-error', 'is-valid');
+
+      if (policyFileName) {
+        policyFileName.textContent = 'Selecione um arquivo';
+      }
+      if (policyFeedback) {
+        policyFeedback.textContent = '';
+      }
+      return;
+    }
+
+    const supportedExtension = /\.(pdf|jpe?g|png)$/i.test(selectedFile.name);
+    const supportedMimeTypes = new Set([
+      'application/pdf',
+      'image/jpeg',
+      'image/png',
+    ]);
+    const supportedMime = !selectedFile.type || supportedMimeTypes.has(selectedFile.type);
+    const invalidFormat = !supportedExtension || !supportedMime;
+    const invalidSize = selectedFile.size > maxPolicyBytes;
+    const invalidEmptyFile = selectedFile.size === 0;
+
+    let errorMessage = '';
+    if (invalidFormat) {
+      errorMessage = 'Formato não permitido. Use PDF, JPG ou PNG.';
+    } else if (invalidSize) {
+      errorMessage = 'O arquivo ultrapassa o limite de 15 MB.';
+    } else if (invalidEmptyFile) {
+      errorMessage = 'O arquivo está vazio. Selecione outro.';
+    }
+
+    policyInput.setCustomValidity(errorMessage);
+    policySubmit.disabled = errorMessage !== '';
+
+    if (policyFileName) {
+      policyFileName.textContent = selectedFile.name;
+    }
+    if (policyFeedback) {
+      const sizeInMB = (selectedFile.size / (1024 * 1024)).toFixed(1);
+      policyFeedback.textContent = errorMessage ||
+        `Arquivo selecionado · ${sizeInMB} MB · pronto para enviar`;
+      policyFeedback.classList.toggle('is-error', errorMessage !== '');
+      policyFeedback.classList.toggle('is-valid', errorMessage === '');
+    }
+
+    policyUpload?.classList.toggle('is-invalid', errorMessage !== '');
+  }
+
   function goodsFormReady() {
     if (!goodsRoot) {
       return false;
@@ -259,7 +325,7 @@
     appendRow(goodsRoot, `
       <div class="activation-repeat-row">
         <input name="goods" placeholder="Ex.: Alimentos refrigerados" required>
-        <button class="btn ghost activation-remove" type="button" aria-label="Remover">×</button>
+        <button class="btn ghost activation-remove" type="button" aria-label="Remover mercadoria">×</button>
       </div>
     `, 'input[name="goods"]');
   });
@@ -267,13 +333,24 @@
   page.querySelector('[data-add-activation-user]')?.addEventListener('click', () => {
     appendRow(usersRoot, `
       <div class="activation-user-row">
-        <input name="system_user_name" placeholder="Nome" required>
-        <input name="system_user_phone" placeholder="Telefone (opcional)">
-        <input name="system_user_email" placeholder="E-mail" type="email" required>
-        <button class="btn ghost activation-remove" type="button" aria-label="Remover">×</button>
+        <label class="field activation-repeat-field">
+          Nome
+          <input name="system_user_name" placeholder="Nome completo" required>
+        </label>
+        <label class="field activation-repeat-field">
+          Telefone (opcional)
+          <input name="system_user_phone" inputmode="tel" placeholder="(00) 00000-0000">
+        </label>
+        <label class="field activation-repeat-field">
+          E-mail
+          <input name="system_user_email" placeholder="nome@empresa.com.br" type="email" required>
+        </label>
+        <button class="btn ghost activation-remove" type="button" aria-label="Remover usuário">×</button>
       </div>
     `, 'input[name="system_user_name"]');
   });
+
+  policyInput?.addEventListener('change', updatePolicyUpload);
 
   page.querySelectorAll('[data-activation-step-form]').forEach((form) => {
     form.addEventListener('input', () => {
@@ -316,5 +393,6 @@
 
   page.dataset.activationWizardReady = 'true';
   syncSaveButtons();
+  updatePolicyUpload();
   goToStep(resolveInitialStep(), false);
 })();
