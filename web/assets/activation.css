@@ -1,7 +1,7 @@
 .activation-public{background:#f5f7f8;min-height:100vh}.activation-page{max-width:980px}.activation-hero{padding:10px 0 8px}.activation-hero h1{max-width:760px}.activation-status-line{margin-top:16px;color:var(--muted)}
 .activation-progress {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
   gap: 8px;
   margin: 18px 0 22px;
 }

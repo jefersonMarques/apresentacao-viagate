@@ -60,35 +60,6 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
                         }
                     </nav>
 
-                    if ActivationCanView(access, "operation") {
-                        <section class="accept-box activation-wizard-panel" id="operacao" data-activation-step="operation">
-                            <span class="step-title">OPERAÇÃO</span>
-                            <h2>Operação e seguro</h2>
-                            <p>Informe os dados da operação que serão utilizados pela equipe de implantação.</p>
-                            if ActivationCanEdit(access, "operation") {
-                                <form method="post" action={ templ.SafeURL("/activation/" + token + "/operation?step=operation") } class="grid" data-activation-step-form>
-                                    <div class="field"><label>Tipo de operação</label><select name="operation_type" required>
-                                        <option value="" selected?={ access.Profile.OperationType == "" }>Selecione</option>
-                                        <option value="normal" selected?={ access.Profile.OperationType == "normal" }>Normal</option>
-                                        <option value="avulsa" selected?={ access.Profile.OperationType == "avulsa" }>Avulsa</option>
-                                    </select></div>
-                                    <div class="field"><label>Seguradora</label><input name="insurer" value={ access.Profile.Insurer } required/></div>
-                                    <div class="field"><label>Início da vigência</label><input name="policy_start_date" type="date" value={ access.Profile.PolicyStartDate } required/></div>
-                                    <div class="field"><label>Fim da vigência</label><input name="policy_end_date" type="date" value={ access.Profile.PolicyEndDate } required/></div>
-                                    <div class="field"><label>Corretor parceiro (opcional)</label><input name="broker_company" value={ access.Profile.BrokerCompany }/></div>
-                                    <div class="field"><label>Produtor do corretor (opcional)</label><input name="broker_producer" value={ access.Profile.BrokerProducer }/></div>
-                                    <div class="field full activation-form-actions">
-                                        <button class="btn ghost" type="button" data-activation-previous>Voltar</button>
-                                        <button class="btn dark" type="submit" data-processing="Salvando operação...">Salvar e continuar</button>
-                                    </div>
-                                </form>
-                            } else {
-                                <div class="activation-answer"><strong>{ humanOperationType(access.Profile.OperationType) }</strong><span>{ access.Profile.Insurer } · { ActivationDateLabel(access.Profile.PolicyStartDate) } a { ActivationDateLabel(access.Profile.PolicyEndDate) }</span></div>
-                                @ActivationReadonlyNavigation()
-                            }
-                        </section>
-                    }
-
                     if ActivationCanView(access, "policy") {
                         <section class="accept-box activation-wizard-panel" id="apolice" data-activation-step="policy" data-policy-present={ BoolString(access.Profile.HasPolicy) }>
                             <span class="step-title">APÓLICE</span>
@@ -218,20 +189,6 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
 
                             if access.Profile.RequiresPolicy {
                                 <div class="activation-review-card">
-                                    <div class="activation-review-head"><h3>Operação e seguro</h3><button class="btn ghost" type="button" data-activation-edit="operation">Editar</button></div>
-                                    if ActivationOperationComplete(access.Profile) {
-                                        <dl class="activation-review-data">
-                                            <dt>Tipo de operação</dt><dd>{ humanOperationType(access.Profile.OperationType) }</dd>
-                                            <dt>Seguradora</dt><dd>{ access.Profile.Insurer }</dd>
-                                            <dt>Vigência</dt><dd>{ ActivationDateLabel(access.Profile.PolicyStartDate) } a { ActivationDateLabel(access.Profile.PolicyEndDate) }</dd>
-                                            <dt>Corretor parceiro</dt><dd>{ ActivationOptionalValue(access.Profile.BrokerCompany) }</dd>
-                                            <dt>Produtor</dt><dd>{ ActivationOptionalValue(access.Profile.BrokerProducer) }</dd>
-                                        </dl>
-                                    } else {
-                                        <p class="activation-review-pending">Dados de operação pendentes.</p>
-                                    }
-                                </div>
-                                <div class="activation-review-card">
                                     <div class="activation-review-head"><h3>Apólice</h3><button class="btn ghost" type="button" data-activation-edit="policy">Editar</button></div>
                                     <p>{ ActivationPolicyStatus(access.Profile.HasPolicy) }</p>
                                 </div>
@@ -304,7 +261,7 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
                             if !ActivationComplete(access.Profile) {
                                 <p class="activation-review-pending" role="status">Existem etapas pendentes. Complete os dados antes de confirmar.</p>
                             } else if !ActivationContractSigned(access.Profile) {
-                                <p class="activation-review-pending">Os dados estão completos. A implantação interna aguardará a assinatura do contrato.</p>
+                                <p class="activation-review-pending">Seus dados foram concluídos. A equipe ViaGate acompanhará as demais pendências da implantação.</p>
                             }
 
                             <div class="activation-form-actions">

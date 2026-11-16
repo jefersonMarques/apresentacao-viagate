@@ -89,8 +89,8 @@ func TestActivationCompleteRequiresPolicy(t *testing.T) {
 		t.Fatal("activation should be complete when policy and operational data are present")
 	}
 	profile.Insurer = ""
-	if ActivationComplete(profile) {
-		t.Fatal("activation must require insurance operation details")
+	if !ActivationComplete(profile) {
+		t.Fatal("customer confirmation must not depend on commercial operation data")
 	}
 }
 
@@ -142,7 +142,7 @@ func TestActivationStepsMatchInsuranceRequirements(t *testing.T) {
         Profile: activation.Profile{RequiresPolicy: true},
     }
     insuredSteps := ActivationSteps(insured)
-    expected := []string{"operation", "policy", "finance", "goods", "users", "review"}
+    expected := []string{"policy", "finance", "goods", "users", "review"}
     if len(insuredSteps) != len(expected) {
         t.Fatalf("insured steps = %d, want %d", len(insuredSteps), len(expected))
     }
@@ -220,7 +220,6 @@ func TestActivationReviewContainsEditActionsAndConfirmation(t *testing.T) {
     html := output.String()
     for _, required := range []string{
         `data-activation-step="review"`,
-        `data-activation-edit="operation"`,
         `data-activation-edit="policy"`,
         `data-activation-edit="finance"`,
         `data-activation-edit="goods"`,
@@ -254,12 +253,55 @@ func TestActivationPageShowsSuccessAfterConfirmation(t *testing.T) {
         t.Fatal("completed activation must not show a new submit action")
     }
 }
-
-func TestActivationDateLabel(t *testing.T) {
-    if actual := ActivationDateLabel("2026-11-16"); actual != "16/11/2026" {
-        t.Fatalf("formatted policy date = %q", actual)
+ 
+func TestCommercialOperationDoesNotBlockCustomerCompletion(t *testing.T) {
+    profile := activation.Profile{
+        RequiresPolicy: true,
+        HasPolicy: true,
+        FinanceResponsibleName: "Finance",
+        FinanceResponsiblePhone: "41999999999",
+        FinanceResponsibleEmail: "finance@example.com",
+        Goods: []string{"Refrigerated goods"},
+        SystemUsers: []activation.SystemUser{{Name: "Operator", Email: "operator@example.com"}},
     }
-    if actual := ActivationDateLabel("invalid"); actual != "invalid" {
-        t.Fatalf("invalid date must not be silently rewritten: %q", actual)
+
+    if !ActivationComplete(profile) {
+        t.Fatal("customer data must be complete before commercial operation is filled")
+    }
+    if ActivationOperationComplete(profile) {
+        t.Fatal("commercial operation must remain incomplete")
+    }
+
+    access := activation.Access{Section: "all", Profile: profile}
+    for _, step := range ActivationSteps(access) {
+        if step.Key == "operation" {
+            t.Fatal("commercial operation must not appear as a customer step")
+        }
+    }
+    if ActivationCanEdit(access, "operation") || ActivationCanView(access, "operation") {
+        t.Fatal("operation must be restricted from public access")
+    }
+    var output bytes.Buffer
+    if err := ActivationPage(access, "test-token", "", "").Render(context.Background(), &output); err != nil {
+        t.Fatalf("render customer form: %v", err)
+    }
+    rendered := output.String()
+    for _, forbidden := range []string{
+        `data-activation-step="operation"`,
+        `data-activation-edit="operation"`,
+        `name="insurer"`,
+        "Operação e seguro",
+        "Dados de operação pendentes",
+    } {
+        if strings.Contains(rendered, forbidden) {
+            t.Errorf("commercial operation exposed to customer: %s", forbidden)
+        }
+    }
+}
+
+func TestCustomerStepCannotShowOperationOnRestrictedLink(t *testing.T) {
+    access := activation.Access{Section: "operation", Profile: activation.Profile{RequiresPolicy: true}}
+    if ActivationCanView(access, "operation") || ActivationCanEdit(access, "operation") {
+        t.Fatal("operation-only tokens must not grant public operation permissions")
     }
 }

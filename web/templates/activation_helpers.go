@@ -2,7 +2,6 @@ package templates
 
 import (
 	"strings"
-	"time"
 
 	"github.com/jefersonMarques/apresentacao-viagate/internal/activation"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/brfields"
@@ -12,7 +11,10 @@ func ActivationCanEdit(access activation.Access, section string) bool {
 	if ActivationFinished(access.Profile) {
 		return false
 	}
-	if (section == "policy" || section == "goods" || section == "operation") && !access.Profile.RequiresPolicy {
+	if section == "operation" {
+		return false
+	}
+	if (section == "policy" || section == "goods") && !access.Profile.RequiresPolicy {
 		return false
 	}
 	return access.Section == "all" || access.Section == section
@@ -28,7 +30,7 @@ func ActivationComplete(profile activation.Profile) bool {
 	if !profile.RequiresPolicy {
 		return true
 	}
-	return profile.HasPolicy && len(profile.Goods) > 0 && ActivationOperationComplete(profile)
+	return profile.HasPolicy && len(profile.Goods) > 0
 }
 
 func ActivationContractSigned(profile activation.Profile) bool {
@@ -137,8 +139,10 @@ func ActivationFinished(profile activation.Profile) bool {
 }
 
 func ActivationCanView(access activation.Access, section string) bool {
-    if (section == "operation" || section == "policy" || section == "goods") &&
-        !access.Profile.RequiresPolicy {
+    if section == "operation" {
+        return false
+    }
+    if (section == "policy" || section == "goods") && !access.Profile.RequiresPolicy {
         return false
     }
 
@@ -155,17 +159,9 @@ func ActivationFinanceComplete(profile activation.Profile) bool {
         strings.TrimSpace(profile.FinanceResponsibleEmail) != ""
 }
 
-func ActivationOptionalValue(value string) string {
-    if strings.TrimSpace(value) == "" {
-        return "Não informado"
-    }
-    return value
-}
-
 func ActivationSteps(access activation.Access) []ActivationStep {
     profile := access.Profile
     candidates := []ActivationStep{
-        {Key: "operation", Label: "Operação", Complete: ActivationOperationComplete(profile)},
         {Key: "policy", Label: "Apólice", Complete: profile.HasPolicy},
         {Key: "finance", Label: "Financeiro", Complete: ActivationFinanceComplete(profile)},
         {Key: "goods", Label: "Mercadorias", Complete: len(profile.Goods) > 0},
@@ -186,12 +182,4 @@ func ActivationSteps(access activation.Access) []ActivationStep {
     }
 
     return steps
-}
-
-func ActivationDateLabel(value string) string {
-    date, err := time.Parse("2006-01-02", strings.TrimSpace(value))
-    if err != nil {
-        return value
-    }
-    return date.Format("02/01/2006")
 }
