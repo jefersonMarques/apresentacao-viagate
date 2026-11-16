@@ -112,6 +112,11 @@ jobs:
           RUN_DB_INTEGRATION: '1'
         run: go test ./internal/notifications -run TestInAppNotificationScopePreferences -count=1
 
+      - name: Test contract template migration
+        env:
+          RUN_DB_INTEGRATION: '1'
+        run: go test ./internal/platform/database -run TestDefaultContractTemplateExcludesInsuranceAfterMigration -count=1
+
       - name: Verify migrations are idempotent
         run: go run ./cmd/migrate up
 
