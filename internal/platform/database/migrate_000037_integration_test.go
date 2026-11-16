@@ -80,13 +80,19 @@ func TestDefaultContractTemplateExcludesInsuranceAfterMigration(t *testing.T) {
 
     _, err = tx.Exec(ctx, `
         insert into contract_templates(id,created_by,current_version,is_active,is_default)
-        values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',1,true,true);
+        values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',1,true,true)
+    `)
+    if err != nil {
+        t.Fatalf("seed template header: %v", err)
+    }
+
+    _, err = tx.Exec(ctx, `
         insert into contract_template_versions(
             contract_template_id,version_number,markdown,template_hash,created_by
         ) values (
             'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',1,$1,digest($1,'sha256'),
             'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
-        );
+        )
     `, original)
     if err != nil {
         t.Fatalf("seed isolated contract template: %v", err)
