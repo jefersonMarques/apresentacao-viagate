@@ -57,6 +57,9 @@ jobs:
       - name: Validate shell scripts
         run: bash -n scripts/*.sh
 
+      - name: Validate activation wizard JavaScript
+        run: node --check web/assets/activation.js
+
       - name: Vet
         run: go vet ./...
 

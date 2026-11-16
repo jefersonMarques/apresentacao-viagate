@@ -42,3 +42,37 @@ The generator refuses to create a new PDF when an insurance-dependent proposal u
 ## Release safety
 
 This PR remains a draft. CI success proves compilation, unit tests, migrations and existing integration checks; it does **not** certify that the end-to-end contracting workflow is ready for production.
+
+## Activation form: guided post-sale wizard
+
+The public activation URL opens a single section at a time. The shared commercial
+proposal link is not exposed, and the previous `/activation/{token}/proposal` route
+has been removed. The company data appears only on the full-access final review.
+
+### Full-access sequence
+- Insurance-dependent: Operation, Policy document, Finance, Goods, Users, Review.
+- Other products: Finance, Users, Review.
+- The final review lists saved information with Edit navigation to every section.
+- The confirmation button is enabled only when all required data is persisted.
+- Successful confirmation displays a dedicated receipt screen and locks further
+  changes through the public forms, consistent with the existing backend rules.
+- A save redirects to the next step, preserving previously saved sections.
+- Changes not yet saved prompt for confirmation before navigating to another step.
+
+### Limited-access links
+- Links limited to Finance, Goods or Users show **only** their authorized section.
+- No review of other sections, proposal link or entire-activation confirmation is shown.
+- The backend also rejects final submission unless the access token permits `all`.
+- Existing editability restrictions, token expiration and revocation still apply.
+
+### Manual verification required before production release
+1. Open an insured activation link with incomplete data and verify six steps.
+2. Save operation and policy, return to prior steps, replace a policy and confirm the saved state.
+3. Save finance, goods and multiple users; review all sections and use every Edit button.
+4. Verify the confirmation button cannot submit incomplete data.
+5. Submit a completed activation and confirm the success page and locked edit state.
+6. Open a product that does not require insurance and verify only three steps.
+7. Open Finance-only, Goods-only and Users-only delegated links: inspect page and attempt
+   to submit the whole activation directly (should be forbidden).
+8. Verify the proposal link and `/activation/{token}/proposal` route are absent.
+9. Check narrow mobile layouts and browser back/forward behavior.

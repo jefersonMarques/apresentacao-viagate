@@ -254,3 +254,12 @@ func TestActivationPageShowsSuccessAfterConfirmation(t *testing.T) {
         t.Fatal("completed activation must not show a new submit action")
     }
 }
+
+func TestActivationDateLabel(t *testing.T) {
+    if actual := ActivationDateLabel("2026-11-16"); actual != "16/11/2026" {
+        t.Fatalf("formatted policy date = %q", actual)
+    }
+    if actual := ActivationDateLabel("invalid"); actual != "invalid" {
+        t.Fatalf("invalid date must not be silently rewritten: %q", actual)
+    }
+}

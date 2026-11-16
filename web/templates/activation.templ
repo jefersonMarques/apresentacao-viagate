@@ -79,7 +79,7 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
                                     </div>
                                 </form>
                             } else {
-                                <div class="activation-answer"><strong>{ humanOperationType(access.Profile.OperationType) }</strong><span>{ access.Profile.Insurer } · { access.Profile.PolicyStartDate } a { access.Profile.PolicyEndDate }</span></div>
+                                <div class="activation-answer"><strong>{ humanOperationType(access.Profile.OperationType) }</strong><span>{ access.Profile.Insurer } · { ActivationDateLabel(access.Profile.PolicyStartDate) } a { ActivationDateLabel(access.Profile.PolicyEndDate) }</span></div>
                                 @ActivationReadonlyNavigation()
                             }
                         </section>
@@ -218,7 +218,7 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
                                         <dl class="activation-review-data">
                                             <dt>Tipo de operação</dt><dd>{ humanOperationType(access.Profile.OperationType) }</dd>
                                             <dt>Seguradora</dt><dd>{ access.Profile.Insurer }</dd>
-                                            <dt>Vigência</dt><dd>{ access.Profile.PolicyStartDate } a { access.Profile.PolicyEndDate }</dd>
+                                            <dt>Vigência</dt><dd>{ ActivationDateLabel(access.Profile.PolicyStartDate) } a { ActivationDateLabel(access.Profile.PolicyEndDate) }</dd>
                                             <dt>Corretor parceiro</dt><dd>{ ActivationOptionalValue(access.Profile.BrokerCompany) }</dd>
                                             <dt>Produtor</dt><dd>{ ActivationOptionalValue(access.Profile.BrokerProducer) }</dd>
                                         </dl>

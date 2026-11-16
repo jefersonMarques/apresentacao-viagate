@@ -2,6 +2,7 @@ package templates
 
 import (
 	"strings"
+	"time"
 
 	"github.com/jefersonMarques/apresentacao-viagate/internal/activation"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/brfields"
@@ -185,4 +186,12 @@ func ActivationSteps(access activation.Access) []ActivationStep {
     }
 
     return steps
+}
+
+func ActivationDateLabel(value string) string {
+    date, err := time.Parse("2006-01-02", strings.TrimSpace(value))
+    if err != nil {
+        return value
+    }
+    return date.Format("02/01/2006")
 }
