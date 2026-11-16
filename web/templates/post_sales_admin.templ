@@ -71,6 +71,52 @@ templ PostSaleDetailPage(user domain.User, detail postsale.Detail, message, erro
 				}
 			</div>
 		</section>
+		if detail.RequiresPolicy {
+			<section class="panel">
+				<div class="panel-head"><h2>Operação e seguro</h2></div>
+				<div class="panel-body">
+					<p>Essas informações são operacionais e não modificam o contrato já assinado.</p>
+					if UserCan(user, "proposal.create") {
+						<form method="post" action={ templ.SafeURL("/admin/post-sales/" + detail.ContractID + "/operation") } class="grid">
+							<div class="field"><label>Tipo de operação</label><select name="operation_type">
+								<option value="" selected?={ detail.Operation.Type == "" }>Selecione</option>
+								<option value="normal" selected?={ detail.Operation.Type == "normal" }>Normal</option>
+								<option value="avulsa" selected?={ detail.Operation.Type == "avulsa" }>Avulsa</option>
+							</select></div>
+							<div class="field"><label>Seguradora</label><input name="insurer" value={ detail.Operation.Insurer }/></div>
+							<div class="field"><label>Início da vigência</label><input type="date" name="policy_start_date" value={ detail.Operation.StartDate }/></div>
+							<div class="field"><label>Fim da vigência</label><input type="date" name="policy_end_date" value={ detail.Operation.EndDate }/></div>
+							<div class="field"><label>Corretor parceiro</label><input name="broker_company" value={ detail.Operation.BrokerCompany }/></div>
+							<div class="field"><label>Produtor do corretor</label><input name="broker_producer" value={ detail.Operation.BrokerProducer }/></div>
+							<div class="field full"><button class="btn primary" type="submit">Salvar dados operacionais</button></div>
+						</form>
+					} else {
+						@PublicDataGrid() {
+							@PublicDataField("Tipo de operação") { { detail.Operation.Type } }
+							@PublicDataField("Seguradora") { { detail.Operation.Insurer } }
+							@PublicDataField("Vigência") { { detail.Operation.StartDate } a { detail.Operation.EndDate } }
+						}
+					}
+				</div>
+			</section>
+			<section class="panel">
+				<div class="panel-head"><h2>Histórico operacional</h2></div>
+				<div class="panel-body">
+					if len(detail.OperationHistory) == 0 {
+						<p>Nenhuma alteração registrada.</p>
+					} else {
+						<table class="table">
+							<thead><tr><th>Data</th><th>Alterado por</th><th>Operação</th><th>Seguradora</th><th>Vigência</th></tr></thead>
+							<tbody>
+								for _, record := range detail.OperationHistory {
+									<tr><td>{ record.ChangedAt.Format("02/01/2006 15:04") }</td><td>{ record.ActorName }</td><td>{ record.Type }</td><td>{ record.Insurer }</td><td>{ record.StartDate } a { record.EndDate }</td></tr>
+								}
+							</tbody>
+						</table>
+					}
+				</div>
+			</section>
+		}
 		<section class="panel">
 			<div class="panel-head"><h2>Histórico do contato</h2></div>
 			<div class="panel-body">

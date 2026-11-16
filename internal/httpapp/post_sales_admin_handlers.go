@@ -57,6 +57,9 @@ func (a *App) postSaleDetailPage(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query().Get("saved") == "1" {
 		message = "Contato atualizado e registrado no histórico."
 	}
+	if r.URL.Query().Get("saved") == "operation" {
+		message = "Dados operacionais salvos com histórico."
+	}
 	render(r.Context(), w, http.StatusOK, templates.PostSaleDetailPage(user, detail, message, ""))
 }
 
@@ -96,4 +99,41 @@ func (a *App) updatePostSaleContact(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, "/admin/post-sales/"+detail.ContractID+"?saved=1", http.StatusSeeOther)
+}
+
+func (a *App) updatePostSaleOperation(w http.ResponseWriter, r *http.Request) {
+	user, _ := currentUser(r.Context())
+	detail, ok := a.postSaleDetail(w, r)
+	if !ok {
+		return
+	}
+	if !detail.RequiresPolicy {
+		http.Error(w, "Esta contratação não exige dados de seguro.", http.StatusConflict)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Dados inválidos.", http.StatusBadRequest)
+		return
+	}
+	operation := postsale.Operation{
+		Type: strings.ToLower(strings.TrimSpace(r.FormValue("operation_type"))),
+		Insurer: strings.TrimSpace(r.FormValue("insurer")),
+		StartDate: strings.TrimSpace(r.FormValue("policy_start_date")),
+		EndDate: strings.TrimSpace(r.FormValue("policy_end_date")),
+		BrokerCompany: strings.TrimSpace(r.FormValue("broker_company")),
+		BrokerProducer: strings.TrimSpace(r.FormValue("broker_producer")),
+	}
+	if err := postsale.ValidateOperation(operation); err != nil {
+		detail.Operation = operation
+		render(r.Context(), w, http.StatusBadRequest, templates.PostSaleDetailPage(user, detail, "", "Verifique o tipo de operação e a vigência da apólice."))
+		return
+	}
+	if err := a.postSaleStore.SaveOperation(r.Context(), detail.ContractID, operation, postsale.Actor{
+		Type: "user", UserID: user.ID, Name: user.Name, IP: requestIP(r), Agent: r.UserAgent(),
+	}); err != nil {
+		a.logger.Error("save post-sale operation failed", "error", err, "contract_id", detail.ContractID)
+		http.Error(w, "Não foi possível salvar os dados operacionais.", http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/admin/post-sales/"+detail.ContractID+"?saved=operation", http.StatusSeeOther)
 }

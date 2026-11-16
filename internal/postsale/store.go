@@ -171,6 +171,7 @@ type Detail struct {
 	ResponsibleName    string
 	ResponsibleEmail   string
 	ResponsiblePhone   string
+	RequiresPolicy     bool
 	Contact            Contact
 	Operation          Operation
 	OperationHistory   []OperationVersion
@@ -217,11 +218,12 @@ func (s *Store) Detail(ctx context.Context, contractID, userID string, all bool)
 	err := s.pool.QueryRow(ctx, `
 		select c.id::text, o.legal_name, u.name, p.title, c.fully_signed_at,
 		       o.cnpj, o.company_responsible_name, o.company_responsible_email::text,
-		       o.company_responsible_phone
+		       o.company_responsible_phone, pv.requires_policy
 		from contracts c
 		join onboardings o on o.id=c.onboarding_id
 		join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
 		join proposals p on p.id=pa.proposal_id
+		join proposal_versions pv on pv.id=pa.proposal_version_id
 		join users u on u.id=p.created_by
 		where c.id=$1 and c.status='signed'
 		  and c.deleted_at is null and o.deleted_at is null
@@ -230,7 +232,7 @@ func (s *Store) Detail(ctx context.Context, contractID, userID string, all bool)
 	`, contractID, userID, all).Scan(
 		&detail.ContractID, &detail.ClientName, &detail.SalespersonName,
 		&detail.ProposalTitle, &detail.SignedAt,
-		&detail.CNPJ, &detail.ResponsibleName, &detail.ResponsibleEmail, &detail.ResponsiblePhone,
+		&detail.CNPJ, &detail.ResponsibleName, &detail.ResponsibleEmail, &detail.ResponsiblePhone, &detail.RequiresPolicy,
 	)
 	if err != nil {
 		return Detail{}, err

@@ -159,6 +159,7 @@ func (a *App) Routes() http.Handler {
 		admin.Get("/admin/post-sales", a.postSalesPage)
 		admin.Get("/admin/post-sales/{contractID}", a.postSaleDetailPage)
 		admin.With(a.permission("proposal.create")).Post("/admin/post-sales/{contractID}/contact", a.updatePostSaleContact)
+		admin.With(a.permission("proposal.create")).Post("/admin/post-sales/{contractID}/operation", a.updatePostSaleOperation)
 
 		admin.Get("/admin/proposals", a.adminProposals)
 		admin.With(a.permission("proposal.create")).Get("/admin/proposals/new", a.newProposalPage)
