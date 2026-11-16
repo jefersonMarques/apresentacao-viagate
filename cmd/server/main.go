@@ -53,7 +53,11 @@ func main() {
 		os.Exit(1)
 	}
 	mailer := email.NewBrevo(cfg.Brevo)
-	registry := companyregistry.NewBrasilAPI(cfg.Registry.Timeout)
+	registry := companyregistry.NewFallbackProvider(
+		companyregistry.NewBrasilAPI(cfg.Registry.Timeout),
+		companyregistry.NewOpenCNPJ(cfg.Registry.Timeout),
+		logger,
+	)
 
 	authStore := auth.NewStore(pool)
 	proposalStore := proposals.NewStore(pool)

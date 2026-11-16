@@ -21,7 +21,7 @@ func (a *App) writeProposalContractData(w http.ResponseWriter, r *http.Request, 
 		}
 		company, err := a.registry.Lookup(r.Context(), cnpj)
 		if err != nil {
-			http.Error(w, `{"error":"CNPJ não encontrado."}`, http.StatusNotFound)
+			a.respondCompanyLookupFailure(w, err, true)
 			return
 		}
 		_ = json.NewEncoder(w).Encode(map[string]string{

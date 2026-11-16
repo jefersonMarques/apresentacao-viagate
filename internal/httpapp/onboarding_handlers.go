@@ -173,7 +173,7 @@ func (a *App) lookupCNPJ(w http.ResponseWriter, r *http.Request) {
 	}
 	company, err := a.registry.Lookup(r.Context(), cnpj)
 	if err != nil {
-		http.Error(w, "CNPJ não encontrado", http.StatusNotFound)
+		a.respondCompanyLookupFailure(w, err, false)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
