@@ -64,19 +64,40 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
                         <section class="accept-box activation-wizard-panel" id="apolice" data-activation-step="policy" data-policy-present={ BoolString(access.Profile.HasPolicy) }>
                             <span class="step-title">APÓLICE</span>
                             <h2>Envie a apólice</h2>
-                            <p>PDF, JPG ou PNG de até 15 MB.</p>
+                            <p>Selecione o arquivo da apólice para a implantação.</p>
                             if ActivationCanEdit(access, "policy") {
                                 <form method="post" action={ templ.SafeURL("/activation/" + token + "/policy?step=policy") } enctype="multipart/form-data" data-activation-step-form>
                                     if access.Profile.HasPolicy {
-                                        <div class="activation-answer"><strong>Apólice recebida</strong><span>Se precisar substituir, escolha outro arquivo.</span></div>
+                                        <div class="badge success activation-policy-received">Apólice recebida</div>
                                     }
-                                    <div class="field"><label>Arquivo da apólice</label><input name="document" type="file" accept="application/pdf,image/jpeg,image/png" required?={ !access.Profile.HasPolicy }/></div>
+                                    <div class="field activation-policy-field">
+                                        <label for="activation-policy-document">Arquivo da apólice</label>
+                                        <div class="upload-drop activation-policy-upload" data-activation-policy-upload>
+                                            <input
+                                                id="activation-policy-document"
+                                                class="activation-policy-input"
+                                                name="document"
+                                                type="file"
+                                                accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                                                required?={ !access.Profile.HasPolicy }
+                                                aria-describedby="activation-policy-help activation-policy-feedback"
+                                                data-activation-policy-input
+                                            />
+                                            <label class="activation-policy-picker" for="activation-policy-document">
+                                                <strong data-activation-policy-filename>Selecione um arquivo</strong>
+                                                <span class="activation-policy-hint">Toque para escolher no dispositivo</span>
+                                                <span class="btn activation-policy-select" aria-hidden="true">Escolher arquivo</span>
+                                                <small id="activation-policy-help">PDF, JPG ou PNG · até 15 MB</small>
+                                            </label>
+                                        </div>
+                                        <p class="activation-policy-feedback" id="activation-policy-feedback" data-activation-policy-feedback role="status" aria-live="polite"></p>
+                                    </div>
                                     <div class="activation-form-actions">
                                         <button class="btn ghost" type="button" data-activation-previous>Voltar</button>
                                         if access.Profile.HasPolicy {
                                             <button class="btn ghost" type="button" data-activation-next>Continuar</button>
                                         }
-                                        <button class="btn dark" type="submit" data-processing="Enviando apólice...">{ ActivationPolicyButton(access.Profile.HasPolicy) } e continuar</button>
+                                        <button class="btn dark" type="submit" data-activation-policy-submit data-processing="Enviando apólice..." disabled?={ access.Profile.HasPolicy }>{ ActivationPolicyButton(access.Profile.HasPolicy) } e continuar</button>
                                     </div>
                                 </form>
                             } else {
@@ -117,10 +138,10 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
                                 <form method="post" action={ templ.SafeURL("/activation/" + token + "/goods?step=goods") } data-activation-step-form>
                                     <div data-activation-goods data-persisted-complete={ BoolString(len(access.Profile.Goods) > 0) }>
                                         if len(access.Profile.Goods) == 0 {
-                                            <div class="activation-repeat-row"><input name="goods" placeholder="Ex.: Alimentos refrigerados" required/><button type="button" class="btn ghost activation-remove" aria-label="Remover">×</button></div>
+                                            <div class="activation-repeat-row"><input name="goods" placeholder="Ex.: Alimentos refrigerados" required/><button type="button" class="btn ghost activation-remove" aria-label="Remover mercadoria">×</button></div>
                                         }
                                         for _, good := range access.Profile.Goods {
-                                            <div class="activation-repeat-row"><input name="goods" value={ good } required/><button type="button" class="btn ghost activation-remove" aria-label="Remover">×</button></div>
+                                            <div class="activation-repeat-row"><input name="goods" value={ good } required/><button type="button" class="btn ghost activation-remove" aria-label="Remover mercadoria">×</button></div>
                                         }
                                     </div>
                                     <div class="activation-form-actions">
@@ -149,10 +170,10 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
                                 <form method="post" action={ templ.SafeURL("/activation/" + token + "/users?step=users") } data-activation-step-form>
                                     <div data-activation-users data-persisted-complete={ BoolString(len(access.Profile.SystemUsers) > 0) }>
                                         if len(access.Profile.SystemUsers) == 0 {
-                                            <div class="activation-user-row"><input name="system_user_name" placeholder="Nome" required/><input name="system_user_phone" placeholder="Telefone (opcional)"/><input type="email" name="system_user_email" placeholder="E-mail" required/><button type="button" class="btn ghost activation-remove" aria-label="Remover">×</button></div>
+                                            <div class="activation-user-row"><label class="field activation-repeat-field">Nome<input name="system_user_name" autocomplete="name" placeholder="Nome completo" required/></label><label class="field activation-repeat-field">Telefone (opcional)<input name="system_user_phone" autocomplete="tel" inputmode="tel" placeholder="(00) 00000-0000"/></label><label class="field activation-repeat-field">E-mail<input type="email" name="system_user_email" autocomplete="email" placeholder="nome@empresa.com.br" required/></label><button type="button" class="btn ghost activation-remove" aria-label="Remover usuário">×</button></div>
                                         }
                                         for _, systemUser := range access.Profile.SystemUsers {
-                                            <div class="activation-user-row"><input name="system_user_name" value={ systemUser.Name } required/><input name="system_user_phone" value={ brfields.FormatPhone(systemUser.Phone) }/><input type="email" name="system_user_email" value={ systemUser.Email } required/><button type="button" class="btn ghost activation-remove" aria-label="Remover">×</button></div>
+                                            <div class="activation-user-row"><label class="field activation-repeat-field">Nome<input name="system_user_name" value={ systemUser.Name } required/></label><label class="field activation-repeat-field">Telefone (opcional)<input name="system_user_phone" inputmode="tel" value={ brfields.FormatPhone(systemUser.Phone) }/></label><label class="field activation-repeat-field">E-mail<input type="email" name="system_user_email" value={ systemUser.Email } required/></label><button type="button" class="btn ghost activation-remove" aria-label="Remover usuário">×</button></div>
                                         }
                                     </div>
                                     <div class="activation-form-actions">
@@ -180,11 +201,19 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
 
                             <div class="activation-review-card">
                                 <div class="activation-review-head"><h3>Empresa</h3><span>Confirmada na contratação</span></div>
-                                <dl class="activation-review-data">
-                                    <dt>Razão social</dt><dd>{ access.Profile.LegalName } · { brfields.FormatCNPJ(access.Profile.CNPJ) }</dd>
-                                    <dt>Endereço</dt><dd>{ ActivationAddress(access.Profile) }</dd>
-                                    <dt>Responsável pela empresa</dt><dd>{ access.Profile.CompanyResponsibleName } · { access.Profile.CompanyResponsibleEmail } · { brfields.FormatPhone(access.Profile.CompanyResponsiblePhone) }</dd>
-                                </dl>
+                                @PublicDataGrid() {
+                                    @PublicDataField("Empresa") {
+                                        <strong>{ access.Profile.LegalName }</strong>
+                                        <span>{ brfields.FormatCNPJ(access.Profile.CNPJ) }</span>
+                                    }
+                                    @PublicDataField("Endereço") {
+                                        <span>{ ActivationAddress(access.Profile) }</span>
+                                    }
+                                    @PublicDataField("Responsável pela empresa") {
+                                        <strong>{ access.Profile.CompanyResponsibleName }</strong>
+                                        <span>{ access.Profile.CompanyResponsibleEmail } · { brfields.FormatPhone(access.Profile.CompanyResponsiblePhone) }</span>
+                                    }
+                                }
                             </div>
 
                             if access.Profile.RequiresPolicy {
@@ -197,11 +226,17 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
                             <div class="activation-review-card">
                                 <div class="activation-review-head"><h3>Contato financeiro</h3><button class="btn ghost" type="button" data-activation-edit="finance">Editar</button></div>
                                 if ActivationFinanceComplete(access.Profile) {
-                                    <dl class="activation-review-data">
-                                        <dt>Nome</dt><dd>{ access.Profile.FinanceResponsibleName }</dd>
-                                        <dt>Telefone</dt><dd>{ brfields.FormatPhone(access.Profile.FinanceResponsiblePhone) }</dd>
-                                        <dt>E-mail</dt><dd>{ access.Profile.FinanceResponsibleEmail }</dd>
-                                    </dl>
+                                    @PublicDataGrid() {
+                                        @PublicDataField("Nome") {
+                                            <strong>{ access.Profile.FinanceResponsibleName }</strong>
+                                        }
+                                        @PublicDataField("Telefone") {
+                                            <span>{ brfields.FormatPhone(access.Profile.FinanceResponsiblePhone) }</span>
+                                        }
+                                        @PublicDataField("E-mail") {
+                                            <span>{ access.Profile.FinanceResponsibleEmail }</span>
+                                        }
+                                    }
                                 } else {
                                     <p class="activation-review-pending">Contato financeiro pendente.</p>
                                 }
