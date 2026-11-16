@@ -17,7 +17,11 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
                 <header class="activation-hero">
                     <span class="step-title">IMPLANTAÇÃO VIAGATE</span>
                     <h1>Vamos preparar sua implantação.</h1>
-                    <p>Preencha os dados necessários. Você pode salvar cada etapa e revisar antes de confirmar.</p>
+                    if access.Section == "all" {
+                        <p>Preencha uma etapa por vez. Revise os dados antes de confirmar.</p>
+                    } else {
+                        <p>Você foi indicado para completar esta etapa. Preencha os dados e salve.</p>
+                    }
                     <div class="activation-status-line"><strong>{ access.Profile.LegalName }</strong></div>
                 </header>
 
