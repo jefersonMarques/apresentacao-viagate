@@ -1,6 +1,6 @@
 # Customer contracting and commercial post-sale redesign
 
-Status: **draft PR, not approved for production deployment**.
+Status: **draft PR, not merged into main**. Changes require green CI and browser validation before a production rollout.
 
 ## Scope already implemented
 
@@ -10,16 +10,20 @@ Status: **draft PR, not approved for production deployment**.
 - Post-signature contact confirmation: signer self or team contact (required name and phone, optional e-mail), with transactional history.
 - Sales post-sale listing and customer detail, scoped to proposal ownership or cross-client permissions.
 - Sales can update the implementation contact and six operational/insurance fields, with immutable modification history. Existing signed document snapshots are not rewritten.
-- The existing activation form provides policy-document upload, finance, transported goods, system users and the new operation form.
+- The public activation form collects policy document, finance, transported goods and initial users; operation and insurance are entered exclusively by Sales in the post-sale panel.
 - Sales can create a limited-scope, expiring, revocable post-sale link, share or copy it, or enqueue an invitation email.
-- Activation completeness validates policy document, insurer, dates, operation type, goods, finance and users where relevant. Internal setup remains gated by a fully signed contract.
+- Customer confirmation validates only applicable customer fields. Starting internal implementation additionally requires a signed contract and completed commercial operation/insurance data when applicable.
 - Existing route that issues an activation link from a signer token now requires an already signed contract.
 
-## Contract template blocker
+## Contract template compatibility
 
-The existing published template includes operation and insurance variables such as `{operation.type}` and `{insurance.insurer}`. The new onboarding flow intentionally does not collect these fields prior to signature.
+The production default contract may already omit the former Operation and Insurance
+sections. Migration 000037 preserves an already-clean contract version without
+creating a redundant replacement. For older templates containing these sections,
+it creates a new version without modifying signed contracts or accepted snapshots.
 
-The generator refuses to create a new PDF when an insurance-dependent proposal uses a contract template requiring uncollected insurance values. It does **not** replace clauses or change accepted proposal version references. The definitive revised commercial contract needs review and approval before these new journeys can be used for insurance-dependent proposals.
+Previously published proposals remain bound to their historical template version;
+never silently switch the accepted contract on an existing proposal.
 
 ## Compatibility and audit
 
@@ -50,9 +54,9 @@ proposal link is not exposed, and the previous `/activation/{token}/proposal` ro
 has been removed. The company data appears only on the full-access final review.
 
 ### Full-access sequence
-- Insurance-dependent: Operation, Policy document, Finance, Goods, Users, Review.
+- Insurance-dependent: Policy document, Finance, Goods, Users, Review (five steps).
 - Other products: Finance, Users, Review.
-- The final review lists saved information with Edit navigation to every section.
+- The final review shows the customer's saved information with Edit navigation; commercial insurance metadata stays in the internal post-sale panel.
 - The confirmation button is enabled only when all required data is persisted.
 - Successful confirmation displays a dedicated receipt screen and locks further
   changes through the public forms, consistent with the existing backend rules.
@@ -66,13 +70,31 @@ has been removed. The company data appears only on the full-access final review.
 - Existing editability restrictions, token expiration and revocation still apply.
 
 ### Manual verification required before production release
-1. Open an insured activation link with incomplete data and verify six steps.
-2. Save operation and policy, return to prior steps, replace a policy and confirm the saved state.
+1. Open an insured activation link with incomplete data and verify five steps, without Operation.
+2. Save policy, return to prior steps, replace a policy and confirm the saved state.
 3. Save finance, goods and multiple users; review all sections and use every Edit button.
 4. Verify the confirmation button cannot submit incomplete data.
-5. Submit a completed activation and confirm the success page and locked edit state.
+5. Submit the customer's complete information without commercial operation; confirm the success page and locked edit state.
 6. Open a product that does not require insurance and verify only three steps.
 7. Open Finance-only, Goods-only and Users-only delegated links: inspect page and attempt
    to submit the whole activation directly (should be forbidden).
 8. Verify the proposal link and `/activation/{token}/proposal` route are absent.
 9. Check narrow mobile layouts and browser back/forward behavior.
+10. Enter commercial operation either before or after customer confirmation, including when the customer has already submitted.
+11. Verify internal activation cannot start until Sales has entered valid operation details, even through direct HTTP POST.
+12. Confirm the post-sale and activation lists show a commercial pendency rather than readiness while operation is incomplete.
+
+## Commercial operation ownership
+
+The implementation contact cannot view or update the six operation and insurance
+fields. Authenticated Sales staff owns them in
+`/admin/post-sales/{contractID}`, with auditable changes.
+
+The `completed` activation status means that the customer has submitted the
+customer-owned sections; it does not necessarily mean the installation is ready
+for internal setup. Readiness requires the customer submission, signed contract,
+and complete commercial operation where insurance is required.
+
+The same SQL predicate gates readiness queries and administrative status updates.
+After a commercial operation is saved, readiness is checked again and the
+standard notification workflow runs if the record becomes eligible.
