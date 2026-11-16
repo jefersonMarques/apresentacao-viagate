@@ -33,7 +33,8 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
                             <p>A implantação interna permanece aguardando a assinatura do contrato.</p>
                         }
                     </section>
-                } else {
+                }
+                if !ActivationFinished(access.Profile) {
                     <div class="activation-step-summary" aria-live="polite">
                         <strong data-activation-step-count>Etapa</strong>
                         <span data-activation-step-label>Preparação</span>
