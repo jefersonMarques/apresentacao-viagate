@@ -126,7 +126,7 @@
   background: #fff4f2;
 }
 
-.activation-public .activation-policy-upload .activation-policy-input {
+.activation-public .activation-wizard-panel .activation-policy-upload .activation-policy-input {
   position: absolute;
   width: 1px;
   height: 1px;

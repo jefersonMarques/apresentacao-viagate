@@ -305,3 +305,108 @@ func TestCustomerStepCannotShowOperationOnRestrictedLink(t *testing.T) {
         t.Fatal("operation-only tokens must not grant public operation permissions")
     }
 }
+
+func TestActivationPolicyUploadUsesSharedComponents(t *testing.T) {
+    cases := []struct {
+        name      string
+        hasPolicy bool
+    }{
+        {name: "new policy"},
+        {name: "policy replacement", hasPolicy: true},
+    }
+
+    for _, test := range cases {
+        t.Run(test.name, func(t *testing.T) {
+            access := activation.Access{
+                Section: "all",
+                Profile: activation.Profile{
+                    RequiresPolicy: true,
+                    HasPolicy: test.hasPolicy,
+                    Status: "in_progress",
+                },
+            }
+
+            var output bytes.Buffer
+            if err := ActivationPage(access, "test-token", "", "").Render(
+                context.Background(), &output,
+            ); err != nil {
+                t.Fatalf("render policy form: %v", err)
+            }
+
+            markup := output.String()
+            expected := []string{
+                "upload-drop activation-policy-upload",
+                "data-activation-policy-input",
+                "data-activation-policy-filename",
+                "data-activation-policy-feedback",
+                "data-activation-policy-submit",
+                "application/pdf,image/jpeg,image/png",
+                "15 MB",
+                "activation-form-actions",
+            }
+            for _, value := range expected {
+                if !strings.Contains(markup, value) {
+                    t.Errorf("upload is missing %q", value)
+                }
+            }
+
+            if test.hasPolicy && !strings.Contains(markup, "Apólice recebida") {
+                t.Fatal("existing upload needs a saved-file indicator")
+            }
+            if test.hasPolicy && !strings.Contains(markup, "data-activation-next") {
+                t.Fatal("existing upload must allow continuing without replacing the file")
+            }
+        })
+    }
+}
+
+func TestActivationReviewUsesSharedDataComponents(t *testing.T) {
+    access := activation.Access{
+        Section: "all",
+        Profile: activation.Profile{
+            Status: "in_progress",
+            LegalName: "Example Logistics",
+            FinanceResponsibleName: "Finance Contact",
+        },
+    }
+    var output bytes.Buffer
+    if err := ActivationPage(access, "test-token", "", "").Render(
+        context.Background(), &output,
+    ); err != nil {
+        t.Fatalf("render activation review: %v", err)
+    }
+
+    markup := output.String()
+    for _, expected := range []string{
+        "grid data-grid",
+        "data-field",
+        "Example Logistics",
+        "Finance Contact",
+        "data-activation-edit=\"finance\"",
+    } {
+        if !strings.Contains(markup, expected) {
+            t.Errorf("review missing shared component or value %q", expected)
+        }
+    }
+}
+
+func TestActivationUserInputsHaveVisibleLabels(t *testing.T) {
+    access := activation.Access{
+        Section: "all",
+        Profile: activation.Profile{Status: "in_progress"},
+    }
+    var output bytes.Buffer
+    if err := ActivationPage(access, "test-token", "", "").Render(
+        context.Background(), &output,
+    ); err != nil {
+        t.Fatalf("render users step: %v", err)
+    }
+
+    markup := output.String()
+    if !strings.Contains(markup, "activation-repeat-field") {
+        t.Fatal("user fields should use the shared field styling")
+    }
+    if !strings.Contains(markup, "Remover usuário") {
+        t.Fatal("remove action must identify the user row")
+    }
+}
