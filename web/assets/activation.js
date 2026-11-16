@@ -194,7 +194,9 @@
       'image/jpeg',
       'image/png',
     ]);
-    const supportedMime = !selectedFile.type || supportedMimeTypes.has(selectedFile.type);
+    const supportedMime = !selectedFile.type ||
+      selectedFile.type === 'application/octet-stream' ||
+      supportedMimeTypes.has(selectedFile.type);
     const invalidFormat = !supportedExtension || !supportedMime;
     const invalidSize = selectedFile.size > maxPolicyBytes;
     const invalidEmptyFile = selectedFile.size === 0;
