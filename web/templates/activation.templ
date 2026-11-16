@@ -212,6 +212,7 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
                                 <dl class="activation-review-data">
                                     <dt>Razão social</dt><dd>{ access.Profile.LegalName } · { brfields.FormatCNPJ(access.Profile.CNPJ) }</dd>
                                     <dt>Endereço</dt><dd>{ ActivationAddress(access.Profile) }</dd>
+                                    <dt>Responsável pela empresa</dt><dd>{ access.Profile.CompanyResponsibleName } · { access.Profile.CompanyResponsibleEmail } · { brfields.FormatPhone(access.Profile.CompanyResponsiblePhone) }</dd>
                                 </dl>
                             </div>
 
