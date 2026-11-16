@@ -26,6 +26,7 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
 
 				<section class="activation-progress">
 					if access.Profile.RequiresPolicy {
+						<div class={ "activation-progress-item " + activationDoneClass(ActivationOperationComplete(access.Profile)) }><span></span><strong>Operação</strong></div>
 						<div class={ "activation-progress-item " + activationDoneClass(access.Profile.HasPolicy) }><span></span><strong>Apólice</strong></div>
 					}
 					<div class={ "activation-progress-item " + activationDoneClass(access.Profile.FinanceResponsibleName != "") }><span></span><strong>Financeiro</strong></div>
@@ -42,8 +43,7 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
 						<div><small>Empresa</small><strong>{ access.Profile.LegalName }</strong><span>{ brfields.FormatCNPJ(access.Profile.CNPJ) }</span></div>
 						<div><small>Endereço</small><strong>{ ActivationAddress(access.Profile) }</strong></div>
 						if access.Profile.RequiresPolicy {
-							<div><small>Operação</small><strong>{ humanOperationType(access.Profile.OperationType) }</strong><span>{ access.Profile.Insurer }</span></div>
-						}
+							}
 						<div><small>Responsável pela empresa</small><strong>{ access.Profile.CompanyResponsibleName }</strong><span>{ access.Profile.CompanyResponsibleEmail } · { brfields.FormatPhone(access.Profile.CompanyResponsiblePhone) }</span></div>
 					</div>
 					<p class="activation-lock-note">Esses dados vieram da contratação e permanecem vinculados ao contrato gerado. Alterações operacionais nesta etapa não modificam o documento contratual.</p>
@@ -56,6 +56,30 @@ templ ActivationPage(access activation.Access, token, message, errorMessage stri
 					</section>
 				}
 
+				if access.Profile.RequiresPolicy {
+					<section class="accept-box" id="operacao">
+						<span class="step-title">DADOS OPERACIONAIS</span>
+						<h2>Operação e seguro</h2>
+						<p>Estes dados são utilizados na implantação e não modificam o contrato assinado.</p>
+						if ActivationCanEdit(access, "operation") {
+							<form method="post" action={ templ.SafeURL("/activation/" + token + "/operation") } class="grid">
+								<div class="field"><label>Tipo de operação</label><select name="operation_type">
+									<option value="" selected?={ access.Profile.OperationType == "" }>Selecione</option>
+									<option value="normal" selected?={ access.Profile.OperationType == "normal" }>Normal</option>
+									<option value="avulsa" selected?={ access.Profile.OperationType == "avulsa" }>Avulsa</option>
+								</select></div>
+								<div class="field"><label>Seguradora</label><input name="insurer" value={ access.Profile.Insurer }/></div>
+								<div class="field"><label>Início da vigência</label><input name="policy_start_date" type="date" value={ access.Profile.PolicyStartDate }/></div>
+								<div class="field"><label>Fim da vigência</label><input name="policy_end_date" type="date" value={ access.Profile.PolicyEndDate }/></div>
+								<div class="field"><label>Corretor parceiro</label><input name="broker_company" value={ access.Profile.BrokerCompany }/></div>
+								<div class="field"><label>Produtor do corretor</label><input name="broker_producer" value={ access.Profile.BrokerProducer }/></div>
+								<div class="field full"><button class="btn dark" type="submit" data-processing="Salvando operação...">Salvar operação</button></div>
+							</form>
+						} else {
+							<div class="activation-answer"><strong>{ humanOperationType(access.Profile.OperationType) }</strong><span>{ access.Profile.Insurer } · { access.Profile.PolicyStartDate } a { access.Profile.PolicyEndDate }</span></div>
+						}
+					</section>
+				}
 				if access.Profile.RequiresPolicy {
 					<section class="accept-box" id="apolice" data-policy-present={ BoolString(access.Profile.HasPolicy) }>
 						<span class="step-title">1 · APÓLICE</span>

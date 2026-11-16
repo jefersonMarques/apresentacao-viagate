@@ -11,7 +11,7 @@ func ActivationCanEdit(access activation.Access, section string) bool {
 	if access.Profile.Status == "completed" || access.Profile.Status == "under_internal_setup" || access.Profile.Status == "activated" {
 		return false
 	}
-	if (section == "policy" || section == "goods") && !access.Profile.RequiresPolicy {
+	if (section == "policy" || section == "goods" || section == "operation") && !access.Profile.RequiresPolicy {
 		return false
 	}
 	return access.Section == "all" || access.Section == section
@@ -27,7 +27,7 @@ func ActivationComplete(profile activation.Profile) bool {
 	if !profile.RequiresPolicy {
 		return true
 	}
-	return profile.HasPolicy && len(profile.Goods) > 0
+	return profile.HasPolicy && len(profile.Goods) > 0 && ActivationOperationComplete(profile)
 }
 
 func ActivationContractSigned(profile activation.Profile) bool {
@@ -114,4 +114,11 @@ func humanOperationType(value string) string {
 	default:
 		return strings.TrimSpace(value)
 	}
+}
+
+func ActivationOperationComplete(profile activation.Profile) bool {
+	operationType := strings.ToLower(strings.TrimSpace(profile.OperationType))
+	return (operationType == "normal" || operationType == "avulsa") &&
+		strings.TrimSpace(profile.Insurer) != "" &&
+		profile.PolicyStartDate != "" && profile.PolicyEndDate != ""
 }

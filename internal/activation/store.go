@@ -174,8 +174,12 @@ func (s *Store) ByID(ctx context.Context, id string) (Profile, error) {
 		       o.legal_name,coalesce(o.trade_name,''),o.cnpj,
 		       coalesce(o.street,''),coalesce(o.street_number,''),coalesce(o.complement,''),coalesce(o.district,''),
 		       coalesce(o.city,''),coalesce(o.state,''),coalesce(o.postal_code,''),
-		       coalesce(o.operation_type,''),coalesce(o.insurer,''),coalesce(o.policy_start_date::text,''),coalesce(o.policy_end_date::text,''),
-		       coalesce(o.broker_company,''),coalesce(o.broker_producer,''),
+		       case when ps.contract_id is not null then coalesce(ps.operation_type,'') else coalesce(o.operation_type,'') end,
+		       case when ps.contract_id is not null then coalesce(ps.insurer,'') else coalesce(o.insurer,'') end,
+		       case when ps.contract_id is not null then coalesce(ps.policy_start_date::text,'') else coalesce(o.policy_start_date::text,'') end,
+		       case when ps.contract_id is not null then coalesce(ps.policy_end_date::text,'') else coalesce(o.policy_end_date::text,'') end,
+		       case when ps.contract_id is not null then coalesce(ps.broker_company,'') else coalesce(o.broker_company,'') end,
+		       case when ps.contract_id is not null then coalesce(ps.broker_producer,'') else coalesce(o.broker_producer,'') end,
 		       o.company_responsible_name,o.company_responsible_phone,o.company_responsible_email::text,
 		       coalesce(a.finance_responsible_name,''),coalesce(a.finance_responsible_phone,''),coalesce(a.finance_responsible_email::text,''),
 		       a.submitted_at,a.activated_at,c.fully_signed_at,pv.requires_policy,
@@ -191,6 +195,7 @@ func (s *Store) ByID(ctx context.Context, id string) (Profile, error) {
 		join onboardings o on o.id=c.onboarding_id
 		join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
 		join proposal_versions pv on pv.id=pa.proposal_version_id
+		left join post_sale_operations ps on ps.contract_id=c.id
 		where a.id=$1
 		  and a.deleted_at is null
 		  and c.deleted_at is null
@@ -369,6 +374,32 @@ func (s *Store) Submit(ctx context.Context, tokenID string) error {
 	}
 
 	if requiresPolicy {
+		var operationComplete bool
+		if err := tx.QueryRow(ctx, `
+			select (
+				case when ps.contract_id is not null
+				then ps.operation_type in ('normal','avulsa')
+				     and nullif(btrim(ps.insurer),'') is not null
+				     and ps.policy_start_date is not null
+				     and ps.policy_end_date is not null
+				else o.operation_type in ('normal','avulsa')
+				     and nullif(btrim(o.insurer),'') is not null
+				     and o.policy_start_date is not null
+				     and o.policy_end_date is not null
+				end
+			)
+			from activation_profiles a
+			join contracts c on c.id=a.contract_id
+			join onboardings o on o.id=c.onboarding_id
+			left join post_sale_operations ps on ps.contract_id=c.id
+			where a.id=$1
+		`, activationID).Scan(&operationComplete); err != nil {
+			return err
+		}
+		if !operationComplete {
+			return fmt.Errorf("complete insurance operation details")
+		}
+
 		var hasPolicy bool
 		if err := tx.QueryRow(ctx, `
 			select exists(

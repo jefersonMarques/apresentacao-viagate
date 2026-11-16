@@ -43,6 +43,10 @@ func TestActivationCompleteRequiresGoodsAndUsers(t *testing.T) {
 	profile := activation.Profile{
 		HasPolicy:               true,
 		RequiresPolicy:          true,
+		OperationType:           "normal",
+		Insurer:                 "Insurer",
+		PolicyStartDate:         "2026-11-01",
+		PolicyEndDate:           "2027-11-01",
 		FinanceResponsibleName:  "Financeiro",
 		FinanceResponsibleEmail: "financeiro@example.com",
 		FinanceResponsiblePhone: "11999999999",
@@ -66,6 +70,10 @@ func TestActivationCompleteRequiresGoodsAndUsers(t *testing.T) {
 func TestActivationCompleteRequiresPolicy(t *testing.T) {
 	profile := activation.Profile{
 		RequiresPolicy:          true,
+		OperationType:           "normal",
+		Insurer:                 "Insurer",
+		PolicyStartDate:         "2026-11-01",
+		PolicyEndDate:           "2027-11-01",
 		FinanceResponsibleName:  "Financeiro",
 		FinanceResponsibleEmail: "financeiro@example.com",
 		FinanceResponsiblePhone: "11999999999",
@@ -79,6 +87,10 @@ func TestActivationCompleteRequiresPolicy(t *testing.T) {
 	profile.HasPolicy = true
 	if !ActivationComplete(profile) {
 		t.Fatal("activation should be complete when policy and operational data are present")
+	}
+	profile.Insurer = ""
+	if ActivationComplete(profile) {
+		t.Fatal("activation must require insurance operation details")
 	}
 }
 
