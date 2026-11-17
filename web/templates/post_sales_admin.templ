@@ -1,0 +1,177 @@
+package templates
+
+import (
+	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
+	"github.com/jefersonMarques/apresentacao-viagate/internal/postsale"
+)
+
+templ PostSalesPage(user domain.User, items []postsale.Item) {
+	@AdminLayout("ViaGate — Pós-venda", user) {
+		@AdminPageHeader("PÓS-VENDA", "Clientes contratados", "Acompanhe os contatos da implantação após a assinatura do contrato.") {}
+		<div class="admin-list-root" data-admin-list>
+			@AdminListToolbar(len(items), "cliente(s)") {
+				@AdminListSearch("Buscar empresa, comercial ou contato...")
+			}
+			@AdminDataTable([]string{"Cliente", "Comercial", "Contrato", "Contato", "Situação", "Ações"}, len(items), "Nenhum contrato assinado encontrado.") {
+				for _, item := range items {
+					<tr data-admin-list-row data-search={ item.ClientName + " " + item.SalespersonName + " " + item.ContactName }>
+						<td data-label="Cliente" data-primary="true"><strong>{ item.ClientName }</strong></td>
+						<td data-label="Comercial">{ item.SalespersonName }</td>
+						<td data-label="Contrato">Assinado em { item.SignedAt.Format("02/01/2006") }</td>
+						<td data-label="Contato">
+							if item.HasContact {
+								{ item.ContactName }
+							} else {
+								Aguardando indicação
+							}
+						</td>
+						<td data-label="Situação">{ postsale.StatusLabel(item) }</td>
+						<td data-label="Ações" data-actions="true"><a class="btn" href={ templ.SafeURL("/admin/post-sales/" + item.ContractID) }>Abrir</a></td>
+					</tr>
+				}
+			}
+		</div>
+	}
+}
+
+templ PostSaleDetailPage(user domain.User, detail postsale.Detail, message, errorMessage string) {
+	@AdminLayout("ViaGate — Pós-venda", user) {
+		@AdminPageHeader("PÓS-VENDA", detail.ClientName, "Contrato assinado · " + detail.ProposalTitle) {
+			<a class="btn" href="/admin/post-sales">Voltar à lista</a>
+		}
+		@PublicFlashMessages(message, errorMessage)
+		<section class="panel">
+			<div class="panel-head"><h2>Empresa e assinatura</h2></div>
+			<div class="panel-body">
+				@PublicDataGrid() {
+					@PublicDataField("Razão social") { <strong>{ detail.ClientName }</strong> }
+					@PublicDataField("CNPJ") { { CNPJ(detail.CNPJ) } }
+					@PublicDataField("Responsável legal") { { detail.ResponsibleName } }
+					@PublicDataField("E-mail do responsável") { { detail.ResponsibleEmail } }
+					@PublicDataField("Telefone do responsável") { { detail.ResponsiblePhone } }
+					@PublicDataField("Comercial") { { detail.SalespersonName } }
+				}
+				<p class="public-flow-muted">Os dados contratuais permanecem vinculados ao documento assinado e não são alterados nesta tela.</p>
+			</div>
+		</section>
+		<section class="panel">
+			<div class="panel-head"><h2>Contato para implantação</h2></div>
+			<div class="panel-body">
+				if detail.Contact.Saved {
+					<p>Contato atual: <strong>{ detail.Contact.Name }</strong> · { detail.Contact.Phone } · { detail.Contact.Email }</p>
+				} else {
+					<p>Contato ainda não informado pelo contratante.</p>
+				}
+				if UserCan(user, "proposal.create") {
+					<form method="post" action={ templ.SafeURL("/admin/post-sales/" + detail.ContractID + "/contact") } class="grid">
+						<div class="field"><label>Nome</label><input name="contact_name" value={ detail.Contact.Name } required/></div>
+						<div class="field"><label>Telefone</label><input name="contact_phone" data-mask="phone" value={ detail.Contact.Phone } required/></div>
+						<div class="field full"><label>E-mail (opcional)</label><input name="contact_email" type="email" value={ detail.Contact.Email }/></div>
+						<div class="field full"><button class="btn primary" type="submit">Salvar contato</button></div>
+					</form>
+				}
+			</div>
+		</section>
+		if detail.RequiresPolicy {
+			<section class="panel">
+				<div class="panel-head"><h2>Operação e seguro</h2></div>
+				<div class="panel-body">
+					<p>Essas informações são operacionais e não modificam o contrato já assinado.</p>
+					if UserCan(user, "proposal.create") {
+						<form method="post" action={ templ.SafeURL("/admin/post-sales/" + detail.ContractID + "/operation") } class="grid">
+							<div class="field"><label>Tipo de operação</label><select name="operation_type">
+								<option value="" selected?={ detail.Operation.Type == "" }>Selecione</option>
+								<option value="normal" selected?={ detail.Operation.Type == "normal" }>Normal</option>
+								<option value="avulsa" selected?={ detail.Operation.Type == "avulsa" }>Avulsa</option>
+							</select></div>
+							<div class="field"><label>Seguradora</label><input name="insurer" value={ detail.Operation.Insurer }/></div>
+							<div class="field"><label>Início da vigência</label><input type="date" name="policy_start_date" value={ detail.Operation.StartDate }/></div>
+							<div class="field"><label>Fim da vigência</label><input type="date" name="policy_end_date" value={ detail.Operation.EndDate }/></div>
+							<div class="field"><label>Corretor parceiro</label><input name="broker_company" value={ detail.Operation.BrokerCompany }/></div>
+							<div class="field"><label>Produtor do corretor</label><input name="broker_producer" value={ detail.Operation.BrokerProducer }/></div>
+							<div class="field full"><button class="btn primary" type="submit">Salvar dados operacionais</button></div>
+						</form>
+					} else {
+						@PublicDataGrid() {
+							@PublicDataField("Tipo de operação") { { detail.Operation.Type } }
+							@PublicDataField("Seguradora") { { detail.Operation.Insurer } }
+							@PublicDataField("Vigência") { { detail.Operation.StartDate } a { detail.Operation.EndDate } }
+						}
+					}
+				</div>
+			</section>
+			<section class="panel">
+				<div class="panel-head"><h2>Histórico operacional</h2></div>
+				<div class="panel-body">
+					if len(detail.OperationHistory) == 0 {
+						<p>Nenhuma alteração registrada.</p>
+					} else {
+						<table class="table">
+							<thead><tr><th>Data</th><th>Alterado por</th><th>Operação</th><th>Seguradora</th><th>Vigência</th></tr></thead>
+							<tbody>
+								for _, record := range detail.OperationHistory {
+									<tr><td>{ record.ChangedAt.Format("02/01/2006 15:04") }</td><td>{ record.ActorName }</td><td>{ record.Type }</td><td>{ record.Insurer }</td><td>{ record.StartDate } a { record.EndDate }</td></tr>
+								}
+							</tbody>
+						</table>
+					}
+				</div>
+			</section>
+		}
+		<section class="panel">
+			<div class="panel-head"><h2>Solicitar informações para implantação</h2></div>
+			<div class="panel-body">
+				<p>O link abre o formulário de apólice, financeiro, mercadorias, usuários e, quando aplicável, operação e seguro.</p>
+				if UserCan(user, "proposal.create") {
+					<form method="post" action={ templ.SafeURL("/admin/post-sales/" + detail.ContractID + "/share") } class="actions">
+						<button class="btn primary" type="submit" name="delivery" value="copy">Gerar link</button>
+						if detail.Contact.Email != "" {
+							<button class="btn dark" type="submit" name="delivery" value="email">Enviar por e-mail</button>
+						}
+					</form>
+				}
+				<p class="public-flow-muted">A emissão de um novo link revoga o anterior gerado pelo comercial. Cada link expira em 30 dias.</p>
+			</div>
+		</section>
+		<section class="panel">
+			<div class="panel-head"><h2>Histórico do contato</h2></div>
+			<div class="panel-body">
+				if len(detail.History) == 0 {
+					<p>Nenhuma alteração registrada.</p>
+				} else {
+					<table class="table">
+						<thead><tr><th>Data</th><th>Alterado por</th><th>Nome</th><th>Telefone</th><th>E-mail</th></tr></thead>
+						<tbody>
+							for _, record := range detail.History {
+								<tr><td>{ record.ChangedAt.Format("02/01/2006 15:04") }</td><td>{ record.ActorName }</td><td>{ record.Name }</td><td>{ record.Phone }</td><td>{ record.Email }</td></tr>
+							}
+						</tbody>
+					</table>
+				}
+			</div>
+		</section>
+	}
+}
+
+templ PostSaleShareLinkPage(user domain.User, detail postsale.Detail, link, message, errorMessage string) {
+	@AdminLayout("ViaGate — Compartilhar dados de implantação", user) {
+		@AdminPageHeader("PÓS-VENDA", "Compartilhar formulário", detail.ClientName) {
+			<a class="btn" href={ templ.SafeURL("/admin/post-sales/" + detail.ContractID) }>Voltar ao cliente</a>
+		}
+		@PublicFlashMessages(message, errorMessage)
+		<section class="panel">
+			<div class="panel-head"><h2>Link de implantação</h2></div>
+			<div class="panel-body">
+				<p>Este link individual permite completar os dados operacionais da contratação. Validade: 30 dias.</p>
+				<div class="field"><label>Link seguro</label><input data-post-sale-share-url value={ link } readonly/></div>
+				<div class="actions">
+					<button class="btn primary" type="button" data-post-sale-copy>Copiar link</button>
+					<button class="btn dark" type="button" data-post-sale-share>Compartilhar</button>
+					<a class="btn" href={ templ.SafeURL(link) } target="_blank" rel="noopener noreferrer">Preencher agora</a>
+				</div>
+				<p data-post-sale-share-status role="status"></p>
+			</div>
+		</section>
+		<script src="/commercial-assets/post-sale-share.js" defer></script>
+	}
+}

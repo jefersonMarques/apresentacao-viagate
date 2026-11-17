@@ -79,6 +79,7 @@ type AdminItem struct {
 	GoodsCount      int
 	SystemUserCount int
 	RequiresPolicy  bool
+	OperationReady  bool
 }
 
 func NewStore(pool *pgxpool.Pool) *Store {
@@ -174,8 +175,12 @@ func (s *Store) ByID(ctx context.Context, id string) (Profile, error) {
 		       o.legal_name,coalesce(o.trade_name,''),o.cnpj,
 		       coalesce(o.street,''),coalesce(o.street_number,''),coalesce(o.complement,''),coalesce(o.district,''),
 		       coalesce(o.city,''),coalesce(o.state,''),coalesce(o.postal_code,''),
-		       coalesce(o.operation_type,''),coalesce(o.insurer,''),coalesce(o.policy_start_date::text,''),coalesce(o.policy_end_date::text,''),
-		       coalesce(o.broker_company,''),coalesce(o.broker_producer,''),
+		       case when ps.contract_id is not null then coalesce(ps.operation_type,'') else coalesce(o.operation_type,'') end,
+		       case when ps.contract_id is not null then coalesce(ps.insurer,'') else coalesce(o.insurer,'') end,
+		       case when ps.contract_id is not null then coalesce(ps.policy_start_date::text,'') else coalesce(o.policy_start_date::text,'') end,
+		       case when ps.contract_id is not null then coalesce(ps.policy_end_date::text,'') else coalesce(o.policy_end_date::text,'') end,
+		       case when ps.contract_id is not null then coalesce(ps.broker_company,'') else coalesce(o.broker_company,'') end,
+		       case when ps.contract_id is not null then coalesce(ps.broker_producer,'') else coalesce(o.broker_producer,'') end,
 		       o.company_responsible_name,o.company_responsible_phone,o.company_responsible_email::text,
 		       coalesce(a.finance_responsible_name,''),coalesce(a.finance_responsible_phone,''),coalesce(a.finance_responsible_email::text,''),
 		       a.submitted_at,a.activated_at,c.fully_signed_at,pv.requires_policy,
@@ -191,6 +196,7 @@ func (s *Store) ByID(ctx context.Context, id string) (Profile, error) {
 		join onboardings o on o.id=c.onboarding_id
 		join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
 		join proposal_versions pv on pv.id=pa.proposal_version_id
+		left join post_sale_operations ps on ps.contract_id=c.id
 		where a.id=$1
 		  and a.deleted_at is null
 		  and c.deleted_at is null
@@ -326,11 +332,11 @@ func (s *Store) Submit(ctx context.Context, tokenID string) error {
 	}
 	defer tx.Rollback(ctx)
 
-	var activationID, status string
+	var activationID, status, allowedSection string
 	var financeName, financeEmail, financePhone string
 	var requiresPolicy bool
 	err = tx.QueryRow(ctx, `
-		select a.id::text,a.status,coalesce(a.finance_responsible_name,''),coalesce(a.finance_responsible_email::text,''),coalesce(a.finance_responsible_phone,''),pv.requires_policy
+		select a.id::text,a.status,t.section,coalesce(a.finance_responsible_name,''),coalesce(a.finance_responsible_email::text,''),coalesce(a.finance_responsible_phone,''),pv.requires_policy
 		from activation_access_tokens t
 		join activation_profiles a on a.id=t.activation_id
 		join contracts c on c.id=a.contract_id
@@ -344,9 +350,12 @@ func (s *Store) Submit(ctx context.Context, tokenID string) error {
 		  and c.deleted_at is null
 		  and o.deleted_at is null
 		for update of t,a
-	`, tokenID).Scan(&activationID, &status, &financeName, &financeEmail, &financePhone, &requiresPolicy)
+	`, tokenID).Scan(&activationID, &status, &allowedSection, &financeName, &financeEmail, &financePhone, &requiresPolicy)
 	if err != nil {
 		return err
+	}
+	if allowedSection != "all" {
+		return fmt.Errorf("activation confirmation requires full access")
 	}
 	if status == "completed" || status == "under_internal_setup" || status == "activated" {
 		return nil
@@ -398,11 +407,11 @@ func (s *Store) Submit(ctx context.Context, tokenID string) error {
 }
 
 func (s *Store) ListAdmin(ctx context.Context) ([]AdminItem, error) {
-	rows, err := s.pool.Query(ctx, `
+	rows, err := s.pool.Query(ctx, fmt.Sprintf(`
 		select a.id::text,a.contract_id::text,o.legal_name,u.name,a.status,c.fully_signed_at,a.submitted_at,a.activated_at,a.updated_at,
 		       (select count(*) from activation_goods g where g.activation_id=a.id),
 		       (select count(*) from activation_system_users su where su.activation_id=a.id),
-		       pv.requires_policy
+		       pv.requires_policy, %s
 		from activation_profiles a
 		join contracts c on c.id=a.contract_id
 		join onboardings o on o.id=c.onboarding_id
@@ -410,13 +419,14 @@ func (s *Store) ListAdmin(ctx context.Context) ([]AdminItem, error) {
 		join proposal_versions pv on pv.id=pa.proposal_version_id
 		join proposals p on p.id=pa.proposal_id
 		join users u on u.id=p.created_by
+        left join post_sale_operations ps on ps.contract_id=c.id
 		where a.deleted_at is null
 		  and c.deleted_at is null
 		  and o.deleted_at is null
 		  and pa.deleted_at is null
 		  and p.deleted_at is null
 		order by case a.status when 'completed' then 0 when 'in_progress' then 1 when 'pending' then 2 when 'under_internal_setup' then 3 else 4 end,a.updated_at desc
-	`)
+	`, commercialOperationReadyPredicate))
 	if err != nil {
 		return nil, err
 	}
@@ -424,7 +434,7 @@ func (s *Store) ListAdmin(ctx context.Context) ([]AdminItem, error) {
 	items := []AdminItem{}
 	for rows.Next() {
 		var item AdminItem
-		if err := rows.Scan(&item.ProfileID, &item.ContractID, &item.ClientName, &item.CommercialName, &item.Status, &item.FullySignedAt, &item.SubmittedAt, &item.ActivatedAt, &item.UpdatedAt, &item.GoodsCount, &item.SystemUserCount, &item.RequiresPolicy); err != nil {
+		if err := rows.Scan(&item.ProfileID, &item.ContractID, &item.ClientName, &item.CommercialName, &item.Status, &item.FullySignedAt, &item.SubmittedAt, &item.ActivatedAt, &item.UpdatedAt, &item.GoodsCount, &item.SystemUserCount, &item.RequiresPolicy, &item.OperationReady); err != nil {
 			return nil, err
 		}
 		items = append(items, item)
@@ -432,44 +442,77 @@ func (s *Store) ListAdmin(ctx context.Context) ([]AdminItem, error) {
 	return items, rows.Err()
 }
 
+const commercialOperationReadyPredicate = `(
+    not pv.requires_policy or coalesce(
+        case when ps.contract_id is not null then
+            ps.operation_type in ('normal','avulsa')
+            and nullif(btrim(ps.insurer),'') is not null
+            and ps.policy_start_date is not null
+            and ps.policy_end_date is not null
+            and ps.policy_end_date >= ps.policy_start_date
+        else
+            o.operation_type in ('normal','avulsa')
+            and nullif(btrim(o.insurer),'') is not null
+            and o.policy_start_date is not null
+            and o.policy_end_date is not null
+            and o.policy_end_date >= o.policy_start_date
+        end,
+        false
+    )
+)`
+
 func (s *Store) ReadyForInternalSetup(ctx context.Context, activationID string) (bool, error) {
-	var ready bool
-	err := s.pool.QueryRow(ctx, `
-		select a.status='completed'
-		   and c.status='signed'
-		   and c.fully_signed_at is not null
-		from activation_profiles a
-		join contracts c on c.id=a.contract_id
-		where a.id=$1
-		  and a.deleted_at is null
-		  and c.deleted_at is null
-	`, activationID).Scan(&ready)
-	return ready, err
+    var ready bool
+    query := fmt.Sprintf(`
+        select a.status='completed'
+            and c.status='signed'
+            and c.fully_signed_at is not null
+            and %s
+        from activation_profiles a
+        join contracts c on c.id=a.contract_id
+        join onboardings o on o.id=c.onboarding_id
+        join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
+        join proposal_versions pv on pv.id=pa.proposal_version_id
+        left join post_sale_operations ps on ps.contract_id=c.id
+        where a.id=$1
+          and a.deleted_at is null
+          and c.deleted_at is null
+          and o.deleted_at is null
+    `, commercialOperationReadyPredicate)
+    err := s.pool.QueryRow(ctx, query, activationID).Scan(&ready)
+    return ready, err
 }
 
 func (s *Store) SetInternalStatus(ctx context.Context, activationID, status string) error {
-	if status != "under_internal_setup" && status != "activated" {
-		return fmt.Errorf("invalid activation status")
-	}
-	command, err := s.pool.Exec(ctx, `
-		update activation_profiles a
-		set status=$2,
-		    activated_at=case when $2='activated' then coalesce(a.activated_at,now()) else a.activated_at end,
-		    updated_at=now()
-		from contracts c
-		where a.id=$1
-		  and c.id=a.contract_id
-		  and a.deleted_at is null
-		  and c.deleted_at is null
-		  and c.status='signed'
-		  and c.fully_signed_at is not null
-		  and a.status in ('completed','under_internal_setup')
-	`, activationID, status)
-	if err != nil {
-		return err
-	}
-	if command.RowsAffected() != 1 {
-		return fmt.Errorf("activation is not ready for this transition")
-	}
-	return nil
+    if status != "under_internal_setup" && status != "activated" {
+        return fmt.Errorf("invalid activation status")
+    }
+    query := fmt.Sprintf(`
+        update activation_profiles a
+        set status=$2,
+            activated_at=case when $2='activated' then coalesce(a.activated_at,now()) else a.activated_at end,
+            updated_at=now()
+        from contracts c
+        join onboardings o on o.id=c.onboarding_id
+        join proposal_acceptances pa on pa.id=o.proposal_acceptance_id
+        join proposal_versions pv on pv.id=pa.proposal_version_id
+        left join post_sale_operations ps on ps.contract_id=c.id
+        where a.id=$1
+          and c.id=a.contract_id
+          and a.deleted_at is null
+          and c.deleted_at is null
+          and o.deleted_at is null
+          and c.status='signed'
+          and c.fully_signed_at is not null
+          and a.status in ('completed','under_internal_setup')
+          and %s
+    `, commercialOperationReadyPredicate)
+    command, err := s.pool.Exec(ctx, query, activationID, status)
+    if err != nil {
+        return err
+    }
+    if command.RowsAffected() != 1 {
+        return fmt.Errorf("activation is not ready for this transition")
+    }
+    return nil
 }

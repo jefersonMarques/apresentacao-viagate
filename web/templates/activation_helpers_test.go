@@ -43,6 +43,10 @@ func TestActivationCompleteRequiresGoodsAndUsers(t *testing.T) {
 	profile := activation.Profile{
 		HasPolicy:               true,
 		RequiresPolicy:          true,
+		OperationType:           "normal",
+		Insurer:                 "Insurer",
+		PolicyStartDate:         "2026-11-01",
+		PolicyEndDate:           "2027-11-01",
 		FinanceResponsibleName:  "Financeiro",
 		FinanceResponsibleEmail: "financeiro@example.com",
 		FinanceResponsiblePhone: "11999999999",
@@ -66,6 +70,10 @@ func TestActivationCompleteRequiresGoodsAndUsers(t *testing.T) {
 func TestActivationCompleteRequiresPolicy(t *testing.T) {
 	profile := activation.Profile{
 		RequiresPolicy:          true,
+		OperationType:           "normal",
+		Insurer:                 "Insurer",
+		PolicyStartDate:         "2026-11-01",
+		PolicyEndDate:           "2027-11-01",
 		FinanceResponsibleName:  "Financeiro",
 		FinanceResponsibleEmail: "financeiro@example.com",
 		FinanceResponsiblePhone: "11999999999",
@@ -79,6 +87,10 @@ func TestActivationCompleteRequiresPolicy(t *testing.T) {
 	profile.HasPolicy = true
 	if !ActivationComplete(profile) {
 		t.Fatal("activation should be complete when policy and operational data are present")
+	}
+	profile.Insurer = ""
+	if !ActivationComplete(profile) {
+		t.Fatal("customer confirmation must not depend on commercial operation data")
 	}
 }
 
@@ -122,4 +134,279 @@ func TestActivationPageHidesPolicyAndGoodsWhenNotRequired(t *testing.T) {
 	if strings.Contains(html, `id="apolice"`) || strings.Contains(html, `id="mercadorias"`) {
 		t.Fatal("policy and goods sections must be hidden when not required")
 	}
+}
+
+func TestActivationStepsMatchInsuranceRequirements(t *testing.T) {
+    insured := activation.Access{
+        Section: "all",
+        Profile: activation.Profile{RequiresPolicy: true},
+    }
+    insuredSteps := ActivationSteps(insured)
+    expected := []string{"policy", "finance", "goods", "users", "review"}
+    if len(insuredSteps) != len(expected) {
+        t.Fatalf("insured steps = %d, want %d", len(insuredSteps), len(expected))
+    }
+    for index, key := range expected {
+        if insuredSteps[index].Key != key {
+            t.Errorf("step %d = %q, want %q", index, insuredSteps[index].Key, key)
+        }
+    }
+
+    regular := activation.Access{Section: "all"}
+    regularSteps := ActivationSteps(regular)
+    expectedRegular := []string{"finance", "users", "review"}
+    if len(regularSteps) != len(expectedRegular) {
+        t.Fatalf("regular steps = %d, want %d", len(regularSteps), len(expectedRegular))
+    }
+    for index, key := range expectedRegular {
+        if regularSteps[index].Key != key {
+            t.Errorf("regular step %d = %q, want %q", index, regularSteps[index].Key, key)
+        }
+    }
+}
+
+func TestActivationPageLimitsDelegateToAuthorizedSection(t *testing.T) {
+    access := activation.Access{
+        Section: "finance",
+        AccessType: "delegate",
+        Profile: activation.Profile{
+            LegalName: "Test Company",
+            CompanyResponsibleEmail: "signer@example.com",
+            Status: "in_progress",
+            RequiresPolicy: true,
+            Insurer: "Example Insurer",
+            Goods: []string{"Restricted Good"},
+        },
+    }
+
+    var output bytes.Buffer
+    if err := ActivationPage(access, "token-test", "", "").Render(context.Background(), &output); err != nil {
+        t.Fatalf("render scoped activation: %v", err)
+    }
+    html := output.String()
+    for _, forbidden := range []string{
+        `data-activation-step="operation"`,
+        `data-activation-step="policy"`,
+        `data-activation-step="goods"`,
+        `data-activation-step="users"`,
+        `data-activation-step="review"`,
+        "Restricted Good",
+        "Example Insurer",
+        "signer@example.com",
+        "/activation/token-test/proposal",
+        "/activation/token-test/submit",
+    } {
+        if strings.Contains(html, forbidden) {
+            t.Errorf("scoped activation exposed forbidden content %q", forbidden)
+        }
+    }
+    if !strings.Contains(html, `data-activation-step="finance"`) {
+        t.Fatal("finance delegate must access the finance step")
+    }
+}
+
+func TestActivationReviewContainsEditActionsAndConfirmation(t *testing.T) {
+    access := activation.Access{
+        Section: "all",
+        Profile: activation.Profile{
+            Status: "in_progress",
+            RequiresPolicy: true,
+        },
+    }
+    var output bytes.Buffer
+    if err := ActivationPage(access, "token-test", "", "").Render(context.Background(), &output); err != nil {
+        t.Fatalf("render review: %v", err)
+    }
+    html := output.String()
+    for _, required := range []string{
+        `data-activation-step="review"`,
+        `data-activation-edit="policy"`,
+        `data-activation-edit="finance"`,
+        `data-activation-edit="goods"`,
+        `data-activation-edit="users"`,
+        "Confirmar dados da implantação",
+    } {
+        if !strings.Contains(html, required) {
+            t.Errorf("review missing action %q", required)
+        }
+    }
+    if strings.Contains(html, `/activation/token-test/proposal`) {
+        t.Fatal("review must not link to the proposal")
+    }
+}
+
+func TestActivationPageShowsSuccessAfterConfirmation(t *testing.T) {
+    access := activation.Access{
+        Section: "all",
+        Profile: activation.Profile{Status: "completed"},
+    }
+    var output bytes.Buffer
+    if err := ActivationPage(access, "token-test", "", "").Render(context.Background(), &output); err != nil {
+        t.Fatalf("render completed activation: %v", err)
+    }
+    html := output.String()
+    if !strings.Contains(html, "Dados enviados com sucesso!") {
+        t.Fatal("completed activation must show success message")
+    }
+    if strings.Contains(html, `data-activation-step="review"`) ||
+        strings.Contains(html, `/activation/token-test/submit`) {
+        t.Fatal("completed activation must not show a new submit action")
+    }
+}
+ 
+func TestCommercialOperationDoesNotBlockCustomerCompletion(t *testing.T) {
+    profile := activation.Profile{
+        RequiresPolicy: true,
+        HasPolicy: true,
+        FinanceResponsibleName: "Finance",
+        FinanceResponsiblePhone: "41999999999",
+        FinanceResponsibleEmail: "finance@example.com",
+        Goods: []string{"Refrigerated goods"},
+        SystemUsers: []activation.SystemUser{{Name: "Operator", Email: "operator@example.com"}},
+    }
+
+    if !ActivationComplete(profile) {
+        t.Fatal("customer data must be complete before commercial operation is filled")
+    }
+    if ActivationOperationComplete(profile) {
+        t.Fatal("commercial operation must remain incomplete")
+    }
+
+    access := activation.Access{Section: "all", Profile: profile}
+    for _, step := range ActivationSteps(access) {
+        if step.Key == "operation" {
+            t.Fatal("commercial operation must not appear as a customer step")
+        }
+    }
+    if ActivationCanEdit(access, "operation") || ActivationCanView(access, "operation") {
+        t.Fatal("operation must be restricted from public access")
+    }
+    var output bytes.Buffer
+    if err := ActivationPage(access, "test-token", "", "").Render(context.Background(), &output); err != nil {
+        t.Fatalf("render customer form: %v", err)
+    }
+    rendered := output.String()
+    for _, forbidden := range []string{
+        `data-activation-step="operation"`,
+        `data-activation-edit="operation"`,
+        `name="insurer"`,
+        "Operação e seguro",
+        "Dados de operação pendentes",
+    } {
+        if strings.Contains(rendered, forbidden) {
+            t.Errorf("commercial operation exposed to customer: %s", forbidden)
+        }
+    }
+}
+
+func TestCustomerStepCannotShowOperationOnRestrictedLink(t *testing.T) {
+    access := activation.Access{Section: "operation", Profile: activation.Profile{RequiresPolicy: true}}
+    if ActivationCanView(access, "operation") || ActivationCanEdit(access, "operation") {
+        t.Fatal("operation-only tokens must not grant public operation permissions")
+    }
+}
+
+func TestActivationPolicyUploadUsesSharedComponents(t *testing.T) {
+    cases := []struct {
+        name      string
+        hasPolicy bool
+    }{
+        {name: "new policy"},
+        {name: "policy replacement", hasPolicy: true},
+    }
+
+    for _, test := range cases {
+        t.Run(test.name, func(t *testing.T) {
+            access := activation.Access{
+                Section: "all",
+                Profile: activation.Profile{
+                    RequiresPolicy: true,
+                    HasPolicy: test.hasPolicy,
+                    Status: "in_progress",
+                },
+            }
+
+            var output bytes.Buffer
+            if err := ActivationPage(access, "test-token", "", "").Render(
+                context.Background(), &output,
+            ); err != nil {
+                t.Fatalf("render policy form: %v", err)
+            }
+
+            markup := output.String()
+            expected := []string{
+                "upload-drop activation-policy-upload",
+                "data-activation-policy-input",
+                "data-activation-policy-filename",
+                "data-activation-policy-feedback",
+                "data-activation-policy-submit",
+                "application/pdf,image/jpeg,image/png",
+                "15 MB",
+                "activation-form-actions",
+            }
+            for _, value := range expected {
+                if !strings.Contains(markup, value) {
+                    t.Errorf("upload is missing %q", value)
+                }
+            }
+
+            if test.hasPolicy && !strings.Contains(markup, "Apólice recebida") {
+                t.Fatal("existing upload needs a saved-file indicator")
+            }
+            if test.hasPolicy && !strings.Contains(markup, "data-activation-next") {
+                t.Fatal("existing upload must allow continuing without replacing the file")
+            }
+        })
+    }
+}
+
+func TestActivationReviewUsesSharedDataComponents(t *testing.T) {
+    access := activation.Access{
+        Section: "all",
+        Profile: activation.Profile{
+            Status: "in_progress",
+            LegalName: "Example Logistics",
+            FinanceResponsibleName: "Finance Contact",
+        },
+    }
+    var output bytes.Buffer
+    if err := ActivationPage(access, "test-token", "", "").Render(
+        context.Background(), &output,
+    ); err != nil {
+        t.Fatalf("render activation review: %v", err)
+    }
+
+    markup := output.String()
+    for _, expected := range []string{
+        "grid data-grid",
+        "data-field",
+        "Example Logistics",
+        "Finance Contact",
+        "data-activation-edit=\"finance\"",
+    } {
+        if !strings.Contains(markup, expected) {
+            t.Errorf("review missing shared component or value %q", expected)
+        }
+    }
+}
+
+func TestActivationUserInputsHaveVisibleLabels(t *testing.T) {
+    access := activation.Access{
+        Section: "all",
+        Profile: activation.Profile{Status: "in_progress"},
+    }
+    var output bytes.Buffer
+    if err := ActivationPage(access, "test-token", "", "").Render(
+        context.Background(), &output,
+    ); err != nil {
+        t.Fatalf("render users step: %v", err)
+    }
+
+    markup := output.String()
+    if !strings.Contains(markup, "activation-repeat-field") {
+        t.Fatal("user fields should use the shared field styling")
+    }
+    if !strings.Contains(markup, "Remover usuário") {
+        t.Fatal("remove action must identify the user row")
+    }
 }

@@ -57,6 +57,11 @@ jobs:
       - name: Validate shell scripts
         run: bash -n scripts/*.sh
 
+      - name: Validate activation wizard JavaScript
+        run: node --check web/assets/activation.js
+      - name: Validate implementation contact JavaScript
+        run: node --check web/assets/implementation-contact.js
+
       - name: Vet
         run: go vet ./...
 
@@ -111,6 +116,11 @@ jobs:
         env:
           RUN_DB_INTEGRATION: '1'
         run: go test ./internal/notifications -run TestInAppNotificationScopePreferences -count=1
+
+      - name: Test contract template migration
+        env:
+          RUN_DB_INTEGRATION: '1'
+        run: go test ./internal/platform/database -run TestDefaultContractTemplateExcludesInsuranceAfterMigration -count=1
 
       - name: Verify migrations are idempotent
         run: go run ./cmd/migrate up

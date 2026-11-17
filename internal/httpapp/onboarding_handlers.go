@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/mail"
 	"strings"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
@@ -154,25 +153,6 @@ func validateOnboarding(current domain.Onboarding) string {
 	if len(current.State) != 2 {
 		return "UF inválida."
 	}
-	if current.RequiresPolicy {
-		if _, valid := normalizeOperationType(current.OperationType); !valid {
-			return "Volte à etapa Seguro, selecione o tipo de operação e salve os dados antes de gerar o contrato."
-		}
-		if current.Insurer == "" {
-			return "Informe a seguradora."
-		}
-		if current.PolicyStartDate == "" || current.PolicyEndDate == "" {
-			return "Informe a vigência da apólice."
-		}
-		start, err1 := time.Parse("2006-01-02", current.PolicyStartDate)
-		end, err2 := time.Parse("2006-01-02", current.PolicyEndDate)
-		if err1 != nil || err2 != nil {
-			return "A vigência da apólice é inválida."
-		}
-		if end.Before(start) {
-			return "O fim da vigência da apólice não pode ser anterior ao início."
-		}
-	}
 	return ""
 }
 
@@ -193,7 +173,7 @@ func (a *App) lookupCNPJ(w http.ResponseWriter, r *http.Request) {
 	}
 	company, err := a.registry.Lookup(r.Context(), cnpj)
 	if err != nil {
-		http.Error(w, "CNPJ não encontrado", http.StatusNotFound)
+		a.respondCompanyLookupFailure(w, err, false)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")

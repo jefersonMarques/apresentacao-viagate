@@ -44,9 +44,9 @@ func (a *App) activationPage(w http.ResponseWriter, r *http.Request) {
 		message = "Convite enviado para a pessoa indicada."
 	case "completed":
 		if access.Profile.ContractStatus == "signed" && access.Profile.FullySignedAt != nil {
-			message = "Dados recebidos. A ViaGate já pode prosseguir com a implantação."
+			message = "Seus dados foram recebidos. O comercial concluirá as informações operacionais pendentes."
 		} else {
-			message = "Dados recebidos. A implantação ficará aguardando apenas a assinatura do contrato."
+			message = "Seus dados foram recebidos. A ViaGate acompanhará as pendências da contratação."
 		}
 	}
 	render(r.Context(), w, http.StatusOK, templates.ActivationPage(access, token, message, ""))
@@ -217,7 +217,7 @@ func (a *App) delegateActivation(w http.ResponseWriter, r *http.Request) {
 	}
 	link := strings.TrimRight(a.cfg.BaseURL, "/") + "/activation/" + plain
 	htmlBody := fmt.Sprintf(
-		"<p>Olá, %s.</p><p>A contratação da <strong>%s</strong> com a ViaGate está em andamento e você foi indicado para complementar os dados necessários para implantação.</p><p>Esse preenchimento pode ser concluído enquanto o responsável legal finaliza a assinatura do contrato.</p><p><a href=\"%s\">Preencher dados para implantação</a></p><p>O link é individual e expira em 30 dias.</p>",
+		"<p>Olá, %s.</p><p>Você foi indicado para preencher os dados necessários à implantação de <strong>%s</strong> na ViaGate.</p><p><a href=\"%s\">Preencher dados para implantação</a></p><p>O link é individual e expira em 30 dias.</p>",
 		html.EscapeString(name), html.EscapeString(access.Profile.LegalName), html.EscapeString(link),
 	)
 	if err := notifications.EnqueueWithOptions(r.Context(), a.pool, notifications.MessageOptions{
@@ -244,11 +244,15 @@ func (a *App) submitActivation(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Link de ativação inválido ou expirado.", http.StatusGone)
 		return
 	}
+	if access.Section != "all" {
+		http.Error(w, "Este acesso não permite confirmar toda a implantação.", http.StatusForbidden)
+		return
+	}
 	if err := a.activationStore.Submit(r.Context(), access.TokenID); err != nil {
 		access, _ = a.activationStore.AccessByToken(r.Context(), hashToken(token))
 		message := "Ainda faltam informações. Preencha o contato financeiro e ao menos um usuário do sistema."
 		if access.Profile.RequiresPolicy {
-			message = "Ainda faltam informações. Envie a apólice, preencha o contato financeiro, informe ao menos uma mercadoria e um usuário do sistema."
+			message = "Ainda faltam informações. Envie a apólice e complete o financeiro, as mercadorias e os usuários."
 		}
 		render(r.Context(), w, http.StatusBadRequest, templates.ActivationPage(access, token, "", message))
 		return
@@ -267,6 +271,10 @@ func (a *App) issueActivationAccess(w http.ResponseWriter, r *http.Request) {
 	access, err := a.contractStore.SignerByPublicToken(r.Context(), signerToken)
 	if err != nil {
 		http.Error(w, "A preparação da implantação ainda não está disponível.", http.StatusConflict)
+		return
+	}
+	if access.Contract.Status != "signed" || access.Signer.Status != "signed" {
+		http.Error(w, "A preparação da implantação estará disponível após a assinatura.", http.StatusConflict)
 		return
 	}
 	profile, err := a.activationStore.EnsureForContract(r.Context(), access.Contract.ID)

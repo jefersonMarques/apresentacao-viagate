@@ -32,31 +32,26 @@ func (a *App) queuePostSignatureActivation(ctx context.Context, access contracts
 	if _, err := a.activationStore.EnsureForContract(ctx, access.Contract.ID); err != nil {
 		return err
 	}
-	proposalPath, err := a.proposalPublicPathByContract(ctx, access.Contract.ID)
-	if err != nil {
-		return err
-	}
-
 	signerToken, err := a.contractStore.SignerPublicToken(ctx, access.Signer.ID)
 	if err != nil {
 		return err
 	}
 
 	baseURL := strings.TrimRight(a.cfg.BaseURL, "/")
-	activationLink := baseURL + proposalPath
+	contactLink := baseURL + "/sign/" + signerToken + "/contact"
 	contractLink := baseURL + "/sign/" + signerToken + "/contract"
 
 	htmlBody := fmt.Sprintf(
-		"<p>Olá, %s.</p><p>Seu contrato ViaGate foi assinado com sucesso.</p><p><a href=\"%s\">Baixar contrato assinado</a></p><p>Se a preparação da implantação ainda não estiver concluída, você ou alguém da sua equipe pode continuar pelo link abaixo.</p><p><a href=\"%s\">Continuar preparação da implantação</a></p><p>Se os dados já tiverem sido concluídos, nenhuma ação adicional é necessária: a ViaGate poderá seguir com a implantação interna.</p>",
+		"<p>Olá, %s.</p><p>Seu contrato ViaGate foi assinado com sucesso.</p><p><a href=\"%s\">Baixar contrato assinado</a></p><p>Precisamos apenas confirmar o contato para a implantação.</p><p><a href=\"%s\">Confirmar contato da implantação</a></p>",
 		html.EscapeString(access.Signer.Name),
 		html.EscapeString(contractLink),
-		html.EscapeString(activationLink),
+		html.EscapeString(contactLink),
 	)
 
 	textBody := fmt.Sprintf(
-		"Seu contrato ViaGate foi assinado com sucesso.\n\nBaixar contrato assinado: %s\n\nContinuar preparação da implantação, se necessário: %s",
+		"Seu contrato ViaGate foi assinado com sucesso.\n\nBaixar contrato assinado: %s\n\nConfirmar contato da implantação: %s",
 		contractLink,
-		activationLink,
+		contactLink,
 	)
 
 	return notifications.EnqueueWithOptions(ctx, a.pool, notifications.MessageOptions{

@@ -56,3 +56,148 @@
 		justify-content: center;
 	}
 }
+
+
+/* Ajustes locais da confirmação pós-assinatura; mantém os componentes globais. */
+.implementation-contact-page {
+  max-width: 760px;
+  padding-top: 56px;
+}
+
+.implementation-contact-card {
+  padding: 34px;
+}
+
+.implementation-contact-card > .badge.success {
+  margin-bottom: 24px;
+  font-size: 10px;
+  letter-spacing: .03em;
+}
+
+.implementation-contact-card .public-flow-header {
+  margin-bottom: 26px;
+}
+
+.implementation-contact-card .public-flow-header h1 {
+  margin: 8px 0 10px;
+  font-size: clamp(24px, 4vw, 32px);
+  line-height: 1.15;
+  letter-spacing: -.025em;
+}
+
+.implementation-contact-card .public-flow-header p {
+  max-width: 560px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.implementation-contact-card .notice:not(.error) {
+  border-left-color: var(--success);
+  background: #f2faf5;
+  color: #166534;
+}
+
+.implementation-contact-options {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.implementation-contact-options legend {
+  margin-bottom: 12px;
+  padding: 0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.implementation-contact-choices {
+  gap: 12px;
+}
+
+.implementation-contact-choice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 80px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  background: var(--white);
+  cursor: pointer;
+}
+
+.implementation-contact-choice:has(input:checked) {
+  border-color: var(--orange);
+  background: #fffaf6;
+}
+
+.implementation-contact-choice input[type="radio"] {
+  flex: 0 0 16px;
+  width: 16px;
+  min-width: 16px;
+  height: 16px;
+  min-height: 16px;
+  padding: 0;
+  margin: 0;
+}
+
+.implementation-contact-choice span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.implementation-contact-choice strong {
+  font-size: 13px;
+  color: var(--deep);
+}
+
+.implementation-contact-choice small {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.implementation-contact-team {
+  margin-top: 20px;
+}
+
+.implementation-contact-team[hidden] {
+  display: none;
+}
+
+.implementation-contact-actions {
+  align-items: center;
+  margin-top: 26px;
+}
+
+.implementation-contact-actions .btn {
+  min-height: 44px;
+}
+
+@media (max-width: 800px) {
+  .implementation-contact-page {
+    padding-top: 20px;
+  }
+
+  .implementation-contact-card {
+    padding: 24px 18px;
+  }
+
+  .implementation-contact-choices {
+    grid-template-columns: 1fr;
+  }
+
+  .implementation-contact-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .implementation-contact-actions .btn {
+    width: 100%;
+  }
+}

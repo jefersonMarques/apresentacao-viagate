@@ -328,6 +328,11 @@ func (a *App) proposalInputFromForm(r *http.Request, salesperson domain.User) (p
 		ContactRole:        strings.TrimSpace(r.FormValue("contact_role")),
 		ContactEmail:       strings.TrimSpace(r.FormValue("contact_email")),
 		ContactPhone:       strings.TrimSpace(r.FormValue("contact_phone")),
+		SignerName:         strings.TrimSpace(r.FormValue("signer_name")),
+		SignerCPF:          strings.TrimSpace(r.FormValue("signer_cpf")),
+		SignerRole:         strings.TrimSpace(r.FormValue("signer_role")),
+		SignerEmail:        strings.TrimSpace(r.FormValue("signer_email")),
+		SignerPhone:        strings.TrimSpace(r.FormValue("signer_phone")),
 		Title:              strings.TrimSpace(r.FormValue("title")),
 		OperationContext:   strings.TrimSpace(r.FormValue("operation_context")),
 		CustomerPriorities: multilineValues(r.FormValue("customer_priorities")),
@@ -394,6 +399,27 @@ func (a *App) proposalInputFromForm(r *http.Request, salesperson domain.User) (p
 			return input, fmt.Errorf("Telefone do contato inválido.")
 		}
 		input.ContactPhone = contactPhone
+	}
+	if input.SignerCPF != "" {
+		cpf, err := cleanCPF(input.SignerCPF)
+		if err != nil {
+			return input, fmt.Errorf("CPF do responsável pela assinatura inválido.")
+		}
+		input.SignerCPF = cpf
+	}
+	if input.SignerEmail != "" {
+		email, err := cleanEmail(input.SignerEmail, false)
+		if err != nil {
+			return input, fmt.Errorf("E-mail do responsável pela assinatura inválido.")
+		}
+		input.SignerEmail = email
+	}
+	if input.SignerPhone != "" {
+		phone, err := cleanPhone(input.SignerPhone, false)
+		if err != nil {
+			return input, fmt.Errorf("Telefone do responsável pela assinatura inválido.")
+		}
+		input.SignerPhone = phone
 	}
 	if value := strings.TrimSpace(r.FormValue("valid_until")); value != "" {
 		date, err := time.Parse("2006-01-02", value)
@@ -494,6 +520,7 @@ func (a *App) proposalInputFromForm(r *http.Request, salesperson domain.User) (p
 			"district": input.ClientDistrict, "city": input.ClientCity, "state": input.ClientState, "postal_code": input.ClientPostalCode,
 		},
 		"contact":             map[string]any{"name": input.ContactName, "role": input.ContactRole, "email": input.ContactEmail, "phone": input.ContactPhone},
+		"signer":              map[string]any{"name": input.SignerName, "cpf": input.SignerCPF, "role": input.SignerRole, "email": input.SignerEmail, "phone": input.SignerPhone},
 		"operation_context":   input.OperationContext,
 		"customer_priorities": input.CustomerPriorities,
 		"solution_title":      input.SolutionTitle,

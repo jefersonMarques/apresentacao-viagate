@@ -1,209 +1,328 @@
 package templates
 
 import (
-	"fmt"
+    "fmt"
 
-	"github.com/jefersonMarques/apresentacao-viagate/internal/activation"
-	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
-	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/brfields"
+    "github.com/jefersonMarques/apresentacao-viagate/internal/activation"
+    "github.com/jefersonMarques/apresentacao-viagate/internal/domain"
+    "github.com/jefersonMarques/apresentacao-viagate/internal/platform/brfields"
 )
 
 templ ActivationPage(access activation.Access, token, message, errorMessage string) {
-	@PublicFlowLayout("ViaGate — Preparação da implantação") {
-		<link rel="stylesheet" href="/commercial-assets/activation.css"/>
-		<link rel="stylesheet" href="/commercial-assets/activation-public.css"/>
-		<div class="public activation-public">
-			<main class="proposal-page activation-page" data-activation-access-section={ access.Section }>
-				<header class="activation-hero">
-					<span class="step-title">PREPARAÇÃO DA IMPLANTAÇÃO</span>
-					<h1>Vamos preparar sua operação.</h1>
-					<p>O contrato e a preparação da operação seguem em paralelo. Você pode concluir estes dados agora ou encaminhar o preenchimento para alguém da sua equipe.</p>
-					<div class="activation-status-line"><strong>{ ActivationStatusLabel(access.Profile.Status) }</strong> · { access.Profile.LegalName }</div>
-					@PublicProposalLink("/activation/" + token + "/proposal")
-				</header>
+    @PublicFlowLayout("ViaGate — Dados para implantação") {
+        <link rel="stylesheet" href="/commercial-assets/activation.css"/>
+        <link rel="stylesheet" href="/commercial-assets/activation-public.css"/>
+        <div class="public activation-public">
+            <main class="proposal-page activation-page" data-activation-access-section={ access.Section } data-activation-wizard>
+                <header class="activation-hero">
+                    <span class="step-title">IMPLANTAÇÃO VIAGATE</span>
+                    <h1>Vamos preparar sua implantação.</h1>
+                    if access.Section == "all" {
+                        <p>Preencha uma etapa por vez. Revise os dados antes de confirmar.</p>
+                    } else {
+                        <p>Você foi indicado para completar esta etapa. Preencha os dados e salve.</p>
+                    }
+                    <div class="activation-status-line"><strong>{ access.Profile.LegalName }</strong></div>
+                </header>
 
-				@PublicFlashMessages(message, errorMessage)
+                @PublicFlashMessages(message, errorMessage)
 
-				<section class="activation-progress">
-					if access.Profile.RequiresPolicy {
-						<div class={ "activation-progress-item " + activationDoneClass(access.Profile.HasPolicy) }><span></span><strong>Apólice</strong></div>
-					}
-					<div class={ "activation-progress-item " + activationDoneClass(access.Profile.FinanceResponsibleName != "") }><span></span><strong>Financeiro</strong></div>
-					if access.Profile.RequiresPolicy {
-						<div class={ "activation-progress-item " + activationDoneClass(len(access.Profile.Goods) > 0) }><span></span><strong>Mercadorias</strong></div>
-					}
-					<div class={ "activation-progress-item " + activationDoneClass(len(access.Profile.SystemUsers) > 0) }><span></span><strong>Usuários</strong></div>
-				</section>
+                if ActivationFinished(access.Profile) {
+                    <section class="accept-box activation-complete-box activation-wizard-success" role="status">
+                        <span class="activation-success-mark" aria-hidden="true">✓</span>
+                        <span class="step-title">DADOS RECEBIDOS</span>
+                        <h2>Dados enviados com sucesso!</h2>
+                        <p>Recebemos suas informações. O comercial cuidará dos dados operacionais e nossa equipe dará continuidade à implantação.</p>
+                        if !ActivationContractSigned(access.Profile) {
+                            <p>A implantação interna permanece aguardando a assinatura do contrato.</p>
+                        }
+                    </section>
+                }
+                if !ActivationFinished(access.Profile) {
+                    <div class="activation-step-summary" aria-live="polite">
+                        <strong data-activation-step-count>Etapa</strong>
+                        <span data-activation-step-label>Preparação</span>
+                    </div>
+                    <nav class="activation-progress" aria-label="Etapas da preparação">
+                        for index, step := range ActivationSteps(access) {
+                            <button
+                                class={ "activation-progress-item " + activationDoneClass(step.Complete) }
+                                type="button"
+                                data-activation-step-link={ step.Key }
+                                data-activation-complete={ BoolString(step.Complete) }
+                            >
+                                <span class="activation-progress-number" aria-hidden="true">{ fmt.Sprint(index + 1) }</span>
+                                <strong>{ step.Label }</strong>
+                                if step.Complete && step.Key != "review" {
+                                    <span class="activation-progress-check" aria-label="Concluída">✓</span>
+                                }
+                            </button>
+                        }
+                    </nav>
 
-				<section class="accept-box activation-readonly">
-					<span class="step-title">DADOS JÁ CONFIRMADOS</span>
-					<h2>Não é necessário preencher novamente</h2>
-					<div class="activation-summary-grid">
-						<div><small>Empresa</small><strong>{ access.Profile.LegalName }</strong><span>{ brfields.FormatCNPJ(access.Profile.CNPJ) }</span></div>
-						<div><small>Endereço</small><strong>{ ActivationAddress(access.Profile) }</strong></div>
-						if access.Profile.RequiresPolicy {
-							<div><small>Operação</small><strong>{ humanOperationType(access.Profile.OperationType) }</strong><span>{ access.Profile.Insurer }</span></div>
-						}
-						<div><small>Responsável pela empresa</small><strong>{ access.Profile.CompanyResponsibleName }</strong><span>{ access.Profile.CompanyResponsibleEmail } · { brfields.FormatPhone(access.Profile.CompanyResponsiblePhone) }</span></div>
-					</div>
-					<p class="activation-lock-note">Esses dados vieram da contratação e permanecem vinculados ao contrato gerado. Alterações operacionais nesta etapa não modificam o documento contratual.</p>
-				</section>
+                    if ActivationCanView(access, "policy") {
+                        <section class="accept-box activation-wizard-panel" id="apolice" data-activation-step="policy" data-policy-present={ BoolString(access.Profile.HasPolicy) }>
+                            <span class="step-title">APÓLICE</span>
+                            <h2>Envie a apólice</h2>
+                            <p>Selecione o arquivo da apólice para a implantação.</p>
+                            if ActivationCanEdit(access, "policy") {
+                                <form method="post" action={ templ.SafeURL("/activation/" + token + "/policy?step=policy") } enctype="multipart/form-data" data-activation-step-form>
+                                    if access.Profile.HasPolicy {
+                                        <div class="badge success activation-policy-received">Apólice recebida</div>
+                                    }
+                                    <div class="field activation-policy-field">
+                                        <label for="activation-policy-document">Arquivo da apólice</label>
+                                        <div class="upload-drop activation-policy-upload" data-activation-policy-upload>
+                                            <input
+                                                id="activation-policy-document"
+                                                class="activation-policy-input"
+                                                name="document"
+                                                type="file"
+                                                accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                                                required?={ !access.Profile.HasPolicy }
+                                                aria-describedby="activation-policy-help activation-policy-feedback"
+                                                data-activation-policy-input
+                                            />
+                                            <label class="activation-policy-picker" for="activation-policy-document">
+                                                <strong data-activation-policy-filename>Selecione um arquivo</strong>
+                                                <span class="activation-policy-hint">Toque para escolher no dispositivo</span>
+                                                <span class="btn activation-policy-select" aria-hidden="true">Escolher arquivo</span>
+                                                <small id="activation-policy-help">PDF, JPG ou PNG · até 15 MB</small>
+                                            </label>
+                                        </div>
+                                        <p class="activation-policy-feedback" id="activation-policy-feedback" data-activation-policy-feedback role="status" aria-live="polite"></p>
+                                    </div>
+                                    <div class="activation-form-actions">
+                                        <button class="btn ghost" type="button" data-activation-previous>Voltar</button>
+                                        if access.Profile.HasPolicy {
+                                            <button class="btn ghost" type="button" data-activation-next>Continuar</button>
+                                        }
+                                        <button class="btn dark" type="submit" data-activation-policy-submit data-processing="Enviando apólice..." disabled?={ access.Profile.HasPolicy }>{ ActivationPolicyButton(access.Profile.HasPolicy) } e continuar</button>
+                                    </div>
+                                </form>
+                            } else {
+                                <div class="activation-answer"><strong>{ ActivationPolicyStatus(access.Profile.HasPolicy) }</strong></div>
+                                @ActivationReadonlyNavigation()
+                            }
+                        </section>
+                    }
 
-				if !ActivationContractSigned(access.Profile) {
-					<section class="notice">
-						<strong>Contrato aguardando assinatura.</strong>
-						<span>Você pode concluir toda a preparação agora. A implantação interna só será liberada depois que o contrato for assinado.</span>
-					</section>
-				}
+                    if ActivationCanView(access, "finance") {
+                        <section class="accept-box activation-wizard-panel" id="financeiro" data-activation-step="finance">
+                            <span class="step-title">FINANCEIRO</span>
+                            <h2>Quem será o contato financeiro?</h2>
+                            <p>Indique a pessoa responsável pelo faturamento.</p>
+                            if ActivationCanEdit(access, "finance") {
+                                <form method="post" action={ templ.SafeURL("/activation/" + token + "/finance?step=finance") } class="grid" data-activation-step-form>
+                                    <div class="field"><label>Nome</label><input name="finance_name" value={ access.Profile.FinanceResponsibleName } required/></div>
+                                    <div class="field"><label>Telefone</label><input name="finance_phone" value={ brfields.FormatPhone(access.Profile.FinanceResponsiblePhone) } inputmode="tel" required/></div>
+                                    <div class="field full"><label>E-mail</label><input type="email" name="finance_email" value={ access.Profile.FinanceResponsibleEmail } required/></div>
+                                    <div class="field full activation-form-actions">
+                                        <button class="btn ghost" type="button" data-activation-previous>Voltar</button>
+                                        <button class="btn dark" type="submit" data-processing="Salvando contato...">Salvar e continuar</button>
+                                    </div>
+                                </form>
+                            } else {
+                                <div class="activation-answer"><strong>{ access.Profile.FinanceResponsibleName }</strong><span>{ access.Profile.FinanceResponsibleEmail } · { brfields.FormatPhone(access.Profile.FinanceResponsiblePhone) }</span></div>
+                                @ActivationReadonlyNavigation()
+                            }
+                        </section>
+                    }
 
-				if access.Profile.RequiresPolicy {
-					<section class="accept-box" id="apolice" data-policy-present={ BoolString(access.Profile.HasPolicy) }>
-						<span class="step-title">1 · APÓLICE</span>
-						<h2>Envie a apólice da operação</h2>
-						<p>O arquivo não faz parte do contrato. Ele será usado pela equipe de implantação e pode ser enviado enquanto o contrato aguarda assinatura.</p>
-						if ActivationCanEdit(access, "policy") {
-							<form method="post" action={ templ.SafeURL("/activation/" + token + "/policy") } enctype="multipart/form-data">
-								<div class="field">
-									<label>Apólice</label>
-									<input name="document" type="file" accept="application/pdf,image/jpeg,image/png" required/>
-								</div>
-								<p class="activation-step-requirement">PDF, JPG ou PNG · máximo 15 MB.</p>
-								<div class="actions activation-step-actions">
-									<span>{ ActivationPolicyStatus(access.Profile.HasPolicy) }</span>
-									<button class="btn dark" type="submit" data-processing="Enviando apólice...">{ ActivationPolicyButton(access.Profile.HasPolicy) }</button>
-								</div>
-							</form>
-						} else {
-							<div class="activation-answer"><strong>{ ActivationPolicyStatus(access.Profile.HasPolicy) }</strong></div>
-						}
-					</section>
-				}
+                    if ActivationCanView(access, "goods") {
+                        <section class="accept-box activation-wizard-panel" id="mercadorias" data-activation-step="goods">
+                            <span class="step-title">MERCADORIAS</span>
+                            <h2>Quais mercadorias vocês transportam?</h2>
+                            <p>Informe pelo menos um tipo de mercadoria.</p>
+                            if ActivationCanEdit(access, "goods") {
+                                <form method="post" action={ templ.SafeURL("/activation/" + token + "/goods?step=goods") } data-activation-step-form>
+                                    <div data-activation-goods data-persisted-complete={ BoolString(len(access.Profile.Goods) > 0) }>
+                                        if len(access.Profile.Goods) == 0 {
+                                            <div class="activation-repeat-row"><input name="goods" placeholder="Ex.: Alimentos refrigerados" required/><button type="button" class="btn ghost activation-remove" aria-label="Remover mercadoria">×</button></div>
+                                        }
+                                        for _, good := range access.Profile.Goods {
+                                            <div class="activation-repeat-row"><input name="goods" value={ good } required/><button type="button" class="btn ghost activation-remove" aria-label="Remover mercadoria">×</button></div>
+                                        }
+                                    </div>
+                                    <div class="activation-form-actions">
+                                        <button class="btn ghost" type="button" data-add-activation-good>+ Adicionar mercadoria</button>
+                                        <button class="btn ghost" type="button" data-activation-previous>Voltar</button>
+                                        <button class="btn dark" type="submit" data-activation-section-save="goods" data-processing="Salvando mercadorias..." disabled?={ len(access.Profile.Goods) == 0 }>Salvar e continuar</button>
+                                    </div>
+                                </form>
+                            } else {
+                                <div class="activation-tags">
+                                    for _, good := range access.Profile.Goods {
+                                        <span>{ good }</span>
+                                    }
+                                </div>
+                                @ActivationReadonlyNavigation()
+                            }
+                        </section>
+                    }
 
-				<section class="accept-box" id="financeiro">
-					if access.Profile.RequiresPolicy {
-						<span class="step-title">2 · FINANCEIRO</span>
-					} else {
-						<span class="step-title">1 · FINANCEIRO</span>
-					}
-					<h2>Quem será o contato financeiro?</h2>
-					<p>Essa pessoa receberá os contatos relacionados a faturamento e assuntos financeiros da operação.</p>
-					if ActivationCanEdit(access, "finance") {
-						<form method="post" action={ templ.SafeURL("/activation/" + token + "/finance") } class="grid">
-							<div class="field"><label>Nome</label><input name="finance_name" value={ access.Profile.FinanceResponsibleName } required/></div>
-							<div class="field"><label>Telefone</label><input name="finance_phone" value={ brfields.FormatPhone(access.Profile.FinanceResponsiblePhone) } inputmode="tel" required/></div>
-							<div class="field full"><label>E-mail</label><input type="email" name="finance_email" value={ access.Profile.FinanceResponsibleEmail } required/></div>
-							<div class="field full"><button class="btn dark" type="submit" data-processing="Salvando...">Salvar contato financeiro</button></div>
-						</form>
-					} else {
-						<div class="activation-answer"><strong>{ access.Profile.FinanceResponsibleName }</strong><span>{ access.Profile.FinanceResponsibleEmail } · { brfields.FormatPhone(access.Profile.FinanceResponsiblePhone) }</span></div>
-					}
-				</section>
+                    if ActivationCanView(access, "users") {
+                        <section class="accept-box activation-wizard-panel" id="usuarios" data-activation-step="users">
+                            <span class="step-title">USUÁRIOS</span>
+                            <h2>Quem utilizará o sistema?</h2>
+                            <p>Informe os primeiros usuários. Outros poderão ser cadastrados depois.</p>
+                            if ActivationCanEdit(access, "users") {
+                                <form method="post" action={ templ.SafeURL("/activation/" + token + "/users?step=users") } data-activation-step-form>
+                                    <div data-activation-users data-persisted-complete={ BoolString(len(access.Profile.SystemUsers) > 0) }>
+                                        if len(access.Profile.SystemUsers) == 0 {
+                                            <div class="activation-user-row"><label class="field activation-repeat-field">Nome<input name="system_user_name" autocomplete="name" placeholder="Nome completo" required/></label><label class="field activation-repeat-field">Telefone (opcional)<input name="system_user_phone" autocomplete="tel" inputmode="tel" placeholder="(00) 00000-0000"/></label><label class="field activation-repeat-field">E-mail<input type="email" name="system_user_email" autocomplete="email" placeholder="nome@empresa.com.br" required/></label><button type="button" class="btn ghost activation-remove" aria-label="Remover usuário">×</button></div>
+                                        }
+                                        for _, systemUser := range access.Profile.SystemUsers {
+                                            <div class="activation-user-row"><label class="field activation-repeat-field">Nome<input name="system_user_name" value={ systemUser.Name } required/></label><label class="field activation-repeat-field">Telefone (opcional)<input name="system_user_phone" inputmode="tel" value={ brfields.FormatPhone(systemUser.Phone) }/></label><label class="field activation-repeat-field">E-mail<input type="email" name="system_user_email" value={ systemUser.Email } required/></label><button type="button" class="btn ghost activation-remove" aria-label="Remover usuário">×</button></div>
+                                        }
+                                    </div>
+                                    <div class="activation-form-actions">
+                                        <button class="btn ghost" type="button" data-add-activation-user>+ Adicionar usuário</button>
+                                        <button class="btn ghost" type="button" data-activation-previous>Voltar</button>
+                                        <button class="btn dark" type="submit" data-activation-section-save="users" data-processing="Salvando usuários..." disabled?={ len(access.Profile.SystemUsers) == 0 }>Salvar e continuar</button>
+                                    </div>
+                                </form>
+                            } else {
+                                <div class="activation-user-list">
+                                    for _, systemUser := range access.Profile.SystemUsers {
+                                        <div><strong>{ systemUser.Name }</strong><span>{ systemUser.Email } · { brfields.FormatPhone(systemUser.Phone) }</span></div>
+                                    }
+                                </div>
+                                @ActivationReadonlyNavigation()
+                            }
+                        </section>
+                    }
 
-				if access.Profile.RequiresPolicy {
-				<section class="accept-box" id="mercadorias">
-					<span class="step-title">3 · OPERAÇÃO</span>
-					<h2>Quais mercadorias vocês transportam?</h2>
-					<p>Liste os principais tipos. Você pode adicionar quantos forem necessários.</p>
-					if ActivationCanEdit(access, "goods") {
-						<form method="post" action={ templ.SafeURL("/activation/" + token + "/goods") }>
-							<div data-activation-goods data-persisted-complete={ BoolString(len(access.Profile.Goods) > 0) }>
-								if len(access.Profile.Goods) == 0 {
-									<div class="activation-repeat-row"><input name="goods" placeholder="Ex.: Queijos frescos" required/><button type="button" class="btn ghost activation-remove" aria-label="Remover">×</button></div>
-								}
-								for _, good := range access.Profile.Goods {
-									<div class="activation-repeat-row"><input name="goods" value={ good } required/><button type="button" class="btn ghost activation-remove" aria-label="Remover">×</button></div>
-								}
-							</div>
-							<p class="activation-step-requirement">Obrigatório: informe pelo menos uma mercadoria.</p>
-							<div class="actions activation-step-actions"><button type="button" class="btn ghost" data-add-activation-good>+ Adicionar mercadoria</button><button class="btn dark" type="submit" data-activation-section-save="goods" data-processing="Salvando..." disabled?={ len(access.Profile.Goods) == 0 }>Salvar e continuar</button></div>
-						</form>
-					} else {
-						<div class="activation-tags">
-							for _, good := range access.Profile.Goods {
-								<span>{ good }</span>
-							}
-						</div>
-					}
-				</section>
-				}
+                    if access.Section == "all" {
+                        <section class="accept-box activation-wizard-panel activation-review" data-activation-step="review" id="revisao">
+                            <span class="step-title">REVISÃO FINAL</span>
+                            <h2>Confira os dados da implantação</h2>
+                            <p>Revise as informações salvas. Se precisar corrigir alguma etapa, selecione Editar.</p>
 
-				<section class="accept-box" id="usuarios">
-					if access.Profile.RequiresPolicy {
-						<span class="step-title">4 · ACESSOS</span>
-					} else {
-						<span class="step-title">2 · ACESSOS</span>
-					}
-					<h2>Quem utilizará o sistema?</h2>
-					<p>Informe apenas quem precisa receber acesso inicialmente. Outros usuários poderão ser cadastrados depois.</p>
-					if ActivationCanEdit(access, "users") {
-						<form method="post" action={ templ.SafeURL("/activation/" + token + "/users") }>
-							<div data-activation-users data-persisted-complete={ BoolString(len(access.Profile.SystemUsers) > 0) }>
-								if len(access.Profile.SystemUsers) == 0 {
-									<div class="activation-user-row"><input name="system_user_name" placeholder="Nome" required/><input name="system_user_phone" placeholder="Telefone"/><input type="email" name="system_user_email" placeholder="E-mail" required/><button type="button" class="btn ghost activation-remove" aria-label="Remover">×</button></div>
-								}
-								for _, systemUser := range access.Profile.SystemUsers {
-									<div class="activation-user-row"><input name="system_user_name" value={ systemUser.Name } required/><input name="system_user_phone" value={ brfields.FormatPhone(systemUser.Phone) }/><input type="email" name="system_user_email" value={ systemUser.Email } required/><button type="button" class="btn ghost activation-remove" aria-label="Remover">×</button></div>
-								}
-							</div>
-							<p class="activation-step-requirement">Obrigatório: informe pelo menos um usuário com nome e e-mail válidos.</p>
-							<div class="actions activation-step-actions"><button type="button" class="btn ghost" data-add-activation-user>+ Adicionar usuário</button><button class="btn dark" type="submit" data-activation-section-save="users" data-processing="Salvando..." disabled?={ len(access.Profile.SystemUsers) == 0 }>Salvar e revisar</button></div>
-						</form>
-					} else {
-						<div class="activation-user-list">
-							for _, systemUser := range access.Profile.SystemUsers {
-								<div><strong>{ systemUser.Name }</strong><span>{ systemUser.Email } · { brfields.FormatPhone(systemUser.Phone) }</span></div>
-							}
-						</div>
-					}
-				</section>
+                            <div class="activation-review-card">
+                                <div class="activation-review-head"><h3>Empresa</h3><span>Confirmada na contratação</span></div>
+                                @PublicDataGrid() {
+                                    @PublicDataField("Empresa") {
+                                        <strong>{ access.Profile.LegalName }</strong>
+                                        <span>{ brfields.FormatCNPJ(access.Profile.CNPJ) }</span>
+                                    }
+                                    @PublicDataField("Endereço") {
+                                        <span>{ ActivationAddress(access.Profile) }</span>
+                                    }
+                                    @PublicDataField("Responsável pela empresa") {
+                                        <strong>{ access.Profile.CompanyResponsibleName }</strong>
+                                        <span>{ access.Profile.CompanyResponsibleEmail } · { brfields.FormatPhone(access.Profile.CompanyResponsiblePhone) }</span>
+                                    }
+                                }
+                            </div>
 
-				if access.AccessType == "owner" && access.Section == "all" && access.Profile.Status != "completed" && access.Profile.Status != "under_internal_setup" && access.Profile.Status != "activated" {
-					<section class="accept-box activation-delegate">
-						<span class="step-title">ENCAMINHAR PREENCHIMENTO</span>
-						<h2>Outra pessoa pode finalizar estes dados</h2>
-						<p>Envie um link individual para um funcionário ou responsável da sua equipe. O contrato continuará com o responsável legal, sem impedir o preenchimento operacional.</p>
-						<form method="post" action={ templ.SafeURL("/activation/" + token + "/delegate") } class="grid">
-							<div class="field"><label>Nome</label><input name="delegate_name" required/></div>
-							<div class="field"><label>E-mail</label><input type="email" name="delegate_email" required/></div>
-							<div class="field full">
-								<label>O que poderá preencher</label>
-								<select name="delegate_section">
-									<option value="all">Toda a preparação</option>
-									<option value="finance">Somente financeiro</option>
-									if access.Profile.RequiresPolicy {
-										<option value="goods">Somente mercadorias</option>
-									}
-									<option value="users">Somente usuários</option>
-								</select>
-							</div>
-							<div class="field full"><button class="btn ghost" type="submit" data-processing="Enviando convite...">Enviar convite</button></div>
-						</form>
-					</section>
-				}
+                            if access.Profile.RequiresPolicy {
+                                <div class="activation-review-card">
+                                    <div class="activation-review-head"><h3>Apólice</h3><button class="btn ghost" type="button" data-activation-edit="policy">Editar</button></div>
+                                    <p>{ ActivationPolicyStatus(access.Profile.HasPolicy) }</p>
+                                </div>
+                            }
 
-				if access.Profile.Status == "completed" || access.Profile.Status == "under_internal_setup" || access.Profile.Status == "activated" {
-					<section class="accept-box activation-complete-box">
-						<span class="step-title">DADOS RECEBIDOS</span>
-						if ActivationContractSigned(access.Profile) {
-							<h2>A ViaGate já pode prosseguir.</h2>
-							<p>As informações necessárias foram recebidas e o contrato está assinado. A implantação interna pode avançar.</p>
-						} else {
-							<h2>Preparação concluída.</h2>
-							<p>Os dados foram recebidos. Agora falta apenas a assinatura do contrato para liberar a implantação interna.</p>
-						}
-					</section>
-				} else if ActivationComplete(access.Profile) {
-					<section class="accept-box activation-submit-box">
-						<span class="step-title">ÚLTIMO PASSO</span>
-						<h2>Todos os dados necessários estão preenchidos.</h2>
-						<p>Revise as informações acima e conclua a preparação. Se o contrato ainda estiver pendente, a implantação ficará aguardando apenas a assinatura.</p>
-						<form method="post" action={ templ.SafeURL("/activation/" + token + "/submit") }><button class="btn primary" type="submit" data-processing="Enviando dados...">Concluir preparação</button></form>
-					</section>
-				}
-			</main>
-			<script src="/commercial-assets/activation.js" defer></script>
-		</div>
-	}
+                            <div class="activation-review-card">
+                                <div class="activation-review-head"><h3>Contato financeiro</h3><button class="btn ghost" type="button" data-activation-edit="finance">Editar</button></div>
+                                if ActivationFinanceComplete(access.Profile) {
+                                    @PublicDataGrid() {
+                                        @PublicDataField("Nome") {
+                                            <strong>{ access.Profile.FinanceResponsibleName }</strong>
+                                        }
+                                        @PublicDataField("Telefone") {
+                                            <span>{ brfields.FormatPhone(access.Profile.FinanceResponsiblePhone) }</span>
+                                        }
+                                        @PublicDataField("E-mail") {
+                                            <span>{ access.Profile.FinanceResponsibleEmail }</span>
+                                        }
+                                    }
+                                } else {
+                                    <p class="activation-review-pending">Contato financeiro pendente.</p>
+                                }
+                            </div>
+
+                            if access.Profile.RequiresPolicy {
+                                <div class="activation-review-card">
+                                    <div class="activation-review-head"><h3>Mercadorias</h3><button class="btn ghost" type="button" data-activation-edit="goods">Editar</button></div>
+                                    if len(access.Profile.Goods) > 0 {
+                                        <div class="activation-tags">
+                                            for _, good := range access.Profile.Goods {
+                                            <span>{ good }</span>
+                                        }
+                                        </div>
+                                    } else {
+                                        <p class="activation-review-pending">Nenhuma mercadoria informada.</p>
+                                    }
+                                </div>
+                            }
+
+                            <div class="activation-review-card">
+                                <div class="activation-review-head"><h3>Usuários iniciais</h3><button class="btn ghost" type="button" data-activation-edit="users">Editar</button></div>
+                                if len(access.Profile.SystemUsers) > 0 {
+                                    <div class="activation-user-list">
+                                        for _, user := range access.Profile.SystemUsers {
+                                            <div><strong>{ user.Name }</strong><span>{ user.Email } · { brfields.FormatPhone(user.Phone) }</span></div>
+                                        }
+                                    </div>
+                                } else {
+                                    <p class="activation-review-pending">Nenhum usuário informado.</p>
+                                }
+                            </div>
+
+                            if access.AccessType == "owner" {
+                                <details class="activation-delegate-details">
+                                    <summary>Encaminhar uma etapa para outra pessoa</summary>
+                                    <p>Envie um link individual para alguém que possa ajudar no preenchimento.</p>
+                                    <form method="post" action={ templ.SafeURL("/activation/" + token + "/delegate?step=review") } class="grid">
+                                        <div class="field"><label>Nome</label><input name="delegate_name" required/></div>
+                                        <div class="field"><label>E-mail</label><input type="email" name="delegate_email" required/></div>
+                                        <div class="field full">
+                                            <label>Etapas autorizadas</label>
+                                            <select name="delegate_section">
+                                                <option value="all">Toda a preparação</option>
+                                                <option value="finance">Somente financeiro</option>
+                                                if access.Profile.RequiresPolicy {
+                                                    <option value="goods">Somente mercadorias</option>
+                                                }
+                                                <option value="users">Somente usuários</option>
+                                            </select>
+                                        </div>
+                                        <div class="field full"><button class="btn ghost" type="submit" data-processing="Enviando convite...">Enviar convite</button></div>
+                                    </form>
+                                </details>
+                            }
+
+                            if !ActivationComplete(access.Profile) {
+                                <p class="activation-review-pending" role="status">Existem etapas pendentes. Complete os dados antes de confirmar.</p>
+                            } else if !ActivationContractSigned(access.Profile) {
+                                <p class="activation-review-pending">Seus dados foram concluídos. A equipe ViaGate acompanhará as demais pendências da implantação.</p>
+                            }
+
+                            <div class="activation-form-actions">
+                                <button class="btn ghost" type="button" data-activation-previous>Voltar</button>
+                                <form method="post" action={ templ.SafeURL("/activation/" + token + "/submit?step=review") }>
+                                    <button class="btn primary" type="submit" data-processing="Confirmando dados..." disabled?={ !ActivationComplete(access.Profile) }>Confirmar dados da implantação</button>
+                                </form>
+                            </div>
+                        </section>
+                    }
+
+                    if access.Section != "all" {
+                        <p class="activation-scoped-note">Seu acesso permite preencher apenas esta etapa. Depois de salvar, os dados ficam disponíveis para a equipe de implantação.</p>
+                    }
+                }
+            </main>
+            <script src="/commercial-assets/activation.js" defer></script>
+        </div>
+    }
+}
+
+templ ActivationReadonlyNavigation() {
+    <div class="activation-form-actions">
+        <button class="btn ghost" type="button" data-activation-previous>Voltar</button>
+        <button class="btn dark" type="button" data-activation-next>Continuar</button>
+    </div>
 }
 
 templ ActivationsAdminPage(user domain.User, items []activation.AdminItem) {
@@ -223,10 +342,10 @@ templ ActivationsAdminPage(user domain.User, items []activation.AdminItem) {
 			}
 			@AdminDataTable([]string{"Cliente", "Comercial", "Status", "Dados", "Contrato", "Ações"}, len(items), "Nenhuma ativação encontrada.") {
 				for _, item := range items {
-					<tr data-admin-list-row data-search={ item.ClientName + " " + item.CommercialName + " " + ActivationStatusLabel(item.Status) } data-filter-status={ item.Status }>
+					<tr data-admin-list-row data-search={ item.ClientName + " " + item.CommercialName + " " + ActivationAdminStatusLabel(item) } data-filter-status={ item.Status }>
 						<td data-label="Cliente" data-primary="true"><strong>{ item.ClientName }</strong></td>
 						<td data-label="Comercial">{ item.CommercialName }</td>
-						<td data-label="Status"><span class={ "badge status-badge " + AdminStatusBadgeClass(item.Status) }>{ ActivationStatusLabel(item.Status) }</span></td>
+						<td data-label="Status"><span class={ "badge status-badge " + AdminStatusBadgeClass(item.Status) }>{ ActivationAdminStatusLabel(item) }</span></td>
 						<td data-label="Dados">
 							if item.RequiresPolicy {
 								{ fmt.Sprintf("%d mercadorias · %d usuários", item.GoodsCount, item.SystemUserCount) }
@@ -306,7 +425,20 @@ templ ActivationAdminDetailPage(user domain.User, profile activation.Profile) {
 				</div>
 			</section>
 		</div>
-		if (profile.Status == "completed" || profile.Status == "under_internal_setup") && ActivationContractSigned(profile) {
+        if profile.Status == "completed" && ActivationContractSigned(profile) &&
+            profile.RequiresPolicy && !ActivationOperationComplete(profile) {
+            <section class="panel activation-admin-implementation admin-page-section-gap">
+                <header class="panel-head"><h2>Aguardando operação comercial</h2></header>
+                <div class="panel-body">
+                    <p>Os dados do cliente foram recebidos. O comercial precisa concluir Operação e seguro no Pós-venda.</p>
+                    if UserCan(user, "proposal.create") {
+                        <a class="btn dark" href={ templ.SafeURL("/admin/post-sales/" + profile.ContractID) }>Abrir Pós-venda</a>
+                    }
+                </div>
+            </section>
+        }
+        if (profile.Status == "completed" || profile.Status == "under_internal_setup") &&
+            ActivationContractSigned(profile) && (!profile.RequiresPolicy || ActivationOperationComplete(profile)) {
 			<section class="panel activation-admin-implementation admin-page-section-gap">
 				<header class="panel-head">
 					<div>

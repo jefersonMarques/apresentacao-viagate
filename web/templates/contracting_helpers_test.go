@@ -9,71 +9,48 @@ import (
 	"github.com/jefersonMarques/apresentacao-viagate/internal/domain"
 )
 
-func TestContractingJourneyRequiresExplicitOperationType(t *testing.T) {
-	var output bytes.Buffer
-	component := ContractingJourneyPage(domain.Onboarding{ID: "onboarding-test", RequiresPolicy: true}, "", "", "")
-	if err := component.Render(context.Background(), &output); err != nil {
-		t.Fatalf("render contracting journey: %v", err)
-	}
-
-	html := output.String()
-	if !strings.Contains(html, "name=\"operation_type\" required") {
-		t.Fatal("operation type select must be required")
-	}
-	if !strings.Contains(html, "value=\"\" disabled selected") {
-		t.Fatal("empty operation type must render an explicit selected placeholder")
-	}
-	if strings.Contains(html, "value=\"normal\" selected") {
-		t.Fatal("normal operation must not be selected when the persisted value is empty")
-	}
-}
-
-func TestContractingOperationTypeLabel(t *testing.T) {
-	tests := map[string]string{
-		"normal": "Normal",
-		"avulsa": "Avulsa",
-		"":       "Não informado",
-	}
-	for value, want := range tests {
-		if got := ContractingOperationTypeLabel(value); got != want {
-			t.Fatalf("ContractingOperationTypeLabel(%q) = %q, want %q", value, got, want)
+func TestContractingJourneyDoesNotRequestInsurance(t *testing.T) {
+	for _, requiresPolicy := range []bool{true,false} {
+		var output bytes.Buffer
+		err := ContractingJourneyPage(domain.Onboarding{
+			ID:"onboarding-test",RequiresPolicy:requiresPolicy,
+		},"","","").Render(context.Background(),&output)
+		if err!=nil{
+			t.Fatalf("render contracting journey: %v",err)
+		}
+		markup:=output.String()
+		for _,forbidden:=range []string{
+			`data-contracting-step="insurance"`,
+			`name="operation_type"`,
+			`name="insurer"`,
+			`name="policy_start_date"`,
+			`name="policy_end_date"`,
+		}{
+			if strings.Contains(markup,forbidden){
+				t.Errorf("contracting journey must not request %s",forbidden)
+			}
 		}
 	}
 }
 
-func TestContractingReadyForReview(t *testing.T) {
-	complete := domain.Onboarding{
-		RequiresPolicy:   true,
-		OperationType:    "normal",
-		Insurer:          "Seguradora Teste",
-		PolicyStartDate:  "2026-09-01",
-		PolicyEndDate:    "2027-09-01",
+func TestContractingReadyForReviewRequiresCompanyOnly(t *testing.T) {
+	company:=domain.Onboarding{
+		CNPJ:"39406000000121",LegalName:"Example Company",PostalCode:"82510000",
+		Street:"Main Street",StreetNumber:"100",City:"Curitiba",State:"PR",RequiresPolicy:true,
 	}
-
-	if !ContractingReadyForReview(complete) {
-		t.Fatal("complete persisted contract data should be ready for review without a policy upload")
+	if !ContractingReadyForReview(company){
+		t.Fatal("company should be ready without insurance details")
 	}
-
-	complete.OperationType = ""
-	if ContractingReadyForReview(complete) {
-		t.Fatal("missing operation type must block review")
+	company.CNPJ=""
+	if ContractingReadyForReview(company){
+		t.Fatal("company without CNPJ must not pass")
 	}
 }
 
-
-func TestContractingReadyForReviewSkipsInsuranceWhenNotRequired(t *testing.T) {
-	onboarding := domain.Onboarding{RequiresPolicy: false}
-	if !ContractingReadyForReview(onboarding) {
-		t.Fatal("insurance must not block review when proposal does not require policy")
-	}
-
-	var output bytes.Buffer
-	component := ContractingJourneyPage(domain.Onboarding{ID: "onboarding-test", RequiresPolicy: false}, "", "", "")
-	if err := component.Render(context.Background(), &output); err != nil {
-		t.Fatalf("render contracting journey: %v", err)
-	}
-	html := output.String()
-	if strings.Contains(html, `data-contracting-step="insurance"`) || strings.Contains(html, `name="insurer"`) {
-		t.Fatal("insurance step must not render when proposal does not require policy")
+func TestContractingOperationTypeLabel(t *testing.T) {
+	for value,want:=range map[string]string{"normal":"Normal","avulsa":"Avulsa","":"Não informado"}{
+		if got:=ContractingOperationTypeLabel(value);got!=want{
+			t.Errorf("operation label=%q, want %q",got,want)
+		}
 	}
 }

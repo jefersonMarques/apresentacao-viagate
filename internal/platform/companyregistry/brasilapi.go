@@ -1,104 +1,115 @@
 package companyregistry
 
 import (
-	"context"
-	"encoding/json"
-	"fmt"
-	"net/http"
-	"net/url"
-	"strings"
-	"time"
+    "context"
+    "encoding/json"
+    "fmt"
+    "io"
+    "net/http"
+    "net/url"
+    "strings"
+    "time"
 
-	"github.com/jefersonMarques/apresentacao-viagate/internal/platform/brtaxid"
+    "github.com/jefersonMarques/apresentacao-viagate/internal/platform/brtaxid"
 )
 
 type Company struct {
-	CNPJ          string
-	LegalName     string
-	TradeName     string
-	Email         string
-	Phone         string
-	Street        string
-	Number        string
-	Complement    string
-	District      string
-	City          string
-	State         string
-	PostalCode    string
-	Status        string
-	PrimaryCNAE   string
+    CNPJ        string
+    LegalName   string
+    TradeName   string
+    Email       string
+    Phone       string
+    Street      string
+    Number      string
+    Complement  string
+    District    string
+    City        string
+    State       string
+    PostalCode  string
+    Status      string
+    PrimaryCNAE string
 }
 
 type Provider interface {
-	Lookup(ctx context.Context, cnpj string) (Company, error)
+    Lookup(ctx context.Context, cnpj string) (Company, error)
 }
 
 type BrasilAPI struct {
-	client *http.Client
+    client   *http.Client
+    endpoint string
 }
 
 func NewBrasilAPI(timeout time.Duration) *BrasilAPI {
-	return &BrasilAPI{client: &http.Client{Timeout: timeout}}
+    return &BrasilAPI{
+        client:   &http.Client{Timeout: timeout},
+        endpoint: "https://brasilapi.com.br/api/cnpj/v1/",
+    }
 }
 
 func (b *BrasilAPI) Lookup(ctx context.Context, cnpj string) (Company, error) {
-	normalized,err:=brtaxid.CleanCNPJ(cnpj)
-	if err!=nil{return Company{},fmt.Errorf("invalid CNPJ")}
+    normalized, err := brtaxid.CleanCNPJ(cnpj)
+    if err != nil {
+        return Company{}, fmt.Errorf("invalid CNPJ: %w", err)
+    }
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://brasilapi.com.br/api/cnpj/v1/"+url.PathEscape(normalized), nil)
-	if err != nil {
-		return Company{}, fmt.Errorf("create CNPJ request: %w", err)
-	}
+    endpoint := b.endpoint + url.PathEscape(normalized)
+    request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+    if err != nil {
+        return Company{}, fmt.Errorf("%w: create BrasilAPI request: %v", ErrUnavailable, err)
+    }
+    request.Header.Set("Accept", "application/json")
 
-	resp, err := b.client.Do(req)
-	if err != nil {
-		return Company{}, fmt.Errorf("lookup CNPJ: %w", err)
-	}
-	defer resp.Body.Close()
+    response, err := b.client.Do(request)
+    if err != nil {
+        return Company{}, fmt.Errorf("%w: BrasilAPI request: %v", ErrUnavailable, err)
+    }
+    defer response.Body.Close()
 
-	if resp.StatusCode == http.StatusNotFound {
-		return Company{}, fmt.Errorf("CNPJ not found")
-	}
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return Company{}, fmt.Errorf("CNPJ provider returned status %d", resp.StatusCode)
-	}
+    if response.StatusCode == http.StatusNotFound {
+        return Company{}, fmt.Errorf("%w: BrasilAPI returned HTTP 404", ErrNotFound)
+    }
+    if response.StatusCode != http.StatusOK {
+        return Company{}, fmt.Errorf("%w: BrasilAPI returned HTTP %d", ErrUnavailable, response.StatusCode)
+    }
 
-	var raw struct {
-		CNPJ                string `json:"cnpj"`
-		RazaoSocial         string `json:"razao_social"`
-		NomeFantasia        string `json:"nome_fantasia"`
-		Email               string `json:"email"`
-		DDDTelefone1        string `json:"ddd_telefone_1"`
-		Logradouro          string `json:"logradouro"`
-		Numero              string `json:"numero"`
-		Complemento         string `json:"complemento"`
-		Bairro              string `json:"bairro"`
-		Municipio           string `json:"municipio"`
-		UF                  string `json:"uf"`
-		CEP                 string `json:"cep"`
-		DescricaoSituacao   string `json:"descricao_situacao_cadastral"`
-		CNAEFiscalDescricao string `json:"cnae_fiscal_descricao"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
-		return Company{}, fmt.Errorf("decode CNPJ response: %w", err)
-	}
+    var payload struct {
+        CNPJ                 string `json:"cnpj"`
+        LegalName            string `json:"razao_social"`
+        TradeName            string `json:"nome_fantasia"`
+        Email                string `json:"email"`
+        Phone                string `json:"ddd_telefone_1"`
+        Street               string `json:"logradouro"`
+        Number               string `json:"numero"`
+        Complement           string `json:"complemento"`
+        District             string `json:"bairro"`
+        City                 string `json:"municipio"`
+        State                string `json:"uf"`
+        PostalCode           string `json:"cep"`
+        Status               string `json:"descricao_situacao_cadastral"`
+        PrimaryCNAE          string `json:"cnae_fiscal_descricao"`
+    }
 
-	responseCNPJ:=normalized
-	if candidate,cleanErr:=brtaxid.CleanCNPJ(raw.CNPJ);cleanErr==nil{responseCNPJ=candidate}
-	return Company{
-		CNPJ:        responseCNPJ,
-		LegalName:   strings.TrimSpace(raw.RazaoSocial),
-		TradeName:   strings.TrimSpace(raw.NomeFantasia),
-		Email:       strings.TrimSpace(raw.Email),
-		Phone:       strings.TrimSpace(raw.DDDTelefone1),
-		Street:      strings.TrimSpace(raw.Logradouro),
-		Number:      strings.TrimSpace(raw.Numero),
-		Complement:  strings.TrimSpace(raw.Complemento),
-		District:    strings.TrimSpace(raw.Bairro),
-		City:        strings.TrimSpace(raw.Municipio),
-		State:       strings.TrimSpace(raw.UF),
-		PostalCode:  strings.TrimSpace(raw.CEP),
-		Status:      strings.TrimSpace(raw.DescricaoSituacao),
-		PrimaryCNAE: strings.TrimSpace(raw.CNAEFiscalDescricao),
-	}, nil
+    if err := json.NewDecoder(io.LimitReader(response.Body, 1<<20)).Decode(&payload); err != nil {
+        return Company{}, fmt.Errorf("%w: decode BrasilAPI response: %v", ErrUnavailable, err)
+    }
+    if err := validateCompanyData(normalized, payload.CNPJ, payload.LegalName); err != nil {
+        return Company{}, fmt.Errorf("%w: BrasilAPI response: %v", ErrUnavailable, err)
+    }
+
+    return Company{
+        CNPJ:        normalized,
+        LegalName:   strings.TrimSpace(payload.LegalName),
+        TradeName:   strings.TrimSpace(payload.TradeName),
+        Email:       strings.TrimSpace(payload.Email),
+        Phone:       strings.TrimSpace(payload.Phone),
+        Street:      strings.TrimSpace(payload.Street),
+        Number:      strings.TrimSpace(payload.Number),
+        Complement:  strings.TrimSpace(payload.Complement),
+        District:    strings.TrimSpace(payload.District),
+        City:        strings.TrimSpace(payload.City),
+        State:       strings.TrimSpace(payload.State),
+        PostalCode:  strings.TrimSpace(payload.PostalCode),
+        Status:      strings.TrimSpace(payload.Status),
+        PrimaryCNAE: strings.TrimSpace(payload.PrimaryCNAE),
+    }, nil
 }

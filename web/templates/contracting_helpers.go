@@ -19,16 +19,13 @@ func ContractingOperationTypeLabel(value string) string {
 }
 
 func ContractingReadyForReview(onboarding domain.Onboarding) bool {
-	if !onboarding.RequiresPolicy {
-		return true
-	}
-	operationType := strings.TrimSpace(strings.ToLower(onboarding.OperationType))
-	if operationType != "normal" && operationType != "avulsa" {
-		return false
-	}
-	return strings.TrimSpace(onboarding.Insurer) != "" &&
-		strings.TrimSpace(onboarding.PolicyStartDate) != "" &&
-		strings.TrimSpace(onboarding.PolicyEndDate) != ""
+	return len(strings.TrimSpace(onboarding.CNPJ)) == 14 &&
+		strings.TrimSpace(onboarding.LegalName) != "" &&
+		strings.TrimSpace(onboarding.PostalCode) != "" &&
+		strings.TrimSpace(onboarding.Street) != "" &&
+		strings.TrimSpace(onboarding.StreetNumber) != "" &&
+		strings.TrimSpace(onboarding.City) != "" &&
+		len(strings.TrimSpace(onboarding.State)) == 2
 }
 
 func ContractingAddress(onboarding domain.Onboarding) string {
